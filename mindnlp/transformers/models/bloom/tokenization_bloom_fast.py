@@ -130,10 +130,10 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             clean_up_tokenization_spaces (bool): Flag indicating whether to clean up tokenization spaces.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         super().__init__(
             vocab_file,

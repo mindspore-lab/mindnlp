@@ -93,10 +93,13 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             None.
         
         Raises:
-            ValueError: If the tokenizer cannot be instantiated from any of the following:
-                >1. A `tokenizers` library serialization file.
-                >2. A slow tokenizer instance to convert.
-                >3. An equivalent slow tokenizer class to instantiate and convert.
+            ValueError:
+                If the tokenizer cannot be instantiated from any of the following:
+                
+                1. A `tokenizers` library serialization file.
+                2. A slow tokenizer instance to convert.
+                3. An equivalent slow tokenizer class to instantiate and convert.
+
                 You need to have sentencepiece installed to convert a slow tokenizer to a fast one.
             ValueError: If `from_slow` is True, but `slow_tokenizer` is None and `slow_tokenizer_class` is None.
                 Also, make sure you have sentencepiece installed if the tokenizer is based on sentencepiece.
@@ -243,7 +246,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
                 This parameter represents the tokenizer object itself.
 
         Returns:
-            bool - A boolean value indicating whether the tokenizer is considered fast.
+            bool:
+                A boolean value indicating whether the tokenizer is considered fast.
                 Returns True if the tokenizer is fast.
 
         Raises:
@@ -279,7 +283,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
                 The keys are token strings and the values are the corresponding indices in the vocabulary.
 
         Raises:
-            N/A
+            None.
         """
         return self._tokenizer.get_vocab(with_added_tokens=True)
 
@@ -292,7 +296,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             self: An instance of the `PreTrainedTokenizerFast` class.
 
         Returns:
-            A dictionary with string keys and integer values representing the vocabulary of the tokenizer.
+            `Dict[str, int]`:
+                A dictionary with string keys and integer values representing the vocabulary of the tokenizer.
 
         Raises:
             None.
@@ -439,7 +444,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
                 If the token is not found, the method returns the unknown token ID specified by 'unk_token_id'.
 
         Raises:
-            None: This method does not raise any exceptions explicitly.
+            None.
         """
         index = self._tokenizer.token_to_id(token)
         if index is None:
@@ -469,7 +474,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
 
         Args:
             self (PreTrainedTokenizerFast): The instance of the PreTrainedTokenizerFast class.
-            new_tokens (List[Union[str, AddedToken]]): A list of new tokens to be added to the tokenizer. Each token can be either a string or an AddedToken object.
+            new_tokens (List[Union[str, AddedToken]]): A list of new tokens to be added to the tokenizer.
+                Each token can be either a string or an AddedToken object.
             special_tokens (bool): A flag indicating whether the new tokens are special tokens. Defaults to False.
 
         Returns:
@@ -643,12 +649,14 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         verbose: bool = True,
     ) -> BatchEncoding:
         r"""
-        This method `_batch_encode_plus` is defined in the class `PreTrainedTokenizerFast`. It takes 17 parameters and returns a value of type `BatchEncoding`.
+        This method `_batch_encode_plus` is defined in the class `PreTrainedTokenizerFast`.
+        It takes 17 parameters and returns a value of type `BatchEncoding`.
 
         Args:
             self: An instance of the class `PreTrainedTokenizerFast`.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]): A list of input texts or text pairs. Each element can be of type
-            `TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]):
+                A list of input texts or text pairs. Each element can be of type `TextInput`, `TextInputPair`,
+                `PreTokenizedInput`, or `PreTokenizedInputPair`.
             add_special_tokens (bool, optional): Whether to add special tokens to the encoded sequences. Defaults to True.
             padding_strategy (PaddingStrategy, optional): The strategy to use for padding. Defaults to `PaddingStrategy.DO_NOT_PAD`.
             truncation_strategy (TruncationStrategy, optional): The strategy to use for truncation. Defaults to `TruncationStrategy.DO_NOT_TRUNCATE`.
@@ -758,7 +766,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         **kwargs,
     ) -> BatchEncoding:
         r"""
-        This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded inputs along with additional information.
+        This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded
+        inputs along with additional information.
 
         Args:
             self: The instance of the class.
@@ -981,8 +990,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
                 Additional keyword arguments passed along to the trainer from the 🤗 Tokenizers library.
 
         Returns:
-            [`PreTrainedTokenizerFast`]: A new tokenizer of the same type as the original one, trained on
-                `text_iterator`.
+            [`PreTrainedTokenizerFast`]:
+                A new tokenizer of the same type as the original one, trained on `text_iterator`.
 
         """
         tokenizer_json = json.loads(self._tokenizer.to_str())

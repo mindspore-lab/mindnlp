@@ -26,7 +26,7 @@ class AttentionMaskConverter:
     - Create a causal 4d mask
     - Create a causal 4d mask with slided window
     - Convert a 2d attention mask (batch_size, query_length) to a 4d attention mask (batch_size, 1, query_length,
-      key_value_length) that can be multiplied with attention scores
+    key_value_length) that can be multiplied with attention scores
 
     Parameters:
         is_causal (`bool`):
@@ -46,7 +46,7 @@ class AttentionMaskConverter:
                 f provided, it must be a strictly positive integer.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the sliding_window parameter is provided and its value is not a strictly positive integer.
@@ -191,7 +191,8 @@ class AttentionMaskConverter:
         `expanded_mask` is [bsz, num_masks, tgt_seq_len, src_seq_len] or [bsz, tgt_seq_len, src_seq_len].
         `attention_mask` is [bsz, src_seq_len].
 
-        The dimension num_masks of `expanded_mask` is most often 1, but it can also be the number of heads in the case of alibi attention bias.
+        The dimension num_masks of `expanded_mask` is most often 1, but it can also be the number of heads in the case
+        of alibi attention bias.
 
         For example, if `expanded_mask` is (e.g. here left-padding case)
         ```

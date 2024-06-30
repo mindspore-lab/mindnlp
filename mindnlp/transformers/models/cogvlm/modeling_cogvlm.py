@@ -127,7 +127,7 @@ class RMSNorm(nn.Cell):
                 The data type should be convertible to float32.
 
         Returns:
-            None. This method modifies the hidden_states tensor in-place.
+            None: This method modifies the hidden_states tensor in-place.
 
         Raises:
             TypeError: If the input hidden_states tensor is not of type mindspore.Tensor.
@@ -175,7 +175,9 @@ class MLP(nn.Cell):
 
         Args:
             self: The instance of the MLP class.
-            config: An object containing configuration parameters for the MLP.
+            config:
+                An object containing configuration parameters for the MLP.
+
                 - hidden_size (int): The size of the hidden layer.
                 - intermediate_size (int): The size of the intermediate layer.
                 - hidden_act (str): The activation function for the hidden layer.
@@ -441,30 +443,31 @@ class RotaryEmbedding(mindspore.nn.Cell):
 
             Returns:
 
-                - Tensor: The tensor containing the inverse frequency values.
+            - Tensor: The tensor containing the inverse frequency values.
 
         _set_cos_sin_cache(self, seq_len, dtype):
             Sets the cosine and sine values cache for the given sequence length and data type.
 
             Args:
 
-                - seq_len (int): The length of the sequence.
-                - dtype (mindspore.dtype): The data type of the input.
+            - seq_len (int): The length of the sequence.
+            - dtype (mindspore.dtype): The data type of the input.
 
             Returns:
 
-                - None
+            - None
 
         construct(self, x, seq_len):
             Constructs the rotary embeddings for the given input and sequence length.
 
             Args:
 
-                - x (Tensor): The input tensor.
-                - seq_len (int): The length of the sequence.
+            - x (Tensor): The input tensor.
+            - seq_len (int): The length of the sequence.
 
             Returns:
-                - Tuple[Tensor, Tensor]: The cosine and sine embeddings for the given sequence length and input.
+
+            - Tuple[Tensor, Tensor]: The cosine and sine embeddings for the given sequence length and input.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -477,10 +480,10 @@ class RotaryEmbedding(mindspore.nn.Cell):
             base (int, optional): The base value used for computing the inverse frequency. Default is 10000.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
 
@@ -1245,10 +1248,10 @@ class CogVLMModel(CogVLMPreTrainedModel):
             self: A reference to the current instance of the class CogVLMModel.
 
         Returns:
-            None. The method returns the embed_tokens attribute of the CogVLMModel instance.
+            embed_tokens: The method returns the embed_tokens attribute of the CogVLMModel instance.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
@@ -1261,7 +1264,7 @@ class CogVLMModel(CogVLMPreTrainedModel):
             value: The input embeddings to be set.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1345,7 +1348,7 @@ def _history_to_prompt(signal_type, history, query):
             - 'vqa': indicates a signal for Visual Question Answering.
             - 'chat': indicates a signal for chat conversation.
         history (list): A list of tuples representing the history of queries and responses.
-                        Each tuple contains two elements: the old query and its corresponding response.
+            Each tuple contains two elements: the old query and its corresponding response.
         query (str): The current query.
 
     Returns:
@@ -1480,10 +1483,10 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             self: An instance of the CogVLMForCausalLM class.
 
         Returns:
-            None: This method returns the output embeddings of the CogVLMForCausalLM model.
+            lm_head: This method returns the output embeddings of the CogVLMForCausalLM model.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -1515,7 +1518,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.model = decoder
 
@@ -1527,10 +1530,10 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             self (CogVLMForCausalLM): The instance of the CogVLMForCausalLM class.
 
         Returns:
-            None: This method does not have a return value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model
 
@@ -1646,7 +1649,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             mindspore.Tensor: The attention mask tensor.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return ops.ones(inputs.shape[:2], dtype=mindspore.int64)  # type: ignore
 
@@ -1817,7 +1820,6 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             self: The instance of the class.
             tokenizer (PreTrainedTokenizer):
                 The tokenizer used for tokenizing the input. It is required for encoding the input text and images.
-
             query (str): The query text for the conversation.
             history (Optional[List[Tuple[str, str]]]):
                 A list of tuples containing the conversation history, where each tuple represents (user, bot) dialogue turns.

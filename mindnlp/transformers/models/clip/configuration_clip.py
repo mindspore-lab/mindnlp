@@ -279,7 +279,7 @@ class CLIPVisionConfig(PretrainedConfig):
             initializer_factor (float): The factor for parameter initialization.
 
         Returns:
-            None: This method initializes the CLIPVisionConfig object with the provided configuration parameters.
+            None.
 
         Raises:
             ValueError: If any of the input parameters are invalid or out of range.

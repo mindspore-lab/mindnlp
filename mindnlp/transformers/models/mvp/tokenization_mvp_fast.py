@@ -1,4 +1,3 @@
-"""
 # coding=utf-8
 # Copyright 2022 The Facebook AI Research Team Authors and The HuggingFace Inc. team.
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 
 import json
@@ -46,11 +44,10 @@ class MvpTokenizerFast(PreTrainedTokenizerFast):
     Example:
         ```python
         >>> from transformers import MvpTokenizerFast
-
+        ...
         >>> tokenizer = MvpTokenizerFast.from_pretrained("RUCAIBox/mvp")
         >>> tokenizer("Hello world")["input_ids"]
         [0, 31414, 232, 2]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [0, 20920, 232, 2]
         ```

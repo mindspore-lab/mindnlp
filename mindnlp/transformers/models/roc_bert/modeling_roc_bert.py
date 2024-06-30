@@ -819,7 +819,6 @@ class RoCBertPreTrainedModel(PreTrainedModel):
 
 class RoCBertModel(RoCBertPreTrainedModel):
     """
-
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
     cross-attention is added between the self-attention layers, following the architecture described in [Attention is
     all you need](https://arxiv.org/abs/1706.03762) by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
@@ -891,22 +890,25 @@ class RoCBertModel(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+        Args:
+            encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
                 the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors
+                of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = (
             output_attentions
@@ -1111,10 +1113,10 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, RoCBertForPreTraining
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
             >>> model = RoCBertForPreTraining.from_pretrained("weiweishi/roc-bert-base-zh")
-
+            ...
             >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
             >>> attack_inputs = {}
             >>> for key in list(inputs.keys()):
@@ -1122,11 +1124,11 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
             >>> label_inputs = {}
             >>> for key in list(inputs.keys()):
             ...     label_inputs[f"labels_{key}"] = inputs[key]
-
+            ...
             >>> inputs.update(label_inputs)
             >>> inputs.update(attack_inputs)
             >>> outputs = model(**inputs)
-
+            ...
             >>> logits = outputs.logits
             >>> logits.shape
             torch.Size([1, 11, 21128])
@@ -1288,18 +1290,18 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, RoCBertForMaskedLM
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
             >>> model = RoCBertForMaskedLM.from_pretrained("weiweishi/roc-bert-base-zh")
-
+            ...
             >>> inputs = tokenizer("法国是首都[MASK].", return_tensors="pt")
-
+            ...
             >>> with torch.no_grad():
             ...     logits = model(**inputs).logits
-
+            ...
             >>> # retrieve index of {mask}
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
-
+            ...
             >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
             >>> tokenizer.decode(predicted_token_id)
             '.'
@@ -1440,10 +1442,11 @@ class RoCBertForCausalLM(RoCBertPreTrainedModel):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
                 the model is configured as a decoder.
             encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-                    the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
             past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
                 `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
@@ -1471,15 +1474,15 @@ class RoCBertForCausalLM(RoCBertPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, RoCBertForCausalLM, RoCBertConfig
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
             >>> config = RoCBertConfig.from_pretrained("weiweishi/roc-bert-base-zh")
             >>> config.is_decoder = True
             >>> model = RoCBertForCausalLM.from_pretrained("weiweishi/roc-bert-base-zh", config=config)
-
+            ...
             >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
             >>> outputs = model(**inputs)
-
+            ...
             >>> prediction_logits = outputs.logits
             ```
         """

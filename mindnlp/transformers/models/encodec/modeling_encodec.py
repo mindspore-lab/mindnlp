@@ -208,7 +208,7 @@ class EncodecConvTranspose1d(nn.Cell):
             stride (int, optional): The stride of the convolution. Defaults to 1.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If self.norm_type is not one of 'weight_norm' or 'time_group_norm'.
@@ -292,7 +292,7 @@ class EncodecLSTM(nn.Cell):
             dimension (int): The dimension of the LSTM input and output.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -344,7 +344,7 @@ class EncodecResnetBlock(nn.Cell):
             dilations (List[int]): A list of dilation factors for each convolutional layer.
         
         Returns:
-            None: This method initializes the EncodecResnetBlock instance.
+            None.
         
         Raises:
             ValueError: Raised if the number of kernel sizes does not match the number of dilations provided.
@@ -460,7 +460,7 @@ class EncodecEncoder(nn.Cell):
             None: This method does not return any value. It updates the hidden_states in place.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
@@ -485,7 +485,7 @@ class EncodecDecoder(nn.Cell):
                 - Restrictions: Must be an instance of the EncodecConfig class.
 
         Returns:
-            None: The method initializes the instance of the EncodecDecoder class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -528,7 +528,7 @@ class EncodecDecoder(nn.Cell):
             None: The method does not return any value directly but modifies the hidden_states in place.
 
         Raises:
-            No specific exceptions are raised by this method under normal operation.
+            None.
         """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
@@ -570,10 +570,10 @@ class EncodecEuclideanCodebook(nn.Cell):
             hidden_states (Tensor): A tensor representing the hidden states to be quantized.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         embed = self.embed.t()
         scaled_states = hidden_states.pow(2).sum(1, keepdims=True)
@@ -616,10 +616,10 @@ class EncodecEuclideanCodebook(nn.Cell):
             embed_ind (int): The index of the embedding to decode.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         quantize = embedding(embed_ind, self.embed)
         return quantize
@@ -639,10 +639,10 @@ class EncodecVectorQuantization(nn.Cell):
                 An object of the EncodecConfig class that contains the configuration data for the vector quantization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.codebook = EncodecEuclideanCodebook(config)
@@ -704,7 +704,7 @@ class EncodecResidualVectorQuantizer(nn.Cell):
                 - num_quantizers (int): The number of quantizers.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -816,6 +816,7 @@ class EncodecModel(EncodecPreTrainedModel):
         construct(input_values, padding_mask, bandwidth, audio_codes, audio_scales, return_dict): Constructs the model.
 
     Example:
+        ```python
         >>> from datasets import load_dataset
         >>> from transformers import AutoProcessor, EncodecModel
         ...
@@ -831,6 +832,7 @@ class EncodecModel(EncodecPreTrainedModel):
         >>> outputs = model(**inputs)
         >>> audio_codes = outputs.audio_codes
         >>> audio_values = outputs.audio_values
+        ```
     """
     def __init__(self, config: EncodecConfig):
         """
@@ -873,10 +875,10 @@ class EncodecModel(EncodecPreTrainedModel):
                 It is used to access the attributes and methods of the class.
 
         Returns:
-            None: This method returns the encoder associated with the EncodecModel instance.
+            encoder: This method returns the encoder associated with the EncodecModel instance.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.encoder
 
@@ -893,7 +895,7 @@ class EncodecModel(EncodecPreTrainedModel):
                 object associated with the instance of the EncodecModel class.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.decoder
 

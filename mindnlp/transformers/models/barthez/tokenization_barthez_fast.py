@@ -144,7 +144,7 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
             mask_token (str): Mask token. Default is '<mask>'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If mask_token is not a string.

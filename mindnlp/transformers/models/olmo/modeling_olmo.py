@@ -53,10 +53,12 @@ def _get_unpad_data(attention_mask):
             should be a binary value indicating whether the corresponding token is masked or not.
     
     Returns:
-        tuple: A tuple containing the following elements:
-            >   - indices (Tensor): A 1D tensor containing the indices of non-zero elements in the flattened attention mask.
-            >   - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch.
-            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+        tuple:
+            A tuple containing the following elements:
+
+            - indices (Tensor): A 1D tensor containing the indices of non-zero elements in the flattened attention mask.
+            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch.
+            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
 
     Raises:
         None
@@ -80,11 +82,11 @@ class OlmoLayerNorm(nn.Cell):
 
         Args:
             self (OlmoLayerNorm): The instance of the class.
-            hidden_size (int): The size of the hidden dimension for the layer normalization. It determines the shape of the normalized layer.
-                The hidden size must be a positive integer.
+            hidden_size (int): The size of the hidden dimension for the layer normalization.
+                It determines the shape of the normalized layer. The hidden size must be a positive integer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -136,11 +138,16 @@ class OlmoRotaryEmbedding(nn.Cell):
 
     """
     This class represents an implementation of Olmo Rotary Embedding for neural networks.
-    It provides methods to calculate and cache cosine and sine values based on positional embeddings for efficient computation in attention mechanisms.
-    The class inherits from nn.Cell and includes initialization parameters for dimensionality, maximum position embeddings, base value, and scaling factor.
-    The class also includes methods to calculate cosine and sine values based on positional embeddings, and provides warnings for deprecated attributes.
-    Note: The 'sin_cached' and 'cos_cached' attributes will be removed in version 4.39 and their contents changed in version 4.38.
-    It is recommended to use the 'forward' method of RoPE instead of accessing these attributes directly.
+    It provides methods to calculate and cache cosine and sine values based on positional embeddings for efficient
+    computation in attention mechanisms. The class inherits from nn.Cell and includes initialization parameters for
+    dimensionality, maximum position embeddings, base value, and scaling factor.
+    The class also includes methods to calculate cosine and sine values based on positional embeddings, and provides
+    warnings for deprecated attributes.
+
+    Note:
+        The 'sin_cached' and 'cos_cached' attributes will be removed in version 4.39 and their contents changed in
+        version 4.38.  It is recommended to use the 'forward' method of RoPE instead of accessing these attributes
+        directly.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
@@ -185,10 +192,11 @@ class OlmoRotaryEmbedding(nn.Cell):
             self: An instance of the OlmoRotaryEmbedding class.
 
         Returns:
-            None. This method returns the cached value of the sine of the input, or None if the cache is empty.
+            Conditional return:
+                This method returns the cached value of the sine of the input, or None if the cache is empty.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         logger.warning_once(
             "The sin_cached attribute will be removed in 4.39. Bear in mind that its contents changed in v4.38. Use "
@@ -205,7 +213,7 @@ class OlmoRotaryEmbedding(nn.Cell):
             self: An instance of the 'OlmoRotaryEmbedding' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -260,7 +268,8 @@ class OlmoLinearScalingRotaryEmbedding(OlmoRotaryEmbedding):
             position_ids (Tensor): The tensor containing positional indices.
 
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing the cosine and sine embeddings constructed based on the input 'x' and 'position_ids'.
+            Tuple[Tensor, Tensor]:
+                A tuple containing the cosine and sine embeddings constructed based on the input 'x' and 'position_ids'.
 
         Raises:
             TypeError: If the input 'position_ids' is not a tensor.
@@ -279,7 +288,8 @@ class OlmoDynamicNTKScalingRotaryEmbedding(OlmoRotaryEmbedding):
     def construct(self, x, position_ids):
         """Constructs the OlmoDynamicNTKScalingRotaryEmbedding.
 
-        This method initializes the OlmoDynamicNTKScalingRotaryEmbedding object by constructing the positional encodings for the input tensor.
+        This method initializes the OlmoDynamicNTKScalingRotaryEmbedding object by constructing the positional
+        encodings for the input tensor.
 
         Args:
             self (OlmoDynamicNTKScalingRotaryEmbedding): An instance of the OlmoDynamicNTKScalingRotaryEmbedding class.
@@ -317,7 +327,8 @@ def rotate_half(x):
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+    """
+    Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -333,6 +344,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -346,7 +358,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 class OlmoMLP(nn.Cell):
 
     """
-    The 'OlmoMLP' class represents a multi-layer perceptron (MLP) with customized operations for gating, projection, and activation functions. This class inherits from the 'nn.Cell' class.
+    The 'OlmoMLP' class represents a multi-layer perceptron (MLP) with customized operations for gating, projection,
+    and activation functions. This class inherits from the 'nn.Cell' class.
 
     Attributes:
         config (object): The configuration object that stores the parameters for the MLP.
@@ -358,23 +371,24 @@ class OlmoMLP(nn.Cell):
         act_fn (function): The activation function applied to the output of the gating and up projection.
 
     Methods:
-        __init__(self, config): Initializes the 'OlmoMLP' class with the given configuration object.
-        construct(self, x): Constructs the MLP by applying the necessary operations to the input 'x' and returning the result.
+        __init__: Initializes the 'OlmoMLP' class with the given configuration object.
+        construct: Constructs the MLP by applying the necessary operations to the input 'x' and returning the result.
 
-    Example usage:
+    Example:
         ```python
-        # Create a configuration object
-        config = MLPConfig(hidden_size=128, intermediate_size=64, hidden_act='relu')
-
-        # Create an instance of the 'OlmoMLP' class
-        mlp = OlmoMLP(config)
-
-        # Construct the MLP
-        output = mlp.construct(input_data)
+        >>> # Create a configuration object
+        >>> config = MLPConfig(hidden_size=128, intermediate_size=64, hidden_act='relu')
+        ...
+        >>> # Create an instance of the 'OlmoMLP' class
+        >>> mlp = OlmoMLP(config)
+        ...
+        >>> # Construct the MLP
+        >>> output = mlp.construct(input_data)
         ```
 
     Note:
-        The 'OlmoMLP' class assumes that the 'ACT2FN' dictionary is defined, which maps the activation function names to their corresponding functions.
+        The 'OlmoMLP' class assumes that the 'ACT2FN' dictionary is defined, which maps the activation function names
+        to their corresponding functions.
     """
     def __init__(self, config):
         """
@@ -382,10 +396,12 @@ class OlmoMLP(nn.Cell):
 
         Args:
             self: The instance of the OlmoMLP class.
-            config: An object of type 'Config' that contains the configuration settings for the OlmoMLP model. It must have the following attributes:
-                >   - hidden_size: An integer representing the size of the hidden layers.
-                >   - intermediate_size: An integer representing the size of the intermediate layers.
-                >   - hidden_act: A string representing the activation function to be used in the hidden layers.
+            config: An object of type 'Config' that contains the configuration settings for the OlmoMLP model.
+                It must have the following attributes:
+
+                - hidden_size: An integer representing the size of the hidden layers.
+                - intermediate_size: An integer representing the size of the intermediate layers.
+                - hidden_act: A string representing the activation function to be used in the hidden layers.
 
         Returns:
             None.
@@ -411,12 +427,12 @@ class OlmoMLP(nn.Cell):
             x: Input data for constructing the MLP.
 
         Returns:
-            None. The method modifies the MLP model in-place.
+            None: The method modifies the MLP model in-place.
 
         Raises:
-            - TypeError: If the input data is not in the expected format.
-            - ValueError: If the input data is invalid or incompatible with the model.
-            - RuntimeError: If there is an issue during the construction process.
+            TypeError: If the input data is not in the expected format.
+            ValueError: If the input data is invalid or incompatible with the model.
+            RuntimeError: If there is an issue during the construction process.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -445,8 +461,8 @@ class OlmoAttention(nn.Cell):
             self: The instance of the class itself.
             config: An instance of the OlmoConfig class, containing configuration parameters for the attention layer.
             layer_idx (Optional[int]): The index of the layer. If not provided, it is set to None.
-                Not providing a `layer_idx` is not recommended and may lead to errors during the forward call if caching is used.
-                Please make sure to provide a `layer_idx` when creating this class.
+                Not providing a `layer_idx` is not recommended and may lead to errors during the forward call
+                if caching is used. Please make sure to provide a `layer_idx` when creating this class.
 
         Returns:
             None
@@ -500,21 +516,29 @@ class OlmoAttention(nn.Cell):
         Raises:
             ValueError: If the RoPE scaling type is unknown.
 
-        This method initializes the RoPE based on the provided configuration. The RoPE is used to incorporate positional information into the attention mechanism of the OlmoAttention model.
+        This method initializes the RoPE based on the provided configuration. The RoPE is used to incorporate positional
+        information into the attention mechanism of the OlmoAttention model.
 
-        If the 'rope_scaling' configuration parameter is not specified, the RoPE is initialized with the OlmoRotaryEmbedding class using the default parameters.
+        If the 'rope_scaling' configuration parameter is not specified, the RoPE is initialized with the
+        OlmoRotaryEmbedding class using the default parameters.
 
-        If the 'rope_scaling' configuration parameter is specified, the RoPE is initialized with a specific scaling type and factor. The 'scaling_type' parameter determines the type of scaling to be used, and
-            the 'scaling_factor' parameter determines the scaling factor to be applied. The available scaling types are 'linear' and 'dynamic'.
-            >   - For 'linear' scaling type, the RoPE is initialized with the OlmoLinearScalingRotaryEmbedding class using the specified scaling factor.
-            >   - For 'dynamic' scaling type, the RoPE is initialized with the OlmoDynamicNTKScalingRotaryEmbedding class using the specified scaling factor.
+        If the 'rope_scaling' configuration parameter is specified, the RoPE is initialized with a specific scaling
+        type and factor. The 'scaling_type' parameter determines the type of scaling to be used, and the
+        'scaling_factor' parameter determines the scaling factor to be applied.
+        The available scaling types are 'linear' and 'dynamic'.
+
+        - For 'linear' scaling type, the RoPE is initialized with the OlmoLinearScalingRotaryEmbedding class using the
+        specified scaling factor.
+        - For 'dynamic' scaling type, the RoPE is initialized with the OlmoDynamicNTKScalingRotaryEmbedding class using
+        the specified scaling factor.
 
         Note:
-            The 'scaling_factor' parameter is used to adjust the scale of the RoPE embeddings. A higher scaling factor results in more distinct embeddings for different positions.
+            The 'scaling_factor' parameter is used to adjust the scale of the RoPE embeddings.
+            A higher scaling factor results in more distinct embeddings for different positions.
 
         If the 'scaling_type' provided is not one of the available options, a ValueError is raised.
 
-        Example usage:
+        Example:
             ```python
             >>> olmo_attention = OlmoAttention()
             >>> olmo_attention._init_rope()
@@ -568,8 +592,10 @@ class OlmoAttention(nn.Cell):
 
         Args:
             self (OlmoAttention): An instance of the OlmoAttention class.
-            hidden_states (mindspore.Tensor): The hidden states input tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, num_heads, sequence_length, sequence_length), where each element is either 0 or 1.
+            hidden_states (mindspore.Tensor): The hidden states input tensor of shape
+                (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape
+                (batch_size, num_heads, sequence_length, sequence_length), where each element is either 0 or 1.
             position_ids (Optional[mindspore.Tensor]): The position ids tensor of shape (batch_size, sequence_length).
             past_key_value (Optional[Cache]): The past key-value cache for efficient attention computation.
             output_attentions (bool): Flag indicating whether to output the attention weights.
@@ -577,11 +603,14 @@ class OlmoAttention(nn.Cell):
             cache_position (Optional[mindspore.Tensor]): The position tensor for the key-value cache.
 
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), the
-            attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the updated past key-value cache.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), the
+                attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the
+                updated past key-value cache.
 
         Raises:
-            ValueError: If the shape of the attention output tensor is not (batch_size, num_heads, sequence_length, hidden_size).
+            ValueError: If the shape of the attention output tensor is not
+                (batch_size, num_heads, sequence_length, hidden_size).
         '''
         bsz, q_len, _ = hidden_states.shape
 
@@ -656,29 +685,9 @@ class OlmoDecoderLayer(nn.Cell):
         input_layernorm: An instance of the OlmoLayerNorm class for input layer normalization.
         post_attention_layernorm: An instance of the OlmoLayerNorm class for post-attention layer normalization.
 
-    Methods:
-        construct(hidden_states, attention_mask=None, position_ids=None, past_key_value=None, output_attentions=False, use_cache=False, cache_position=None, **kwargs)
-            Constructs the decoder layer.
-
-            Args:
-                hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-                attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch_size, sequence_length)`
-                    if flash attention is used, or `(batch_size, 1, query_sequence_length, key_sequence_length)` if default
-                    attention is used.
-                position_ids (mindspore.Tensor, optional): The position IDs tensor.
-                past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-                output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers.
-                use_cache (bool, optional): If set to True, `past_key_values` key value states are returned and can be used
-                    to speed up decoding.
-                cache_position (mindspore.Tensor, optional): The cache position tensor.
-                **kwargs: Additional keyword arguments.
-
-            Returns:
-                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional
-                attentions and present key value states.
-
     Warnings:
-        Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure to use `attention_mask` instead.
+        Passing `padding_mask` is deprecated and will be removed in v4.37.
+        Please make sure to use `attention_mask` instead.
 
     Note:
         The construct method is the entry point for the decoder layer.
@@ -693,7 +702,7 @@ class OlmoDecoderLayer(nn.Cell):
             layer_idx (int): An integer representing the index of the layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not an instance of OlmoConfig.
@@ -781,18 +790,27 @@ class OlmoPreTrainedModel(PreTrainedModel):
     OlmoPreTrainedModel provides methods for initializing weights, setting up cache, and resetting cache.
 
     Methods:
-        _init_weights(self, cell): Initializes the weights of the given cell. If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a standard deviation of
-            self.config.initializer_range. If the cell has a bias, the bias is initialized to zeros. If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a standard deviation of
-            self.config.initializer_range. If the cell has a padding index, the weight at the padding index is set to 0.
+        _init_weights:
+            Initializes the weights of the given cell.
 
-        _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None): Sets up the cache for the model. If the attention implementation is 'flash_attention_2' and the cache class is
-            StaticCache, a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class, with the specified maximum batch size, maximum cache length, and data type.
+            - If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a
+            standard deviation of self.config.initializer_range.
+            - If the cell has a bias, the bias is initialized to zeros.
+            - If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a
+            standard deviation of self.config.initializer_range.
+            - If the cell has a padding index, the weight at the padding index is set to 0.
 
-        _reset_cache(self): Resets the cache for the model. For each layer in the model, the cache is set to None.
+        _setup_cache: Sets up the cache for the model.
+            If the attention implementation is 'flash_attention_2' and the cache class is StaticCache,
+            a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class,
+            with the specified maximum batch size, maximum cache length, and data type.
+
+        _reset_cache: Resets the cache for the model. For each layer in the model, the cache is set to None.
 
     Note:
-        The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype
-        attribute in the config attribute.
+        The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a
+        layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype attribute in the 
+        config attribute.
         For more information on Olmo, refer to the documentation at https://github.com/huggingface/transformers.
     """
     config_class = OlmoConfig
@@ -811,10 +829,10 @@ class OlmoPreTrainedModel(PreTrainedModel):
             cell: The cell to initialize the weights for.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         std = self.config.initializer_range
         if isinstance(cell, nn.Dense):
@@ -839,11 +857,12 @@ class OlmoPreTrainedModel(PreTrainedModel):
             max_cache_len (Optional[int]): The maximum length of the cache. Defaults to None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            ValueError: Raised if the `static` cache implementation is selected while using `attn_implementation==flash_attention_2`.
-                In such cases, it is recommended to use `sdpa` instead and report the issue at https://github.com/huggingface/transformers.
+            ValueError: Raised if the `static` cache implementation is selected while using 
+                `attn_implementation==flash_attention_2`.  In such cases, it is recommended to use `sdpa` instead and 
+                report the issue at https://github.com/huggingface/transformers.
         """
         if self.config._attn_implementation == "flash_attention_2" and cache_cls == StaticCache:
             raise ValueError(
@@ -868,10 +887,10 @@ class OlmoPreTrainedModel(PreTrainedModel):
             self (OlmoPreTrainedModel): The instance of the OlmoPreTrainedModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         for layer in self.model.layers:
             layer.self_attn.past_key_value = None
@@ -890,11 +909,13 @@ class OlmoModel(OlmoPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config (OlmoConfig): An object containing the configuration parameters for the model.
-                >   - `pad_token_id` (int): The token ID used for padding sequences.
-                >   - `vocab_size` (int): The size of the vocabulary.
-                >   - `hidden_size` (int): The hidden size of the model.
-                >   - `num_hidden_layers` (int): The number of hidden layers in the model.
+            config (OlmoConfig):
+                An object containing the configuration parameters for the model.
+
+                - `pad_token_id` (int): The token ID used for padding sequences.
+                - `vocab_size` (int): The size of the vocabulary.
+                - `hidden_size` (int): The hidden size of the model.
+                - `num_hidden_layers` (int): The number of hidden layers in the model.
 
         Returns:
             None
@@ -924,10 +945,10 @@ class OlmoModel(OlmoPreTrainedModel):
             self (OlmoModel): The instance of the OlmoModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
@@ -937,13 +958,14 @@ class OlmoModel(OlmoPreTrainedModel):
 
         Args:
             self (OlmoModel): The instance of the OlmoModel class.
-            value (object): The input embeddings to be set for the OlmoModel. It should be of type 'object' and can contain the input embeddings data.
+            value (object): The input embeddings to be set for the OlmoModel.
+                It should be of type 'object' and can contain the input embeddings data.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embed_tokens = value
 
@@ -969,7 +991,8 @@ class OlmoModel(OlmoPreTrainedModel):
             input_ids (mindspore.Tensor, optional): The input tensor containing the token IDs. Default is None.
             attention_mask (mindspore.Tensor, optional): The attention mask tensor. Default is None.
             position_ids (mindspore.Tensor, optional): The tensor containing the position IDs. Default is None.
-            past_key_values (List[mindspore.Tensor], optional): The list of tensors containing the past key values. Default is None.
+            past_key_values (List[mindspore.Tensor], optional): The list of tensors containing the past key values.
+                Default is None.
             inputs_embeds (mindspore.Tensor, optional): The input tensor containing the embedded inputs. Default is None.
             use_cache (bool, optional): Whether to use cache. Default is None.
             output_attentions (bool, optional): Whether to output attentions. Default is None.
@@ -1107,11 +1130,12 @@ class OlmoModel(OlmoPreTrainedModel):
             past_seen_tokens (int): The number of tokens seen in the past.
 
         Returns:
-            None. This method updates the causal mask in place and does not return any value.
+            None: This method updates the causal mask in place and does not return any value.
 
         Raises:
             ValueError: If the input_tensor dtype is not supported for calculating the min value.
-            RuntimeError: If there is an issue in updating the causal mask due to incorrect dimensions or values in the input tensors.
+            RuntimeError: If there is an issue in updating the causal mask due to incorrect dimensions or values
+                in the input tensors.
         """
         dtype = input_tensor.dtype
         min_dtype = finfo(dtype, 'min')
@@ -1160,33 +1184,32 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
 
     The class contains the following methods:
 
-    >   - `__init__(self, config)`: Initializes the class instance with a given configuration.
-    >   - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-    >   - `set_input_embeddings(self, value)`: Sets the input embeddings of the model.
-    >   - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-    >   - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model.
-    >   - `set_decoder(self, decoder)`: Sets the decoder of the model.
-    >   - `get_decoder(self)`: Returns the decoder of the model.
-    >   - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position)`: Constructs the model
-            and returns the output.
-    >   - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, cache_position, **kwargs)`: Prepares the inputs for generation.
+    - `__init__`: Initializes the class instance with a given configuration.
+    - `get_input_embeddings`: Returns the input embeddings of the model.
+    - `set_input_embeddings`: Sets the input embeddings of the model.
+    - `get_output_embeddings`: Returns the output embeddings of the model.
+    - `set_output_embeddings`: Sets the output embeddings of the model.
+    - `set_decoder`: Sets the decoder of the model.
+    - `get_decoder`: Returns the decoder of the model.
+    - `construct`: Constructs the model and returns the output.
+    - `prepare_inputs_for_generation`: Prepares the inputs for generation.
 
     The class also includes a private static method `_reorder_cache(past_key_values, beam_idx)`.
 
-    Example usage:
+    Example:
         ```python
-        from transformers import AutoTokenizer, OlmoForCausalLM
-
-        model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
-        tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
-
-        prompt = "Hey, are you conscious? Can you talk to me?"
-        inputs = tokenizer(prompt, return_tensors="pt")
-
-        # Generate
-        generate_ids = model.generate(inputs.input_ids, max_length=30)
-        generated_text = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        print(generated_text)
+        >>> from transformers import AutoTokenizer, OlmoForCausalLM
+        ...
+        >>> model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
+        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
+        ...
+        >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        ...
+        >>> # Generate
+        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >>> generated_text = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        >>> print(generated_text)
         ```
     """
     _tied_weights_keys = ["lm_head.weight"]
@@ -1197,10 +1220,12 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
 
         Args:
             self: The current instance of the class.
-            config: An instance of the configuration class for OlmoForCausalLM. It contains various parameters and settings used for model initialization.
-                >   - Type: config object
-                >   - Purpose: To customize the behavior of the model.
-                >   - Restrictions: None
+            config: An instance of the configuration class for OlmoForCausalLM.
+                It contains various parameters and settings used for model initialization.
+
+                - Type: config object
+                - Purpose: To customize the behavior of the model.
+                - Restrictions: None
 
         Returns:
             None
@@ -1218,16 +1243,17 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
 
     def get_input_embeddings(self):
         """
-        This method is implemented in the 'OlmoForCausalLM' class and is used to retrieve the input embeddings from the model.
+        This method is implemented in the 'OlmoForCausalLM' class and is used to retrieve the
+        input embeddings from the model.
 
         Args:
             self: An instance of the 'OlmoForCausalLM' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
@@ -1240,7 +1266,7 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
             value: The input embeddings to be set for the model. It should be a tensor representing the embeddings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1255,10 +1281,10 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
             self: An instance of the 'OlmoForCausalLM' class.
 
         Returns:
-            None: This method returns the 'lm_head' attribute, which is of type 'None'. The 'lm_head' is the output embedding layer of the model.
+            The 'lm_head' attribute: which is of type 'None'. The 'lm_head' is the output embedding layer of the model.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -1268,11 +1294,12 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
 
         Args:
             self (OlmoForCausalLM): The instance of the OlmoForCausalLM class.
-            new_embeddings: The new embeddings to be set for the output layer of the model. This can be a tensor or any object that can be assigned to `self.lm_head`. The shape of the embeddings should match
-            the expected shape of the output layer.
+            new_embeddings: The new embeddings to be set for the output layer of the model.
+                This can be a tensor or any object that can be assigned to `self.lm_head`.
+                The shape of the embeddings should match the expected shape of the output layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1288,7 +1315,7 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
             decoder: The decoder to be set for the model. It should be compatible with the OlmoForCausalLM model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1303,10 +1330,10 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
             self: The instance of the OlmoForCausalLM class.
 
         Returns:
-            None. The method returns the decoder model associated with the OlmoForCausalLM instance.
+            model: The decoder model associated with the OlmoForCausalLM instance.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.model
 
@@ -1338,13 +1365,13 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
         Example:
             ```python
             >>> from transformers import AutoTokenizer, OlmoForCausalLM
-
+            ...
             >>> model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
             >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
-
+            ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
             >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
             >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -1407,14 +1434,16 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
         Args:
             self (object): The instance of the class.
             input_ids (tensor): The input tensor containing tokenized input sequence.
-            past_key_values (tensor, optional): The tensor of cached key values for previous time steps. Defaults to None.
-            attention_mask (tensor, optional): The attention mask tensor to avoid attending to padding tokens. Defaults to None.
+            past_key_values (tensor, optional): The tensor of cached key values for previous time steps.
+                Defaults to None.
+            attention_mask (tensor, optional): The attention mask tensor to avoid attending to padding tokens.
+                Defaults to None.
             inputs_embeds (tensor, optional): The tensor of embeddings for input tokens. Defaults to None.
             cache_position (tensor, optional): The tensor specifying the position in the cache. Defaults to None.
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If attention_mask and input_ids have incompatible shapes.
@@ -1507,17 +1536,19 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
         
         Args:
             past_key_values (tuple): A tuple containing cached states from previous layers.
-                                     Each element in the tuple represents the cached states for a layer.
-                                     These states are used during inference for generating the next tokens.
+                Each element in the tuple represents the cached states for a layer.
+                These states are used during inference for generating the next tokens.
             beam_idx (Tensor): A 1D tensor containing the indices of beams to reorder the cached states.
-                               This tensor specifies the new order in which the cached states should be arranged.
+                This tensor specifies the new order in which the cached states should be arranged.
         
         Returns:
-            None. This method does not return any value but updates the order of the cached states based on the given beam indices.
+            None: This method does not return any value but updates the order of the cached states based on the
+                given beam indices.
         
         Raises:
-            - IndexError: If the provided beam indices are out of range or incompatible with the cached states.
-            - TypeError: If the input parameters are not of the expected types (tuple for past_key_values, Tensor for beam_idx).
+            IndexError: If the provided beam indices are out of range or incompatible with the cached states.
+            TypeError: If the input parameters are not of the expected types
+                (tuple for past_key_values, Tensor for beam_idx).
         """
         reordered_past = ()
         for layer_past in past_key_values:

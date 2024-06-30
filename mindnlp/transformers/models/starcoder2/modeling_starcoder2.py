@@ -73,17 +73,21 @@ def _get_unpad_data(attention_mask):
 class Starcoder2RotaryEmbedding(nn.Cell):
 
     """
-    The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural network models. This class inherits from the nn.Cell class.
+    The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural
+    network models. This class inherits from the nn.Cell class.
     
-    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions, maximum position embeddings, and base value for the rotary embedding. It computes the
-        inverse frequency and sets the cosine and sine cache for positional encoding.
+    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions,
+    maximum position embeddings, and base value for the rotary embedding. It computes the inverse frequency and sets
+    the cosine and sine cache for positional encoding.
 
     The _set_cos_sin_cache method sets the cosine and sine cache based on the maximum sequence length and data type.
 
-    The construct method applies the positional encoding to the input tensor based on the sequence length and returns the cosine and sine embeddings.
+    The construct method applies the positional encoding to the input tensor based on the sequence length and returns
+    the cosine and sine embeddings.
 
     Note:
-        This docstring is a detailed summary of the Starcoder2RotaryEmbedding class and its methods, providing an overview of its functionality and purpose within the context of neural network modeling.
+        This docstring is a detailed summary of the Starcoder2RotaryEmbedding class and its methods, providing an
+        overview of its functionality and purpose within the context of neural network modeling.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -96,7 +100,7 @@ class Starcoder2RotaryEmbedding(nn.Cell):
             base (int, optional): The base value used in the calculation. Default is 10000.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If dim is not an integer.
@@ -126,7 +130,7 @@ class Starcoder2RotaryEmbedding(nn.Cell):
             dtype: The data type for the cache.
 
         Returns:
-            None. This method modifies the cos_cached and sin_cached attributes of the Starcoder2RotaryEmbedding instance.
+            None: This method modifies the cos_cached and sin_cached attributes of the Starcoder2RotaryEmbedding instance.
 
         Raises:
             None.
@@ -150,9 +154,12 @@ class Starcoder2RotaryEmbedding(nn.Cell):
             seq_len (Optional[int]): The length of the sequence. If not provided, the default value is None.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: A tuple containing the cosine and sine embeddings for the given sequence length.
-                >   - The cosine embedding is obtained by taking the first 'seq_len' elements from the cached cosine values.
-                >   - The sine embedding is obtained by taking the first 'seq_len' elements from the cached sine values.
+            Tuple[torch.Tensor, torch.Tensor]:
+                A tuple containing the cosine and sine embeddings for the given sequence length.
+
+                - The cosine embedding is obtained by taking the first 'seq_len' elements from the cached cosine values.
+                - The sine embedding is obtained by taking the first 'seq_len' elements from the cached sine values.
+
                 Both embeddings are converted to the same data type as the input tensor 'x'.
 
         Raises:
@@ -180,7 +187,8 @@ def rotate_half(x):
 
 # Copied from transformers.models.mistral.modeling_mistral.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+    """
+    Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -197,6 +205,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -235,7 +244,7 @@ class Starcoder2MLP(nn.Cell):
             config (Starcoder2Config): An instance of Starcoder2Config containing the configuration parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not of type Starcoder2Config.
@@ -295,7 +304,8 @@ class Starcoder2Attention(nn.Cell):
         Args:
             self: The object instance.
             config (Starcoder2Config): The configuration object containing various model hyperparameters.
-            layer_idx (Optional[int], default=None): The index of the layer. If None, a warning will be logged and it is not recommended to omit this parameter as it may cause errors during the forward call if
+            layer_idx (Optional[int], default=None): The index of the layer. If None, a warning will be logged and
+                it is not recommended to omit this parameter as it may cause errors during the forward call if
                 caching is used.
 
         Returns:
@@ -358,21 +368,26 @@ class Starcoder2Attention(nn.Cell):
 
         Args:
             self (Starcoder2Attention): The instance of the Starcoder2Attention layer.
-            hidden_states (mindspore.Tensor): The input hidden states tensor with shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores with shape (batch_size, 1, sequence_length, key_value_sequence_length).
-            position_ids (Optional[mindspore.Tensor]): An optional tensor to specify the position ids with shape (batch_size, sequence_length).
+            hidden_states (mindspore.Tensor): The input hidden states tensor with shape
+                (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores with
+                shape (batch_size, 1, sequence_length, key_value_sequence_length).
+            position_ids (Optional[mindspore.Tensor]): An optional tensor to specify the position ids with shape
+                (batch_size, sequence_length).
             past_key_value (Optional[Cache]): An optional cache for previous key and value states.
             output_attentions (bool): A flag to indicate whether to return the attention weights.
             use_cache (bool): A flag to indicate whether to use the cache for key and value states.
 
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing
+                the attention output tensor with shape (batch_size, sequence_length, hidden_size),
                 attention weights tensor (optional), and past key value tuple (optional).
 
         Raises:
             ValueError: If the attention weights or attention mask shape does not match the expected shape.
             ValueError: If the output size of `attn_output` does not match the expected shape.
-            ValueError: If the cache structure has changed and the layer index is not initialized for auto-regressive decoding.
+            ValueError: If the cache structure has changed and the layer index is not initialized for
+                auto-regressive decoding.
             '''
         if "padding_mask" in kwargs:
             warnings.warn(
@@ -455,7 +470,8 @@ STARCODER2_ATTENTION_CLASSES = {
 class Starcoder2DecoderLayer(nn.Cell):
 
     """
-    The Starcoder2DecoderLayer class represents a single layer of the Starcoder2 decoder model. This class inherits from nn.Cell and implements the operations required for the decoder layer.
+    The Starcoder2DecoderLayer class represents a single layer of the Starcoder2 decoder model.
+    This class inherits from nn.Cell and implements the operations required for the decoder layer.
 
     Attributes:
         hidden_size (int): The size of the hidden state in the layer.
@@ -466,14 +482,16 @@ class Starcoder2DecoderLayer(nn.Cell):
 
     Methods:
         construct:
-            Applies the operations of the decoder layer to the input hidden states and returns the output along with optional values based on the provided arguments.
+            Applies the operations of the decoder layer to the input hidden states and returns the output along with
+            optional values based on the provided arguments.
 
     Args:
         config (Starcoder2Config): The configuration for the Starcoder2 model.
         layer_idx (int): The index of the layer within the model.
 
     Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optionally, attention weights and/or present key value states.
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optionally,
+            attention weights and/or present key value states.
 
     Raises:
         ValueError: If the input dimensions are incompatible.
@@ -490,7 +508,8 @@ class Starcoder2DecoderLayer(nn.Cell):
 
         Args:
             self: The object itself.
-            config (Starcoder2Config): An instance of the Starcoder2Config class containing the configuration settings for the decoder layer.
+            config (Starcoder2Config): An instance of the Starcoder2Config class containing the configuration settings
+                for the decoder layer.
             layer_idx (int): The index of the decoder layer.
 
         Returns:
@@ -571,15 +590,18 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     """
     This class represents a Starcoder2PreTrainedModel, which is a subclass of PreTrainedModel.
 
-    The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells. The initialization process depends on the type of the cell. If the cell is an instance of
-    nn.Dense, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a bias, the bias
-    is initialized with zeros.
+    The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells.
+    The initialization process depends on the type of the cell. If the cell is an instance of nn.Dense, the weights are
+    initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range`
+    attribute of the configuration. If the cell has a bias, the bias is initialized with zeros.
 
-    If the cell is an instance of nn.Embedding, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the
-    configuration. If the cell has a padding index, the weight corresponding to the padding index is set to 0.
+    If the cell is an instance of nn.Embedding, the weights are initialized using a normal distribution with a mean
+    of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration.
+    If the cell has a padding index, the weight corresponding to the padding index is set to 0.
 
     Note:
-        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense or nn.Embedding.
+        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense
+        or nn.Embedding.
 
     Please refer to the source code for more details on the implementation.
 
@@ -619,16 +641,18 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
         Args:
             self (Starcoder2Model): The current instance of the Starcoder2Model class.
-            config (Starcoder2Config): An instance of Starcoder2Config containing the configuration parameters for the model.
-                >   - config.pad_token_id (int): The index of the padding token in the vocabulary.
-                >   - config.vocab_size (int): The size of the vocabulary.
-                >   - config.hidden_size (int): The size of the hidden layers.
-                >   - config.embedding_dropout (float): The dropout probability for the embedding layer.
-                >   - config.num_hidden_layers (int): The number of hidden layers in the model.
-                >   - config.norm_epsilon (float): The epsilon value for normalization.
+            config (Starcoder2Config):
+                An instance of Starcoder2Config containing the configuration parameters for the model.
+
+                - config.pad_token_id (int): The index of the padding token in the vocabulary.
+                - config.vocab_size (int): The size of the vocabulary.
+                - config.hidden_size (int): The size of the hidden layers.
+                - config.embedding_dropout (float): The dropout probability for the embedding layer.
+                - config.num_hidden_layers (int): The number of hidden layers in the model.
+                - config.norm_epsilon (float): The epsilon value for normalization.
 
         Returns:
-            None. The method initializes the attributes of the Starcoder2Model instance.
+            None.
 
         Raises:
             TypeError: If the config parameter is not an instance of Starcoder2Config.
@@ -658,7 +682,8 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             self: The instance of the Starcoder2Model class.
 
         Returns:
-            None: This method returns the input embeddings as stored in the 'embed_tokens' attribute of the Starcoder2Model instance.
+            None: This method returns the input embeddings as stored in the 'embed_tokens' attribute of the
+                Starcoder2Model instance.
 
         Raises:
             None
@@ -674,10 +699,10 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             value (any): The input embeddings to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = value
 
@@ -698,10 +723,12 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
         Args:
             self (Starcoder2Model): The instance of the Starcoder2Model class.
-            input_ids (mindspore.Tensor, optional): The input tensor containing the indices of input tokens. Defaults to None.
+            input_ids (mindspore.Tensor, optional): The input tensor containing the indices of input tokens.
+                Defaults to None.
             attention_mask (mindspore.Tensor, optional): The attention mask tensor. Defaults to None.
             position_ids (mindspore.Tensor, optional): The position ids tensor. Defaults to None.
-            past_key_values (List[mindspore.Tensor], optional): The list of tensors containing past key values. Defaults to None.
+            past_key_values (List[mindspore.Tensor], optional): The list of tensors containing past key values.
+                Defaults to None.
             inputs_embeds (mindspore.Tensor, optional): The embedded input tensors. Defaults to None.
             use_cache (bool, optional): Flag to indicate whether to use cache. Defaults to None.
             output_attentions (bool, optional): Flag to indicate whether to output attentions. Defaults to None.
@@ -713,7 +740,8 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified, or if neither of them is specified.
-            Warning: If use_cache is set to True and gradient checkpointing is enabled, the use_cache flag will be overridden.
+            Warning: If use_cache is set to True and gradient checkpointing is enabled,
+                the use_cache flag will be overridden.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -828,22 +856,24 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralForCausalLM with MISTRAL->STARCODER2,Mistral-7B-v0.1->starcoder2-7b_16k,Mistral->Starcoder2,mistralai->bigcode
 class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
-    """
-    The Starcoder2ForCausalLM class represents a Starcoder2 model for causal language modeling. It inherits from the Starcoder2PreTrainedModel.
+    r"""
+    The Starcoder2ForCausalLM class represents a Starcoder2 model for causal language modeling.
+    It inherits from the Starcoder2PreTrainedModel.
 
-    This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings, set the decoder, get the decoder, construct the model with various optional inputs, prepare
-    inputs for generation, and reorder the cache.
+    This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings,
+    set the decoder, get the decoder, construct the model with various optional inputs, prepare inputs for generation,
+    and reorder the cache.
 
-    Example usage:
+    Example:
         ```python
         >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
-
+        ...
         >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
         >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
-
+        ...
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
         >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+        ...
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -858,10 +888,11 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: A dictionary containing configuration parameters for the model. It is used to initialize the Starcoder2Model, determine the vocabulary size, and configure the lm_head.
+            config: A dictionary containing configuration parameters for the model.
+                It is used to initialize the Starcoder2Model, determine the vocabulary size, and configure the lm_head.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -896,10 +927,11 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
         Args:
             self (Starcoder2ForCausalLM): The instance of the Starcoder2ForCausalLM class.
-            value: The input embeddings to be set for the model. It should be compatible with the model's embed_tokens attribute.
+            value: The input embeddings to be set for the model. It should be compatible with the model's
+                embed_tokens attribute.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -911,15 +943,19 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Method to retrieve the output embeddings from the Starcoder2ForCausalLM class.
 
         Args:
-            self: Instance of the Starcoder2ForCausalLM class.
-                >   - Type: Starcoder2ForCausalLM
-                >   - Purpose: Represents the current instance of the class.
-                >   - Restrictions: None
+            self:
+                Instance of the Starcoder2ForCausalLM class.
+
+                - Type: Starcoder2ForCausalLM
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: None
 
         Returns:
-            The output embeddings.
-                >   - Type: None
-                >   - Purpose: The method returns the output embeddings.
+            lm_head:
+                The output embeddings.
+
+                - Type: None
+                - Purpose: The method returns the output embeddings.
 
         Raises:
             None
@@ -930,17 +966,19 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         """
         Set the output embeddings for Starcoder2ForCausalLM.
 
-        This method allows the user to set the output embeddings for the Starcoder2ForCausalLM model. The output embeddings are responsible for generating the predicted output sequence.
+        This method allows the user to set the output embeddings for the Starcoder2ForCausalLM model.
+        The output embeddings are responsible for generating the predicted output sequence.
 
         Args:
             self (Starcoder2ForCausalLM): The current instance of the Starcoder2ForCausalLM class.
-            new_embeddings (Any): The new embeddings to set as the output embeddings. This can be of any type, as long as it is compatible with the model architecture.
+            new_embeddings (Any): The new embeddings to set as the output embeddings.
+                This can be of any type, as long as it is compatible with the model architecture.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -953,10 +991,10 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
             decoder: The decoder object to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.model = decoder
 
@@ -968,10 +1006,10 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
             self: The instance of the Starcoder2ForCausalLM class.
 
         Returns:
-            None: This method returns the decoder model associated with the instance.
+            model: This method returns the decoder model associated with the instance.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return self.model
 
@@ -1001,13 +1039,13 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Example:
             ```python
             >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
-
+            ...
             >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
             >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
-
+            ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
             >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
             >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -1069,23 +1107,32 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Args:
             self: An instance of the Starcoder2ForCausalLM class.
             input_ids (torch.Tensor): Tensor of shape (batch_size, sequence_length) containing the input IDs.
-            past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values. If Cache object is provided, the cache_length, past_length, and max_cache_length are
-                extracted. If tuple is provided, cache_length and past_length are extracted from the first element. If None, cache_length and past_length are calculated based on input_ids.
-            attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length) containing the attention mask. If not None and attention_mask.shape[1] is greater than input_ids.shape[1], the
-                input_ids are truncated accordingly. If attention_mask is not None and past_length is less than input_ids.shape[1], the input_ids are sliced accordingly.
-                If max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] is greater than max_cache_length, the attention_mask is truncated accordingly.
-            inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size) containing the input embeddings. If not None and past_key_values is None, the model_inputs
+            past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values.
+                If Cache object is provided, the cache_length, past_length, and max_cache_length are
+                extracted. If tuple is provided, cache_length and past_length are extracted from the first element.
+                If None, cache_length and past_length are calculated based on input_ids.
+            attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length)
+                containing the attention mask. If not None and attention_mask.shape[1] is greater than
+                input_ids.shape[1], the input_ids are truncated accordingly. If attention_mask is not None and
+                past_length is less than input_ids.shape[1], the input_ids are sliced accordingly.
+                If max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] is
+                greater than max_cache_length, the attention_mask is truncated accordingly.
+            inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size)
+                containing the input embeddings. If not None and past_key_values is None, the model_inputs
                 dictionary is updated with 'inputs_embeds' key.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            dict: A dictionary containing the model inputs. The dictionary includes the following keys:
-                >   - 'input_ids': Tensor of shape (batch_size, sequence_length) containing the input IDs.
-                >   - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs. If attention_mask is not None and position_ids is None, the position_ids are calculated based on the
-                    attention_mask.
-                >   - 'past_key_values': Cache object or tuple of tensors containing the past key values.
-                >   - 'use_cache': Boolean indicating whether to use cache or not.
-                >   - 'attention_mask': Tensor of shape (batch_size, sequence_length) containing the attention mask.
+            dict:
+                A dictionary containing the model inputs. The dictionary includes the following keys:
+
+                - 'input_ids': Tensor of shape (batch_size, sequence_length) containing the input IDs.
+                - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs.
+                If attention_mask is not None and position_ids is None, the position_ids are calculated based on the
+                attention_mask.
+                - 'past_key_values': Cache object or tuple of tensors containing the past key values.
+                - 'use_cache': Boolean indicating whether to use cache or not.
+                - 'attention_mask': Tensor of shape (batch_size, sequence_length) containing the attention mask.
 
         Raises:
             None.
@@ -1150,14 +1197,15 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Reorders the cache of past key values based on the given beam index.
 
         Args:
-            past_key_values (tuple): A tuple containing the cache of past key values. Each element in the tuple represents the past key values for a specific layer.
+            past_key_values (tuple): A tuple containing the cache of past key values.
+                Each element in the tuple represents the past key values for a specific layer.
             beam_idx (torch.Tensor): A tensor containing the beam indices for reordering the cache.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1169,13 +1217,17 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
 # Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with Llama->Starcoder2, LLAMA->STARCODER2
 class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
-
     """
-    This class represents a sequence classification model based on Starcoder2 architecture. It inherits functionality from Starcoder2PreTrainedModel.
-    The class includes methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification.
-    The 'construct' method takes various input parameters like input_ids, attention_mask, position_ids, etc., and returns the sequence classifier output.
-    It supports computing loss based on different problem types such as regression, single-label classification, and multi-label classification.
-    The class provides flexibility to handle different problem types and batch sizes, ensuring efficient training and inference for sequence classification tasks.
+    This class represents a sequence classification model based on Starcoder2 architecture.
+    It inherits functionality from Starcoder2PreTrainedModel.
+    The class includes methods for initializing the model, getting and setting input embeddings, and constructing
+    the model for sequence classification.
+    The 'construct' method takes various input parameters like input_ids, attention_mask, position_ids, etc.,
+    and returns the sequence classifier output.
+    It supports computing loss based on different problem types such as regression, single-label classification,
+    and multi-label classification.
+    The class provides flexibility to handle different problem types and batch sizes, ensuring efficient training
+    and inference for sequence classification tasks.
     """
     def __init__(self, config):
         """
@@ -1207,7 +1259,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
             self: An instance of the 'Starcoder2ForSequenceClassification' class.
 
         Returns:
-            None. The method retrieves the input embeddings from the model and does not return any value.
+            None: The method retrieves the input embeddings from the model and does not return any value.
 
         Raises:
             None.
@@ -1221,14 +1273,15 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
 
         Args:
             self (Starcoder2ForSequenceClassification): The instance of the Starcoder2ForSequenceClassification class.
-            value: The input embeddings to be set for the model. It should be compatible with the model's embedding layer.
+            value: The input embeddings to be set for the model.
+                It should be compatible with the model's embedding layer.
 
         Returns:
-            None. This method does not return any value explicitly.
+            None.
 
         Raises:
-            - TypeError: If the value provided is not compatible with the model's embedding layer.
-            - AttributeError: If the model instance does not have the 'embed_tokens' attribute.
+            TypeError: If the value provided is not compatible with the model's embedding layer.
+            AttributeError: If the model instance does not have the 'embed_tokens' attribute.
         """
         self.model.embed_tokens = value
 

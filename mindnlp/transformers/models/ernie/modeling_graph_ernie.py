@@ -463,7 +463,7 @@ class MSErnieSelfOutput(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -530,7 +530,7 @@ class MSErnieAttention(nn.Cell):
             position_embedding_type: (Optional) A string specifying the type of position embedding. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -812,7 +812,7 @@ class MSErnieLayer(nn.Cell):
                 Only applicable if add_cross_attention is True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If add_cross_attention is True and the layer is not used as a decoder model.
@@ -949,7 +949,7 @@ class MSErnieLayer(nn.Cell):
             None: This method does not directly return any value. Instead, it updates the layer output.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -989,7 +989,7 @@ class MSErnieEncoder(nn.Cell):
                 - Other configuration parameters specific to the MSErnieEncoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1028,9 +1028,9 @@ class MSErnieEncoder(nn.Cell):
             output_hidden_states (Optional[bool]): Flag to output hidden states.
 
         Returns:
-        Union[Tuple[mindspore.Tensor], dict]: Depending on the output flags, returns a tuple containing hidden states,
-            next decoder cache, all hidden states, self attentions, and cross attentions. If any of these values are
-            None, they are excluded from the tuple.
+            Union[Tuple[mindspore.Tensor], dict]: Depending on the output flags, returns a tuple containing hidden states,
+                next decoder cache, all hidden states, self attentions, and cross attentions. If any of these values are
+                None, they are excluded from the tuple.
 
         Raises:
             None
@@ -1183,7 +1183,7 @@ class MSErniePredictionHeadTransform(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None. This method initializes the MSErniePredictionHeadTransform class with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the configuration object is not of the expected type.
@@ -1393,10 +1393,10 @@ class MSErnieOnlyNSPHead(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
@@ -1414,7 +1414,7 @@ class MSErnieOnlyNSPHead(nn.Cell):
                 based on the pooled output.
 
         Raises:
-            None: This method does not raise any exceptions.
+            NNone.
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -1580,10 +1580,10 @@ class MSErnieModel(MSErniePreTrainedModel):
             self (MSErnieModel): An instance of the MSErnieModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1597,10 +1597,10 @@ class MSErnieModel(MSErniePreTrainedModel):
             value: The new input embeddings to be set. This should be of type torch.Tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -1949,11 +1949,11 @@ class MSErnieForCausalLM(MSErniePreTrainedModel):
             self: The instance of the MSErnieForCausalLM class.
 
         Returns:
-            None: The method returns the output embeddings of the model which are of type None.
+            decoder: The method returns the output embeddings of the model which are of type None.
                 These embeddings represent the learned representation of the input data.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
 
         """
         return self.cls.predictions.decoder
@@ -1968,7 +1968,7 @@ class MSErnieForCausalLM(MSErniePreTrainedModel):
             new_embeddings (Any): The new embeddings to be set for the output layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2077,6 +2077,7 @@ class MSErnieForCausalLM(MSErniePreTrainedModel):
         Returns:
             dict:
                 A dictionary containing the prepared input tensors.
+
                 - 'input_ids' (torch.Tensor): The modified input tensor.
                 Shape: [batch_size, modified_sequence_length].
                 - 'attention_mask' (torch.Tensor): The attention mask tensor.
@@ -2228,7 +2229,7 @@ class MSErnieForMaskedLM(MSErniePreTrainedModel):
             self: An instance of the MSErnieForMaskedLM class.
 
         Returns:
-            None. The method returns a value of type 'None'.
+            None: The method returns a value of type 'None'.
 
         Raises:
             None.
@@ -2372,20 +2373,20 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
     that sequence B is a continuation of sequence A, while a label of 1 indicates that sequence B is a random sequence.
 
     Example:
-    ```python
-    >>> from transformers import AutoTokenizer, MSErnieForNextSentencePrediction
-    ...
-    >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    >>> model = MSErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    ...
-    >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-    >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-    >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-    ...
-    >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
-    >>> logits = outputs.logits
-    >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
-    ```
+        ```python
+        >>> from transformers import AutoTokenizer, MSErnieForNextSentencePrediction
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        >>> model = MSErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        ...
+        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        ...
+        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+        >>> logits = outputs.logits
+        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+        ```
 
     Note:
         The 'next_sentence_label' argument in the construct method is deprecated and will be removed in a future version.
@@ -2988,7 +2989,6 @@ class MSUIE(MSErniePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ):
         r"""
-
         Args:
             input_ids (Tensor):
                 See :class:`ErnieModel`.

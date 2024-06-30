@@ -204,10 +204,10 @@ class ConvBertTokenizer(PreTrainedTokenizer):
                 This parameter represents the current ConvBertTokenizer object.
         
         Returns:
-            None. The method returns the length of the vocabulary stored in the ConvBertTokenizer object.
+            len: The method returns the length of the vocabulary stored in the ConvBertTokenizer object.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return len(self.vocab)
 
@@ -445,7 +445,7 @@ class BasicTokenizer():
                 Indicates whether to split tokens on punctuation marks. Default is True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -595,7 +595,7 @@ class WordpieceTokenizer():
             max_input_chars_per_word (int, optional): The maximum number of characters allowed for an input word. Defaults to 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

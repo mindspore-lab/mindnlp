@@ -111,14 +111,16 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                    using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                  BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            BPE-dropout.
 
     Attributes:
         sp_model (`SentencePieceProcessor`):
@@ -155,10 +157,11 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             unk_token (str, optional): Token for unknown words (default: '<unk>').
             pad_token (str, optional): Padding token (default: '<pad>').
             mask_token (str, optional): Mask token (default: '<mask>').
-            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePiece model (default: None).
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePiece model
+                (default: None).
 
         Returns:
-            None: This method initializes the XLMRobertaTokenizer instance.
+            None.
 
         Raises:
             TypeError: If mask_token is not a string.
@@ -209,11 +212,13 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             self: The XLMRobertaTokenizer object itself.
 
         Returns:
-            None. The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary. The state includes a copy of the object's attributes stored in '__dict__' with some modifications.
-            The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized model prototype obtained from 'self.sp_model.serialized_model_proto()'.
+            state: The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary.
+                The state includes a copy of the object's attributes stored in '__dict__' with some modifications.
+                The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized
+                model prototype obtained from 'self.sp_model.serialized_model_proto()'.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -231,13 +236,13 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             d (dict): A dictionary containing the state information to be set for the XLMRobertaTokenizer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided 'd' is not a valid dictionary.
-            - AttributeError: If the 'sp_model_kwargs' attribute is not found in the instance.
-            - ValueError: If the 'sp_model_proto' is not valid or cannot be loaded.
-            - Other exceptions: Any other exceptions raised during the execution of the method.
+            TypeError: If the provided 'd' is not a valid dictionary.
+            AttributeError: If the 'sp_model_kwargs' attribute is not found in the instance.
+            ValueError: If the 'sp_model_proto' is not valid or cannot be loaded.
+            Other exceptions: Any other exceptions raised during the execution of the method.
         """
         self.__dict__ = d
 
@@ -255,8 +260,8 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLM-RoBERTa sequence has the following format:
 
-        >   - single sequence: `<s> X </s>`
-        >   - pair of sequences: `<s> A </s></s> B </s>`
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -333,7 +338,8 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             self (XLMRobertaTokenizer): The instance of the XLMRobertaTokenizer class.
 
         Returns:
-            int: The size of the vocabulary used by the tokenizer. This value is calculated by adding the length of the sp_model attribute, the fairseq_offset attribute, and 1.
+            int: The size of the vocabulary used by the tokenizer. This value is calculated by adding the length of
+                the sp_model attribute, the fairseq_offset attribute, and 1.
 
         Raises:
             None.
@@ -373,7 +379,8 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
 
-        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input. It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned
+        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input.
+        It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned
         as a list of strings.
         """
         # TODO check if the t5/llama PR also applies here

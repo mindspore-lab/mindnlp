@@ -127,7 +127,7 @@ class ContextPooler(nn.Cell):
             None: The method does not perform any computation but simply returns the output dimension.
             
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         return self.config.hidden_size
 
@@ -170,7 +170,7 @@ class XSoftmax(nn.Cell):
                 along the last dimension of the input tensor.
         
         Returns:
-            None: The method does not return any value.
+            None.
         
         Raises:
             None.
@@ -254,10 +254,10 @@ class DropoutContext:
             self: The instance of the DropoutContext class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         self.dropout = 0
         self.mask = None
@@ -269,7 +269,8 @@ def get_mask(input, local_context):
     """
     Args:
         input (Tensor): The input tensor for which the dropout mask is generated.
-        local_context (DropoutContext or float): The local context containing information about dropout parameters.
+        local_context (DropoutContext or float):
+            The local context containing information about dropout parameters.
 
             - If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
             - If a float value is provided, it will be used as the dropout rate.
@@ -309,7 +310,7 @@ class XDropout(nn.Cell):
             local_ctx (object): The local context for the XDropout instance.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -328,10 +329,10 @@ class XDropout(nn.Cell):
             inputs (torch.Tensor): The input tensor to be masked and scaled.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         mask, dropout = get_mask(inputs, self.local_ctx)
         self.scale = 1.0 / (1 - dropout)
@@ -366,10 +367,10 @@ class StableDropout(nn.Cell):
             drop_prob (float): The probability of dropping a value during dropout. Must be between 0 and 1 (inclusive).
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.drop_prob = drop_prob
@@ -395,10 +396,10 @@ class StableDropout(nn.Cell):
             self (StableDropout): An instance of the StableDropout class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.count = 0
         self.context_stack = None
@@ -413,7 +414,7 @@ class StableDropout(nn.Cell):
             scale (int, optional): The scaling factor applied to the dropout mask. Defaults to 1.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -432,10 +433,10 @@ class StableDropout(nn.Cell):
                 This parameter is required for accessing the instance attributes and methods.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.context_stack is not None:
             if self.count >= len(self.context_stack):
@@ -496,25 +497,26 @@ class DebertaV2SelfOutput(nn.Cell):
         This method constructs the hidden states by applying a series of operations on the input hidden states and the input tensor.
         
         Args:
-            self: Instance of the DebertaSelfOutput class.
+            self:
+                Instance of the DebertaSelfOutput class.
 
                 - Type: DebertaSelfOutput
                 - Purpose: Represents the current instance of the class.
             
-            hidden_states: Hidden states that need to be processed.
+            hidden_states:
+                Hidden states that need to be processed.
 
                 - Type: tensor
                 - Purpose: Represents the input hidden states that will undergo transformation.
             
-            input_tensor: Input tensor to be added to the processed hidden states.
+            input_tensor:
+                Input tensor to be added to the processed hidden states.
 
                 - Type: tensor
                 - Purpose: Represents the input tensor to be added to the processed hidden states.
         
         Returns:
-            None:
-                - Type: None
-                - Purpose: The method does not return any value.
+            None.
         
         Raises:
             None
@@ -579,7 +581,7 @@ class DebertaV2Attention(nn.Cell):
                 DebertaSelfOutput instances.
         
         Returns:
-            None: This method does not return anything.
+            None.
         
         Raises:
             None.
@@ -671,10 +673,10 @@ class DebertaV2Intermediate(nn.Cell):
                     - If it is an object, it should be a callable that takes a single argument.
         
         Returns:
-            None: The method does not return any value.
+            None.
         
         Raises:
-            None: The method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -707,9 +709,11 @@ class DebertaV2Intermediate(nn.Cell):
             activation function.
         
         Example:
+            ```python
             >>> intermediate_layer = DebertaIntermediate()
             >>> hidden_states = mindspore.Tensor([0.1, 0.2, 0.3])
             >>> output = intermediate_layer.construct(hidden_states)
+            ```
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -754,16 +758,18 @@ class DebertaV2Output(nn.Cell):
         
         Args:
             self: The instance of the DebertaOutput class.
-            config: An instance of the configuration class containing the parameters for the DebertaOutput layer.
+            config:
+                An instance of the configuration class containing the parameters for the DebertaOutput layer.
+
                 - Type: object
                 - Purpose: Specifies the configuration settings for the DebertaOutput layer.
                 - Restrictions: Must be a valid instance of the configuration class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -839,10 +845,10 @@ class DebertaV2Layer(nn.Cell):
                 It is used to customize the behavior of the layer during initialization.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.attention = DebertaV2Attention(config)
@@ -874,7 +880,7 @@ class DebertaV2Layer(nn.Cell):
             output_attentions (bool): Flag indicating whether to output attention matrices. Defaults to False.
         
         Returns:
-            None: This method returns None.
+            None.
         
         Raises:
             ValueError: If the dimensions of the input tensors are incompatible.
@@ -1354,7 +1360,7 @@ class DebertaV2Embeddings(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -1523,7 +1529,7 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
             config (object): The configuration object containing the model configuration parameters.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -1545,10 +1551,10 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
             self (DebertaModel): An instance of the DebertaModel class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1562,7 +1568,7 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
                 It should be of the appropriate type compatible with the model's word_embeddings attribute.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If the new_embeddings parameter is not of the expected type.
@@ -1989,7 +1995,7 @@ class DebertaV2ForQuestionAnswering(DebertaV2PreTrainedModel):
             config: An instance of the configuration class containing the model configuration.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

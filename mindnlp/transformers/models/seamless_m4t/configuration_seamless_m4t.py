@@ -219,13 +219,13 @@ class SeamlessM4TConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import SeamlessM4TModel, SeamlessM4TConfig
-
+        ...
         >>> # Initializing a SeamlessM4T "facebook/hf-seamless-m4t-medium" style configuration
         >>> configuration = SeamlessM4TConfig()
-
+        ...
         >>> # Initializing a model from the "facebook/hf-seamless-m4t-medium" style configuration
         >>> model = SeamlessM4TModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -393,7 +393,7 @@ class SeamlessM4TConfig(PretrainedConfig):
             vocoder_offset (int): The offset value for the vocoder.
 
         Returns:
-            None. This method initializes the SeamlessM4TConfig object with the specified parameters.
+            None.
 
         Raises:
             None.

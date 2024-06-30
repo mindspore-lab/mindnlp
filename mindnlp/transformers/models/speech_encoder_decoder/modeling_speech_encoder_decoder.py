@@ -79,10 +79,12 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
             [`Speech2TextProcessor`] should be used for padding and conversion into a tensor of type
             `mindspore.Tensor`.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
-            >- [What are attention masks?](../glossary#attention-mask)
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
+            [What are attention masks?](../glossary#attention-mask)
         decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
             Indices of decoder input sequence tokens in the vocabulary.
 
@@ -104,7 +106,8 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
             `last_hidden_state` (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`) is a tensor
             of hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the
             decoder.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors 
+            of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
@@ -145,8 +148,8 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
         return_dict (`bool`, *optional*):
             If set to `True`, the model will return a [`~utils.Seq2SeqLMOutput`] instead of a plain tuple.
         kwargs (*optional*): Remaining dictionary of keyword arguments. Keyword arguments come in two flavors:
-            >- Without a prefix which will be input as `**encoder_kwargs` for the encoder forward function.
-            >- With a *decoder_* prefix which will be input as `**decoder_kwargs` for the decoder forward function.
+            - Without a prefix which will be input as `**encoder_kwargs` for the encoder forward function.
+            - With a *decoder_* prefix which will be input as `**decoder_kwargs` for the decoder forward function.
 """
 
 
@@ -297,41 +300,44 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
 
         Params:
             encoder_pretrained_model_name_or_path (`str`, *optional*):
-                >- Information necessary to initiate the encoder. Can be either:
-                >   - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                >   - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                >   - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
-                      this case, `from_tf` should be set to `True` and a configuration object should be provided as
-                      `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
-                      PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
+                Information necessary to initiate the encoder. Can be either:
+
+                - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                - A path to a *directory* containing model weights saved using
+                [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
+                this case, `from_tf` should be set to `True` and a configuration object should be provided as
+                `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
+                PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
 
             decoder_pretrained_model_name_or_path (`str`, *optional*, defaults to `None`):
-                >- Information necessary to initiate the decoder. Can be either:
-                >   - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                >   - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                >   - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
-                      this case, `from_tf` should be set to `True` and a configuration object should be provided as
-                      `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
-                      PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
+                Information necessary to initiate the decoder. Can be either:
+
+                - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                - A path to a *directory* containing model weights saved using
+                [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
+                this case, `from_tf` should be set to `True` and a configuration object should be provided as
+                `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
+                PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
 
             model_args (remaining positional arguments, *optional*):
                 All remaning positional arguments will be passed to the underlying model's `__init__` method.
 
             kwargs (remaining dictionary of keyword arguments, *optional*):
-                >- Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
-                    `output_attentions=True`).
-                >   - To update the encoder configuration, use the prefix *encoder_* for each configuration parameter.
-                >   - To update the decoder configuration, use the prefix *decoder_* for each configuration parameter.
-                >   - To update the parent model configuration, do not use a prefix for each configuration parameter.
+                Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
+                `output_attentions=True`).
+
+                - To update the encoder configuration, use the prefix *encoder_* for each configuration parameter.
+                - To update the decoder configuration, use the prefix *decoder_* for each configuration parameter.
+                - To update the parent model configuration, do not use a prefix for each configuration parameter.
 
                 Behaves differently depending on whether a `config` is provided or automatically loaded.
 
         Example:
             ```python
             >>> from transformers import SpeechEncoderDecoderModel
-
+            ...
             >>> # initialize a wav2vec2bert from a pretrained Wav2Vec2 and a pretrained BERT model. Note that the cross-attention layers will be randomly initialized
             >>> model = SpeechEncoderDecoderModel.from_encoder_decoder_pretrained(
             ...     "facebook/wav2vec2-base-960h", "google-bert/bert-base-uncased"
@@ -451,27 +457,26 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
         Returns:
             `Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import SpeechEncoderDecoderModel, AutoProcessor
             >>> from datasets import load_dataset
             >>> import torch
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
             >>> model = SpeechEncoderDecoderModel.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
-
+            ...
             >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-
+            ...
             >>> input_values = processor(ds[0]["audio"]["array"], return_tensors="pt").input_values
             >>> # Inference: Translate English speech to German
             >>> generated = model.generate(input_values)
             >>> decoded = processor.batch_decode(generated, skip_special_tokens=True)[0]
             >>> decoded
             'Mr. Quilter ist der Apostel der Mittelschicht und wir freuen uns, sein Evangelium willkommen heißen zu können.'
-
             >>> # Training: Train model on English transcription
             >>> labels = processor(text=ds[0]["text"], return_tensors="pt").input_ids
-
+            ...
             >>> loss = model(input_values, labels=labels).loss
             >>> loss.backward()
             ```

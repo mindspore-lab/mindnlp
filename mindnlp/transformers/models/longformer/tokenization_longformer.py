@@ -121,13 +121,14 @@ class LongformerTokenizer(PreTrainedTokenizer):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+
+    Example:
         ```python
         >>> from transformers import LongformerTokenizer
-
+        ...
         >>> tokenizer = LongformerTokenizer.from_pretrained("allenai/longformer-base-4096")
         >>> tokenizer("Hello world")["input_ids"]
         [0, 31414, 232, 2]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [0, 20920, 232, 2]
         ```
@@ -230,7 +231,7 @@ class LongformerTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             FileNotFoundError: If the 'vocab_file' or 'merges_file' cannot be found.
@@ -296,8 +297,10 @@ class LongformerTokenizer(PreTrainedTokenizer):
         Raises:
             None.
 
-        This method calculates and returns the vocabulary size of the LongformerTokenizer. The vocabulary size represents the number of unique tokens in the tokenizer's encoder. The encoder is a component of
-        the LongformerTokenizer that is responsible for encoding input text into numerical representations.
+        This method calculates and returns the vocabulary size of the LongformerTokenizer.
+        The vocabulary size represents the number of unique tokens in the tokenizer's encoder.
+        The encoder is a component of the LongformerTokenizer that is responsible for encoding input text into
+        numerical representations.
 
         Example:
             ```python
@@ -306,8 +309,8 @@ class LongformerTokenizer(PreTrainedTokenizer):
             50000
             ```
 
-        In the above example, the vocab_size() method is called on an instance of the LongformerTokenizer class, resulting in the return value of 50000, which represents the number of unique tokens in the
-        tokenizer's encoder.
+        In the above example, the vocab_size() method is called on an instance of the LongformerTokenizer class,
+        resulting in the return value of 50000, which represents the number of unique tokens in the tokenizer's encoder.
         """
         return len(self.encoder)
 
@@ -322,7 +325,8 @@ class LongformerTokenizer(PreTrainedTokenizer):
             self: The instance of the LongformerTokenizer class.
 
         Returns:
-            vocab (dict): A dictionary containing the vocabulary. It is a combination of the encoder and added_tokens_encoder. The encoder is copied into the vocab dictionary, and then the added_tokens_encoder
+            vocab (dict): A dictionary containing the vocabulary. It is a combination of the encoder and
+            added_tokens_encoder. The encoder is copied into the vocab dictionary, and then the added_tokens_encoder
             is updated into the vocab dictionary.
 
         Raises:
@@ -375,13 +379,15 @@ class LongformerTokenizer(PreTrainedTokenizer):
             Finally, the method converts the encoded token back to a string representation by joining the characters with a
             space delimiter. The resulting encoded token is then stored in the cache for future use.
 
-        Example usage:
-            tokenizer = LongformerTokenizer()
-            encoded_token = tokenizer.bpe('hello')
-            print(encoded_token)  # Output: 'h e l lo'
-
-            encoded_token = tokenizer.bpe('world')
-            print(encoded_token)  # Output: 'w or ld'
+        Example:
+            ```python
+            >>> tokenizer = LongformerTokenizer()
+            >>> encoded_token = tokenizer.bpe('hello')
+            >>> print(encoded_token)  # Output: 'h e l lo'
+            ...
+            >>> encoded_token = tokenizer.bpe('world')
+            >>> print(encoded_token)  # Output: 'w or ld'
+            ```
         """
         if token in self.cache:
             return self.cache[token]
@@ -498,8 +504,8 @@ class LongformerTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A Longformer sequence has the following format:
 
-        >   - single sequence: `<s> X </s>`
-        >   - pair of sequences: `<s> A </s></s> B </s>`
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

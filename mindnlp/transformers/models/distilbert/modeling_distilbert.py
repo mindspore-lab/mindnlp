@@ -104,7 +104,7 @@ def create_sinusoidal_embeddings(n_pos: int, dim: int, out: mindspore.Tensor):
         out (mindspore.Tensor): The output tensor to store the sinusoidal embeddings.
 
     Returns:
-        None: This function does not return a value.
+        None.
 
     Raises:
         None
@@ -255,7 +255,7 @@ class MultiHeadSelfAttention(nn.Cell):
                 attention dropout (attention_dropout).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the number of heads (n_heads) specified in the config does not evenly divide
@@ -422,7 +422,7 @@ class FFN(nn.Cell):
                  - activation (str): The activation function used in the FFN.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
             None.
@@ -488,19 +488,6 @@ class TransformerBlock(nn.Cell):
 
     This class inherits from the nn.Cell class.
 
-    Constructor:
-        __init__(self, config: PretrainedConfig):
-            Initializes a new instance of the TransformerBlock class.
-
-            Parameters:
-
-            - config: PretrainedConfig.
-
-                - The configuration object for the TransformerBlock.
-            - Raises:
-
-                - ValueError: If the dimension of the configuration is not divisible evenly by the number of heads.
-
     Methods:
         construct:
             Constructs the TransformerBlock using the given input tensors and parameters.
@@ -534,7 +521,7 @@ class TransformerBlock(nn.Cell):
                 'n_heads' must be a factor of 'dim' for proper division.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the division of 'dim' by 'n_heads' results in a non-zero remainder,
@@ -565,8 +552,8 @@ class TransformerBlock(nn.Cell):
             attn_mask: mindspore.Tensor(bs, seq_length)
 
         Returns:
-            sa_weights: mindspore.Tensor(bs, n_heads, seq_length, seq_length) The attention weights ffn_output:
-            mindspore.Tensor(bs, seq_length, dim) The output of the transformer block contextualization.
+            sa_weights (mindspore.Tensor(bs, n_heads, seq_length, seq_length)): The attention weights
+            ffn_output (mindspore.Tensor(bs, seq_length, dim)): The output of the transformer block contextualization.
         """
         # Self-Attention
         sa_output = self.attention(
@@ -656,7 +643,7 @@ class Transformer(nn.Cell):
                 This parameter is required for setting up the Transformer instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -789,7 +776,7 @@ class DistilBertModel(DistilBertPreTrainedModel):
                 This parameter is required to configure the model's embeddings and transformer components.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -814,9 +801,11 @@ class DistilBertModel(DistilBertPreTrainedModel):
 
         Arguments:
             new_num_position_embeddings (`int`):
-                The number of new position embedding matrix. If position embeddings are learned, increasing the size
-                will add newly initialized vectors at the end, whereas reducing the size will remove vectors from the
-                end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
+                The number of new position embedding matrix.
+
+                - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
+                whereas reducing the size will remove vectors from the end.
+                - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
                 size will add correct vectors at the end following the position encoding algorithm, whereas reducing
                 the size will remove vectors from the end.
         """
@@ -875,7 +864,7 @@ class DistilBertModel(DistilBertPreTrainedModel):
             new_embeddings (nn.Embedding): The new embeddings to be set for the input.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -929,9 +918,11 @@ class DistilBertModel(DistilBertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a BaseModelOutput instead of a tuple. Default is None.
 
         Returns:
-            Union[BaseModelOutput, Tuple[mindspore.Tensor, ...]]: The output of the DistilBertModel.
-                If `return_dict` is set to True, a BaseModelOutput object is returned.
-                Otherwise, a tuple containing a tensor and optionally, attention weights and hidden states is returned.
+            Union[BaseModelOutput, Tuple[mindspore.Tensor, ...]]:
+                The output of the DistilBertModel.
+
+                - If `return_dict` is set to True, a BaseModelOutput object is returned.
+                - Otherwise, a tuple containing a tensor and optionally, attention weights and hidden states is returned.
 
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are specified simultaneously.
@@ -1011,7 +1002,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
                 It contains the model's architecture and hyperparameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided 'config' parameter is not of type PretrainedConfig.
@@ -1078,10 +1069,10 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
                 It should be an instance of nn.Cell representing the new embeddings to be used.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method under normal operation.
+            None.
         """
         self.vocab_projector = new_embeddings
 
@@ -1183,7 +1174,7 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
                 Must be an instance of PretrainedConfig.
 
         Returns:
-            None: This method initializes the model attributes and does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not an instance of PretrainedConfig.
@@ -1214,9 +1205,11 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
 
         Arguments:
             new_num_position_embeddings (`int`):
-                The number of new position embedding matrix. If position embeddings are learned, increasing the size
-                will add newly initialized vectors at the end, whereas reducing the size will remove vectors from the
-                end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
+                The number of new position embedding matrix.
+
+                - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
+                whereas reducing the size will remove vectors from the end.
+                - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
                 size will add correct vectors at the end following the position encoding algorithm, whereas reducing
                 the size will remove vectors from the end.
         """
@@ -1337,9 +1330,11 @@ class DistilBertForQuestionAnswering(DistilBertPreTrainedModel):
 
         Arguments:
             new_num_position_embeddings (`int`):
-                The number of new position embedding matrix. If position embeddings are learned, increasing the size
-                will add newly initialized vectors at the end, whereas reducing the size will remove vectors from the
-                end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
+                The number of new position embedding matrix.
+
+                - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
+                whereas reducing the size will remove vectors from the end.
+                - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
                 size will add correct vectors at the end following the position encoding algorithm, whereas reducing
                 the size will remove vectors from the end.
         """
@@ -1477,9 +1472,11 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
 
         Arguments:
             new_num_position_embeddings (`int`):
-                The number of new position embedding matrix. If position embeddings are learned, increasing the size
-                will add newly initialized vectors at the end, whereas reducing the size will remove vectors from the
-                end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
+                The number of new position embedding matrix.
+
+                - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
+                whereas reducing the size will remove vectors from the end.
+                - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the
                 size will add correct vectors at the end following the position encoding algorithm, whereas reducing
                 the size will remove vectors from the end.
         """
@@ -1551,13 +1548,14 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
             Resizes position embeddings of the model if `new_num_position_embeddings != config.max_position_embeddings`.
 
             Args:
-                - new_num_position_embeddings (`int`): The number of new position embeddings.
 
-                    - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
-                    whereas reducing the size will remove vectors from the end.
-                    - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the size
-                    will add correct vectors at the end following the position encoding algorithm, whereas reducing the size
-                    will remove vectors from the end.
+            - new_num_position_embeddings (`int`): The number of new position embeddings.
+
+                - If position embeddings are learned, increasing the size will add newly initialized vectors at the end,
+                whereas reducing the size will remove vectors from the end.
+                - If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the size
+                will add correct vectors at the end following the position encoding algorithm, whereas reducing the size
+                will remove vectors from the end.
 
         construct:
             This method is used to compute the outputs of the model for multiple choice tasks.
@@ -1582,17 +1580,18 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
             - return_dict (Optional[bool]): Whether to return a `MultipleChoiceModelOutput` instead of a tuple.
 
             Returns:
-                If ``return_dict=True``, a :class:`~transformers.MultipleChoiceModelOutput` containing various elements
-                depending on the configuration (e.g., ``loss``, ``logits``, ``hidden_states``, ``attentions``),
-                otherwise a tuple of objects as follows:
 
-                - **logits** (:obj:`mindspore.Tensor` of shape `(batch_size, num_choices)`): The logits for each choice.
-                - **hidden_states** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_hidden_states=True``
-                is passed or when ``config.output_hidden_states=True``): Tuple of :obj:`mindspore.Tensor` of shape
-                `(batch_size, sequence_length, hidden_size)`.
-                - **attentions** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_attentions=True``
-                is passed or when ``config.output_attentions=True``): Tuple of :obj:`mindspore.Tensor` of shape
-                `(batch_size, num_heads, sequence_length, sequence_length)`.
+            If ``return_dict=True``, a :class:`~transformers.MultipleChoiceModelOutput` containing various elements
+            depending on the configuration (e.g., ``loss``, ``logits``, ``hidden_states``, ``attentions``),
+            otherwise a tuple of objects as follows:
+
+            - **logits** (:obj:`mindspore.Tensor` of shape `(batch_size, num_choices)`): The logits for each choice.
+            - **hidden_states** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_hidden_states=True``
+            is passed or when ``config.output_hidden_states=True``): Tuple of :obj:`mindspore.Tensor` of shape
+            `(batch_size, sequence_length, hidden_size)`.
+            - **attentions** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_attentions=True``
+            is passed or when ``config.output_attentions=True``): Tuple of :obj:`mindspore.Tensor` of shape
+            `(batch_size, num_heads, sequence_length, sequence_length)`.
 
     Example:
         ```python

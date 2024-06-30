@@ -213,7 +213,7 @@ class BertTokenizer(PreTrainedTokenizer):
             strip_accents (str, optional): Method to strip accents. None by default.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the vocab_file path is invalid or the file does not exist.
@@ -261,7 +261,7 @@ class BertTokenizer(PreTrainedTokenizer):
             self: The instance of the BertTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             This method does not raise any exceptions.
@@ -452,7 +452,7 @@ class BertTokenizer(PreTrainedTokenizer):
         indices are not consecutive, a warning message is logged.
 
         Example:
-            ···python
+            ```python
             >>> tokenizer = BertTokenizer()
             >>> save_directory = '/path/to/save'
             >>> filename_prefix = 'my-vocab'
@@ -521,7 +521,7 @@ class BasicTokenizer():
             do_split_on_punc (bool, optional): Indicates whether to split on punctuation characters. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -672,7 +672,7 @@ class WordpieceTokenizer():
                 Defaults to 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is not a positive integer.

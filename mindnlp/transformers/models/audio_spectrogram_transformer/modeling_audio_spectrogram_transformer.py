@@ -65,7 +65,7 @@ class ASTEmbeddings(nn.Cell):
                 It specifies the hidden size and dropout probability for the embeddings.
                 
         Returns:
-            None: This method initializes the ASTEmbeddings class attributes but does not return any value.
+            None.
         
         Raises:
             None
@@ -237,7 +237,7 @@ class ASTSelfAttention(nn.Cell):
             config (ASTConfig): An object of type 'ASTConfig' representing the configuration settings for the self-attention mechanism.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size specified in the 'config' object is not a multiple of the number of attention heads.
@@ -359,7 +359,7 @@ class ASTSelfOutput(nn.Cell):
                 - Restrictions: Must be an instance of ASTConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -433,7 +433,7 @@ class ASTAttention(nn.Cell):
             components of the ASTAttention instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             No specific exceptions are raised by this method.
@@ -537,13 +537,14 @@ class ASTIntermediate(nn.Cell):
             config (ASTConfig): An object that stores the configuration settings for the ASTIntermediate.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method initializes the ASTIntermediate instance by setting up the necessary attributes and configurations. It takes in the following parameters:
+            This method initializes the ASTIntermediate instance by setting up the necessary attributes and configurations.
+            It takes in the following parameters:
 
             - self: This parameter represents the instance of the class and is automatically passed when calling the method.
             - config (ASTConfig): An object of the ASTConfig class that contains the configuration settings for the ASTIntermediate. It is used to customize the behavior of the instance.
@@ -638,7 +639,7 @@ class ASTOutput(nn.Cell):
                 It must be of type ASTConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None: This method does not raise any exceptions.
@@ -685,7 +686,7 @@ class ASTLayer(nn.Cell):
             config (ASTConfig): An instance of ASTConfig containing configuration parameters for the layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -787,7 +788,7 @@ class ASTEncoder(nn.Cell):
                 It must be of type ASTConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -918,7 +919,7 @@ class ASTModel(ASTPreTrainedModel):
                 t provides necessary settings and hyperparameters for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1049,7 +1050,8 @@ class ASTMLPHead(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (ASTConfig): The configuration object for the ASTMLPHead. It contains the following attributes:
+            config (ASTConfig): The configuration object for the ASTMLPHead.
+                It contains the following attributes:
 
                 - hidden_size (int): The size of the hidden layers.
                 - layer_norm_eps (float): The epsilon value for LayerNorm.
@@ -1107,7 +1109,7 @@ class ASTForAudioClassification(ASTPreTrainedModel):
                 - num_labels (int): The number of labels/classes for audio classification.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

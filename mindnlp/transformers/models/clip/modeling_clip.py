@@ -229,7 +229,7 @@ class CLIPVisionEmbeddings(nn.Cell):
                 - config.num_channels (int): The number of channels in the input image.
 
         Returns:
-            None: This method initializes various attributes and parameters of the CLIPVisionEmbeddings class.
+            None.
 
         Raises:
             None.
@@ -416,7 +416,7 @@ class CLIPAttention(nn.Cell):
             bsz (int): The batch size.
 
         Returns:
-            None. This method only reshapes the input tensor.
+            None.
 
         Raises:
             None.
@@ -607,6 +607,7 @@ class CLIPEncoderLayer(nn.Cell):
                 - causal_attention_mask (mindspore.Tensor): The causal attention mask of size (batch, tgt_len, src_len)
                 used for preventing information flow from future tokens to past tokens.
                 - output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers. Default is False.
+
             Returns:
 
                 - Tuple[mindspore.Tensor]: A tuple containing the encoded hidden states. If output_attentions is True,
@@ -766,9 +767,9 @@ class CLIPEncoder(nn.Cell):
             config (CLIPConfig): The configuration object for the encoder.
                 It specifies the settings for the encoder's behavior.
 
-                    - Type: CLIPConfig
-                    - Purpose: To provide configuration options for the encoder.
-                    - Restrictions: None
+                - Type: CLIPConfig
+                - Purpose: To provide configuration options for the encoder.
+                - Restrictions: None
 
         Returns:
             None.
@@ -799,14 +800,16 @@ class CLIPEncoder(nn.Cell):
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
-                    - 1 for tokens that are **not masked**,
-                    - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Causal mask for the text model. Mask values selected in `[0, 1]`:
 
-                    - 1 for tokens that are **not masked**,
-                    - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -910,6 +913,7 @@ class CLIPTextTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
         """
@@ -1247,7 +1251,7 @@ class CLIPVisionModel(CLIPPreTrainedModel):
                 It must be of type CLIPVisionConfig.
 
         Returns:
-            None. This method initializes the CLIPVisionModel instance with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type CLIPVisionConfig.
@@ -1280,6 +1284,7 @@ class CLIPVisionModel(CLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
 
@@ -1337,9 +1342,11 @@ class CLIPModel(CLIPPreTrainedModel):
                 - text_config (CLIPTextConfig): An instance of the CLIPTextConfig class which holds the configuration parameters for the text model.
 
                     - hidden_size (int): The dimension of the hidden state in the text model.
+
                 - vision_config (CLIPVisionConfig): An instance of the CLIPVisionConfig class which holds the configuration parameters for the vision model.
 
                     - hidden_size (int): The dimension of the hidden state in the vision model.
+
                 - projection_dim (int): The dimension of the projection output.
 
         Returns:
@@ -1434,6 +1441,7 @@ class CLIPModel(CLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> mindspore.Tensor:
         r"""
+
         Returns:
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
                 applying the projection layer to the pooled output of [`CLIPVisionModel`].
@@ -1486,6 +1494,7 @@ class CLIPModel(CLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CLIPOutput]:
         r"""
+
         Returns:
             Union[Tuple, CLIPOutput]
 
@@ -1648,7 +1657,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         Args:
             self (CLIPTextModelWithProjection): The instance of the CLIPTextModelWithProjection class.
             value: The input embeddings to be set for the text model.
-                   This should be a tensor or object that can be assigned to the `token_embedding` attribute of the text model.
+                This should be a tensor or object that can be assigned to the `token_embedding` attribute of the text model.
 
         Returns:
             None: This method modifies the state of the text model by setting the input embeddings.
@@ -1668,6 +1677,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CLIPTextModelOutput]:
         r"""
+
         Returns:
             Union[Tuple, CLIPTextModelOutput]
 
@@ -1756,7 +1766,7 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
                 It contains the necessary parameters for configuring the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.

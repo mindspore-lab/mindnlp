@@ -144,7 +144,7 @@ class ContextPooler(nn.Cell):
             None: The method does not perform any computation but simply returns the output dimension.
 
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         return self.config.hidden_size
 
@@ -187,7 +187,7 @@ class XSoftmax(nn.Cell):
                 along the last dimension of the input tensor.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
             None.
@@ -274,10 +274,10 @@ class DropoutContext:
             self: The instance of the DropoutContext class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         self.dropout = 0
         self.mask = None
@@ -289,7 +289,8 @@ def get_mask(input, local_context):
     """
     Args:
         input (Tensor): The input tensor for which the dropout mask is generated.
-        local_context (DropoutContext or float): The local context containing information about dropout parameters.
+        local_context (DropoutContext or float):
+            The local context containing information about dropout parameters.
 
             - If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
             - If a float value is provided, it will be used as the dropout rate.
@@ -329,7 +330,7 @@ class XDropout(nn.Cell):
             local_ctx (object): The local context for the XDropout instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -348,10 +349,10 @@ class XDropout(nn.Cell):
             inputs (torch.Tensor): The input tensor to be masked and scaled.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         mask, dropout = get_mask(inputs, self.local_ctx)
         self.scale = 1.0 / (1 - dropout)
@@ -386,10 +387,10 @@ class StableDropout(nn.Cell):
             drop_prob (float): The probability of dropping a value during dropout. Must be between 0 and 1 (inclusive).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.drop_prob = drop_prob
@@ -415,10 +416,10 @@ class StableDropout(nn.Cell):
             self (StableDropout): An instance of the StableDropout class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.count = 0
         self.context_stack = None
@@ -433,7 +434,7 @@ class StableDropout(nn.Cell):
             scale (int, optional): The scaling factor applied to the dropout mask. Defaults to 1.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -452,10 +453,10 @@ class StableDropout(nn.Cell):
                 This parameter is required for accessing the instance attributes and methods.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.context_stack is not None:
             if self.count >= len(self.context_stack):
@@ -583,9 +584,7 @@ class DebertaSelfOutput(nn.Cell):
                 - Purpose: Represents the input tensor to be added to the processed hidden states.
 
         Returns:
-            None:
-                - Type: None
-                - Purpose: The method does not return any value.
+            None.
 
         Raises:
             None
@@ -650,7 +649,7 @@ class DebertaAttention(nn.Cell):
                 DebertaSelfOutput instances.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
             None.
@@ -746,10 +745,10 @@ class DebertaIntermediate(nn.Cell):
                     - If it is an object, it should be a callable that takes a single argument.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
-            None. The method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -838,10 +837,10 @@ class DebertaOutput(nn.Cell):
                 - Restrictions: Must be a valid instance of the configuration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -919,10 +918,10 @@ class DebertaLayer(nn.Cell):
                 It is used to customize the behavior of the layer during initialization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.attention = DebertaAttention(config)
@@ -954,7 +953,7 @@ class DebertaLayer(nn.Cell):
             output_attentions (bool): Flag indicating whether to output attention matrices. Defaults to False.
 
         Returns:
-            None: This method returns None.
+            None.
 
         Raises:
             ValueError: If the dimensions of the input tensors are incompatible.
@@ -998,7 +997,7 @@ class DebertaEncoder(nn.Cell):
                     - max_position_embeddings (int): Maximum number of position embeddings.
 
         Returns:
-            None: This method initializes the DebertaEncoder class.
+            None.
 
         Raises:
             None.
@@ -1123,7 +1122,7 @@ class DebertaEncoder(nn.Cell):
                 Defaults to True.
 
         Returns:
-            None: This method does not return any explicit value.
+            None.
 
         Raises:
             ValueError: If the input parameters are invalid or incompatible.
@@ -1225,10 +1224,10 @@ def c2p_dynamic_expand(c2p_pos, query_layer, relative_pos):
             Expected shape is [relative_features].
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
-        None: This function does not raise any exceptions.
+        None.
     """
     return c2p_pos.expand([query_layer.shape[0], query_layer.shape[1], query_layer.shape[2], relative_pos.shape[-1]])
 
@@ -1261,7 +1260,7 @@ def pos_dynamic_expand(pos_index, p2c_att, key_layer):
         key_layer (torch.Tensor): A tensor representing key layer values.
 
     Returns:
-        None: The function returns None.
+        None.
 
     Raises:
         None
@@ -1355,9 +1354,11 @@ class DisentangledSelfAttention(nn.Cell):
             - The last dimension in the returned tensor is determined by the shape of the input tensor.
 
         Example:
+            ```python
             >>> attention = DisentangledSelfAttention()
             >>> input_tensor = torch.randn(32, 10, 512)
             >>> output_tensor = attention.swapaxes_for_scores(input_tensor)
+            ```
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, -1)
         x = x.view(new_x_shape)
@@ -1549,7 +1550,7 @@ class DebertaEmbeddings(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1719,7 +1720,7 @@ class DebertaModel(DebertaPreTrainedModel):
             config (object): The configuration object containing the model configuration parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1741,10 +1742,10 @@ class DebertaModel(DebertaPreTrainedModel):
             self (DebertaModel): An instance of the DebertaModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1758,7 +1759,7 @@ class DebertaModel(DebertaPreTrainedModel):
                 It should be of the appropriate type compatible with the model's word_embeddings attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the new_embeddings parameter is not of the expected type.
@@ -1912,7 +1913,7 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
             config (object): The configuration object containing parameters for the Deberta model.
 
         Returns:
-            None. This method initializes the DebertaForMaskedLM class attributes.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is of an incorrect type.
@@ -1934,10 +1935,10 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
             self (DebertaForMaskedLM): The instance of the DebertaForMaskedLM class.
 
         Returns:
-            None. This method returns the output embeddings obtained from the predictions decoder of the model.
+            decoder: This method returns the output embeddings obtained from the predictions decoder of the model.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -1951,10 +1952,10 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
                 It should be of shape (vocab_size, hidden_size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.cls.predictions.decoder = new_embeddings
 
@@ -2047,7 +2048,7 @@ class DebertaPredictionHeadTransform(nn.Cell):
                 - layer_norm_eps (float): The epsilon value for LayerNorm.
 
         Returns:
-            None: This method initializes the DebertaPredictionHeadTransform object with the specified configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -2204,7 +2205,7 @@ class DebertaOnlyMLMHead(nn.Cell):
             sequence_output: (object) The sequence output from the model for which prediction scores need to be generated.
 
         Returns:
-            None: The method returns None.
+            None.
 
         Raises:
             None.
@@ -2294,10 +2295,10 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
             new_embeddings (torch.nn.Embedding): The new input embeddings to be set for the Deberta model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.deberta.set_input_embeddings(new_embeddings)
 
@@ -2430,12 +2431,10 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
                 Required and must be an instance of DebertaConfig.
 
         Returns:
-            None:
-                This method does not return any value.
+            None.
 
         Raises:
-            None:
-                This method does not raise any exceptions.
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -2519,7 +2518,7 @@ class DebertaForQuestionAnswering(DebertaPreTrainedModel):
             config: An instance of the configuration class containing the model configuration.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

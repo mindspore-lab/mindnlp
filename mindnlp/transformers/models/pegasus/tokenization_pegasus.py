@@ -76,14 +76,16 @@ class PegasusTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                        using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                    BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+                - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
@@ -113,14 +115,15 @@ class PegasusTokenizer(PreTrainedTokenizer):
             mask_token_sent (str, optional): Token representing masked tokens at sentence level. Default is '<mask_1>'.
             additional_special_tokens (List[str], optional): List of additional special tokens. Default is None.
             offset (int): Offset value for special tokens.
-            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePieceProcessor. Default is None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePieceProcessor.
+                Default is None.
 
         Returns:
             None
 
         Raises:
-            - TypeError: If additional_special_tokens is not a list.
-            - ValueError: If additional_special_tokens contain an incorrectly shifted list of unknown tokens.
+            TypeError: If additional_special_tokens is not a list.
+            ValueError: If additional_special_tokens contain an incorrectly shifted list of unknown tokens.
         """
         self.offset = offset
         if additional_special_tokens is not None:
@@ -208,13 +211,16 @@ class PegasusTokenizer(PreTrainedTokenizer):
             self: An instance of the PegasusTokenizer class.
 
         Returns:
-            A dictionary containing the vocabulary of the tokenizer, where the keys are strings representing tokens and the values are integers representing their corresponding ids.
+            dict:
+                A dictionary containing the vocabulary of the tokenizer, where the keys are strings representing tokens
+                and the values are integers representing their corresponding ids.
 
         Raises:
             None.
 
         Note:
-            The vocabulary includes both the base tokenizer's vocabulary and any additional tokens that have been added using the `add_tokens` method.
+            The vocabulary includes both the base tokenizer's vocabulary and any additional tokens that
+            have been added using the `add_tokens` method.
 
         Example:
             ```python
@@ -250,18 +256,22 @@ class PegasusTokenizer(PreTrainedTokenizer):
 
     def __setstate__(self, d):
         """
-        This method __setstate__ is defined within the class PegasusTokenizer and is used to set the internal state of the tokenizer object based on the provided dictionary 'd'.
+        This method __setstate__ is defined within the class PegasusTokenizer and is used to set the internal state
+        of the tokenizer object based on the provided dictionary 'd'.
 
         Args:
             self (PegasusTokenizer): The instance of the PegasusTokenizer class on which this method is called.
-            d (dict): A dictionary containing the state information to be set on the tokenizer object. This dictionary is expected to hold the necessary data for setting the state of the tokenizer.
+            d (dict): A dictionary containing the state information to be set on the tokenizer object.
+                This dictionary is expected to hold the necessary data for setting the state of the tokenizer.
 
         Returns:
-            None: This method does not return any value explicitly. It updates the internal state of the PegasusTokenizer object based on the provided dictionary 'd'.
+            None: This method does not return any value explicitly. It updates the internal state of the
+                PegasusTokenizer object based on the provided dictionary 'd'.
 
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions that could occur during the execution of this method may include any exceptions raised by the
-            SentencePieceProcessor class methods like Load, if there are issues with loading the vocabulary file specified in the state information.
+            None: However, potential exceptions that could occur during the execution of this method may include any
+                exceptions raised by the SentencePieceProcessor class methods like Load, if there are issues with
+                loading the vocabulary file specified in the state information.
         """
         self.__dict__ = d
 
@@ -308,17 +318,18 @@ class PegasusTokenizer(PreTrainedTokenizer):
 
     def _special_token_mask(self, seq):
         """
-        This method is defined in the 'PegasusTokenizer' class and is named '_special_token_mask'. It takes two parameters: self and seq.
+        This method is defined in the 'PegasusTokenizer' class and is named '_special_token_mask'.
+        It takes two parameters: self and seq.
 
         Args:
             self: An instance of the 'PegasusTokenizer' class.
             seq (list): A list of integers representing a sequence of tokens.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         all_special_ids = set(self.all_special_ids)  # call it once instead of inside list comp
         all_special_ids.remove(self.unk_token_id)  # <unk> is only sometimes special
@@ -341,8 +352,8 @@ class PegasusTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequences for sequence classification tasks by concatenating
         and adding special tokens. A PEGASUS sequence has the following format, where `X` represents the sequence:
 
-        >   - single sequence: `X </s>`
-        >   - pair of sequences: `A B </s>` (not intended use)
+        - single sequence: `X </s>`
+        - pair of sequences: `A B </s>` (not intended use)
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.

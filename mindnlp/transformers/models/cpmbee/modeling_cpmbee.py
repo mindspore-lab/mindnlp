@@ -84,8 +84,10 @@ class CpmBeeLinear(nn.Dense):
 
     def construct(self, x: mindspore.Tensor):
         """
+
         Args:
             x (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`): The input of linear layer
+
         Returns:
             `mindspore.Tensor` of shape `(batch, seq_len, dim_out)`: The output of the linear transform y.
         """
@@ -112,7 +114,7 @@ class CpmBeeLayerNorm(nn.Cell):
                 - config.ms_dtype (str): The data type for the weight parameter.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -313,10 +315,11 @@ class CpmBeeSelfAttentionBlock(nn.Cell):
 
         Args:
             self: The CpmBeeSelfAttentionBlock instance itself.
-            config (CpmBeeConfig): An instance of CpmBeeConfig containing configuration parameters for the self-attention block.
+            config (CpmBeeConfig): An instance of CpmBeeConfig containing configuration parameters for the
+                self-attention block.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -562,10 +565,10 @@ class CpmBeeTransformerBlock(nn.Cell):
             mask_ffn (bool, optional): A boolean indicating whether to mask feed-forward network. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         super().__init__()
         self.mask_att = mask_att
@@ -650,6 +653,7 @@ class CpmBeeEncoder(nn.Cell):
             - output_hidden_states (bool, optional): Indicates whether to return hidden states of all layers.
             - past_key_values (Tuple[mindspore.Tensor, mindspore.Tensor], optional): Cached past key and value projection states.
             - use_cache (bool, optional): If True, past key and value states are returned for speeding up decoding.
+
             Returns:
 
             - mindspore.Tensor: Processed hidden states after passing through all encoder layers.
@@ -668,7 +672,7 @@ class CpmBeeEncoder(nn.Cell):
                 The config parameter must be of type CpmBeeConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AssertionError: If the length of config.mask_modules does not equal the number of hidden layers specified in config.
@@ -790,10 +794,10 @@ class CpmBeeBucketPositionBias(nn.Cell):
                 - ms_dtype: The dtype for the position bias parameter.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
 
@@ -944,7 +948,7 @@ class CpmBeeOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config object is not of the expected type.
@@ -1001,7 +1005,7 @@ class CpmBeeRotaryEmbedding(nn.Cell):
                 - Restrictions: Must be a valid instance of the CpmBeeConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1059,7 +1063,7 @@ class CpmBeeEmbeddingExt(nn.Embedding):
                 - ms_dtype: The data type for model parameters.
 
         Returns:
-            None: This method initializes the CpmBeeEmbeddingExt object with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -1088,10 +1092,10 @@ class CpmBeeEmbeddingExt(nn.Embedding):
                 - Purpose: Represent the sub-IDs for modifying the embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         embeds = super().construct(ids) / math.sqrt(self.dim_model)
         return self.rotary_emb(embeds, ids_sub)
@@ -1108,7 +1112,7 @@ class CpmBeeEmbeddingExt(nn.Embedding):
 
         Returns:
             mindspore.Tensor or None: The projected tensor 'x' after applying the dense layer operation.
-            If 'ext_table' is provided and has a non-zero shape, the concatenated tensor is returned.
+                If 'ext_table' is provided and has a non-zero shape, the concatenated tensor is returned.
 
         Raises:
             None
@@ -1209,10 +1213,10 @@ class CpmBeeModel(CpmBeePreTrainedModel):
                 It is used to access the input embeddings for the model.
 
         Returns:
-            None. The method returns the input embedding associated with the CpmBeeModel instance.
+            input_embedding: The method returns the input embedding associated with the CpmBeeModel instance.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.input_embedding
 
@@ -1225,10 +1229,10 @@ class CpmBeeModel(CpmBeePreTrainedModel):
                 It can be of any type and should contain the necessary information for input embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         self.input_embedding = embeddings
 
@@ -1251,50 +1255,51 @@ class CpmBeeModel(CpmBeePreTrainedModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        """Constructs the CpmBeeModel.
+        """
+        Constructs the CpmBeeModel.
 
-            Args:
-                self: The object itself.
-                input_ids (mindspore.Tensor): The input tensor of shape (batch, seq_length) containing the input IDs.
-                input_id_sub (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Defaults to None.
-                length (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch,) containing the length of the input sequences.
-                    Defaults to None.
-                context (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the context. Defaults to None.
-                sample_ids (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the sample IDs. Defaults to None.
-                num_segments (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the number of segments.
-                    Defaults to None.
-                segment (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the segments. Defaults to None.
-                segment_rel_offset (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the segment relative offset.
-                    Defaults to None.
-                segment_rel (Optional[mindspore.Tensor], optional):
-                    The optional input tensor of shape (batch, seq_length) containing the segment relative.
-                    Defaults to None.
-                span (Optional[Dict], optional):
-                    The optional input dictionary containing span information. Defaults to None.
-                output_attentions (Optional[bool], optional):
-                    The optional boolean flag indicating whether to output attentions. Defaults to None.
-                output_hidden_states (Optional[bool], optional):
-                    The optional boolean flag indicating whether to output hidden states. Defaults to None.
-                past_key_values (Optional[List], optional):
-                    The optional list containing past key values. Defaults to None.
-                use_cache (Optional[bool], optional):
-                    The optional boolean flag indicating whether to use cache. Defaults to None.
-                return_dict (Optional[bool], optional):
-                    The optional boolean flag indicating whether to return a dictionary. Defaults to None.
+        Args:
+            self: The object itself.
+            input_ids (mindspore.Tensor): The input tensor of shape (batch, seq_length) containing the input IDs.
+            input_id_sub (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Defaults to None.
+            length (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch,) containing the length of the input sequences.
+                Defaults to None.
+            context (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the context. Defaults to None.
+            sample_ids (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the sample IDs. Defaults to None.
+            num_segments (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the number of segments.
+                Defaults to None.
+            segment (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segments. Defaults to None.
+            segment_rel_offset (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative offset.
+                Defaults to None.
+            segment_rel (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative.
+                Defaults to None.
+            span (Optional[Dict], optional):
+                The optional input dictionary containing span information. Defaults to None.
+            output_attentions (Optional[bool], optional):
+                The optional boolean flag indicating whether to output attentions. Defaults to None.
+            output_hidden_states (Optional[bool], optional):
+                The optional boolean flag indicating whether to output hidden states. Defaults to None.
+            past_key_values (Optional[List], optional):
+                The optional list containing past key values. Defaults to None.
+            use_cache (Optional[bool], optional):
+                The optional boolean flag indicating whether to use cache. Defaults to None.
+            return_dict (Optional[bool], optional):
+                The optional boolean flag indicating whether to return a dictionary. Defaults to None.
 
-            Returns:
-                None
+        Returns:
+            None
 
-            Raises:
-                None
-            """
+        Raises:
+            None
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1639,7 +1644,7 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
             **model_kwargs: Additional model-specific keyword arguments.
 
         Returns:
-            None: This method initializes the CpmBeeBeamSearchScorer object.
+            None.
 
         Raises:
             ValueError: If the provided batch size, num_beams, num_beam_groups, or max_length is not a positive integer.
@@ -2250,10 +2255,10 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             self (CpmBeeForCausalLM): The instance of the CpmBeeForCausalLM class.
 
         Returns:
-            None: This method returns the input embeddings, which are of type None.
+            input_embedding: This method returns the input embeddings, which are of type None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.cpmbee.input_embedding
 
@@ -2284,7 +2289,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 

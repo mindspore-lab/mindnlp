@@ -155,7 +155,7 @@ class MarianAttention(nn.Cell):
             bsz (int): The batch size. It should be a positive integer.
         
         Returns:
-            None: This method does not return any value explicitly.
+            None.
         
         Raises:
             None
@@ -542,14 +542,17 @@ class MarianEncoder(MarianPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             head_mask (`torch.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
             inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -709,31 +712,35 @@ class MarianDecoder(MarianPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+               - 1 for tokens that are **not masked**,
+               - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`torch.FloatTensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
             encoder_attention_mask (`torch.LongTensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
-                >- Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
-                    selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
-                    cross-attention on hidden heads. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
+                cross-attention on hidden heads. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -993,16 +1000,17 @@ class MarianModel(MarianPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Seq2SeqModelOutput:
         r"""
+
         Returns:
             `Seq2SeqModelOutput`
 
         Example:
             ```python
             >>> from transformers import AutoTokenizer, MarianModel
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
             >>> model = MarianModel.from_pretrained("Helsinki-NLP/opus-mt-en-de")
-
+            ...
             >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
             >>> decoder_inputs = tokenizer(
             ...     "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
@@ -1010,7 +1018,7 @@ class MarianModel(MarianPreTrainedModel):
             ...     add_special_tokens=False,
             ... )
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
-
+            ...
             >>> last_hidden_states = outputs.last_hidden_state
             >>> list(last_hidden_states.shape)
             [1, 26, 512]

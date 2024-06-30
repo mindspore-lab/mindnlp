@@ -71,7 +71,7 @@ class GPTPanguConfig(PretrainedConfig):
             eos_token_id (int, optional): The end of sequence token id. Defaults to 9.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

@@ -87,12 +87,12 @@ def _align_output_features_output_indices(
 
     The logic is as follows:
 
-        - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
-        `out_indices`.
-        - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
-        `out_features`.
-        - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
-        - `out_indices` and `out_features` set: input `out_indices` and `out_features` are returned.
+    - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
+    `out_indices`.
+    - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
+    `out_features`.
+    - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
+    - `out_indices` and `out_features` set: input `out_indices` and `out_features` are returned.
 
     Args:
         out_features (`List[str]`): The names of the features for the backbone to output.
@@ -119,12 +119,12 @@ def get_aligned_output_features_output_indices(
 
     The logic is as follows:
 
-        - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
-        `out_indices`.
-        - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
-        `out_features`.
-        - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
-        - `out_indices` and `out_features` set: they are verified to be aligned.
+    - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
+    `out_indices`.
+    - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
+    `out_features`.
+    - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
+    - `out_indices` and `out_features` set: they are verified to be aligned.
 
     Args:
         out_features (`List[str]`): The names of the features for the backbone to output.
@@ -142,9 +142,10 @@ def get_aligned_output_features_output_indices(
 
 
 class BackboneMixin:
-
-    r"""The `BackboneMixin` class represents a mixin for initializing backbone models used in computer vision and natural language processing tasks. It provides methods for initializing the backbone, setting
-output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
+    r"""
+    The `BackboneMixin` class represents a mixin for initializing backbone models used in computer vision and
+    natural language processing tasks. It provides methods for initializing the backbone, setting
+    output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
 
     Attributes:
         stage_names: A list of stage names in the backbone model.
@@ -155,12 +156,12 @@ output features and indices, accessing feature channels, and serializing the ins
         channels: A list of the number of channels for each output feature.
 
     Methods:
-        _init_timm_backbone(config): Initialize the backbone model from the 'timm' library.
-        _init_transformers_backbone(config): Initialize the backbone model for transformers.
-        _init_backbone(config): Initialize the backbone based on the specified type (MINDCV or MINDNLP).
-        forward_with_filtered_kwargs(*args, **kwargs): Forward method with filtered keyword arguments.
-        forward(pixel_values, output_hidden_states, output_attentions, return_dict): Forward method for processing input data.
-        to_dict(): Serialize the instance to a Python dictionary, including the 'out_features' and 'out_indices' attributes.
+        _init_timm_backbone: Initialize the backbone model from the 'timm' library.
+        _init_transformers_backbone: Initialize the backbone model for transformers.
+        _init_backbone: Initialize the backbone based on the specified type (MINDCV or MINDNLP).
+        forward_with_filtered_kwargs: Forward method with filtered keyword arguments.
+        forward: Forward method for processing input data.
+        to_dict: Serialize the instance to a Python dictionary, including the 'out_features' and 'out_indices' attributes.
 
     Raises:
         ValueError: If the backbone type is not supported.
@@ -197,17 +198,18 @@ output features and indices, accessing feature channels, and serializing the ins
 
         Args:
             self (BackboneMixin): The instance of the BackboneMixin class.
-            config (object): The configuration object containing the following attributes:
+            config (object):
+                The configuration object containing the following attributes:
 
                 - stage_names (list): A list of stage names for the transformers backbone.
                 - out_features (list, optional): A list of output features. Defaults to None.
                 - out_indices (list, optional): A list of output indices. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         stage_names = getattr(config, "stage_names")
         out_features = getattr(config, "out_features", None)
@@ -272,7 +274,8 @@ output features and indices, accessing feature channels, and serializing the ins
                 It represents the current instance of the BackboneMixin.
 
         Returns:
-            None: This method returns the output indices stored in the '_out_indices' attribute of the BackboneMixin instance.
+            None: This method returns the output indices stored in the '_out_indices' attribute of the
+                BackboneMixin instance.
 
         Raises:
             None.
@@ -297,7 +300,8 @@ output features and indices, accessing feature channels, and serializing the ins
             self (BackboneMixin): The instance of the class.
 
         Returns:
-            dict: A dictionary where the keys represent the stages in the backbone and the values represent the number of feature channels for each stage.
+            dict: A dictionary where the keys represent the stages in the backbone and the values represent the
+                number of feature channels for each stage.
 
         Raises:
             None.
@@ -333,16 +337,17 @@ output features and indices, accessing feature channels, and serializing the ins
         """
         Forward with Filtered Kwargs
         
-        This method is defined in the 'BackboneMixin' class and is used to invoke the 'forward' method while filtering the keyword arguments based on the parameters defined in the 'forward' method's signature.
+        This method is defined in the 'BackboneMixin' class and is used to invoke the 'forward' method while
+        filtering the keyword arguments based on the parameters defined in the 'forward' method's signature.
         
         Args:
             self: An instance of the 'BackboneMixin' class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         signature = dict(inspect.signature(self.forward).parameters)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in signature}
@@ -356,17 +361,20 @@ output features and indices, accessing feature channels, and serializing the ins
         return_dict: Optional[bool] = None,
     ):
         r"""
-        This method, named 'forward', is defined in the class 'BackboneMixin' and is responsible for performing a forward pass through the network.
+        This method, named 'forward', is defined in the class 'BackboneMixin' and is responsible for performing a
+        forward pass through the network.
         
         Args:
             self: The instance of the class.
             pixel_values: A tensor containing the input pixel values.
-            output_hidden_states: (Optional) A boolean flag indicating whether to output the hidden states. Defaults to None.
-            output_attentions: (Optional) A boolean flag indicating whether to output the attentions. Defaults to None.
+            output_hidden_states: (Optional) A boolean flag indicating whether to output the hidden states.
+                Defaults to None.
+            output_attentions: (Optional) A boolean flag indicating whether to output the attentions.
+                Defaults to None.
             return_dict: (Optional) A boolean flag indicating whether to return a dictionary. Defaults to None.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             NotImplementedError: If the method is not implemented by the derived class.
@@ -395,13 +403,14 @@ class BackboneConfigMixin:
         
         Args:
             self: object - The instance of the class.
-                The 'self' parameter refers to the instance of the class itself. It is used to access and modify class attributes and methods.
+                The 'self' parameter refers to the instance of the class itself.
+                It is used to access and modify class attributes and methods.
         
         Returns:
-            None: The method returns the value of the '_out_features' attribute of the class instance.
+            `_out_features`: The method returns the value of the '_out_features' attribute of the class instance.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self._out_features
 
@@ -424,8 +433,7 @@ class BackboneConfigMixin:
                 The instance of the BackboneConfigMixin class.
         
         Returns:
-            None.
-                This method returns the '_out_indices' attribute of the instance.
+            `_out_indices`: This method returns the '_out_indices' attribute of the instance.
         
         Raises:
             None.

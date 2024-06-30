@@ -1811,26 +1811,31 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
     It is recommended to use `AutoModelForCausalLM` for causal language models, `AutoModelForMaskedLM`
     for masked language models, and `AutoModelForSeq2SeqLM` for encoder-decoder models instead.
 
-    Class: AutoModelWithLMHead
+    Inherits from: `_AutoModelWithLMHead`
 
-    Inherits from: _AutoModelWithLMHead
+    Methods:
+        from_config:
 
-    Class Methods:
-        >1. from_config(cls, config)
-        >   - This method is used to create an instance of the class from a configuration object.
-        >   - Parameters:
-        >       - config: The configuration object used to initialize the class instance.
-        >   - Returns:
-        >       - An instance of the class.
+           - This method is used to create an instance of the class from a configuration object.
+           - Parameters:
 
-        >2. from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs)
-        >   - This method is used to create an instance of the class from a pretrained model.
-        >   - Parameters:
-        >       - pretrained_model_name_or_path: The name or path of the pretrained model.
-        >       - *model_args: Additional model-specific arguments.
-        >       - **kwargs: Additional keyword arguments.
-        >   - Returns:
-        >       - An instance of the class.
+               - config: The configuration object used to initialize the class instance.
+           - Returns:
+
+               - An instance of the class.
+
+        from_pretrained:
+
+           - This method is used to create an instance of the class from a pretrained model.
+           - Parameters:
+
+               - pretrained_model_name_or_path: The name or path of the pretrained model.
+               - *model_args: Additional model-specific arguments.
+               - **kwargs: Additional keyword arguments.
+
+           - Returns:
+
+               - An instance of the class.
 
     Note:
         This class is deprecated and should not be used in new implementations.
@@ -1846,7 +1851,7 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
             config (object): The configuration object used to create the instance. It contains the necessary information to initialize the model.
 
         Returns:
-            None: This method does not return any value explicitly as it initializes an instance of the class.
+            None.
 
         Raises:
             FutureWarning: If the 'AutoModelWithLMHead' class is used, a warning is issued to inform the user

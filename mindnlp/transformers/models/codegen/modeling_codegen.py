@@ -154,7 +154,7 @@ class CodeGenAttention(nn.Cell):
             config: A configuration object that contains various parameters for the attention mechanism.
 
         Returns:
-            None. This method only initializes the instance and does not return any value.
+            None.
 
         Raises:
             ValueError: If the `embed_dim` is not divisible by `num_attention_heads`.
@@ -198,7 +198,7 @@ class CodeGenAttention(nn.Cell):
 
         Returns:
             reshaped (Tensor): The reshaped tensor after splitting the input tensor into multiple heads.
-            It has a shape of (batch_size, seq_len, n_head // mp_num, dim_head).
+                It has a shape of (batch_size, seq_len, n_head // mp_num, dim_head).
 
         Raises:
             None.
@@ -504,7 +504,7 @@ class CodeGenBlock(nn.Cell):
 
             Args:
 
-                - config: A configuration object containing the necessary parameters for the block initialization.
+            - config: A configuration object containing the necessary parameters for the block initialization.
 
         construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
             Constructs the block by performing attention mechanism, feed-forward computation, and residual addition.
@@ -530,7 +530,9 @@ class CodeGenBlock(nn.Cell):
 
         Args:
             self: The instance of the CodeGenBlock class.
-            config: A configuration object containing parameters for the block.
+            config:
+                A configuration object containing parameters for the block.
+
                 - Type: object
                 - Purpose: The configuration object to customize the block's behavior.
                 - Restrictions: None
@@ -572,7 +574,7 @@ class CodeGenBlock(nn.Cell):
 
         Returns:
             Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-            Depending on the use_cache flag, returns the processed hidden states and optionally the intermediate outputs.
+                Depending on the use_cache flag, returns the processed hidden states and optionally the intermediate outputs.
 
         Raises:
             None
@@ -719,7 +721,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
             None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.wte = new_embeddings
 
@@ -896,14 +898,12 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         lm_head (nn.Dense): The dense layer for predicting the next token in the language modeling task.
 
     Methods:
-        __init__(self, config): Initializes the CodeGenForCausalLM instance.
-        get_output_embeddings(self): Returns the output embeddings of the LM head.
-        set_output_embeddings(self, new_embeddings): Sets the output embeddings of the LM head.
-        prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs): Prepares the input tensors for generation.
-        construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None, position_ids=None,
-            head_mask=None, inputs_embeds=None, labels=None, use_cache=None, output_attentions=None,
-            output_hidden_states=None, return_dict=None): Constructs the output of the model for a given set of inputs.
-        _reorder_cache(past_key_values, beam_idx): Reorders the cache of past key values for beam search or beam sampling.
+        __init__: Initializes the CodeGenForCausalLM instance.
+        get_output_embeddings: Returns the output embeddings of the LM head.
+        set_output_embeddings: Sets the output embeddings of the LM head.
+        prepare_inputs_for_generation: Prepares the input tensors for generation.
+        construct: Constructs the output of the model for a given set of inputs.
+        _reorder_cache: Reorders the cache of past key values for beam search or beam sampling.
 
     """
     _tied_weights_keys = ["lm_head.weight"]
@@ -917,7 +917,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
             config: An object containing configuration parameters for the model.
 
         Returns:
-            None. This method initializes the transformer and lm_head attributes of the instance.
+            None.
 
         Raises:
             This method does not explicitly raise any exceptions.
@@ -937,10 +937,10 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
             self: The instance of the class 'CodeGenForCausalLM' itself.
 
         Returns:
-            None: This method returns the output embeddings represented by 'self.lm_head', which is of type 'None'.
+            lm_head: This method returns the output embeddings represented by 'self.lm_head', which is of type 'None'.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.lm_head
 

@@ -38,8 +38,8 @@ class TextTokenizer:
         Args:
             self: The TextTokenizer object.
             model_path (str): The path to the model file. This file contains the pre-trained sentence piece model.
-                              The model file must be in the SentencePiece format (.model file extension).
-                              This parameter is required to successfully initialize the TextTokenizer object.
+                The model file must be in the SentencePiece format (.model file extension).
+                This parameter is required to successfully initialize the TextTokenizer object.
             
         Returns:
             None.
@@ -62,7 +62,8 @@ class TextTokenizer:
             text (str): The input text to be encoded.
             
         Returns:
-            None: This method does not return any value directly. Instead, it encodes the input text using the SentencePiece tokenizer.
+            None: This method does not return any value directly.
+                Instead, it encodes the input text using the SentencePiece tokenizer.
         
         Raises:
             None.
@@ -94,7 +95,7 @@ class TextTokenizer:
             text (str): The input text to be tokenized.
             
         Returns:
-            None. The method modifies the internal state of the TextTokenizer object.
+            None.
         
         Raises:
             This method does not raise any exceptions.
@@ -129,10 +130,10 @@ class TextTokenizer:
         
         Returns:
             None: This method does not return a value directly but updates the internal state of the TextTokenizer instance
-            by converting the tokens into their corresponding ids.
+                by converting the tokens into their corresponding ids.
         
         Raises:
-            No specific exceptions are raised by this method under normal operation.
+            None.
         """
         return [self.sp.PieceToId(token) for token in tokens]
 
@@ -214,8 +215,7 @@ class SPTokenizer:
                 Determines whether to fallback to byte encoding if character encoding fails. Default is True.
         
         Returns:
-            None:
-                This method does not return any value.
+            None.
 
         Raises:
             AssertionError
@@ -237,10 +237,10 @@ class SPTokenizer:
             self: SPTokenizer object. The instance of the SPTokenizer class.
 
         Returns:
-            None. This method returns the text tokenizer associated with the SPTokenizer instance.
+            text_tokenizer: This method returns the text tokenizer associated with the SPTokenizer instance.
 
         Raises:
-            No explicit exceptions are raised by this method.
+            None.
         """
         return self.text_tokenizer
 
@@ -253,7 +253,7 @@ class SPTokenizer:
             length (int): The length of the blank token to be generated. Must be greater than or equal to 2.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AssertionError: If the specified length is less than 2.
@@ -273,7 +273,7 @@ class SPTokenizer:
             None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return "<|tab|>"
 
@@ -289,7 +289,7 @@ class SPTokenizer:
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.text_tokenizer.num_tokens
 
@@ -302,10 +302,12 @@ class SPTokenizer:
             self (SPTokenizer): The instance of the SPTokenizer class.
 
         Returns:
-            None. This method does not return a value directly but calculates the total number of tokens based on the sum of image tokens and text tokens.
+            None:
+                This method does not return a value directly but calculates the total number of tokens based on the
+                sum of image tokens and text tokens.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.num_image_tokens + self.num_text_tokens
 
@@ -322,7 +324,7 @@ class SPTokenizer:
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         text = text.replace("\t", SPTokenizer.get_tab_token())
         for i in range(max_len, 1, -1):
@@ -343,7 +345,7 @@ class SPTokenizer:
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if linebreak:
             text = text.replace("\n", "<n>")
@@ -381,7 +383,7 @@ class SPTokenizer:
             None.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         text = text.replace("<n>", "\n")
         text = text.replace(SPTokenizer.get_tab_token(), "\t")
@@ -460,7 +462,8 @@ class SPTokenizer:
                 If x is a string, it represents the token to retrieve.
 
         Returns:
-            None: This method does not return any value directly. The retrieved item is indirectly obtained based on the key provided.
+            None: This method does not return any value directly.
+                The retrieved item is indirectly obtained based on the key provided.
 
         Raises:
             ValueError: Raised when the key provided is neither a string nor an integer, indicating an invalid key type.
@@ -604,7 +607,9 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             inputs (str): The input text to be preprocessed.
 
         Returns:
-            str: The preprocessed text based on the specified configuration.
+            str:
+                The preprocessed text based on the specified configuration.
+
                 - If self.remove_space is True, leading and trailing spaces are removed,
                 and consecutive spaces within the text are replaced with a  single space.
                 - If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.

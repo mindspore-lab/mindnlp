@@ -64,13 +64,13 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
         q_noise: amount of Quantization Noise
         block_size: size of the blocks for subsequent quantization with iPQ
 
-    Remarks:
-        >   - Module weights must have the right sizes wrt the block size
-        >   - Only Linear, Embedding and Conv2d modules are supported for the moment
-        >   - For more detail on how to quantize by blocks with convolutional weights, see "And the Bit Goes Down:
-            Revisiting the Quantization of Neural Networks"
-        >   - We implement the simplest form of noise here as stated in the paper which consists in randomly dropping
-            blocks
+    Notes:
+        - Module weights must have the right sizes wrt the block size
+        - Only Linear, Embedding and Conv2d modules are supported for the moment
+        - For more detail on how to quantize by blocks with convolutional weights, see "And the Bit Goes Down:
+        Revisiting the Quantization of Neural Networks"
+        - We implement the simplest form of noise here as stated in the paper which consists in randomly dropping
+        blocks
     """
     # if no quantization noise, don't register hook
     if q_noise <= 0:
@@ -146,17 +146,18 @@ class LayerDropModuleList(nn.CellList):
     A LayerDrop implementation based on [`mindspore.nn.CellList`]. LayerDrop as described in
     https://arxiv.org/abs/1909.11556.
 
-    We refresh the choice of which layers to drop every time we iterate over the LayerDropModuleList instance. During evaluation we always iterate over all layers.
+    We refresh the choice of which layers to drop every time we iterate over the LayerDropModuleList instance.
+    During evaluation we always iterate over all layers.
 
-    Usage:
+    Example:
         ```python
-        layers = LayerDropList(p_drop=0.5, modules=[layer1, layer2, layer3])
-        for layer in layers:  # this might iterate over layers 1 and 3
-            x = layer(x
-        for layer in layers:  # this might iterate over all layers
-            x = layer(x)
-        for layer in layers:  # this might not iterate over any layers
-            x = layer(x)
+        >>> layers = LayerDropList(p_drop=0.5, modules=[layer1, layer2, layer3])
+        >>> for layer in layers:  # this might iterate over layers 1 and 3
+        >>>     x = layer(x
+        >>> for layer in layers:  # this might iterate over all layers
+        >>>     x = layer(x)
+        >>> for layer in layers:  # this might not iterate over any layers
+        >>>     x = layer(x)
         ```
 
     Args:
@@ -170,30 +171,32 @@ class LayerDropModuleList(nn.CellList):
         Args:
             self (object): The current instance of the LayerDropModuleList class.
             p_drop (float): The probability of dropping a module during training. Must be a float value.
-            modules (Optional[Iterable[nn.Cell]]): An optional iterable of neural network modules to be included in the list.
-                Defaults to None if not provided. Each module should be an instance of nn.Cell.
+            modules (Optional[Iterable[nn.Cell]]): An optional iterable of neural network modules to be included
+                in the list. Defaults to None if not provided. Each module should be an instance of nn.Cell.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None specified.
+            None.
         """
         super().__init__(modules)
         self.p_drop = p_drop
 
     def __iter__(self) -> Iterator[nn.Cell]:
         """
-        This method '__iter__' in the class 'LayerDropModuleList' serves as an iterator to iterate through the cells within the module list.
+        This method '__iter__' in the class 'LayerDropModuleList' serves as an iterator to iterate through the cells
+        within the module list.
 
         Args:
-            self: The instance of the 'LayerDropModuleList' class. It is used to access the attributes and methods of the class.
+            self: The instance of the 'LayerDropModuleList' class.
+                It is used to access the attributes and methods of the class.
 
         Returns:
             An iterator of type 'Iterator[nn.Cell]' that yields the cells within the module list.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         dropout_probs = Tensor(shape=(len(self)), dtype=ms.float32, init=Uniform())
         for i, cell in enumerate(super().__iter__()):
@@ -211,16 +214,18 @@ class GraphormerGraphNodeFeature(nn.Cell):
 
         Args:
             self (GraphormerGraphNodeFeature): The instance of the GraphormerGraphNodeFeature class.
-            config (GraphormerConfig): An instance of GraphormerConfig containing the configuration parameters.
-                >   - num_attention_heads (int): Number of attention heads.
-                >   - num_atoms (int): Number of atoms.
-                >   - num_in_degree (int): Number of in-degrees.
-                >   - num_out_degree (int): Number of out-degrees.
-                >   - hidden_size (int): Size of the hidden layers.
-                >   - pad_token_id (int): Token ID for padding.
+            config (GraphormerConfig):
+                An instance of GraphormerConfig containing the configuration parameters.
+
+                - num_attention_heads (int): Number of attention heads.
+                - num_atoms (int): Number of atoms.
+                - num_in_degree (int): Number of in-degrees.
+                - num_out_degree (int): Number of out-degrees.
+                - hidden_size (int): Size of the hidden layers.
+                - pad_token_id (int): Token ID for padding.
 
         Returns:
-            None. This method initializes the attributes of the GraphormerGraphNodeFeature class.
+            None.
 
         Raises:
             None.
@@ -251,15 +256,15 @@ class GraphormerGraphNodeFeature(nn.Cell):
         Args:
             self: Instance of the GraphormerGraphNodeFeature class.
             input_nodes (Tensor): Tensor containing input node features for each graph.
-                                  Shape: (n_graph, n_nodes, n_features).
+                Shape: (n_graph, n_nodes, n_features).
             in_degree (Tensor): Tensor representing the in-degree of each node in the graph.
-                                Shape: (n_graph, n_nodes).
+                Shape: (n_graph, n_nodes).
             out_degree (Tensor): Tensor representing the out-degree of each node in the graph.
-                                 Shape: (n_graph, n_nodes).
+                Shape: (n_graph, n_nodes).
 
         Returns:
             Tensor: A tensor representing the graph node features after encoding and aggregation.
-                    Shape: (n_graph, n_nodes, feature_dim).
+                Shape: (n_graph, n_nodes, feature_dim).
 
         Raises:
             None
@@ -289,10 +294,11 @@ class GraphormerGraphAttnBias(nn.Cell):
 
         Args:
             self: The instance of the GraphormerGraphAttnBias class.
-            config (GraphormerConfig): An instance of GraphormerConfig class containing the configuration parameters for the Graphormer model.
+            config (GraphormerConfig): An instance of GraphormerConfig class containing the configuration parameters
+                for the Graphormer model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -329,18 +335,21 @@ class GraphormerGraphAttnBias(nn.Cell):
 
         Args:
             self: The instance of the GraphormerGraphAttnBias class.
-            input_nodes (Tensor): The input nodes tensor representing the nodes in the graph. Shape should be (n_graph, n_node, ...).
+            input_nodes (Tensor): The input nodes tensor representing the nodes in the graph.
+                Shape should be (n_graph, n_node, ...).
             attn_bias (Tensor): The attention bias tensor. Should have the same shape as input_nodes.
             spatial_pos (Tensor): The spatial positional encoding tensor. Should have the same shape as input_nodes.
-            input_edges (Tensor): The input edges tensor representing the edges in the graph. Shape should be (n_graph, n_node, n_node, ...).
+            input_edges (Tensor): The input edges tensor representing the edges in the graph.
+                Shape should be (n_graph, n_node, n_node, ...).
             attn_edge_type (Tensor): The attention edge type tensor. Should have the same shape as input_edges.
 
         Returns:
             Tensor: The constructed graph attention bias tensor after performing the specified operations.
 
         Raises:
-            - ValueError: If the input shapes of input_nodes, attn_bias, spatial_pos, input_edges, or attn_edge_type are incompatible for the operations within the method.
-            - RuntimeError: If any runtime error occurs during the execution of the method.
+            ValueError: If the input shapes of input_nodes, attn_bias, spatial_pos, input_edges, or attn_edge_type are
+                incompatible for the operations within the method.
+            RuntimeError: If any runtime error occurs during the execution of the method.
         """
         n_graph, n_node = input_nodes.shape[:2]
         graph_attn_bias = attn_bias.copy()
@@ -402,18 +411,22 @@ class GraphormerMultiheadAttention(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (GraphormerConfig): An object containing the configuration parameters for the GraphormerMultiheadAttention.
-                >   - embedding_dim (int): The dimension of the input embeddings.
-                >   - kdim (int, optional): The dimension of the key embeddings. If not provided, it defaults to embedding_dim.
-                >   - vdim (int, optional): The dimension of the value embeddings. If not provided, it defaults to embedding_dim.
-                >   - num_attention_heads (int): The number of attention heads.
-                >   - attention_dropout (float): The dropout rate for attention weights.
-                >   - bias (bool): Whether to include bias in the linear transformations.
-                >   - q_noise (float): The standard deviation of the noise added to the query, key, and value projections.
-                >   - qn_block_size (int): The block size for quantization noise.
+            config (GraphormerConfig):
+                An object containing the configuration parameters for the GraphormerMultiheadAttention.
+
+                - embedding_dim (int): The dimension of the input embeddings.
+                - kdim (int, optional): The dimension of the key embeddings.
+                If not provided, it defaults to embedding_dim.
+                - vdim (int, optional): The dimension of the value embeddings.
+                If not provided, it defaults to embedding_dim.
+                - num_attention_heads (int): The number of attention heads.
+                - attention_dropout (float): The dropout rate for attention weights.
+                - bias (bool): Whether to include bias in the linear transformations.
+                - q_noise (float): The standard deviation of the noise added to the query, key, and value projections.
+                - qn_block_size (int): The block size for quantization noise.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             AssertionError: If embedding_dim is not divisible by num_attention_heads.
@@ -619,22 +632,24 @@ class GraphormerGraphEncoderLayer(nn.Cell):
 
         Args:
             self (GraphormerGraphEncoderLayer): The instance of the GraphormerGraphEncoderLayer class.
-            config (GraphormerConfig): An instance of GraphormerConfig containing the configuration parameters for the encoder layer.
-                >   - embedding_dim (int): The dimension of the input embeddings.
-                >   - num_attention_heads (int): The number of attention heads in the multi-head attention mechanism.
-                >   - q_noise (bool): A flag indicating whether to use quantization noise.
-                >   - qn_block_size (int): The block size for quantization noise.
-                >   - pre_layernorm (bool): A flag indicating whether to apply LayerNorm before the self-attention module.
-                >   - dropout (float): The dropout probability for the encoder layer.
-                >   - activation_dropout (float): The dropout probability for the activation function.
-                >   - activation_fn (str): The activation function to be used.
-                >   - ffn_embedding_dim (int): The dimension of the feed-forward neural network layer.
+            config (GraphormerConfig):
+                An instance of GraphormerConfig containing the configuration parameters for the encoder layer.
+
+                - embedding_dim (int): The dimension of the input embeddings.
+                - num_attention_heads (int): The number of attention heads in the multi-head attention mechanism.
+                - q_noise (bool): A flag indicating whether to use quantization noise.
+                - qn_block_size (int): The block size for quantization noise.
+                - pre_layernorm (bool): A flag indicating whether to apply LayerNorm before the self-attention module.
+                - dropout (float): The dropout probability for the encoder layer.
+                - activation_dropout (float): The dropout probability for the activation function.
+                - activation_fn (str): The activation function to be used.
+                - ffn_embedding_dim (int): The dimension of the feed-forward neural network layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
 
@@ -733,25 +748,27 @@ class GraphormerGraphEncoder(nn.Cell):
 
         Args:
             self: The object itself.
-            config (GraphormerConfig): An instance of the GraphormerConfig class containing the configuration parameters for the graph encoder.
-                >   - dropout (float): The dropout probability.
-                >   - layerdrop (float): The layer drop probability.
-                >   - embedding_dim (int): The dimension of the input embeddings.
-                >   - apply_graphormer_init (bool): Indicates whether to apply Graphormer initialization.
-                >   - traceable (bool): Indicates whether the model should be traceable.
-                >   - graph_node_feature (GraphormerGraphNodeFeature): An instance of the GraphormerGraphNodeFeature class.
-                >   - graph_attn_bias (GraphormerGraphAttnBias): An instance of the GraphormerGraphAttnBias class.
-                >   - embed_scale (float): The scale factor for the input embeddings.
-                >   - q_noise (float): The quantization noise.
-                >   - qn_block_size (int): The block size for quantization noise.
-                >   - encoder_normalize_before (bool): Indicates whether to normalize before the encoder layers.
-                >   - pre_layernorm (bool): Indicates whether to apply layer normalization before the encoder layers.
-                >   - num_hidden_layers (int): The number of hidden layers in the encoder.
-                >   - freeze_embeddings (bool): Indicates whether to freeze the embeddings.
-                >   - num_trans_layers_to_freeze (int): The number of transformer layers to freeze.
+            config (GraphormerConfig):
+                An instance of the GraphormerConfig class containing the configuration parameters for the graph encoder.
+
+                - dropout (float): The dropout probability.
+                - layerdrop (float): The layer drop probability.
+                - embedding_dim (int): The dimension of the input embeddings.
+                - apply_graphormer_init (bool): Indicates whether to apply Graphormer initialization.
+                - traceable (bool): Indicates whether the model should be traceable.
+                - graph_node_feature (GraphormerGraphNodeFeature): An instance of the GraphormerGraphNodeFeature class.
+                - graph_attn_bias (GraphormerGraphAttnBias): An instance of the GraphormerGraphAttnBias class.
+                - embed_scale (float): The scale factor for the input embeddings.
+                - q_noise (float): The quantization noise.
+                - qn_block_size (int): The block size for quantization noise.
+                - encoder_normalize_before (bool): Indicates whether to normalize before the encoder layers.
+                - pre_layernorm (bool): Indicates whether to apply layer normalization before the encoder layers.
+                - num_hidden_layers (int): The number of hidden layers in the encoder.
+                - freeze_embeddings (bool): Indicates whether to freeze the embeddings.
+                - num_trans_layers_to_freeze (int): The number of transformer layers to freeze.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the configuration specifies freezing embeddings, as this feature is not yet implemented.
@@ -827,15 +844,20 @@ class GraphormerGraphEncoder(nn.Cell):
             attn_bias (Tensor): The attention bias tensor. Shape (batch_size, num_heads, num_nodes, num_nodes).
             in_degree (Tensor): The in-degree tensor of the graph nodes. Shape (batch_size, num_nodes).
             out_degree (Tensor): The out-degree tensor of the graph nodes. Shape (batch_size, num_nodes).
-            spatial_pos (Tensor): The spatial position tensor of the graph nodes. Shape (batch_size, num_nodes, spatial_dim).
+            spatial_pos (Tensor): The spatial position tensor of the graph nodes.
+                Shape (batch_size, num_nodes, spatial_dim).
             attn_edge_type (Tensor): The attention edge type tensor. Shape (batch_size, num_edges).
-            perturb (Optional[Tensor]): The optional perturbation tensor. If provided, shape (batch_size, num_nodes, input_dim).
+            perturb (Optional[Tensor]): The optional perturbation tensor.
+                If provided, shape (batch_size, num_nodes, input_dim).
             last_state_only (bool): A flag indicating whether to return only the last state. Default is False.
-            token_embeddings (Optional[Tensor]): Optional token embeddings tensor. If provided, shape (batch_size, num_nodes, input_dim).
-            attn_mask (Optional[Tensor]): Optional attention mask tensor. If provided, shape (batch_size, num_heads, num_nodes, num_nodes).
+            token_embeddings (Optional[Tensor]): Optional token embeddings tensor.
+                If provided, shape (batch_size, num_nodes, input_dim).
+            attn_mask (Optional[Tensor]): Optional attention mask tensor.
+                If provided, shape (batch_size, num_heads, num_nodes, num_nodes).
 
         Returns:
-            Tuple[Union[Tensor, List[Tensor]], Tensor]: A tuple containing the inner states as a list of tensors and the graph representation tensor.
+            Tuple[Union[Tensor, List[Tensor]], Tensor]:
+                A tuple containing the inner states as a list of tensors and the graph representation tensor.
 
         Raises:
             None.
@@ -907,7 +929,7 @@ class GraphormerDecoderHead(nn.Cell):
             num_classes (int): The number of classes in the classification task.
 
         Returns:
-            None. This method initializes the GraphormerDecoderHead class attributes.
+            None.
 
         Raises:
             None.
@@ -1009,17 +1031,18 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             value (bool): The value indicating whether gradient checkpointing is enabled or disabled.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided module is not an instance of GraphormerModel.
+            TypeError: If the provided module is not an instance of GraphormerModel.
         """
         if isinstance(module, GraphormerModel):
             module.gradient_checkpointing = value
 
 
 class GraphormerModel(GraphormerPreTrainedModel):
-    """The Graphormer model is a graph-encoder model.
+    """
+    The Graphormer model is a graph-encoder model.
 
     It goes from a graph to its representation. If you want to use the model for a downstream classification task, use
     GraphormerForGraphClassification instead. For any other downstream task, feel free to add a new class, or combine
@@ -1031,12 +1054,14 @@ class GraphormerModel(GraphormerPreTrainedModel):
 
         Args:
             self: The instance of the GraphormerModel class.
-            config (GraphormerConfig): An object of type GraphormerConfig containing the configuration settings for the model.
-                The config parameter is used to set various attributes of the GraphormerModel instance, such as max_nodes, graph_encoder,
-                share_input_output_embed, lm_output_learned_bias, load_softmax, lm_head_transform_weight, activation_fn, and layer_norm.
+            config (GraphormerConfig):
+                An object of type GraphormerConfig containing the configuration settings for the model.
+                The config parameter is used to set various attributes of the GraphormerModel instance,
+                such as max_nodes, graph_encoder, share_input_output_embed, lm_output_learned_bias, load_softmax,
+                lm_head_transform_weight, activation_fn, and layer_norm.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1095,10 +1120,12 @@ class GraphormerModel(GraphormerPreTrainedModel):
             return_dict (Optional[bool], default=None): If True, returns a BaseModelOutputWithNoAttention object.
 
         Returns:
-            Union[Tuple[Tensor], BaseModelOutputWithNoAttention]: Depending on the value of return_dict, either a tuple containing input_nodes and inner_states or a BaseModelOutputWithNoAttention object.
+            Union[Tuple[Tensor], BaseModelOutputWithNoAttention]:
+                Depending on the value of return_dict, either a tuple containing input_nodes and inner_states
+                or a BaseModelOutputWithNoAttention object.
 
         Raises:
-            - NotImplementedError: If masked_tokens is not None, indicating that the functionality is not implemented.
+            NotImplementedError: If masked_tokens is not None, indicating that the functionality is not implemented.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1129,11 +1156,12 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
     This model can be used for graph-level classification or regression tasks.
 
     It can be trained on
-    >   - regression (by setting config.num_classes to 1); there should be one float-type label per graph
-    >   - one task classification (by setting config.num_classes to the number of classes); there should be one integer
-            label per graph
-    >   - binary multi-task classification (by setting config.num_classes to the number of labels); there should be a list
-            of integer labels for each graph.
+
+    - regression (by setting config.num_classes to 1); there should be one float-type label per graph
+    - one task classification (by setting config.num_classes to the number of classes); there should be one integer
+    label per graph
+    - binary multi-task classification (by setting config.num_classes to the number of labels); there should be a list
+    of integer labels for each graph.
     """
     def __init__(self, config: GraphormerConfig):
         """
@@ -1141,10 +1169,11 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config (GraphormerConfig): An instance of GraphormerConfig containing the configuration settings for the Graphormer model.
+            config (GraphormerConfig):
+                An instance of GraphormerConfig containing the configuration settings for the Graphormer model.
 
         Returns:
-            None. This method initializes the GraphormerForGraphClassification instance with the provided configuration settings.
+            None.
 
         Raises:
             None.
@@ -1175,49 +1204,66 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
         """Constructs a Graphormer for graph classification.
 
         This method takes the following parameters:
-        >   - self: The object instance.
-        >   - input_nodes: A Tensor representing the input nodes.
-        >   - input_edges: A Tensor representing the input edges.
-        >   - attn_bias: A Tensor representing the attention bias.
-        >   - in_degree: A Tensor representing the in-degree of the nodes.
-        >   - out_degree: A Tensor representing the out-degree of the nodes.
-        >   - spatial_pos: A Tensor representing the spatial positions of the nodes.
-        >   - attn_edge_type: A Tensor representing the attention edge types.
-        >   - labels: An optional Tensor representing the labels for classification. Defaults to None.
-        >   - return_dict: An optional boolean indicating whether to return a dictionary. If not provided, it uses the value from the configuration. Defaults to None.
-        >   - **kwargs: Additional keyword arguments.
+
+        - self: The object instance.
+        - input_nodes: A Tensor representing the input nodes.
+        - input_edges: A Tensor representing the input edges.
+        - attn_bias: A Tensor representing the attention bias.
+        - in_degree: A Tensor representing the in-degree of the nodes.
+        - out_degree: A Tensor representing the out-degree of the nodes.
+        - spatial_pos: A Tensor representing the spatial positions of the nodes.
+        - attn_edge_type: A Tensor representing the attention edge types.
+        - labels: An optional Tensor representing the labels for classification. Defaults to None.
+        - return_dict: An optional boolean indicating whether to return a dictionary.
+        If not provided, it uses the value from the configuration. Defaults to None.
+        - **kwargs: Additional keyword arguments.
 
         The method returns a value of type Union[Tuple[Tensor], SequenceClassifierOutput].
 
         Args:
             self: The object instance.
             input_nodes: A Tensor representing the input nodes. Shape: [batch_size, sequence_length, hidden_size].
-            input_edges: A Tensor representing the input edges. Shape: [batch_size, sequence_length, sequence_length, hidden_size].
+            input_edges: A Tensor representing the input edges.
+                Shape: [batch_size, sequence_length, sequence_length, hidden_size].
             attn_bias: A Tensor representing the attention bias. Shape: [batch_size, sequence_length, sequence_length].
             in_degree: A Tensor representing the in-degree of the nodes. Shape: [batch_size, sequence_length].
             out_degree: A Tensor representing the out-degree of the nodes. Shape: [batch_size, sequence_length].
-            spatial_pos: A Tensor representing the spatial positions of the nodes. Shape: [batch_size, sequence_length, hidden_size].
-            attn_edge_type: A Tensor representing the attention edge types. Shape: [batch_size, sequence_length, sequence_length].
-            labels: An optional Tensor representing the labels for classification. Shape: [batch_size, num_classes]. Defaults to None.
-            return_dict: An optional boolean indicating whether to return a dictionary. If not provided, it uses the value from the configuration. Defaults to None.
+            spatial_pos: A Tensor representing the spatial positions of the nodes.
+                Shape: [batch_size, sequence_length, hidden_size].
+            attn_edge_type: A Tensor representing the attention edge types.
+                Shape: [batch_size, sequence_length, sequence_length].
+            labels: An optional Tensor representing the labels for classification. Shape: [batch_size, num_classes].
+                Defaults to None.
+            return_dict: An optional boolean indicating whether to return a dictionary.
+                If not provided, it uses the value from the configuration. Defaults to None.
             **kwargs: Additional keyword arguments.
 
         Returns:
             Conditional Return:
-                >   - If 'return_dict' is False, the method returns a tuple containing the following elements (if not None):
-                >       - loss: A Tensor representing the calculated loss. Shape: [batch_size].
-                >       - logits: A Tensor representing the output logits. Shape: [batch_size, num_classes].
-                >       - hidden_states: A list of Tensors representing the hidden states. Each Tensor has shape [batch_size, sequence_length, hidden_size].
-                >   - If 'return_dict' is True, the method returns a SequenceClassifierOutput object with the following attributes (if not None):
-                >       - loss: A Tensor representing the calculated loss. Shape: [batch_size].
-                >       - logits: A Tensor representing the output logits. Shape: [batch_size, num_classes].
-                >       - hidden_states: A list of Tensors representing the hidden states. Each Tensor has shape [batch_size, sequence_length, hidden_size].
-                >       - attentions: None.
+
+                - If 'return_dict' is False, the method returns a tuple containing the following elements (if not None):
+
+                    - loss: A Tensor representing the calculated loss. Shape: [batch_size].
+                    - logits: A Tensor representing the output logits. Shape: [batch_size, num_classes].
+                    - hidden_states: A list of Tensors representing the hidden states. Each Tensor has shape
+                    [batch_size, sequence_length, hidden_size].
+
+                - If 'return_dict' is True, the method returns a SequenceClassifierOutput object with the following
+                attributes (if not None):
+
+                    - loss: A Tensor representing the calculated loss. Shape: [batch_size].
+                    - logits: A Tensor representing the output logits. Shape: [batch_size, num_classes].
+                    - hidden_states: A list of Tensors representing the hidden states. Each Tensor has shape
+                    [batch_size, sequence_length, hidden_size].
+                    - attentions: None.
 
         Raises:
-            MSELossError: If 'labels' is not None and 'num_classes' is 1, but the shape of 'labels' is not compatible with logits.
-            CrossEntropyLossError: If 'labels' is not None and 'num_classes' is greater than 1, but the shape of 'labels' is not compatible with logits.
-            BCEWithLogitsLossError: If 'labels' is not None and 'num_classes' is greater than 1, but the shape of 'labels' is not compatible with logits.
+            MSELossError: If 'labels' is not None and 'num_classes' is 1, but the shape of 'labels' is not compatible
+                with logits.
+            CrossEntropyLossError: If 'labels' is not None and 'num_classes' is greater than 1, but the shape of
+                'labels' is not compatible with logits.
+            BCEWithLogitsLossError: If 'labels' is not None and 'num_classes' is greater than 1, but the shape of
+                'labels' is not compatible with logits.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

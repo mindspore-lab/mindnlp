@@ -137,7 +137,7 @@ class AlignTextConfig(PretrainedConfig):
             use_cache (bool, optional): Whether to use cache for the transformer encoder. Defaults to True.
 
         Returns:
-            None: The method initializes the instance attributes with the provided values.
+            None.
 
         Raises:
             ValueError: If any of the provided parameters are not of the expected type or value range.
@@ -317,7 +317,7 @@ class AlignVisionConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -437,7 +437,8 @@ class AlignConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-        """Initializes an instance of the AlignConfig class.
+        """
+        Initializes an instance of the AlignConfig class.
         
         Args:
             self: The instance of the AlignConfig class.
@@ -448,10 +449,10 @@ class AlignConfig(PretrainedConfig):
             initializer_range (float, optional): The range for initializing variables. Defaults to 0.02.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__(**kwargs)
 

@@ -28,14 +28,13 @@ MUSICGEN_MELODY_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 
 class MusicgenMelodyDecoderConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of an [`MusicgenMelodyDecoder`]. It is used to instantiate a
-    Musicgen Melody decoder according to the specified arguments, defining the model architecture. Instantiating a
-    configuration with the defaults will yield a similar configuration to that of the Musicgen Melody
-    [facebook/musicgen-melody](https://huggingface.co/facebook/musicgen-melody) architecture.
+    This is the configuration class to store the configuration of an [`MusicgenMelodyDecoder`].
+    It is used to instantiate a Musicgen Melody decoder according to the specified arguments, defining the model
+    architecture. Instantiating a configuration with the defaults will yield a similar configuration to that of the
+    Musicgen Melody [facebook/musicgen-melody](https://huggingface.co/facebook/musicgen-melody) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
-
 
     Args:
         vocab_size (`int`, *optional*, defaults to 2048):
@@ -136,7 +135,7 @@ class MusicgenMelodyDecoderConfig(PretrainedConfig):
             None
 
         Raises:
-            - ValueError: If the number of audio channels is not 1 (mono) or 2 (stereo).
+            ValueError: If the number of audio channels is not 1 (mono) or 2 (stereo).
         """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
@@ -170,9 +169,9 @@ class MusicgenMelodyDecoderConfig(PretrainedConfig):
 class MusicgenMelodyConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`MusicgenMelodyModel`]. It is used to instantiate a
-    Musicgen Melody model according to the specified arguments, defining the text encoder, audio encoder and Musicgen Melody decoder
-    configs. Instantiating a configuration with the defaults will yield a similar configuration to that of the Musicgen Melody
-    [facebook/musicgen-melody](https://huggingface.co/facebook/musicgen-melody) architecture.
+    Musicgen Melody model according to the specified arguments, defining the text encoder, audio encoder and Musicgen
+    Melody decoder configs. Instantiating a configuration with the defaults will yield a similar configuration to that
+    of the Musicgen Melody [facebook/musicgen-melody](https://huggingface.co/facebook/musicgen-melody) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -180,15 +179,16 @@ class MusicgenMelodyConfig(PretrainedConfig):
     Args:
         num_chroma (`int`, *optional*, defaults to 12): Number of chroma bins to use.
         chroma_length (`int`, *optional*, defaults to 235):
-            Maximum chroma duration if audio is used to condition the model. Corresponds to the maximum duration used during training.
+            Maximum chroma duration if audio is used to condition the model. Corresponds to the maximum duration used
+            during training.
         kwargs (*optional*):
             Dictionary of keyword arguments. Notably:
-                >   - **text_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
-                    defines the text encoder config.
-                >   - **audio_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
-                    defines the audio encoder config.
-                >   - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
-                    the decoder config.
+                - **text_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
+                defines the text encoder config.
+                - **audio_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
+                defines the audio encoder config.
+                - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+                the decoder config.
 
     Example:
         ```python
@@ -199,28 +199,28 @@ class MusicgenMelodyConfig(PretrainedConfig):
         ...     EncodecConfig,
         ...     MusicgenMelodyForConditionalGeneration,
         ... )
-
+        ...
         >>> # Initializing text encoder, audio encoder, and decoder model configurations
         >>> text_encoder_config = T5Config()
         >>> audio_encoder_config = EncodecConfig()
         >>> decoder_config = MusicgenMelodyDecoderConfig()
-
+        ...
         >>> configuration = MusicgenMelodyConfig.from_sub_models_config(
         ...     text_encoder_config, audio_encoder_config, decoder_config
         ... )
-
+        ...
         >>> # Initializing a MusicgenMelodyForConditionalGeneration (with random weights) from the facebook/musicgen-melody style configuration
         >>> model = MusicgenMelodyForConditionalGeneration(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         >>> config_text_encoder = model.config.text_encoder
         >>> config_audio_encoder = model.config.audio_encoder
         >>> config_decoder = model.config.decoder
-
+        ...
         >>> # Saving the model, including its configuration
         >>> model.save_pretrained("musicgen_melody-model")
-
+        ...
         >>> # loading model and config from pretrained folder
         >>> musicgen_melody_config = MusicgenMelodyConfig.from_pretrained("musicgen_melody-model")
         >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("musicgen_melody-model", config=musicgen_melody_config)
@@ -244,7 +244,7 @@ class MusicgenMelodyConfig(PretrainedConfig):
             chroma_length (int): The length of the chroma. Defaults to 235.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the config is not initialized with text_encoder, audio_encoder, and decoder config.

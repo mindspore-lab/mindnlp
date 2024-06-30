@@ -214,7 +214,7 @@ class BartTokenizer(PreTrainedTokenizer):
             add_prefix_space (bool): Whether to add space to the beginning of the token (default is False).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             FileNotFoundError: If the vocab_file or merges_file is not found.
@@ -314,10 +314,11 @@ class BartTokenizer(PreTrainedTokenizer):
                 - Restrictions: Must be a valid string input.
 
         Returns:
-            The method returns the processed token after applying Byte Pair Encoding.
+            token:
+                The method returns the processed token after applying Byte Pair Encoding.
 
-            - Type: str
-            - Purpose: Represents the token after encoding.
+                - Type: str
+                - Purpose: Represents the token after encoding.
 
         Raises:
             None
@@ -518,13 +519,16 @@ class BartTokenizer(PreTrainedTokenizer):
 
                 - If True, the text is assumed to be split into words and no further processing is done.
                 - If False, the text is assumed to be a continuous string and additional processing may be applied.
-            **kwargs: Additional keyword arguments.
-                add_prefix_space (bool):
-                    Flag indicating whether a space should be added to the beginning of the text.
+            **kwargs:
+                Additional keyword arguments.
 
-                    - If True, and if the text is not empty and does not start with a space,
-                    a space is added before the text.
-                    - If False, no space is added. Default is the value of self.add_prefix_space.
+                add_prefix_space (bool):
+
+                Flag indicating whether a space should be added to the beginning of the text.
+
+                - If True, and if the text is not empty and does not start with a space,
+                a space is added before the text.
+                - If False, no space is added. Default is the value of self.add_prefix_space.
 
         Returns:
             str: The prepared text for tokenization.

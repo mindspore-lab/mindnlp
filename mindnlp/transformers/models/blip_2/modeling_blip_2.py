@@ -127,7 +127,7 @@ class Blip2VisionEmbeddings(nn.Cell):
             config (Blip2VisionConfig): An instance of the Blip2VisionConfig class containing configuration parameters.
 
         Returns:
-            None: This method initializes the Blip2VisionEmbeddings object with the provided configuration settings.
+            None.
 
         Raises:
             None.
@@ -307,10 +307,11 @@ class Blip2MLP(nn.Cell):
     based on the 'hidden_act' parameter from the configuration object.
 
     The construct method takes a tensor 'hidden_states' as input and performs the following operations:
-    >   1. Applies the first fully connected layer (fc1) to the 'hidden_states' tensor.
-    >   2. Applies the activation function to the output of fc1.
-    >   3. Applies the second fully connected layer (fc2) to the output of the activation function.
-    >   4. Returns the resulting tensor.
+
+    1. Applies the first fully connected layer (fc1) to the 'hidden_states' tensor.
+    2. Applies the activation function to the output of fc1.
+    3. Applies the second fully connected layer (fc2) to the output of the activation function.
+    4. Returns the resulting tensor.
 
     Note:
         This class assumes that ACT2FN is a dictionary mapping activation function names to their corresponding functions.
@@ -410,7 +411,7 @@ class Blip2EncoderLayer(nn.Cell):
                 This parameter is used to initialize the hidden size attribute, embed_dim, of the Blip2EncoderLayer object.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
             None.
@@ -517,7 +518,7 @@ class Blip2Encoder(nn.Cell):
                 The config parameter must be of type Blip2Config.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -655,6 +656,7 @@ class Blip2VisionModel(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
         """
@@ -700,10 +702,10 @@ class Blip2VisionModel(Blip2PreTrainedModel):
             self (Blip2VisionModel): The instance of the Blip2VisionModel class.
 
         Returns:
-            None: This method returns the input embeddings.
+            embeddings: This method returns the input embeddings.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embeddings
 
@@ -751,7 +753,7 @@ class Blip2QFormerMultiHeadAttention(nn.Cell):
             is_cross_attention (bool, optional): A flag indicating if the attention is cross-attention. Defaults to False.
 
         Returns:
-            None: This method initializes the Blip2QFormerMultiHeadAttention object and does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
@@ -792,7 +794,7 @@ class Blip2QFormerMultiHeadAttention(nn.Cell):
             attn_gradients: The attention gradients to be saved. This should be a tensor or array-like object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -807,10 +809,10 @@ class Blip2QFormerMultiHeadAttention(nn.Cell):
             self (Blip2QFormerMultiHeadAttention): An instance of the Blip2QFormerMultiHeadAttention class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         """
         return self.attn_gradients
@@ -841,10 +843,10 @@ class Blip2QFormerMultiHeadAttention(nn.Cell):
             self (Blip2QFormerMultiHeadAttention): The instance of the Blip2QFormerMultiHeadAttention class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.attention_map
 
@@ -892,7 +894,7 @@ class Blip2QFormerMultiHeadAttention(nn.Cell):
             output_attentions: (bool) A boolean flag indicating whether to output attentions.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the position_embedding_type is not one of ('relative_key', 'relative_key_query').
@@ -1091,7 +1093,7 @@ class Blip2QFormerAttention(nn.Cell):
                                                  Defaults to False.
 
         Returns:
-            None: This method initializes the attention module, output module, and the set of pruned heads.
+            None.
 
         Raises:
             None.
@@ -1238,7 +1240,7 @@ class Blip2QFormerIntermediate(nn.Cell):
                     - Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1272,8 +1274,8 @@ class Blip2QFormerIntermediate(nn.Cell):
 
         Returns:
             mindspore.Tensor: The output tensor representing the intermediate representation of the model.
-            It is of the same shape as the input hidden_states tensor, with each value being transformed based on
-            the operations performed within the method.
+                It is of the same shape as the input hidden_states tensor, with each value being transformed based on
+                the operations performed within the method.
 
         Raises:
             None
@@ -1405,7 +1407,7 @@ class Blip2QFormerLayer(nn.Cell):
                 - Restrictions: Must be a non-negative integer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1543,7 +1545,7 @@ class Blip2QFormerLayer(nn.Cell):
             None: This method does not return any value. It processes the attention_output and updates internal layer states.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -1565,7 +1567,7 @@ class Blip2QFormerLayer(nn.Cell):
             None: This method does not return any value. It modifies the layer output in place.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate_query(attention_output)
         layer_output = self.output_query(intermediate_output, attention_output)
@@ -1594,7 +1596,7 @@ class Blip2QFormerEncoder(nn.Cell):
 
     Returns:
         BaseModelOutputWithPastAndCrossAttentions: An object containing the final hidden states, past key values,
-        hidden states of all layers, self-attentions of all layers, and cross-attentions of all layers.
+            hidden states of all layers, self-attentions of all layers, and cross-attentions of all layers.
     """
     def __init__(self, config):
         """
@@ -1606,10 +1608,11 @@ class Blip2QFormerEncoder(nn.Cell):
             self: Blip2QFormerEncoder
                 The instance of the Blip2QFormerEncoder class.
             config: dict
-                A dictionary containing the configuration parameters for the encoder. It includes settings such as the number of hidden layers and other configuration options.
+                A dictionary containing the configuration parameters for the encoder.
+                It includes settings such as the number of hidden layers and other configuration options.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1653,7 +1656,7 @@ class Blip2QFormerEncoder(nn.Cell):
             query_length (int): Length of the query.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             Warning: If `use_cache=True` is used in combination with gradient checkpointing,
@@ -1745,7 +1748,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
                 It should be an instance of Blip2QFormerConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1756,7 +1759,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
 
             - self.config: The provided config object is stored as an instance variable.
             - self.layernorm: A LayerNorm module is created with the hidden size specified in the config.
-                The epsilon value for LayerNorm is set to the value specified in the config.
+            The epsilon value for LayerNorm is set to the value specified in the config.
             - self.dropout: A Dropout module is created with the dropout probability specified in the config.
             - self.encoder: An instance of Blip2QFormerEncoder class is created with the provided config.
 
@@ -1782,7 +1785,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
             self: The reference to the current instance of the Blip2QFormerModel class.
 
         Returns:
-            None. The method returns the word embeddings for the input.
+            word_embeddings: The method returns the word embeddings for the input.
 
         Raises:
             None.
@@ -1798,10 +1801,10 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
             value: The input embeddings to be set. It can be of any valid type.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -1869,24 +1872,25 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, `optional`):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, `optional`):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, `optional`):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, `optional`):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of:
-            shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`): Contains precomputed key and
-            value hidden states of the attention blocks. Can be used to speed up decoding. If `past_key_values` are
-            used, the user can optionally input only the last `decoder_input_ids` (those that don't have their past key
-            value states given to this model) of shape `(batch_size, 1)` instead of all `decoder_input_ids` of shape
-            `(batch_size, sequence_length)`.
-        use_cache (`bool`, `optional`):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of:
+                shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`): Contains precomputed key and
+                value hidden states of the attention blocks. Can be used to speed up decoding. If `past_key_values` are
+                used, the user can optionally input only the last `decoder_input_ids` (those that don't have their past key
+                value states given to this model) of shape `(batch_size, 1)` instead of all `decoder_input_ids` of shape
+                `(batch_size, sequence_length)`.
+            use_cache (`bool`, `optional`):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2030,10 +2034,10 @@ class Blip2Model(Blip2PreTrainedModel):
             config (Blip2Config): An instance of Blip2Config containing the configuration parameters for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__(config)
 
@@ -2065,10 +2069,10 @@ class Blip2Model(Blip2PreTrainedModel):
             self (Blip2Model): An instance of the Blip2Model class.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.language_model.get_input_embeddings()
 
@@ -2082,7 +2086,7 @@ class Blip2Model(Blip2PreTrainedModel):
                 It should be of type torch.Tensor or any compatible type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the value provided is not of the expected type.
@@ -2099,10 +2103,10 @@ class Blip2Model(Blip2PreTrainedModel):
             new_embeddings (object): The new output embeddings to be set for the language model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self.language_model.set_output_embeddings(new_embeddings)
 
@@ -2133,11 +2137,10 @@ class Blip2Model(Blip2PreTrainedModel):
 
         Returns:
             None:
-
-                - This method returns None as it retrieves the encoder from the language model.
+                This method returns None as it retrieves the encoder from the language model.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.language_model.get_encoder()
 
@@ -2186,6 +2189,7 @@ class Blip2Model(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         r"""
+
         Returns:
             text_outputs (`CausalLMOutputWithPast`, or `tuple(mindspore.Tensor)` if `return_dict=False`):
                 The language model outputs. If `return_dict=True`, the output is a [`CausalLMOutputWithPast`] that
@@ -2242,6 +2246,7 @@ class Blip2Model(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         r"""
+
         Returns:
             vision_outputs (`BaseModelOutputWithPooling` or tuple of `mindspore.Tensor`):
                 The vision model outputs. If `return_dict=True`, the output is a [`BaseModelOutputWithPooling`] that
@@ -2287,6 +2292,7 @@ class Blip2Model(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         r"""
+
         Returns:
             vision_outputs (`BaseModelOutputWithPooling` or tuple of `mindspore.Tensor`):
                 The vision model outputs. If `return_dict=True`, the output is a [`BaseModelOutputWithPooling`] that
@@ -2352,6 +2358,7 @@ class Blip2Model(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]:
         r"""
+
         Returns:
             `Union[Tuple, Blip2ForConditionalGenerationModelOutput]`
 
@@ -2502,10 +2509,10 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
                 language projection, and language model. The config parameter is required and must be of type Blip2Config.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         super().__init__(config)
 
@@ -2537,7 +2544,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             self: An instance of the Blip2ForConditionalGeneration class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2559,10 +2566,10 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             value (torch.Tensor): The input embeddings to be set for the language model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         This method sets the input embeddings for the underlying language model of Blip2ForConditionalGeneration.
         The input embeddings are used to represent the input tokens during the model's forward pass.
@@ -2588,7 +2595,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             new_embeddings: The new embeddings to be set for the language model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2667,10 +2674,10 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             self: The instance of the Blip2ForConditionalGeneration class.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         if not self.config.use_decoder_only_language_model:
             self.language_model.encoder.embed_tokens = self.language_model.shared
@@ -2689,6 +2696,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]:
         r"""
+
         Returns:
             Union[Tuple, Blip2ForConditionalGenerationModelOutput]
 

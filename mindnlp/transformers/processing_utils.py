@@ -56,7 +56,7 @@ class ProcessorMixin:
             self (ProcessorMixin): The instance of the ProcessorMixin class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: Raised if an unexpected keyword argument is provided,
@@ -250,10 +250,10 @@ class ProcessorMixin:
             pretrained_model_name_or_path (str): The name or path of the pre-trained model.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         args = []
         for attribute_name in cls.attributes:
@@ -280,7 +280,8 @@ class ProcessorMixin:
             self (ProcessorMixin): The instance of the ProcessorMixin class.
             
         Returns:
-            None: Returns the model input names from the first attribute of the ProcessorMixin instance if available, otherwise returns None.
+            None: Returns the model input names from the first attribute of the ProcessorMixin instance if available,
+                otherwise returns None.
             
         Raises:
             None.

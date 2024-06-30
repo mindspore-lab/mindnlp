@@ -529,14 +529,14 @@ class XLMTokenizer(PreTrainedTokenizer):
     """
     Construct an XLM tokenizer. Based on Byte-Pair Encoding. The tokenization process is the following:
 
-    >   - Moses preprocessing and tokenization for most supported languages.
-    >   - Language specific tokenization for Chinese (Jieba), Japanese (KyTea) and Thai (PyThaiNLP).
-    >   - Optionally lowercases and normalizes all inputs text.
-    >   - The arguments `special_tokens` and the function `set_special_tokens`, can be used to add additional symbols (like
-            "__classify__") to a vocabulary.
-    >   - The `lang2id` attribute maps the languages supported by the model with their IDs if provided (automatically set
-            for pretrained vocabularies).
-    >   - The `id2lang` attributes does reverse mapping if provided (automatically set for pretrained vocabularies).
+    - Moses preprocessing and tokenization for most supported languages.
+    - Language specific tokenization for Chinese (Jieba), Japanese (KyTea) and Thai (PyThaiNLP).
+    - Optionally lowercases and normalizes all inputs text.
+    - The arguments `special_tokens` and the function `set_special_tokens`, can be used to add additional symbols (like
+    "__classify__") to a vocabulary.
+    - The `lang2id` attribute maps the languages supported by the model with their IDs if provided (automatically set
+    for pretrained vocabularies).
+    - The `id2lang` attributes does reverse mapping if provided (automatically set for pretrained vocabularies).
 
     This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods.
@@ -571,8 +571,8 @@ class XLMTokenizer(PreTrainedTokenizer):
         mask_token (`str`, *optional*, defaults to `"<special1>"`):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
-        additional_special_tokens (`List[str]`, *optional*, defaults to `['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>',
-            '<special9>']`):
+        additional_special_tokens (`List[str]`, *optional*, defaults to `['<special0>', '<special1>', '<special2>',
+            '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>', '<special9>']`):
             List of additional special tokens.
         lang2id (`Dict[str, int]`, *optional*):
             Dictionary mapping languages string identifiers to their IDs.
@@ -626,15 +626,17 @@ class XLMTokenizer(PreTrainedTokenizer):
             pad_token (str): The padding token (default: '<pad>').
             cls_token (str): The classification token (default: '</s>').
             mask_token (str): The masking token (default: '<special1>').
-            additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>',
-                '<special8>', '<special9>']).
+            additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>',
+                '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>',
+                '<special9>']).
             lang2id (dict): A dictionary mapping languages to IDs.
             id2lang (dict): A dictionary mapping IDs to languages.
-            do_lowercase_and_remove_accent (bool): A flag indicating whether to lowercase and remove accents (default: True).
+            do_lowercase_and_remove_accent (bool): A flag indicating whether to lowercase and remove accents
+                (default: True).
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ImportError: If the sacremoses library is not installed.
@@ -696,27 +698,30 @@ class XLMTokenizer(PreTrainedTokenizer):
             self: The instance of the 'XLMTokenizer' class.
 
         Returns:
-            None. This method returns None.
+            None.
 
         Raises:
-            No explicit exceptions are raised by this method.
+            None.
         """
         return self.do_lowercase_and_remove_accent
 
     def moses_punct_norm(self, text, lang):
         """
-        The 'moses_punct_norm' method is a member of the 'XLMTokenizer' class. It normalizes punctuation in a given text based on the specified language using the MosesPunctNormalizer.
+        The 'moses_punct_norm' method is a member of the 'XLMTokenizer' class. It normalizes punctuation in a given text
+        based on the specified language using the MosesPunctNormalizer.
 
         Args:
             self (XLMTokenizer): An instance of the XLMTokenizer class.
             text (str): The input text to be normalized.
-            lang (str): The language of the input text. The normalization is performed based on the rules specific to this language.
+            lang (str): The language of the input text. The normalization is performed based on the rules specific to
+                this language.
 
         Returns:
-            None: This method does not return any value. It modifies the input text in-place by normalizing the punctuation.
+            None: This method does not return any value. It modifies the input text in-place by normalizing the
+                punctuation.
 
         Raises:
-            N/A: This method does not raise any exceptions.
+            None.
         """
         if lang not in self.cache_moses_punct_normalizer:
             punct_normalizer = self.sm.MosesPunctNormalizer(lang=lang)
@@ -735,26 +740,34 @@ class XLMTokenizer(PreTrainedTokenizer):
             lang (str): The language of the text.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method tokenizes the input text using the MosesTokenizer from the SentencePiece library. It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into
-                individual tokens based on language-specific rules and returns the tokenized output.
+            This method tokenizes the input text using the MosesTokenizer from the SentencePiece library.
+            It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into
+            individual tokens based on language-specific rules and returns the tokenized output.
 
-            >   - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
-            >   - The 'text' parameter represents the text that needs to be tokenized.
-            >   - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate tokenizer.
+            - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
+            - The 'text' parameter represents the text that needs to be tokenized.
+            - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate
+            tokenizer.
 
-            If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of
-            the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
+            If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in
+            the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of the method with
+            the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding
+            repeated instantiation of tokenizers.
 
-            The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization. The 'return_str' parameter is set to False, indicating that the method should return a list
-            of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
+            The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization.
+            The 'return_str' parameter is set to False, indicating that the method should return a list of tokens rather
+            than a single string. The 'escape' parameter is set to False, indicating that no escaping of special
+            characters should be performed during tokenization.
 
-            Note: The MosesTokenizer relies on pre-trained language-specific models for accurate tokenization. Make sure to have these models available for the desired languages.
+            Note:
+                The MosesTokenizer relies on pre-trained language-specific models for accurate tokenization.
+                Make sure to have these models available for the desired languages.
 
         Example:
             ```python
@@ -762,10 +775,12 @@ class XLMTokenizer(PreTrainedTokenizer):
             >>> tokenized_text = tokenizer.moses_tokenize("Hello world!", "en")
             ```
 
-            The above example tokenizes the input text "Hello world!" using the MosesTokenizer for English language. The resulting tokenized text is stored in the 'tokenized_text' variable.
+            The above example tokenizes the input text "Hello world!" using the MosesTokenizer for English language.
+            The resulting tokenized text is stored in the 'tokenized_text' variable.
 
             Note:
-                The actual tokenization behavior may vary based on the language and the specific language models used by the MosesTokenizer.
+                The actual tokenization behavior may vary based on the language and the specific language models used
+                by the MosesTokenizer.
         """
         if lang not in self.cache_moses_tokenizer:
             moses_tokenizer = self.sm.MosesTokenizer(lang=lang)
@@ -784,7 +799,7 @@ class XLMTokenizer(PreTrainedTokenizer):
             lang (str): The language of the input text.
 
         Returns:
-            None. The method modifies the input text in-place.
+            None: The method modifies the input text in-place.
 
         Raises:
             None.
@@ -803,11 +818,13 @@ class XLMTokenizer(PreTrainedTokenizer):
             text (str): The Japanese text to be tokenized.
 
         Returns:
-            None: This method returns None. The tokenized text can be accessed by calling the getWS method of the ja_word_tokenizer object.
+            None: This method returns None. The tokenized text can be accessed by calling the getWS method of the
+                ja_word_tokenizer object.
 
         Raises:
             AttributeError: If an attribute error occurs during the execution of the method.
-            ImportError: If an import error occurs, typically when the required KyTea library or its Python wrapper is not installed.
+            ImportError: If an import error occurs, typically when the required KyTea library or its Python wrapper
+                is not installed.
             Exception: Any other unexpected exception raised during the execution of the method.
         """
         if self.ja_word_tokenizer is None:
@@ -864,7 +881,8 @@ class XLMTokenizer(PreTrainedTokenizer):
             self (XLMTokenizer): An instance of the XLMTokenizer class.
 
         Returns:
-            dict: A dictionary representing the vocabulary of the tokenizer. The keys are the tokens and the values are their corresponding IDs.
+            dict: A dictionary representing the vocabulary of the tokenizer. The keys are the tokens and the values
+                are their corresponding IDs.
 
         Raises:
             None.
@@ -890,10 +908,12 @@ class XLMTokenizer(PreTrainedTokenizer):
             token (str): The input token to be processed through BPE. It should be a string representing a word.
 
         Returns:
-            str: The processed token after applying Byte Pair Encoding. The token may have undergone splitting or merging based on the rules of BPE.
+            str: The processed token after applying Byte Pair Encoding. The token may have undergone splitting or
+                merging based on the rules of BPE.
 
         Raises:
-            ValueError: If an error occurs during the processing of the token, such as an issue with indexing or comparison.
+            ValueError: If an error occurs during the processing of the token, such as an issue with indexing or
+                comparison.
             KeyError: If the method encounters a key error while accessing data structures like dictionaries.
         """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
@@ -945,20 +965,20 @@ class XLMTokenizer(PreTrainedTokenizer):
 
         Details of tokenization:
 
-        >   - [sacremoses](https://github.com/alvations/sacremoses): port of Moses
-        >   - Install with `pip install sacremoses`
-        >   - [pythainlp](https://github.com/PyThaiNLP/pythainlp): Thai tokenizer
-        >   - Install with `pip install pythainlp`
-        >   - [kytea](https://github.com/chezou/Mykytea-python): Japanese tokenizer, wrapper of
-              [KyTea](https://github.com/neubig/kytea)
-        >   - Install with the following steps:
-                ```
-                git clone git@github.com:neubig/kytea.git && cd kytea autoreconf -i ./configure --prefix=$HOME/local
-                make && make install pip install kytea
-                ```
+        - [sacremoses](https://github.com/alvations/sacremoses): port of Moses
+        - Install with `pip install sacremoses`
+        - [pythainlp](https://github.com/PyThaiNLP/pythainlp): Thai tokenizer
+        - Install with `pip install pythainlp`
+        - [kytea](https://github.com/chezou/Mykytea-python): Japanese tokenizer, wrapper of
+        [KyTea](https://github.com/neubig/kytea)
+        - Install with the following steps:
+        ```
+        git clone git@github.com:neubig/kytea.git && cd kytea autoreconf -i ./configure --prefix=$HOME/local
+        make && make install pip install kytea
+        ```
 
-        >    - [jieba](https://github.com/fxsjy/jieba): Chinese tokenizer (*)
-        >    - Install with `pip install jieba`
+        - [jieba](https://github.com/fxsjy/jieba): Chinese tokenizer (*)
+        - Install with `pip install jieba`
 
         (*) The original XLM used [Stanford
         Segmenter](https://nlp.stanford.edu/software/stanford-segmenter-2018-10-16.zip). However, the wrapper
@@ -969,10 +989,10 @@ class XLMTokenizer(PreTrainedTokenizer):
         externally, and set `bypass_tokenizer=True` to bypass the tokenizer.
 
         Args:
-        >    - lang: ISO language code (default = 'en') (string). Languages should belong of the model supported
-              languages. However, we don't enforce it.
-        >    - bypass_tokenizer: Allow users to preprocess and tokenize the sentences externally (default = False)
-              (bool). If True, we only apply BPE.
+            lang (string): ISO language code (default = 'en'). Languages should belong of the model supported
+                languages. However, we don't enforce it.
+            bypass_tokenizer (bool): Allow users to preprocess and tokenize the sentences externally (default = False).
+                If True, we only apply BPE.
 
         Returns:
             List of tokens.
@@ -1053,8 +1073,8 @@ class XLMTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLM sequence has the following format:
 
-        >   - single sequence: `<s> X </s>`
-        >   - pair of sequences: `<s> A </s> B </s>`
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -1183,8 +1203,9 @@ class XLMTokenizer(PreTrainedTokenizer):
                 No restrictions.
         
         Returns:
-            None.
-            This method returns a dictionary representing the current state of the XLMTokenizer object with the 'sm' attribute set to None.
+            dict:
+                This method returns a dictionary representing the current state of the XLMTokenizer object with the
+                'sm' attribute set to None.
         
         Raises:
             None.
@@ -1199,14 +1220,17 @@ class XLMTokenizer(PreTrainedTokenizer):
         
         Args:
             self (XLMTokenizer): The XLMTokenizer object.
-            d (dict): The dictionary containing the state to be set. The dictionary should have the following keys:
+            d (dict): The dictionary containing the state to be set.
+                The dictionary should have the following keys:
+
                 - '__dict__': The dictionary representing the attributes of the object.
         
         Returns:
-            None. This method doesn't return any value.
+            None.
         
         Raises:
-            ImportError: If the 'sacremoses' module is not installed, an ImportError is raised. The error message will provide instructions on how to install the module.
+            ImportError: If the 'sacremoses' module is not installed, an ImportError is raised. The error message
+                will provide instructions on how to install the module.
         """
         self.__dict__ = d
 

@@ -32,6 +32,7 @@ class InternLMConfig(PretrainedConfig):
     configuration with the defaults will yield a similar configuration to that of the InternLM-7B.
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
     Args:
         vocab_size (`int`, *optional*, defaults to 32000):
             Vocabulary size of the InternLM model. Defines the number of different tokens that can be represented by the
@@ -106,10 +107,10 @@ class InternLMConfig(PretrainedConfig):
             attn_implementation (str): The implementation method for attention. If None, defaults to 'eager'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - None
+            None
         """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

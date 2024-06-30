@@ -80,13 +80,13 @@ class LEDConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import LEDModel, LEDConfig
-
+        ...
         >>> # Initializing a LED allenai/led-base-16384 style configuration
         >>> configuration = LEDConfig()
-
+        ...
         >>> # Initializing a model from the allenai/led-base-16384 style configuration
         >>> model = LEDModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

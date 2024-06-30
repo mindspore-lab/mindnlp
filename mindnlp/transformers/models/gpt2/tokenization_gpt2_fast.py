@@ -70,13 +70,14 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+
+    Example:
         ```python
         >>> from transformers import GPT2TokenizerFast
-
+        ...
         >>> tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         >>> tokenizer("Hello world")["input_ids"]
         [15496, 995]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [18435, 995]
         ```
@@ -145,10 +146,10 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
             add_prefix_space (bool, optional): A flag indicating whether to add a prefix space. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(
             vocab_file,
@@ -176,15 +177,16 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         This method '_batch_encode_plus' is defined in the class 'GPT2TokenizerFast'. It takes the following parameters:
 
         Args:
-        - self: (object) The instance of the class.
+            self: (object) The instance of the class.
 
         Returns:
-        - (BatchEncoding) An instance of the 'BatchEncoding' class containing the encoded inputs.
+            (BatchEncoding) An instance of the 'BatchEncoding' class containing the encoded inputs.
 
         Raises:
-        - AssertionError: If the 'add_prefix_space' is False and the 'is_split_into_words' is also False, an assertion error is raised with the message 'You need to instantiate GPT2TokenizerFast with
-            add_prefix_space=True to use it with pretokenized inputs'.
-        - Any other exceptions raised by the 'super()._batch_encode_plus' method.
+            AssertionError: If the 'add_prefix_space' is False and the 'is_split_into_words' is also False,
+                an assertion error is raised with the message 'You need to instantiate GPT2TokenizerFast with
+                add_prefix_space=True to use it with pretokenized inputs'.
+            Any other exceptions: raised by the 'super()._batch_encode_plus' method.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -204,10 +206,12 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A dictionary-like object containing the encoded inputs.
 
         Raises:
-            AssertionError: If the 'is_split_into_words' parameter is set to True and the 'add_prefix_space' parameter is set to False, an AssertionError is raised.
+            AssertionError: If the 'is_split_into_words' parameter is set to True and the 'add_prefix_space' parameter
+            is set to False, an AssertionError is raised.
 
         Note:
-            This method is intended to be used with pretokenized inputs. If the 'is_split_into_words' parameter is set to True, make sure to instantiate the GPT2TokenizerFast class with 'add_prefix_space=True'.
+            This method is intended to be used with pretokenized inputs. If the 'is_split_into_words' parameter
+            is set to True, make sure to instantiate the GPT2TokenizerFast class with 'add_prefix_space=True'.
 
         Example:
             ```python
@@ -215,7 +219,6 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
             >>> encoded_inputs = tokenizer._encode_plus("Hello, world!")
             >>> print(encoded_inputs)
             {'input_ids': [15496, 259, 114, 616], 'attention_mask': [1, 1, 1, 1]}
-
             >>> tokenizer = GPT2TokenizerFast(add_prefix_space=True)
             >>> encoded_inputs = tokenizer._encode_plus("Hello, world!", is_split_into_words=True)
             AssertionError: You need to instantiate GPT2TokenizerFast with add_prefix_space=True to use it with pretokenized inputs.
@@ -237,7 +240,8 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         Args:
             self (GPT2TokenizerFast): An instance of the GPT2TokenizerFast class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): An optional prefix to be added to the saved vocabulary file(s). Defaults to None.
+            filename_prefix (Optional[str], optional): An optional prefix to be added to the saved vocabulary file(s).
+                Defaults to None.
 
         Returns:
             Tuple[str]: A tuple containing the file path(s) where the vocabulary was saved.

@@ -81,10 +81,10 @@ class ConvNextDropPath(nn.Cell):
                 If not provided, defaults to None. Should be a float value between 0 and 1, inclusive.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.drop_prob = drop_prob
@@ -203,7 +203,7 @@ class ConvNextEmbeddings(nn.Cell):
             config: An object containing the configuration parameters for the ConvNextEmbeddings class.
 
         Returns:
-            None. This method initializes the ConvNextEmbeddings class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -267,7 +267,7 @@ class ConvNextLayer(nn.Cell):
             drop_path: A float representing the dropout probability for drop path regularization.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
             ValueError: If config.hidden_act is not found in ACT2FN.
@@ -340,7 +340,7 @@ class ConvNextStage(nn.Cell):
             drop_path_rates (list, optional): A list of dropout rates for each layer in the stage. Defaults to None.
 
         Returns:
-            None: This method initializes the ConvNextStage object.
+            None.
 
         Raises:
             ValueError: If in_channels is not equal to out_channels or stride is greater than 1.
@@ -372,7 +372,7 @@ class ConvNextStage(nn.Cell):
             mindspore.Tensor: The tensor representing the output hidden states after the next stage.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.downsampling_layer(hidden_states)
         hidden_states = self.layers(hidden_states)
@@ -406,7 +406,8 @@ class ConvNextEncoder(nn.Cell):
 
         Args:
             self (ConvNextEncoder): The instance of the ConvNextEncoder class.
-            config: A configuration object containing various settings for the ConvNextEncoder.
+            config:
+                A configuration object containing various settings for the ConvNextEncoder.
 
                 - drop_path_rate (float): The rate at which to apply drop path regularization.
                 - depths (list[int]): List of integers representing the depths of each stage.
@@ -414,7 +415,7 @@ class ConvNextEncoder(nn.Cell):
                 - num_stages (int): The total number of stages in the ConvNextEncoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -642,7 +643,7 @@ class ConvNextForImageClassification(ConvNextPreTrainedModel):
                 - Restrictions: Must be an instance of the appropriate configuration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -757,7 +758,7 @@ class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
                 - channels (list): A list of integers representing the number of channels for each stage.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

@@ -136,7 +136,7 @@ class CpmBeeConfig(PretrainedConfig):
             half (bool): Flag to indicate whether to use half precision. Defaults to False.
         
         Returns:
-            None: The method initializes the CpmBeeConfig instance.
+            None.
         
         Raises:
             None.

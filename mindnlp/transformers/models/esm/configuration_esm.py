@@ -90,11 +90,11 @@ class EsmConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import EsmModel, EsmConfig
-
+        ...
         >>> # Initializing a ESM facebook/esm-1b style configuration >>> configuration = EsmConfig()
-
+        ...
         >>> # Initializing a model from the configuration >>> model = ESMModel(configuration)
-
+        ...
         >>> # Accessing the model configuration >>> configuration = model.config
         ```
     """
@@ -252,21 +252,22 @@ class EsmFoldConfig:
             None.
 
         Description:
-            This method checks if the 'trunk' attribute is None. If it is, a new instance of the 'TrunkConfig' class is created and assigned to 'self.trunk'.
-            If the 'trunk' attribute is of type dict, it is unpacked and passed as keyword arguments to create a new instance of the 'TrunkConfig' class,
-            which is then assigned to 'self.trunk'. This method is typically called after the object is initialized to ensure that the 'trunk' attribute
-            is properly set.
+            This method checks if the 'trunk' attribute is None. If it is, a new instance of the 'TrunkConfig' class
+            is created and assigned to 'self.trunk'. If the 'trunk' attribute is of type dict, it is unpacked and
+            passed as keyword arguments to create a new instance of the 'TrunkConfig' class,  which is then assigned to
+            'self.trunk'. This method is typically called after the object is initialized to ensure that the 'trunk'
+            attribute is properly set.
 
-        Example usage:
+        Example:
             ```python
-            config = EsmFoldConfig()
-            config.__post_init__()
-            # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class.
-
-            config = EsmFoldConfig(trunk={'option1': True, 'option2': False})
-            config.__post_init__()
-            # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class,
-            # with 'option1' set to True and 'option2' set to False.
+            >>> config = EsmFoldConfig()
+            >>> config.__post_init__()
+            >>> # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class.
+            ...
+            >>> config = EsmFoldConfig(trunk={'option1': True, 'option2': False})
+            >>> config.__post_init__()
+            >>> # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class,
+            >>> # with 'option1' set to True and 'option2' set to False.
             ```
         """
         if self.trunk is None:
@@ -290,7 +291,8 @@ class EsmFoldConfig:
 class TrunkConfig:
 
     """
-    Represents the configuration settings for the Trunk model. This class defines the configuration attributes and their validations for the Trunk model.
+    Represents the configuration settings for the Trunk model.
+    This class defines the configuration attributes and their validations for the Trunk model.
 
     Attributes:
         structure_module (StructureModuleConfig): The configuration for the structure module.
@@ -302,22 +304,24 @@ class TrunkConfig:
         dropout (float): The dropout rate, should not be greater than 0.4.
 
     Raises:
-        ValueError: If any of the following conditions are not met:
+        ValueError:
+            If any of the following conditions are not met:
 
-            >- `max_recycles` is not a positive integer.
-            >- `sequence_state_dim` is not a round multiple of itself.
-            >- `pairwise_state_dim` is not a round multiple of itself.
-            >- `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
-            >- `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
-            >- `pairwise_state_dim` is not an even number.
-            >- `dropout` is greater than 0.4.
+            - `max_recycles` is not a positive integer.
+            - `sequence_state_dim` is not a round multiple of itself.
+            - `pairwise_state_dim` is not a round multiple of itself.
+            - `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
+            - `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
+            - `pairwise_state_dim` is not an even number.
+            - `dropout` is greater than 0.4.
 
     Methods:
         __post_init__(self): Performs post-initialization validations for the configuration attributes.
         to_dict(self): Serializes the instance to a Python dictionary, including the structure module configuration.
 
     Overrides:
-        `~PretrainedConfig.to_dict`: Overrides the default `to_dict` method to include the structure module configuration in the dictionary output.
+        `~PretrainedConfig.to_dict`: Overrides the default `to_dict` method to include the structure module
+        configuration in the dictionary output.
     """
     num_blocks: int = 48
     sequence_state_dim: int = 1024
@@ -340,16 +344,16 @@ class TrunkConfig:
             self: The instance of the TrunkConfig class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If `max_recycles` is not a positive value.
-            - ValueError: If `sequence_state_dim` is not a round multiple of itself.
-            - ValueError: If `pairwise_state_dim` is not a round multiple of itself.
-            - ValueError: If `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
-            - ValueError: If `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
-            - ValueError: If `pairwise_state_dim` is not an even number.
-            - ValueError: If `dropout` is greater than or equal to 0.4.
+            ValueError: If `max_recycles` is not a positive value.
+            ValueError: If `sequence_state_dim` is not a round multiple of itself.
+            ValueError: If `pairwise_state_dim` is not a round multiple of itself.
+            ValueError: If `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
+            ValueError: If `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
+            ValueError: If `pairwise_state_dim` is not an even number.
+            ValueError: If `dropout` is greater than or equal to 0.4.
         """
         if self.structure_module is None:
             self.structure_module = StructureModuleConfig()
@@ -469,13 +473,16 @@ class StructureModuleConfig:
 
 def get_default_vocab_list():
     '''
-    This function returns a list of default vocabulary items including special tokens and characters used in natural language processing tasks.
+    This function returns a list of default vocabulary items including special tokens and characters used in natural
+    language processing tasks.
 
     Args:
         None.
 
     Returns:
-        List: A list of default vocabulary items including '<cls>', '<pad>', '<eos>', '<unk>', 'L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U',
+        List:
+            A list of default vocabulary items including '<cls>', '<pad>', '<eos>', '<unk>', 'L', 'A', 'G', 'V', 'S',
+            'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U',
             'Z', 'O', '.', '-', '<null_1>', '<mask>'.
     
     Raises:

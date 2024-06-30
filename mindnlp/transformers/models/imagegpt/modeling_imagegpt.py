@@ -605,18 +605,18 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         Returns:
             `Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoImageProcessor, ImageGPTModel
             >>> from PIL import Image
             >>> import requests
-
+            ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
             >>> model = ImageGPTModel.from_pretrained("openai/imagegpt-small")
-
+            ...
             >>> inputs = image_processor(images=image, return_tensors="pt")
             >>> outputs = model(**inputs)
             >>> last_hidden_states = outputs.last_hidden_state
@@ -883,18 +883,18 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
         Returns:
             `Union[Tuple, CausalLMOutputWithCrossAttentions]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoImageProcessor, ImageGPTForCausalImageModeling
             >>> import torch
             >>> import matplotlib.pyplot as plt
             >>> import numpy as np
-
+            ...
             >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
             >>> model = ImageGPTForCausalImageModeling.from_pretrained("openai/imagegpt-small")
             >>> device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             >>> model.to(device)  # doctest: +IGNORE_RESULT
-
+            ...
             >>> # unconditional generation of 8 images
             >>> batch_size = 4
             >>> context = torch.full((batch_size, 1), model.config.vocab_size - 1)  # initialize with SOS token
@@ -902,17 +902,17 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
             >>> output = model.generate(
             ...     input_ids=context, max_length=model.config.n_positions + 1, temperature=1.0, do_sample=True, top_k=40
             ... )
-
+            ...
             >>> clusters = image_processor.clusters
             >>> height = image_processor.size["height"]
             >>> width = image_processor.size["width"]
-
+            ...
             >>> samples = output[:, 1:].cpu().detach().numpy()
             >>> samples_img = [
             ...     np.reshape(np.rint(127.5 * (clusters[s] + 1.0)), [height, width, 3]).astype(np.uint8) for s in samples
             ... ]  # convert color cluster tokens back to pixels
             >>> f, axes = plt.subplots(1, batch_size, dpi=300)
-
+            ...
             >>> for img, ax in zip(samples_img, axes):  # doctest: +IGNORE_RESULT
             ...     ax.axis("off")
             ...     ax.imshow(img)
@@ -1030,18 +1030,18 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         Returns:
             `Union[Tuple, SequenceClassifierOutputWithPast]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoImageProcessor, ImageGPTForImageClassification
             >>> from PIL import Image
             >>> import requests
-
+            ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
             >>> model = ImageGPTForImageClassification.from_pretrained("openai/imagegpt-small")
-
+            ...
             >>> inputs = image_processor(images=image, return_tensors="pt")
             >>> outputs = model(**inputs)
             >>> logits = outputs.logits

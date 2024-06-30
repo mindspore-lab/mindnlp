@@ -54,19 +54,19 @@ class LlavaConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import LlavaForConditionalGeneration, LlavaConfig, CLIPVisionConfig, LlamaConfig
-
+        ...
         >>> # Initializing a CLIP-vision config
         >>> vision_config = CLIPVisionConfig()
-
+        ...
         >>> # Initializing a Llama config
         >>> text_config = LlamaConfig()
-
+        ...
         >>> # Initializing a Llava llava-1.5-7b style configuration
         >>> configuration = LlavaConfig(vision_config, text_config)
-
+        ...
         >>> # Initializing a model from the llava-1.5-7b style configuration
         >>> model = LlavaForConditionalGeneration(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -90,17 +90,20 @@ class LlavaConfig(PretrainedConfig):
 
         Args:
             self: The instance of the class.
-            vision_config (dict or None): Configuration options for the vision model. If provided as a dictionary, must include the 'model_type' key. Default is None.
-            text_config (dict or None): Configuration options for the text model. If provided as a dictionary, must include the 'model_type' key. Default is None.
+            vision_config (dict or None): Configuration options for the vision model.
+                If provided as a dictionary, must include the 'model_type' key. Default is None.
+            text_config (dict or None): Configuration options for the text model.
+                If provided as a dictionary, must include the 'model_type' key. Default is None.
             ignore_index (int): The index to ignore during computations. Default is -100.
             image_token_index (int): The index assigned to image tokens. Default is 32000.
             projector_hidden_act (str): The activation function for the projector. Default is 'gelu'.
-            vision_feature_select_strategy (str): The strategy to select vision features. Valid values are 'default' and 'full'. Default is 'default'.
+            vision_feature_select_strategy (str): The strategy to select vision features.
+                Valid values are 'default' and 'full'. Default is 'default'.
             vision_feature_layer (int): The layer to extract vision features from. Default is -2.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None
+            None.
 
         Raises:
             ValueError: If the provided vision_feature_select_strategy is not 'default' or 'full'.
@@ -175,11 +178,12 @@ class LlavaConfig(PretrainedConfig):
                 It is used to access the internal attributes and configurations of the class.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
-            FutureWarning: This method raises a FutureWarning when accessed, indicating that the 'vocab_size' attribute is deprecated.
-                Users are advised to use 'text_config.vocab_size' instead.
+            FutureWarning: This method raises a FutureWarning when accessed,
+                indicating that the 'vocab_size' attribute is deprecated. Users are advised to use
+                'text_config.vocab_size' instead.
         """
         warnings.warn(
             "The `vocab_size` attribute is deprecated and will be removed in v4.42, Please use `text_config.vocab_size` instead.",
@@ -197,13 +201,15 @@ class LlavaConfig(PretrainedConfig):
             value (int): The new vocabulary size to be set. It should be a positive integer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines the number of unique words that can be stored in the vocabulary. It is important to set an
-        appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
+        This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines
+        the number of unique words that can be stored in the vocabulary. It is important to set an appropriate
+        vocabulary size based on the application and the amount of available memory. The vocabulary size can only be
+        set to a positive integer value, otherwise an error will be raised.
 
         Example:
             ```python

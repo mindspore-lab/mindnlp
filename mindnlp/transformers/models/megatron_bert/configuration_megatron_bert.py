@@ -79,13 +79,13 @@ class MegatronBertConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import MegatronBertConfig, MegatronBertModel
-
+        ...
         >>> # Initializing a MEGATRON_BERT bert-base-uncased style configuration
         >>> configuration = MegatronBertConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the bert-base-uncased style configuration
         >>> model = MegatronBertModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -132,10 +132,10 @@ class MegatronBertConfig(PretrainedConfig):
             use_cache (bool): Whether to use caching during inference.
 
         Returns:
-            None
+            None.
 
         Raises:
-            - ValueError: If any argument is invalid or out of range.
+            ValueError: If any argument is invalid or out of range.
         """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
 

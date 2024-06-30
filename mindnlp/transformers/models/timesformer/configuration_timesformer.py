@@ -81,13 +81,13 @@ class TimesformerConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import TimesformerConfig, TimesformerModel
-
+        ...
         >>> # Initializing a TimeSformer timesformer-base style configuration
         >>> configuration = TimesformerConfig()
-
+        ...
         >>> # Initializing a model from the configuration
         >>> model = TimesformerModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -137,7 +137,7 @@ class TimesformerConfig(PretrainedConfig):
             drop_path_rate (float, optional): The drop path rate for stochastic depth. Defaults to 0.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

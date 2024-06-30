@@ -100,7 +100,7 @@ class BlenderbotAttention(nn.Cell):
             config (Optional[BlenderbotConfig], optional): The configuration for the Blenderbot model. Default is None.
         
         Returns:
-            None: This method initializes the instance of the class without returning any value.
+            None.
         
         Raises:
             ValueError: If embed_dim is not divisible by num_heads.
@@ -427,7 +427,7 @@ class BlenderbotDecoderLayer(nn.Cell):
                 - config.decoder_ffn_dim (int): The dimensionality of the feedforward network.
 
         Returns:
-            None: This method initializes various attributes of the BlenderbotDecoderLayer instance.
+            None.
 
         Raises:
             ValueError: If any of the input parameters are invalid or missing.
@@ -636,7 +636,7 @@ class BlenderbotEncoder(BlenderbotPreTrainedModel):
             embed_tokens (Optional[nn.Embedding]): Optional parameter representing embedding tokens. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -819,7 +819,7 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
                 Defaults to None.
 
         Returns:
-            None: This method initializes the instance of the BlenderbotDecoder class.
+            None.
 
         Raises:
             None.
@@ -856,10 +856,10 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
                 This parameter is used to access the embed_tokens attribute.
 
         Returns:
-            None: This method returns the embed_tokens attribute, which represents the input embeddings.
+            embed_tokens: This method returns the embed_tokens attribute, which represents the input embeddings.
 
         Raises:
-            None
+            None.
         """
         return self.embed_tokens
 
@@ -874,10 +874,10 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
                 It can be of any valid data type and is used to set the embed_tokens attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = value
 
@@ -1149,7 +1149,7 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
                 An instance of the BlenderbotConfig class containing configuration parameters for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1176,7 +1176,7 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             None: This method returns the shared input embeddings.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.shared
 
@@ -1206,10 +1206,10 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             self (BlenderbotModel): An instance of the BlenderbotModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.encoder
 
@@ -1358,7 +1358,7 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
             config (BlenderbotConfig): An instance of the BlenderbotConfig class containing the configuration settings for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1403,7 +1403,7 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
             The decoder is a component of the BlenderbotForConditionalGeneration model
             that is responsible for generating responses based on the input.
 
-        Example usage:
+        Example:
             ```python
             >>> blenderbot = BlenderbotForConditionalGeneration()
             >>> decoder = blenderbot.get_decoder()
@@ -1492,7 +1492,7 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
                 It is used to access the lm_head attribute, which contains the output embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1508,10 +1508,10 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
             new_embeddings: The new embeddings to be set as the output embeddings. This parameter can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -1669,7 +1669,7 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
             beam_idx (Tensor): A tensor of shape (batch_size, beam_size) containing the indices to reorder the past key values.
 
         Returns:
-            None. This method returns the reordered past key values as a tuple.
+            reordered_past: This method returns the reordered past key values as a tuple.
 
         Raises:
             None.
@@ -1704,7 +1704,7 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1721,7 +1721,7 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
                 It is used to access the methods and attributes of the class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1788,10 +1788,10 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
             self (BlenderbotForCausalLM): The instance of the BlenderbotForCausalLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         This method retrieves the input embeddings from the decoder of the BlenderbotForCausalLM model.
         The input embeddings are used to convert the input tokens into continuous vector representations.
@@ -1814,7 +1814,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
                 This parameter should be a torch.Tensor containing the input embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1834,7 +1834,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
                 The output embeddings are used for generating the model's output.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -1848,7 +1848,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
                 It should be an instance of `torch.nn.Embedding` class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1870,7 +1870,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
             None: This method does not return any value. It updates the decoder for the model in-place.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.model.decoder = decoder
 
@@ -2083,7 +2083,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
             beam_idx (Tensor): Index tensor specifying the order for reordering the past states.
         
         Returns:
-            None. This method modifies the past_key_values in-place to reorder the cache according to the beam_idx.
+            None: This method modifies the past_key_values in-place to reorder the cache according to the beam_idx.
         
         Raises:
             IndexError: If the provided beam_idx is out of bounds or not compatible with past_key_values.

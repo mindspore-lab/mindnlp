@@ -60,7 +60,7 @@ class Trie:
             self: The Trie instance.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
             None.
@@ -370,10 +370,10 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
             self: An instance of the PreTrainedTokenizer class.
 
         Returns:
-            None: This method initializes the PreTrainedTokenizer object.
+            None.
 
         Raises:
-            No exceptions are raised in this method.
+            None.
         """
         # 1. Init the parent class
 
@@ -580,7 +580,7 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
                 A list of unique tokens to be added to the tokens trie. Default is an empty list.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the unique_no_split_tokens parameter is not a list of strings.
@@ -740,7 +740,7 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
                 If the token is None, it returns None. Otherwise, it returns the ID associated with the token.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if token is None:
             return None
@@ -758,7 +758,7 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
             token (str): The token to be converted to ID.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the method is not implemented or overridden by a subclass.
@@ -1231,11 +1231,12 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
         Args:
             self (object): The instance of the PreTrainedTokenizer class.
             token_ids (List[int]): A list of token IDs to be decoded into a string.
-            skip_special_tokens (bool): A flag indicating whether special tokens should be skipped during decoding. Defaults to False.
+            skip_special_tokens (bool): A flag indicating whether special tokens should be skipped during decoding.
+                Defaults to False.
             clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces.
                 If None, the value of self.clean_up_tokenization_spaces is used. Defaults to None.
-            spaces_between_special_tokens (bool): A flag indicating whether spaces should be added between special tokens in the decoded text.
-                Defaults to True.
+            spaces_between_special_tokens (bool): A flag indicating whether spaces should be added between special
+                tokens in the decoded text. Defaults to True.
         
         Returns:
             str: The decoded string representation of the input token IDs.

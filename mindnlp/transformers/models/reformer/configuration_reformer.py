@@ -147,13 +147,13 @@ class ReformerConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import ReformerConfig, ReformerModel
-
+        ...
         >>> # Initializing a Reformer configuration
         >>> configuration = ReformerConfig()
-
+        ...
         >>> # Initializing a Reformer model (with random weights)
         >>> model = ReformerModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -238,7 +238,7 @@ class ReformerConfig(PretrainedConfig):
             classifier_dropout (None or float): Dropout probability for classifier layers.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

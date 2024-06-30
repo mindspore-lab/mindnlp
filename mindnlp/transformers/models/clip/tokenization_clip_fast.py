@@ -104,7 +104,7 @@ class CLIPTokenizerFast(PreTrainedTokenizerFast):
             pad_token (str, optional): The padding token. Default is 'endoftext'.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: Raised if the backend tokenizer pre_tokenizer does not match the expected format.

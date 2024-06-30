@@ -108,11 +108,10 @@ class GPT2Tokenizer(PreTrainedTokenizer):
     Example:
         ```python
         >>> from transformers import GPT2Tokenizer
-
+        ...
         >>> tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         >>> tokenizer("Hello world")["input_ids"]
         [15496, 995]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [18435, 995]
         ```
@@ -250,7 +249,7 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             self: GPT2Tokenizer object. The instance of the GPT2Tokenizer class.
 
         Returns:
-            dict or None. A merged dictionary containing the encoder and added tokens encoder.
+            dict or None: A merged dictionary containing the encoder and added tokens encoder.
 
         Raises:
             None.
@@ -324,7 +323,7 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             token_ids_1 (list, optional): List of token IDs for the second input. Default is None.
 
         Returns:
-            None. This method does not return a value, but it modifies the input lists by adding special tokens.
+            None: This method does not return a value, but it modifies the input lists by adding special tokens.
 
         Raises:
             None.
@@ -404,7 +403,8 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         Args:
             self (GPT2Tokenizer): The instance of the GPT2Tokenizer class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): The prefix to be added to the filename of the vocabulary files. Defaults to None.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filename of the vocabulary files.
+                Defaults to None.
 
         Returns:
             Tuple[str]: A tuple containing the paths of the saved vocabulary files.
@@ -412,14 +412,16 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         Raises:
             OSError: If the save_directory is not a valid directory.
 
-        This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory. The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains
+        This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory.
+        The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains
         the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
 
-        If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter is optional and can be used to add a prefix to the filename of the saved vocabulary
-        files. If filename_prefix is not provided, no prefix will be added to the filenames.
+        If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter
+        is optional and can be used to add a prefix to the filename of the saved vocabulary files.
+        If filename_prefix is not provided, no prefix will be added to the filenames.
 
-        The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file). The vocab_file path points to the saved vocabulary file, and the merge_file path points to
-        the saved merge file.
+        The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file).
+        The vocab_file path points to the saved vocabulary file, and the merge_file path points to the saved merge file.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -456,13 +458,14 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         Args:
             self (GPT2Tokenizer): The instance of the GPT2Tokenizer class.
             text (str): The input text to be prepared for tokenization.
-            is_split_into_words (bool): A flag indicating whether the input text is already split into words. If True, the text will not be modified.
+            is_split_into_words (bool): A flag indicating whether the input text is already split into words.
+                If True, the text will not be modified.
         
         Returns:
             tuple: A tuple containing the prepared text and any remaining keyword arguments after processing.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if is_split_into_words or add_prefix_space:

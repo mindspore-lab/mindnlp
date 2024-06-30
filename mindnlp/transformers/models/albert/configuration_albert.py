@@ -167,7 +167,7 @@ class AlbertConfig(PretrainedConfig):
             eos_token_id (int, optional): The ID for end of sequence token. Defaults to 3.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

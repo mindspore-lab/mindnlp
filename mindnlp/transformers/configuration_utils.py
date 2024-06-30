@@ -52,7 +52,8 @@ class PretrainedConfig:
             ValueError: If label2id is not a dictionary.
             ValueError: If id2label is not a dictionary.
             ValueError: If num_labels is provided and is incompatible with the id to label map.
-            ValueError: If problem_type is not one of the allowed types: 'regression', 'single_label_classification', 'multi_label_classification'.
+            ValueError: If problem_type is not one of the allowed types: 'regression', 'single_label_classification',
+                'multi_label_classification'.
             AttributeError: If any attribute cannot be set for the instance.
         '''
         self.ms_dtype = kwargs.pop("ms_dtype", None)
@@ -173,7 +174,7 @@ class PretrainedConfig:
             value (any): The value to be assigned to the attribute specified by the key.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             AttributeError: If the key is not found in the attribute map of the parent class.
@@ -184,7 +185,8 @@ class PretrainedConfig:
 
     def __getattribute__(self, key):
         """
-        This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the specified attribute key.
+        This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the
+        specified attribute key.
 
         Args:
             self (object): The instance of the PretrainedConfig class.
@@ -341,9 +343,7 @@ class PretrainedConfig:
                 </Tip>
 
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
-
                 - If `False`, then this function returns just the final configuration object.
-
                 - If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
                 dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
                 part of `kwargs` which has not been used to update `config` and is otherwise ignored.
@@ -717,7 +717,8 @@ class PretrainedConfig:
             self: An instance of the PretrainedConfig class.
 
         Returns:
-            str: The implementation type of the attention mechanism. Possible values are:
+            str:
+                The implementation type of the attention mechanism. Possible values are:
 
                 - 'eager': If the '_attn_implementation_internal' attribute is set to None or not defined.
                 - The value of '_attn_implementation_internal': If it is not None.
@@ -739,17 +740,18 @@ class PretrainedConfig:
     @_attn_implementation.setter
     def _attn_implementation(self, value):
         """
-        This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the '_attn_implementation_internal' attribute.
+        This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the
+        '_attn_implementation_internal' attribute.
 
         Args:
             self (object): The instance of the PretrainedConfig class.
             value (any): The value to be assigned to the '_attn_implementation_internal' attribute.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         self._attn_implementation_internal = value
 
@@ -821,8 +823,8 @@ class EncoderDecoderConfig(PretrainedConfig):
             ValueError: If any of the 'encoder' or 'decoder' configuration dictionaries are empty.
 
         Note:
-            This method is used to initialize a configuration object for an encoder-decoder model. It expects the following
-            parameters to be passed as keyword arguments:
+            This method is used to initialize a configuration object for an encoder-decoder model.
+            It expects the following parameters to be passed as keyword arguments:
 
             - encoder: A dictionary containing the configuration settings for the encoder model. It should include the
               'model_type' parameter specifying the type of the encoder model.

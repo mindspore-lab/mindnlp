@@ -77,7 +77,7 @@ class TextStreamer(BaseStreamer):
             **decode_kwargs: Additional keyword arguments for decoding.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If tokenizer is not an instance of AutoTokenizer.
@@ -255,7 +255,7 @@ class TextIteratorStreamer(TextStreamer):
             None: This method returns None as it is meant to be an iterator and does not explicitly return a value.
         
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         return self
 
@@ -264,7 +264,8 @@ class TextIteratorStreamer(TextStreamer):
         Method to retrieve the next value from the text queue in the TextIteratorStreamer class.
         
         Args:
-            self: An instance of the TextIteratorStreamer class.
+            self:
+                An instance of the TextIteratorStreamer class.
 
                 - Type: TextIteratorStreamer
                 - Purpose: Represents the current instance of the TextIteratorStreamer class.

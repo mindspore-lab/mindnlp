@@ -51,7 +51,7 @@ class CLIPProcessor(ProcessorMixin):
             tokenizer (object): A tokenizer object used for tokenizing text inputs.
         
         Returns:
-            None. This method initializes a CLIPProcessor object.
+            None.
         
         Raises:
             ValueError: If either `image_processor` or `tokenizer` is not specified.

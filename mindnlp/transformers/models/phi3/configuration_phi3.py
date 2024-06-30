@@ -52,7 +52,7 @@ class Phi3Config(PretrainedConfig):
         num_key_value_heads (`int`, *optional*):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -98,13 +98,13 @@ class Phi3Config(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import Phi3Model, Phi3Config
-
+        ...
         >>> # Initializing a Phi-3 style configuration
         >>> configuration = Phi3Config.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
-
+        ...
         >>> # Initializing a model from the configuration
         >>> model = Phi3Model(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -167,11 +167,11 @@ class Phi3Config(PretrainedConfig):
             sliding_window: Not specified.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If rope_scaling is provided without rope_theta or vice versa.
-            - TypeError: If any of the input parameters have an unexpected type.
+            ValueError: If rope_scaling is provided without rope_theta or vice versa.
+            TypeError: If any of the input parameters have an unexpected type.
         """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

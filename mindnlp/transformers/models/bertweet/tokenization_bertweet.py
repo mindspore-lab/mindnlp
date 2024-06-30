@@ -135,14 +135,14 @@ class BertweetTokenizer(PreTrainedTokenizer):
             mask_token (str): Mask token (default is '<mask>').
 
         Returns:
-            None: This method initializes the BertweetTokenizer instance with the provided parameters.
+            None.
 
         Raises:
-            - ImportError: If the 'emoji' library is not installed, a warning is logged, and emoticons or emojis will not be converted to text.
-              To resolve this, install emoji library using 'pip3 install emoji==0.6.0'.
-            - FileNotFoundError: If the vocab_file or merges_file cannot be found or accessed.
-            - IOError: If there is an issue reading the merges_file with UTF-8 encoding.
-            - Exception: Any other unforeseen exceptions that might occur during the initialization process.
+            ImportError: If the 'emoji' library is not installed, a warning is logged, and emoticons or emojis will not be converted to text.
+                To resolve this, install emoji library using 'pip3 install emoji==0.6.0'.
+            FileNotFoundError: If the vocab_file or merges_file cannot be found or accessed.
+            IOError: If there is an issue reading the merges_file with UTF-8 encoding.
+            Exception: Any other unforeseen exceptions that might occur during the initialization process.
         """
         try:
             from emoji import demojize
@@ -271,15 +271,18 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Method to retrieve the vocabulary size of the BertweetTokenizer.
 
         Args:
-            self: The instance of the BertweetTokenizer class.
-                Type: BertweetTokenizer object.
-                Purpose: Represents the current instance of the BertweetTokenizer class.
-                Restrictions: None.
+            self:
+                The instance of the BertweetTokenizer class.
+
+                - Type: BertweetTokenizer object.
+                - Purpose: Represents the current instance of the BertweetTokenizer class.
+                - Restrictions: None.
 
         Returns:
             The total number of unique tokens in the tokenizer's encoder.
-                Type: int.
-                Purpose: Indicates the vocabulary size of the tokenizer.
+
+                - Type: int.
+                - Purpose: Indicates the vocabulary size of the tokenizer.
 
         Raises:
             None.
@@ -816,7 +819,7 @@ class TweetTokenizer:
                 Defaults to False.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

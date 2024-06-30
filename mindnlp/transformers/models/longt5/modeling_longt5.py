@@ -226,13 +226,14 @@ class LongT5LayerNorm(nn.Cell):
         
         Args:
             self (LongT5LayerNorm): An instance of the LongT5LayerNorm class.
-            hidden_states (numpy.ndarray): A numpy array containing hidden states to be normalized. The array should have a dtype of mindspore.float32. 
+            hidden_states (numpy.ndarray): A numpy array containing hidden states to be normalized.
+                The array should have a dtype of mindspore.float32.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: No exceptions are raised by this method.
+            None.
         """
         variance = hidden_states.astype(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         hidden_states = hidden_states / ops.sqrt(variance + self.variance_epsilon)
@@ -252,16 +253,17 @@ class LongT5DenseActDense(nn.Cell):
         
         Args:
             self: Represents the instance of the class.
-            config (LongT5Config): An object of type LongT5Config containing configuration parameters for the dense layers. It specifies the dimensions of the input and output tensors, as well as the dropout
-                rate and activation function to be used.
+            config (LongT5Config): An object of type LongT5Config containing configuration parameters for the
+            dense layers. It specifies the dimensions of the input and output tensors, as well as the dropout
+            rate and activation function to be used.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not of type LongT5Config.
-            - ValueError: If the config parameter contains invalid configuration values.
-            - RuntimeError: If there is an issue with initializing the dense layers, dropout, or activation function.
+            TypeError: If the config parameter is not of type LongT5Config.
+            ValueError: If the config parameter contains invalid configuration values.
+            RuntimeError: If there is an issue with initializing the dense layers, dropout, or activation function.
         """
         super().__init__()
         self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
@@ -300,14 +302,16 @@ class LongT5DenseGatedActDense(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (LongT5Config): An object containing configuration parameters for the dense layers.
-                config.d_model (int): The dimensionality of the model.
-                config.d_ff (int): The dimensionality of the feed-forward layer.
-                config.dropout_rate (float): The dropout rate for regularization.
-                config.dense_act_fn (str): The name of the activation function to be used.
+            config (LongT5Config):
+                An object containing configuration parameters for the dense layers.
+
+                - config.d_model (int): The dimensionality of the model.
+                - config.d_ff (int): The dimensionality of the feed-forward layer.
+                - config.dropout_rate (float): The dropout rate for regularization.
+                - config.dense_act_fn (str): The name of the activation function to be used.
 
         Returns:
-            None. This method initializes the dense layers and other attributes of the class instance.
+            None.
 
         Raises:
             None.
@@ -328,10 +332,10 @@ class LongT5DenseGatedActDense(nn.Cell):
             hidden_states (Tensor): The input hidden states.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_gelu = self.act(self.wi_0(hidden_states))
         hidden_linear = self.wi_1(hidden_states)
@@ -349,10 +353,11 @@ class LongT5LayerFF(nn.Cell):
         Args:
             self (object): The instance of the LongT5LayerFF class.
             config (LongT5Config): An instance of LongT5Config containing configuration settings for the LongT5LayerFF.
-                This parameter is used to configure the behavior of the LongT5LayerFF. It is expected to be an instance of the LongT5Config class.
+                This parameter is used to configure the behavior of the LongT5LayerFF.
+                It is expected to be an instance of the LongT5Config class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -375,11 +380,11 @@ class LongT5LayerFF(nn.Cell):
             hidden_states (tensor): The input hidden states to be processed by the feed-forward layer.
 
         Returns:
-            None. This method modifies the hidden_states in-place.
+            None: This method modifies the hidden_states in-place.
 
         Raises:
-            - TypeError: If the input hidden_states are not of type tensor.
-            - ValueError: If the input hidden_states are empty or have incompatible dimensions.
+            TypeError: If the input hidden_states are not of type tensor.
+            ValueError: If the input hidden_states are empty or have incompatible dimensions.
         """
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.DenseReluDense(forwarded_states)
@@ -395,11 +400,12 @@ class LongT5Attention(nn.Cell):
 
         Args:
             self: The instance of the LongT5Attention class.
-            config (LongT5Config): An instance of LongT5Config containing configuration parameters for the attention mechanism.
+            config (LongT5Config): An instance of LongT5Config containing configuration parameters
+                for the attention mechanism.
             has_relative_attention_bias (bool): A boolean flag indicating whether relative attention bias is used.
 
         Returns:
-            None. This method initializes the instance attributes and does not return any value.
+            None.
 
         Raises:
             None.
@@ -428,19 +434,22 @@ class LongT5Attention(nn.Cell):
 
     def prune_heads(self, heads):
         """
-        This method 'prune_heads' is defined within the class 'LongT5Attention' and is responsible for pruning the attention heads in the LongT5 model based on the provided 'heads'.
+        This method 'prune_heads' is defined within the class 'LongT5Attention' and is responsible for pruning the
+        attention heads in the LongT5 model based on the provided 'heads'.
 
         Args:
             self (LongT5Attention): The instance of the LongT5Attention class.
             heads (List[int]): A list of integers representing the heads to be pruned from the attention mechanism.
 
         Returns:
-            None: This method does not return any value explicitly but modifies the internal state of the LongT5Attention instance by pruning the specified attention heads.
+            None: This method does not return any value explicitly but modifies the internal state of the
+                LongT5Attention instance by pruning the specified attention heads.
 
         Raises:
-            - TypeError: If the 'heads' parameter is not a list of integers.
-            - ValueError: If the 'heads' list is empty, as there are no heads to prune.
-            - ValueError: If the number of heads to prune exceeds the total number of available heads in the LongT5Attention instance.
+            TypeError: If the 'heads' parameter is not a list of integers.
+            ValueError: If the 'heads' list is empty, as there are no heads to prune.
+            ValueError: If the number of heads to prune exceeds the total number of available heads in the
+                LongT5Attention instance.
         """
         if len(heads) == 0:
             return
@@ -656,7 +665,7 @@ class LongT5LocalAttention(nn.Cell):
             has_relative_attention_bias (bool): A flag indicating whether relative attention bias is enabled.
 
         Returns:
-            None. This method initializes various attributes of the LongT5LocalAttention instance.
+            None.
 
         Raises:
             None.
@@ -776,16 +785,21 @@ class LongT5LocalAttention(nn.Cell):
             self (LongT5LocalAttention): An instance of the LongT5LocalAttention class.
             hidden_states (Tensor): The input hidden states tensor of shape (batch_size, seq_length, hidden_dim).
             mask (Tensor, optional): The attention mask tensor of shape (batch_size, seq_length). Defaults to None.
-            position_bias (Tensor, optional): The position bias tensor of shape (1, 1, n_heads, block_len, 3 * block_len). Defaults to None.
-            layer_head_mask (Tensor, optional): The layer head mask tensor of shape (batch_size, n_heads, seq_length, seq_length). Defaults to None.
+            position_bias (Tensor, optional): The position bias tensor of shape (1, 1, n_heads, block_len, 3 * block_len).
+                Defaults to None.
+            layer_head_mask (Tensor, optional):
+                The layer head mask tensor of shape (batch_size, n_heads, seq_length, seq_length). Defaults to None.
             output_attentions (bool, optional): Flag to output attention weights. Defaults to False.
 
         Returns:
-            Tuple: A tuple containing the following elements:
-                >   - attn_output (Tensor): The output tensor of shape (batch_size, seq_length, hidden_dim).
-                >   - present_key_value_state (None): Placeholder for future use.
-                >   - position_bias (Tensor): The position bias tensor of shape (1, 1, n_heads, block_len, 3 * block_len).
-                >   - attn_weights (Tensor, optional): The attention weights tensor of shape (batch_size, n_heads, seq_length, seq_length), returned only if output_attentions is set to True.
+            Tuple:
+                A tuple containing the following elements:
+
+                - attn_output (Tensor): The output tensor of shape (batch_size, seq_length, hidden_dim).
+                - present_key_value_state (None): Placeholder for future use.
+                - position_bias (Tensor): The position bias tensor of shape (1, 1, n_heads, block_len, 3 * block_len).
+                - attn_weights (Tensor, optional): The attention weights tensor of shape
+                (batch_size, n_heads, seq_length, seq_length), returned only if output_attentions is set to True.
 
         Raises:
             None.
@@ -871,7 +885,8 @@ class LongT5TransientGlobalAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config (LongT5Config): An object of the LongT5Config class containing configuration parameters.
-            has_relative_attention_bias (bool, optional): Specifies whether relative attention bias is present. Default is False.
+            has_relative_attention_bias (bool, optional): Specifies whether relative attention bias is present.
+                Default is False.
 
         Returns:
             None
@@ -989,8 +1004,8 @@ class LongT5TransientGlobalAttention(nn.Cell):
             mindspore.Tensor: A tensor representing the computed attention side bias.
 
         Raises:
-            - ValueError: If the input tensors are not of the expected shape or type.
-            - RuntimeError: If there is an issue during the computation process.
+            ValueError: If the input tensors are not of the expected shape or type.
+            RuntimeError: If there is an issue during the computation process.
         """
         # (batch_size, 1, seq_len, global_seq_len)
         side_attention_mask = ops.equal(mask[..., None], global_segment_ids[:, None, :])[:, None, ...]
@@ -1026,9 +1041,12 @@ class LongT5TransientGlobalAttention(nn.Cell):
         Args:
             self: The instance of the LongT5TransientGlobalAttention class.
             hidden_states (Tensor): The input hidden states with shape (batch_size, seq_length, hidden_size).
-            mask (Tensor, optional): An optional mask tensor with shape (batch_size, seq_length) to mask the attention scores.
-            position_bias (Tensor, optional): An optional position bias tensor with shape (1, 1, n_heads, block_len, 3 * block_len).
-            layer_head_mask (Tensor, optional): An optional mask tensor with shape (n_heads, block_len, block_len) to mask specific heads and blocks.
+            mask (Tensor, optional): An optional mask tensor with shape (batch_size, seq_length) to
+                mask the attention scores.
+            position_bias (Tensor, optional): An optional position bias tensor with shape
+                (1, 1, n_heads, block_len, 3 * block_len).
+            layer_head_mask (Tensor, optional): An optional mask tensor with shape (n_heads, block_len, block_len)
+                to mask specific heads and blocks.
             output_attentions (bool): A boolean flag indicating whether to include attention weights in the output.
 
         Returns:
@@ -1169,10 +1187,11 @@ class LongT5LayerSelfAttention(nn.Cell):
         Args:
             self: The object itself.
             config (object): An instance of configuration for the LongT5LayerSelfAttention.
-            has_relative_attention_bias (bool, optional): Indicates whether relative attention bias is applied. Default is False.
+            has_relative_attention_bias (bool, optional): Indicates whether relative attention bias is applied.
+                Default is False.
 
         Returns:
-            None. This method initializes the LongT5LayerSelfAttention object.
+            None.
 
         Raises:
             None.
@@ -1211,9 +1230,9 @@ class LongT5LayerSelfAttention(nn.Cell):
             Tuple: A tuple containing updated hidden states and attention outputs.
 
         Raises:
-            - ValueError: If any of the input tensors have incompatible shapes.
-            - TypeError: If any input parameter is not of the expected type.
-            - RuntimeError: If cache is not initialized properly or if there is an issue with the attention mechanism.
+            ValueError: If any of the input tensors have incompatible shapes.
+            TypeError: If any input parameter is not of the expected type.
+            RuntimeError: If cache is not initialized properly or if there is an issue with the attention mechanism.
         """
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.SelfAttention(
@@ -1236,14 +1255,14 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters for the attention mechanism.
-            has_relative_attention_bias (bool, optional): A flag indicating whether the attention mechanism has relative attention bias.
-                Defaults to False.
+            has_relative_attention_bias (bool, optional): A flag indicating whether the attention mechanism 
+                has relative attention bias. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.LocalSelfAttention = LongT5LocalAttention(config, has_relative_attention_bias=has_relative_attention_bias)
@@ -1263,14 +1282,23 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
 
         Args:
             self: The instance of the LongT5LayerLocalSelfAttention class.
-            hidden_states (tensor): The input hidden states. It is of type tensor and represents the input sequence of hidden states.
-            attention_mask (tensor, optional): An optional mask tensor. It is of type tensor and is used to mask the attention scores. Default is None.
-            position_bias (tensor, optional): An optional tensor for positional bias. It is of type tensor and provides positional information to the attention mechanism. Default is None.
-            layer_head_mask (tensor, optional): An optional mask tensor. It is of type tensor and is applied to the attention scores for specific layers and heads. Default is None.
-            output_attentions (bool, optional): A flag to indicate whether to output attentions. It is of type bool and determines whether to include attention outputs in the return value. Default is False.
+            hidden_states (tensor): The input hidden states. It is of type tensor and represents the input sequence
+                of hidden states.
+            attention_mask (tensor, optional): An optional mask tensor. It is of type tensor and is used to mask the
+                attention scores. Default is None.
+            position_bias (tensor, optional): An optional tensor for positional bias.
+                It is of type tensor and provides positional information to the attention mechanism. Default is None.
+            layer_head_mask (tensor, optional): An optional mask tensor.
+                It is of type tensor and is applied to the attention scores for specific layers and heads.
+                Default is None.
+            output_attentions (bool, optional): A flag to indicate whether to output attentions.
+                It is of type bool and determines whether to include attention outputs in the return value.
+                Default is False.
 
         Returns:
-            tuple: A tuple containing the following elements:
+            tuple:
+                A tuple containing the following elements:
+
                 - hidden_states (tensor): The updated hidden states after the local self-attention operation.
                 - additional_outputs (tuple): Additional outputs including attention scores if 'output_attentions' is True.
 
@@ -1298,13 +1326,14 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         Args:
             self: The instance itself.
             config: An object containing configuration settings for the LongT5LayerTransientGlobalSelfAttention.
-            has_relative_attention_bias (bool, optional): Specifies whether the attention has relative bias. Defaults to False.
+            has_relative_attention_bias (bool, optional): Specifies whether the attention has relative bias.
+                Defaults to False.
 
         Returns:
-            None. This method initializes the LongT5LayerTransientGlobalSelfAttention instance.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.TransientGlobalSelfAttention = LongT5TransientGlobalAttention(
@@ -1334,9 +1363,11 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
             output_attentions (bool, optional): Flag to indicate whether to output attention scores.
 
         Returns:
-            tuple: A tuple containing the following elements:
-                >   - hidden_states (tensor): The updated hidden states after applying attention mechanism.
-                >   - additional_outputs (tuple): Any additional outputs returned by the attention mechanism.
+            tuple:
+                A tuple containing the following elements:
+
+                - hidden_states (tensor): The updated hidden states after applying attention mechanism.
+                - additional_outputs (tuple): Any additional outputs returned by the attention mechanism.
 
         Raises:
             None
@@ -1361,16 +1392,18 @@ class LongT5LayerCrossAttention(nn.Cell):
 
         Args:
             self: An instance of the LongT5LayerCrossAttention class.
-            config: A dictionary containing configuration settings for the LongT5LayerCrossAttention.
-                >   - Type: dict
-                >   - Purpose: Contains the configuration settings for the LongT5LayerCrossAttention.
-                >   - Restrictions: Must be a valid dictionary with required configuration parameters.
+            config:
+                A dictionary containing configuration settings for the LongT5LayerCrossAttention.
+
+                - Type: dict
+                - Purpose: Contains the configuration settings for the LongT5LayerCrossAttention.
+                - Restrictions: Must be a valid dictionary with required configuration parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.EncDecAttention = LongT5Attention(config, has_relative_attention_bias=False)
@@ -1394,22 +1427,34 @@ class LongT5LayerCrossAttention(nn.Cell):
 
         Args:
             self (LongT5LayerCrossAttention): An instance of the LongT5LayerCrossAttention class.
-            hidden_states (torch.Tensor): The input hidden states of the layer. Shape: (batch_size, sequence_length, hidden_size).
-            key_value_states (torch.Tensor): The key-value states for attention. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (torch.Tensor, optional): The attention mask tensor. Shape: (batch_size, sequence_length).
-            position_bias (torch.Tensor, optional): The position bias tensor. Shape: (batch_size, num_heads, sequence_length, sequence_length).
-            layer_head_mask (torch.Tensor, optional): The layer head mask tensor. Shape: (batch_size, num_heads, sequence_length, sequence_length).
-            past_key_value (tuple, optional): The past key-value states for attention. Tuple containing two tensors: (past_key_states, past_value_states).
+            hidden_states (torch.Tensor): The input hidden states of the layer.
+                Shape: (batch_size, sequence_length, hidden_size).
+            key_value_states (torch.Tensor): The key-value states for attention.
+                Shape: (batch_size, sequence_length, hidden_size).
+            attention_mask (torch.Tensor, optional): The attention mask tensor.
+                Shape: (batch_size, sequence_length).
+            position_bias (torch.Tensor, optional): The position bias tensor.
+                Shape: (batch_size, num_heads, sequence_length, sequence_length).
+            layer_head_mask (torch.Tensor, optional): The layer head mask tensor.
+                Shape: (batch_size, num_heads, sequence_length, sequence_length).
+            past_key_value (tuple, optional): The past key-value states for attention.
+                Tuple containing two tensors: (past_key_states, past_value_states).
             use_cache (bool, optional): Whether to use cache for the attention outputs.
             query_length (int, optional): The length of the query.
             output_attentions (bool, optional): Whether to output the attention outputs.
 
         Returns:
-            tuple: A tuple containing the following elements:
-                >   - layer_output (torch.Tensor): The output hidden states of the layer. Shape: (batch_size, sequence_length, hidden_size).
-                >   - attention_probs (torch.Tensor, optional): The attention probabilities. Shape: (batch_size, num_heads, sequence_length, sequence_length). This is only returned when output_attentions=True.
-                >   - cross_attentions (torch.Tensor, optional): The cross-attention probabilities. Shape: (batch_size, num_heads, sequence_length, sequence_length). This is only returned when
-                    output_attentions=True.
+            tuple:
+                A tuple containing the following elements:
+
+                - layer_output (torch.Tensor): The output hidden states of the layer.
+                Shape: (batch_size, sequence_length, hidden_size).
+                - attention_probs (torch.Tensor, optional): The attention probabilities.
+                Shape: (batch_size, num_heads, sequence_length, sequence_length).
+                This is only returned when output_attentions=True.
+                - cross_attentions (torch.Tensor, optional): The cross-attention probabilities.
+                Shape: (batch_size, num_heads, sequence_length, sequence_length).
+                This is only returned when output_attentions=True.
 
         Raises:
             None.
@@ -1440,10 +1485,11 @@ class LongT5Block(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): The configuration object containing the settings for the LongT5Block.
-            has_relative_attention_bias (bool): A boolean indicating whether the attention mechanism has relative attention bias.
+            has_relative_attention_bias (bool): A boolean indicating whether the attention mechanism
+                has relative attention bias.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the configuration for the encoder attention mechanism is invalid, a ValueError is raised.
@@ -1503,7 +1549,9 @@ class LongT5Block(nn.Cell):
             output_attentions (bool, optional): Flag to indicate whether to output attentions.
 
         Returns:
-            Tuple of output tensors including the updated hidden states and additional information based on the input parameters.
+            tuple:
+                Tuple of output tensors including the updated hidden states and additional information
+                based on the input parameters.
 
         Raises:
             ValueError: If the number of past key values does not match the expected number.
@@ -1704,7 +1752,8 @@ class LongT5PreTrainedModel(PreTrainedModel):
             torch.Tensor: The shifted input_ids tensor with the first position filled with the decoder_start_token_id.
 
         Raises:
-            ValueError: If self.model.config.decoder_start_token_id is not defined or if self.model.config.pad_token_id is not defined.
+            ValueError: If self.model.config.decoder_start_token_id is not defined
+                or if self.model.config.pad_token_id is not defined.
         """
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id
@@ -1740,33 +1789,39 @@ class LongT5Stack(LongT5PreTrainedModel):
             embed_tokens: An optional nn.Embedding object representing the embedding tokens. Defaults to None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method initializes the LongT5Stack instance by setting various attributes and creating the necessary layers. It takes in the following parameters:
-            >   - self: The instance of the LongT5Stack class itself.
-            >   - config: A configuration object which contains the parameters for the LongT5Stack.
-            >   - embed_tokens: An optional nn.Embedding object that represents the embedding tokens. If provided, the weight of the embed_tokens will be set to the weight of the provided object.
+            This method initializes the LongT5Stack instance by setting various attributes and creating
+            the necessary layers. It takes in the following parameters:
+
+            - self: The instance of the LongT5Stack class itself.
+            - config: A configuration object which contains the parameters for the LongT5Stack.
+            - embed_tokens: An optional nn.Embedding object that represents the embedding tokens.
+            If provided, the weight of the embed_tokens will be set to the weight of the provided object.
 
         The method performs the following steps:
-        >   1. Calls the __init__ method of the super class to initialize the parent class.
-        >   2. Sets the embed_tokens attribute to an nn.Embedding object with the specified vocabulary size and d_model.
-        >   3. If embed_tokens is not None, it sets the weight of self.embed_tokens to the weight of the provided embed_tokens.
-        >   4. Sets the is_decoder attribute to the value of config.is_decoder.
-        >   5. Sets the local_radius attribute to the value of config.local_radius.
-        >   6. Sets the block_len attribute to the local_radius + 1.
-        >   7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is
-            the first block in the list.
-        >   8. Sets the final_layer_norm attribute to a LongT5LayerNorm object with the specified d_model and layer_norm_epsilon.
-        >   9. Sets the dropout attribute to an nn.Dropout object with the specified dropout_rate.
-        >   10. Sets the gradient_checkpointing attribute to False.
-        >   11. Calls the post_init method.
+
+        1. Calls the __init__ method of the super class to initialize the parent class.
+        2. Sets the embed_tokens attribute to an nn.Embedding object with the specified vocabulary size and d_model.
+        3. If embed_tokens is not None, it sets the weight of self.embed_tokens to the weight of the provided embed_tokens.
+        4. Sets the is_decoder attribute to the value of config.is_decoder.
+        5. Sets the local_radius attribute to the value of config.local_radius.
+        6. Sets the block_len attribute to the local_radius + 1.
+        7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is
+        determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is the
+        first block in the list.
+        8. Sets the final_layer_norm attribute to a LongT5LayerNorm object with the specified d_model and layer_norm_epsilon.
+        9. Sets the dropout attribute to an nn.Dropout object with the specified dropout_rate.
+        10. Sets the gradient_checkpointing attribute to False.
+        11. Calls the post_init method.
 
         Note:
-            The LongT5Stack class is part of the LongT5 model and is responsible for stacking multiple LongT5Blocks to form the complete LongT5 model.
+            The LongT5Stack class is part of the LongT5 model and is responsible for stacking multiple LongT5Blocks
+            to form the complete LongT5 model.
         """
         super().__init__(config)
 
@@ -1800,7 +1855,7 @@ class LongT5Stack(LongT5PreTrainedModel):
             self: The instance of the LongT5Stack class. It is used to access the embed_tokens attribute.
 
         Returns:
-            None: This method returns the value of the embed_tokens attribute, which represents the input embeddings.
+            The embed_tokens attribute: which represents the input embeddings.
 
         Raises:
             None
@@ -1816,10 +1871,10 @@ class LongT5Stack(LongT5PreTrainedModel):
             new_embeddings (Any): The new embeddings to be set for the input tokens. It can be any object type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = new_embeddings
 
@@ -1857,12 +1912,14 @@ class LongT5Stack(LongT5PreTrainedModel):
             return_dict (bool, optional): Flag indicating whether to return a dictionary. Default is None.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            - ValueError: If both input_ids and inputs_embeds are specified simultaneously, or if neither input_ids nor inputs_embeds are specified.
-            - AssertionError: If the model is used as a decoder and use_cache is set to True, or if the model is used as a decoder and encoder_attention_mask is not specified while encoder_hidden_states is
-                provided.
+            ValueError: If both input_ids and inputs_embeds are specified simultaneously,
+                or if neither input_ids nor inputs_embeds are specified.
+            AssertionError: If the model is used as a decoder and use_cache is set to True,
+                or if the model is used as a decoder and encoder_attention_mask is not specified
+                while encoder_hidden_states is provided.
         '''
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -2034,10 +2091,10 @@ class LongT5Model(LongT5PreTrainedModel):
                 It specifies the model's architecture, including vocab size and model dimension.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
@@ -2062,10 +2119,10 @@ class LongT5Model(LongT5PreTrainedModel):
             self: The instance of the LongT5Model class.
 
         Returns:
-            None. The method returns the shared input embeddings used in the LongT5Model.
+            The shared input embeddings used in the LongT5Model.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.shared
 
@@ -2080,7 +2137,7 @@ class LongT5Model(LongT5PreTrainedModel):
                 The shape of the tensor should match the expected input shape of the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2098,7 +2155,7 @@ class LongT5Model(LongT5PreTrainedModel):
             self (LongT5Model): The instance of the LongT5Model class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2145,22 +2202,22 @@ class LongT5Model(LongT5PreTrainedModel):
         This method constructs a LongT5 model with the specified parameters.
 
         Args:
-            self: (object) The instance of the class.
-            input_ids: (list) The input token IDs for the encoder.
-            attention_mask: (list) The attention mask for the encoder input.
-            decoder_input_ids: (list) The input token IDs for the decoder.
-            decoder_attention_mask: (list) The attention mask for the decoder input.
-            head_mask: (list) The mask applied to the encoder's attention heads.
-            decoder_head_mask: (list) The mask applied to the decoder's attention heads.
-            cross_attn_head_mask: (list) The mask applied to the cross-attention heads.
-            encoder_outputs: (object) The output of the encoder.
-            past_key_values: (object) The past key values for the decoder.
-            inputs_embeds: (object) The embeddings for the encoder inputs.
-            decoder_inputs_embeds: (object) The embeddings for the decoder inputs.
-            use_cache: (bool) Flag indicating whether to use cache.
-            output_attentions: (bool) Flag indicating whether to output attentions.
-            output_hidden_states: (bool) Flag indicating whether to output hidden states.
-            return_dict: (bool) Flag indicating whether to return a dictionary.
+            self (object): The instance of the class.
+            input_ids (list): The input token IDs for the encoder.
+            attention_mask (list): The attention mask for the encoder input.
+            decoder_input_ids (list): The input token IDs for the decoder.
+            decoder_attention_mask (list): The attention mask for the decoder input.
+            head_mask (list): The mask applied to the encoder's attention heads.
+            decoder_head_mask (list): The mask applied to the decoder's attention heads.
+            cross_attn_head_mask (list): The mask applied to the cross-attention heads.
+            encoder_outputs (object): The output of the encoder.
+            past_key_values (object): The past key values for the decoder.
+            inputs_embeds (object): The embeddings for the encoder inputs.
+            decoder_inputs_embeds (object): The embeddings for the decoder inputs.
+            use_cache (bool): Flag indicating whether to use cache.
+            output_attentions (bool): Flag indicating whether to output attentions.
+            output_hidden_states (bool): Flag indicating whether to output hidden states.
+            return_dict (bool): Flag indicating whether to return a dictionary.
 
         Returns:
             None
@@ -2238,14 +2295,14 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         """
         Args:
             self: The instance of the LongT5ForConditionalGeneration class.
-            config (LongT5Config): An instance of LongT5Config class containing the configuration parameters for the LongT5 model. It specifies the model dimensions, vocabulary size, and other relevant
-                settings.
+            config (LongT5Config): An instance of LongT5Config class containing the configuration parameters
+                for the LongT5 model. It specifies the model dimensions, vocabulary size, and other relevant settings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.model_dim = config.d_model
@@ -2271,19 +2328,18 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         Method to retrieve the input embeddings from the LongT5ForConditionalGeneration model.
 
         Args:
-            self: An instance of the LongT5ForConditionalGeneration class.
-                >   - Type: LongT5ForConditionalGeneration
-                >   - Purpose: Represents the current instance of the LongT5ForConditionalGeneration class.
-                >   - Restrictions: None
+            self:
+                An instance of the LongT5ForConditionalGeneration class.
+
+                - Type: LongT5ForConditionalGeneration
+                - Purpose: Represents the current instance of the LongT5ForConditionalGeneration class.
+                - Restrictions: None
 
         Returns:
-            None
-                >   - Type: None
-                >   - Purpose: The method returns None as it retrieves the input embeddings from the model.
+            None: The method returns None as it retrieves the input embeddings from the model.
 
         Raises:
-            None
-                >   - The method does not raise any exceptions.
+            None.
         """
         return self.shared
 
@@ -2295,16 +2351,17 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
 
     def _tie_weights(self):
         """
-        This method ties the weights of the encoder and decoder embeddings if the configuration specifies to tie the word embeddings.
+        This method ties the weights of the encoder and decoder embeddings if the configuration specifies
+        to tie the word embeddings.
 
         Args:
             self (LongT5ForConditionalGeneration): The instance of the LongT5ForConditionalGeneration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -2371,9 +2428,9 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
             None
 
         Raises:
-            - NotImplementedError: If the method encounters an operation that is not implemented.
-            - ValueError: If incorrect arguments are provided or if the input dimensions are not valid.
-            - RuntimeError: If there is an issue during model execution.
+            NotImplementedError: If the method encounters an operation that is not implemented.
+            ValueError: If incorrect arguments are provided or if the input dimensions are not valid.
+            RuntimeError: If there is an issue during model execution.
         """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2489,19 +2546,23 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
 
     def _reorder_cache(self, past_key_values, beam_idx):
         '''
-        This method '_reorder_cache' is defined within the class 'LongT5ForConditionalGeneration' and is responsible for reordering the cache for the T5 model during decoding.
+        This method '_reorder_cache' is defined within the class 'LongT5ForConditionalGeneration' and
+        is responsible for reordering the cache for the T5 model during decoding.
 
         Args:
             self: The instance of the class.
-            past_key_values (tuple): A tuple containing the past key and value states for each layer in the decoder. The past key and value states are used to speed up decoding. If None, a warning is logged
-                suggesting to set 'use_cache=True' to enhance decoding speed.
+            past_key_values (tuple): A tuple containing the past key and value states for each layer in the decoder.
+                The past key and value states are used to speed up decoding.
+                If None, a warning is logged suggesting to set 'use_cache=True' to enhance decoding speed.
             beam_idx (tensor): The indices of the selected beams to be used for reordering the past key and value states.
 
         Returns:
-            tuple: The reordered past key and value states for the decoder. If the 'past_key_values' parameter is None, it returns None.
+            tuple: The reordered past key and value states for the decoder.
+                If the 'past_key_values' parameter is None, it returns None.
 
         Raises:
-            AssertionError: If the shape or length of the reordered layer past states does not match the original layer past states.
+            AssertionError: If the shape or length of the reordered layer past states does not match the
+                original layer past states.
         '''
         # if decoder past is not included in output
         # speedy decoding is disabled and no need to reorder
@@ -2538,10 +2599,12 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
 
         Args:
             self: The object instance.
-            config (LongT5Config): The configuration object for the model.
-                >   - The 'config' parameter is of type LongT5Config, which holds various configuration settings for the model.
-                >   - It is used to initialize the base class with the provided configuration.
-                >   - This parameter is required and must be provided.
+            config (LongT5Config):
+                The configuration object for the model.
+
+                - The 'config' parameter is of type LongT5Config, which holds various configuration settings for the model.
+                - It is used to initialize the base class with the provided configuration.
+                - This parameter is required and must be provided.
         
         Returns:
             None
@@ -2567,7 +2630,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
             self: An instance of the LongT5EncoderModel class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -2583,7 +2646,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
             new_embeddings (object): New input embeddings to be set for the model.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -2599,10 +2662,10 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
             self (LongT5EncoderModel): The instance of the LongT5EncoderModel class.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -2643,7 +2706,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary. Default is None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

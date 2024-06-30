@@ -150,7 +150,7 @@ class CvtConfig(PretrainedConfig):
             None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         '''
         super().__init__(**kwargs)
         self.num_channels = num_channels

@@ -37,7 +37,7 @@ class MSBertEmbeddings(nn.Cell):
             config: An object of the config class containing the configuration parameters for the embeddings.
             
         Returns:
-            None. This method does not return any value.
+            None.
             
         Raises:
             None.
@@ -46,22 +46,18 @@ class MSBertEmbeddings(nn.Cell):
         token type embeddings, layer normalization, and dropout. The configuration parameters are used to determine
         the size of the embeddings and other properties.
         
-        The 'word_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
+        - The 'word_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for word embeddings. It takes the vocabulary size (config.vocab_size) and hidden size (config.hidden_size) as 
         arguments.
-        
-        The 'position_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table 
+        - The 'position_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for position embeddings. It takes the maximum position embeddings (config.max_position_embeddings) and hidden size 
         (config.hidden_size) as arguments.
-        
-        The 'token_type_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table 
+        - The 'token_type_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for token type embeddings. It takes the token type vocabulary size (config.type_vocab_size) and hidden size 
         (config.hidden_size) as arguments.
-        
-        The 'LayerNorm' attribute is an instance of the nn.LayerNorm class, which applies layer normalization to the 
+        - The 'LayerNorm' attribute is an instance of the nn.LayerNorm class, which applies layer normalization to the
         input embeddings. It takes the hidden size (config.hidden_size) and epsilon (config.layer_norm_eps) as arguments.
-        
-        The 'dropout' attribute is an instance of the nn.Dropout class, which applies dropout regularization to the 
+        - The 'dropout' attribute is an instance of the nn.Dropout class, which applies dropout regularization to the
         input embeddings. It takes the dropout probability (config.hidden_dropout_prob) as an argument.
         """
         super().__init__()
@@ -138,7 +134,7 @@ class MSBertSelfAttention(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
@@ -398,7 +394,7 @@ class MSBertSelfOutput(nn.Cell):
             config: An object containing configuration parameters for the MSBertSelfOutput class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -452,10 +448,10 @@ class MSBertAttention(nn.Cell):
             init_cache (bool, optional): Flag indicating whether to initialize cache. Default is False.
 
         Returns:
-            None: This method initializes the MSBertAttention object.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.self = MSBertSelfAttention(config, causal, init_cache)
@@ -512,7 +508,7 @@ class MSBertIntermediate(nn.Cell):
                 - hidden_act (str): The activation function for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the correct type.
@@ -690,10 +686,10 @@ class MSBertEncoder(nn.Cell):
                 - layer (nn.CellList): List of MSBertLayer instances.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.output_attentions = config.output_attentions
@@ -710,7 +706,7 @@ class MSBertEncoder(nn.Cell):
             self: An instance of the MSBertEncoder class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -826,7 +822,7 @@ class MSBertPooler(nn.Cell):
                 - Restrictions: Must be compatible with the expected configuration format.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -919,12 +915,13 @@ class MSBertPredictionHeadTransform(nn.Cell):
                 - Restrictions: Should be compatible with the operations performed within the method.
 
         Returns:
-            The transformed hidden states after passing through the dense layer, activation function, and LayerNorm.
+            hidden_states:
+
                 - Type: None
                 - Purpose: To return the processed hidden states for further usage.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -1021,10 +1018,10 @@ class MSBertPreTrainingHeads(nn.Cell):
                 - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Dense classes.
 
         Returns:
-            None: This method initializes the MSBertPreTrainingHeads class with the specified configuration.
+            None.
 
         Raises:
-            No exceptions are explicitly raised within this method.
+            None.
         """
         super().__init__()
         self.predictions = MSBertLMPredictionHead(config)
@@ -1102,7 +1099,7 @@ class MSBertModel(MSBertPreTrainedModel):
             add_pooling_layer (bool): Flag indicating whether to add a pooling layer to the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1121,10 +1118,11 @@ class MSBertModel(MSBertPreTrainedModel):
             self: The instance of the MSBertModel class.
 
         Returns:
-            None: This method returns the input embeddings of the MSBertModel.
+            word_embeddings:
+                This method returns the input embeddings of the MSBertModel.
 
         Raises:
-            None
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1137,7 +1135,7 @@ class MSBertModel(MSBertPreTrainedModel):
             new_embeddings (object): The new input embeddings to be set. This could be of any type, such as a tensor or an array.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1242,7 +1240,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
                 It should be an instance of the configuration class specific to the MSBertForPretraining model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None

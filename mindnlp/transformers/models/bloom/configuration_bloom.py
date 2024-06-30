@@ -142,7 +142,7 @@ class BloomConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. The method does not return a value.
+            None.
         
         Raises:
             None.

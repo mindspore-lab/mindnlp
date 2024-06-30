@@ -178,8 +178,11 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
 
         Args:
             *args: Variable length positional arguments.
-            **kwargs: Variable length keyword arguments.
-                is_split_into_words (bool, optional): Specifies if the input is already split into words. Defaults to False.
+            **kwargs:
+                Variable length keyword arguments.
+
+                - is_split_into_words (bool, optional):
+                Specifies if the input is already split into words. Defaults to False.
 
         Returns:
             BatchEncoding: A dictionary-like object containing the tokenized and encoded representations of the input batch.
@@ -299,7 +302,7 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         def find_re(string, pattern, start_pos):
             m = pattern.search(string, start_pos)

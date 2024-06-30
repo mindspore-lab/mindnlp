@@ -80,7 +80,7 @@ class ByT5Tokenizer(PreTrainedTokenizer):
             additional_special_tokens (list, optional): List of additional special tokens. Default is None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: Raised if both extra_ids and additional_special_tokens are provided and

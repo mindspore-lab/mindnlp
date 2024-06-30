@@ -38,11 +38,10 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     Example:
         ```python
         >>> from transformers import GPTNeoXTokenizerFast
-
+        ...
         >>> tokenizer = GPTNeoXTokenizerFast.from_pretrained("openai-community/gpt2")
         >>> tokenizer("Hello world")["input_ids"]
         [15496, 995]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [18435, 995]
         ```
@@ -161,10 +160,10 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
                 Purpose: Represents the tokenizer instance to which the end-of-sequence token is added.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return self._add_eos_token
 
@@ -177,12 +176,13 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the GPTNeoXTokenizerFast class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method adds a BOS token to the tokenizer. The BOS token is used to indicate the start of a sentence or a sequence.
+        This method adds a BOS token to the tokenizer.
+        The BOS token is used to indicate the start of a sentence or a sequence.
 
         Note:
             The BOS token is specific to the GPTNeoXTokenizerFast class and cannot be used with other tokenizers.
@@ -201,10 +201,10 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
                 If True, an end-of-sequence token will be added; if False, it will not be added.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self._add_eos_token = value
         self.update_post_processor()
@@ -219,29 +219,33 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
             value: The new value to be assigned to the 'add_bos_token' attribute.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor
-            method.
+            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class.
+            It allows setting a new value for the attribute and automatically triggers the update_post_processor method.
 
-            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of
-            each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
+            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization.
+            When 'add_bos_token' is set to True, a BOS token will be added at the beginning of each tokenized sequence.
+            When 'add_bos_token' is set to False, no BOS token will be added.
 
-            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any
-            necessary adjustments to the post-processing logic, if required.
+            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the
+            post-processor based on the new value. The update_post_processor method handles any necessary adjustments
+            to the post-processing logic, if required.
 
-            Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the resulting tokenized sequences.
+            Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the
+            resulting tokenized sequences.
 
-        Example usage:
+        Example:
             ```python
             >>> tokenizer = GPTNeoXTokenizerFast()
             >>> tokenizer.add_bos_token = True
             ```
-            In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True, which enables the addition of BOS tokens during tokenization.
+            In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True,
+            which enables the addition of BOS tokens during tokenization.
         """
         self._add_bos_token = value
         self.update_post_processor()
@@ -351,9 +355,9 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
         
         Raises:
-            - IOError: If there are issues with saving the vocabulary files to the specified directory.
-            - ValueError: If the provided save_directory is invalid or inaccessible.
-            - TypeError: If the provided filename_prefix is not a string.
+            IOError: If there are issues with saving the vocabulary files to the specified directory.
+            ValueError: If the provided save_directory is invalid or inaccessible.
+            TypeError: If the provided filename_prefix is not a string.
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

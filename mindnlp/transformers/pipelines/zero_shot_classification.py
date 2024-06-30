@@ -34,17 +34,20 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
 
     def _parse_labels(self, labels):
         """
-        This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible for parsing and processing the input labels.
+        This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible
+        for parsing and processing the input labels.
         
         Args:
             self (object): The instance of the class.
-            labels (str or list): The input labels to be parsed. If a string is provided, it will be split by comma and whitespace, and any empty or whitespace-only labels will be removed.
+            labels (str or list): The input labels to be parsed. If a string is provided, it will be split by comma and
+                whitespace, and any empty or whitespace-only labels will be removed.
         
         Returns:
-            None: This method does not explicitly return any value, as it directly modifies the 'labels' parameter in place.
+            None: This method does not explicitly return any value,
+                as it directly modifies the 'labels' parameter in place.
         
         Raises:
-            N/A: This method does not raise any specific exceptions.
+            None.
         """
         if isinstance(labels, str):
             labels = [label.strip() for label in labels.split(",") if label.strip()]
@@ -146,12 +149,12 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             self: The instance of the ZeroShotClassificationPipeline class.
             *args: Variable length argument list.
             args_parser:
-                An instance of the ZeroShotClassificationArgumentHandler class that handles the arguments for zero-shot classification.
-                Defaults to ZeroShotClassificationArgumentHandler().
+                An instance of the ZeroShotClassificationArgumentHandler class that handles the arguments for
+                zero-shot classification. Defaults to ZeroShotClassificationArgumentHandler().
             **kwargs: Keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -167,13 +170,15 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     @property
     def entailment_id(self):
         """
-        Returns the index of the 'entailment' label in the label-to-identifier mapping of the ZeroShotClassificationPipeline's model configuration.
+        Returns the index of the 'entailment' label in the label-to-identifier mapping of the
+        ZeroShotClassificationPipeline's model configuration.
 
         Args:
             self (ZeroShotClassificationPipeline): The current instance of the ZeroShotClassificationPipeline class.
 
         Returns:
-            int: The index of the 'entailment' label in the label-to-identifier mapping. If the 'entailment' label is not found, -1 is returned.
+            int: The index of the 'entailment' label in the label-to-identifier mapping. If the 'entailment' label is
+                not found, -1 is returned.
 
         Raises:
             None.
@@ -234,7 +239,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             self: An instance of the ZeroShotClassificationPipeline class.
 
         Returns:
-            This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -247,7 +252,8 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         - Collects the 'multi_label' parameter if provided.
 
         Note:
-            - The 'multi_class' argument has been deprecated and renamed to 'multi_label'. 'multi_class' will be removed in a future version of Transformers.
+            - The 'multi_class' argument has been deprecated and renamed to 'multi_label'. 'multi_class' will be
+            removed in a future version of Transformers.
             - The 'candidate_labels' parameter should be a list of strings representing the labels.
             - The 'hypothesis_template' parameter should be a string representing the template for the hypothesis.
             - The 'multi_label' parameter should be a boolean indicating whether multi-label classification should be used.
@@ -306,8 +312,9 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
                 the labels are considered independent and probabilities are normalized for each candidate
                 by doing a softmax of the entailment score vs. the contradiction score.
 
-        Return:
-            A `dict` or a list of `dict`: Each result comes as a dictionary with the following keys:
+        Returns:
+            A `dict` or a list of `dict`:
+                Each result comes as a dictionary with the following keys:
 
                 - **sequence** (`str`) -- The sequence for which this is the output.
                 - **labels** (`List[str]`) -- The labels sorted by order of likelihood.
@@ -391,12 +398,14 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
                 Each dictionary must have the keys 'candidate_label', 'sequence', and 'logits'.
                 The 'candidate_label' key represents the candidate label, 'sequence' key represents the sequence,
                 and 'logits' key holds the logits values.
-            multi_label (bool): A flag indicating whether the classification is multi-label or not. If set to True, the method processes the outputs accordingly.
+            multi_label (bool): A flag indicating whether the classification is multi-label or not.
+                If set to True, the method processes the outputs accordingly.
 
         Returns:
             dict: A dictionary containing the processed information of the model outputs.
-                It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels in descending
-                order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
+                It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels
+                in descending order of their scores, and 'scores' key with the corresponding scores of the candidate
+                labels.
         
         Raises:
             IndexError: If the indices accessed during processing are out of bounds.

@@ -58,7 +58,7 @@ class CTRLConfig(PretrainedConfig):
             Whether or not the model should return the last key/values attentions (not used by all models).
 
 
-    Examples:
+    Example:
         ```python
         >>> from transformers import CTRLConfig, CTRLModel
         ...

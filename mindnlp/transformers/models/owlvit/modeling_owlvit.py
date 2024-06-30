@@ -603,9 +603,11 @@ OWLVIT_TEXT_INPUTS_DOCSTRING = r"""
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
             IDs?](../glossary#input-ids)
         attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         output_attentions (`bool`, *optional*):
             Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
@@ -638,9 +640,11 @@ OWLVIT_INPUTS_DOCSTRING = r"""
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
             IDs?](../glossary#input-ids)
         attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values.
@@ -665,9 +669,11 @@ OWLVIT_OBJECT_DETECTION_INPUTS_DOCSTRING = r"""
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
             IDs?](../glossary#input-ids).
         attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         output_hidden_states (`bool`, *optional*):
             Whether or not to return the last hidden state. See `text_model_last_hidden_state` and
@@ -721,14 +727,18 @@ class OwlViTEncoder(nn.Cell):
         Args:
             inputs_embeds (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`).
             attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Causal mask for the text model. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -803,6 +813,7 @@ class OwlViTTextTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
         """
@@ -886,10 +897,10 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoProcessor, OwlViTTextModel
-
+            ...
             >>> model = OwlViTTextModel.from_pretrained("google/owlvit-base-patch32")
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> inputs = processor(
@@ -931,6 +942,7 @@ class OwlViTVisionTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
         """
@@ -994,19 +1006,19 @@ class OwlViTVisionModel(OwlViTPreTrainedModel):
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
+        Example:
             ```python
             >>> from PIL import Image
             >>> import requests
             >>> from transformers import AutoProcessor, OwlViTVisionModel
-
+            ...
             >>> model = OwlViTVisionModel.from_pretrained("google/owlvit-base-patch32")
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> inputs = processor(images=image, return_tensors="pt")
-
+            ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
             >>> pooled_output = outputs.pooler_output  # pooled CLS states
@@ -1071,10 +1083,10 @@ class OwlViTModel(OwlViTPreTrainedModel):
             text_features (`ms.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
                 applying the projection layer to the pooled output of [`OwlViTTextModel`].
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoProcessor, OwlViTModel
-
+            ...
             >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> inputs = processor(
@@ -1104,14 +1116,14 @@ class OwlViTModel(OwlViTPreTrainedModel):
         r"""
         Returns:
             image_features (`ms.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
-            applying the projection layer to the pooled output of [`OwlViTVisionModel`].
+                applying the projection layer to the pooled output of [`OwlViTVisionModel`].
 
-        Examples:
+        Example:
             ```python
             >>> from PIL import Image
             >>> import requests
             >>> from transformers import AutoProcessor, OwlViTModel
-
+            ...
             >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
@@ -1154,12 +1166,12 @@ class OwlViTModel(OwlViTPreTrainedModel):
         Returns:
             `Union[Tuple, OwlViTOutput]`
 
-        Examples:
+        Example:
             ```python
             >>> from PIL import Image
             >>> import requests
             >>> from transformers import AutoProcessor, OwlViTModel
-
+            ...
             >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
@@ -1367,6 +1379,7 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
                 Features extracted from the image, returned by the `image_text_embedder` method.
             feature_map:
                 A spatial re-arrangement of image_features, also returned by the `image_text_embedder` method.
+
         Returns:
             pred_boxes:
                 List of predicted boxes (cxcywh normalized to 0, 1) nested within a dictionary.
@@ -1529,16 +1542,17 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> OwlViTImageGuidedObjectDetectionOutput:
         r"""
+
         Returns:
             `OwlViTImageGuidedObjectDetectionOutput`
 
-        Examples:
+        Example:
             ```python
             >>> import requests
             >>> from PIL import Image
             >>> import torch
             >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch16")
             >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch16")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
@@ -1633,33 +1647,33 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         Returns:
             `OwlViTObjectDetectionOutput`
 
-        Examples:
+        Example:
             ```python
             >>> import requests
             >>> from PIL import Image
             >>> import torch
             >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
             >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
-
+            ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> texts = [["a photo of a cat", "a photo of a dog"]]
             >>> inputs = processor(text=texts, images=image, return_tensors="pt")
             >>> outputs = model(**inputs)
-
+            ...
             >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
             >>> target_sizes = ms.Tensor([image.size[::-1]])
             >>> # Convert outputs (bounding boxes and class logits) to final bounding boxes and scores
             >>> results = processor.post_process_object_detection(
             ...     outputs=outputs, threshold=0.1, target_sizes=target_sizes
             ... )
-
+            ...
             >>> i = 0  # Retrieve predictions for the first image for the corresponding text queries
             >>> text = texts[i]
             >>> boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
-
+            ...
             >>> for box, score, label in zip(boxes, scores, labels):
             ...     box = [round(i, 2) for i in box.tolist()]
             ...     print(f"Detected {text[label]} with confidence {round(score.item(), 3)} at location {box}")

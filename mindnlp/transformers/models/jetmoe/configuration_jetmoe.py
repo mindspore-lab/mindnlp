@@ -72,13 +72,13 @@ class JetMoEConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import JetMoEModel, JetMoEConfig
-
+        ...
         >>> # Initializing a JetMoE 4B style configuration
         >>> configuration = JetMoEConfig()
-
+        ...
         >>> # Initializing a model from the JetMoE 4B style configuration
         >>> model = JetMoEModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -139,7 +139,7 @@ class JetMoEConfig(PretrainedConfig):
             initializer_range (float, optional): The range for weight initialization. Defaults to 0.01.
         
         Returns:
-            None. The method sets the configuration parameters for the JetMoEConfig instance.
+            None.
         
         Raises:
             None.

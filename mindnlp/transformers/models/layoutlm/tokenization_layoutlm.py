@@ -138,7 +138,8 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         
         Args:
             self: The instance of the class.
-            vocab_file (str): Path to the vocabulary file. This file should contain the tokens and their corresponding IDs.
+            vocab_file (str): Path to the vocabulary file.
+                This file should contain the tokens and their corresponding IDs.
             do_lower_case (bool, optional): Whether to convert all tokens to lowercase. Defaults to True.
             do_basic_tokenize (bool, optional): Whether to apply basic tokenization. Defaults to True.
             never_split (list, optional): List of tokens that should never be split. Defaults to None.
@@ -235,15 +236,17 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text, split_special_tokens=False):
         '''
-        This method '_tokenize' is defined within the 'LayoutLMTokenizer' class and is responsible for tokenizing the input text.
+        This method '_tokenize' is defined within the 'LayoutLMTokenizer' class and is responsible
+        for tokenizing the input text.
         
         Args:
             self: The instance of the LayoutLMTokenizer class.
             text (str): The input text to be tokenized.
-            split_special_tokens (bool): A flag indicating whether special tokens should be split. If set to True, special tokens will be split; otherwise, they will not be split.
+            split_special_tokens (bool): A flag indicating whether special tokens should be split.
+                If set to True, special tokens will be split; otherwise, they will not be split.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -282,8 +285,8 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A LayoutLM sequence has the following format:
 
-        >   - single sequence: `[CLS] X [SEP]`
-        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        - single sequence: `[CLS] X [SEP]`
+        - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -437,7 +440,7 @@ class BasicTokenizer:
             do_split_on_punc (bool, optional): Indicates whether to split on punctuation. Default is True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -586,7 +589,7 @@ class WordpieceTokenizer:
             max_input_chars_per_word (int, optional): The maximum number of characters per word. Defaults to 100.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is not a positive integer.

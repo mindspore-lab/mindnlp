@@ -140,10 +140,10 @@ class AlignOutput(ModelOutput):
         
         Returns:
             Tuple[Any]: A tuple containing the values of the AlignOutput instance. The method excludes 'text_model_output' and 
-            'vision_model_output' keys and recursively converts any nested AlignOutput instances to tuples.
+                'vision_model_output' keys and recursively converts any nested AlignOutput instances to tuples.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return tuple(
             self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
@@ -158,8 +158,9 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     This function calculates the contrastive loss used in deep learning models.
     
     Args:
-        logits (mindspore.Tensor): The input tensor representing the logits. It is a 1-D tensor of shape (N,), where N is the number of classes. The logits are usually the output of the model before applying
-        the softmax function.
+        logits (mindspore.Tensor): The input tensor representing the logits. It is a 1-D tensor of shape (N,),
+            where N is the number of classes. The logits are usually the output of the model before applying
+            the softmax function.
 
     Returns:
         mindspore.Tensor: The computed contrastive loss as a scalar tensor.
@@ -173,8 +174,9 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
 def align_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
     """
     Args:
-        similarity (mindspore.Tensor): A tensor representing the similarity between two sets of embeddings. It is used to calculate the contrastive loss for alignment. The tensor should have the shape
-        (batch_size, embedding_size).
+        similarity (mindspore.Tensor): A tensor representing the similarity between two sets of embeddings.
+            It is used to calculate the contrastive loss for alignment. The tensor should have the shape
+            (batch_size, embedding_size).
 
     Returns:
         mindspore.Tensor: A tensor representing the alignment loss, which is the average of the contrastive loss calculated for captions and images.
@@ -283,7 +285,8 @@ class AlignVisionEmbeddings(nn.Cell):
 
         Args:
             self: An instance of the AlignVisionEmbeddings class.
-            pixel_values (mindspore.Tensor): A tensor containing the pixel values of the images. It should have shape (batch_size, channels, height, width).
+            pixel_values (mindspore.Tensor): A tensor containing the pixel values of the images.
+                It should have shape (batch_size, channels, height, width).
 
         Returns:
             mindspore.Tensor: A tensor containing the aligned vision embeddings. It has the same shape as the input tensor.
@@ -293,11 +296,11 @@ class AlignVisionEmbeddings(nn.Cell):
 
         This method performs the following steps to construct the aligned vision embeddings:
 
-        >1. Padding: The pixel_values tensor is padded to ensure that the dimensions are compatible with the subsequent convolution operation.
-        >2. Convolution: The padded tensor is convolved using a predefined set of filters to extract features.
-        >3. Batch Normalization: The features tensor is normalized to improve the stability and speed of the training process.
-        >4. Activation: The normalized features are passed through an activation function to introduce non-linearity.
-        >5. The resulting tensor is returned as the aligned vision embeddings.
+        1. Padding: The pixel_values tensor is padded to ensure that the dimensions are compatible with the subsequent convolution operation.
+        2. Convolution: The padded tensor is convolved using a predefined set of filters to extract features.
+        3. Batch Normalization: The features tensor is normalized to improve the stability and speed of the training process.
+        4. Activation: The normalized features are passed through an activation function to introduce non-linearity.
+        5. The resulting tensor is returned as the aligned vision embeddings.
         """
         features = self.padding(pixel_values)
         features = self.convolution(features)
@@ -358,7 +361,7 @@ class AlignVisionDepthwiseConv2d(nn.Conv2d):
             pad_mode (str, optional): The padding mode to use. Defaults to 'zeros'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If in_channels, depth_multiplier, kernel_size, stride, padding, or dilation is less than or equal to 0.
@@ -394,7 +397,7 @@ class AlignVisionExpansionLayer(nn.Cell):
             out_dim (int): The output dimension for the expansion layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the configuration settings are invalid or incompatible.
@@ -462,7 +465,7 @@ class AlignVisionDepthwiseLayer(nn.Cell):
             adjust_padding (bool): A boolean flag indicating whether to adjust padding.
 
         Returns:
-            None: This method initializes the attributes of the AlignVisionDepthwiseLayer instance.
+            None.
 
         Raises:
             None.
@@ -523,7 +526,7 @@ class AlignVisionSqueezeExciteLayer(nn.Cell):
             expand (bool, optional): A flag indicating whether to expand the dimension. Defaults to False.
 
         Returns:
-            None: This method initializes the AlignVisionSqueezeExciteLayer class.
+            None.
 
         Raises:
             ValueError: If the input dimensions are not valid.
@@ -698,7 +701,7 @@ class AlignVisionBlock(nn.Cell):
             adjust_padding (bool): Whether to adjust padding in the depthwise convolutional layer.
 
         Returns:
-            None: This method initializes the instance variables of the AlignVisionBlock class.
+            None.
 
         Raises:
             None.
@@ -781,7 +784,8 @@ class AlignVisionEncoder(nn.Cell):
 
         Args:
             self (AlignVisionEncoder): The instance of the AlignVisionEncoder class.
-            config (AlignVisionConfig): An instance of AlignVisionConfig containing the configuration parameters for the encoder.
+            config (AlignVisionConfig):
+                An instance of AlignVisionConfig containing the configuration parameters for the encoder.
             
                 - depth_coefficient (float): A coefficient used for computing the number of repeated blocks.
                 - in_channels (list): List of input channel dimensions for each block.
@@ -794,7 +798,7 @@ class AlignVisionEncoder(nn.Cell):
                 - drop_connect_rate (float): The rate at which to apply drop connect regularization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If any of the configuration parameters are invalid or missing.
@@ -888,7 +892,9 @@ class AlignTextEmbeddings(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (object): An object containing configuration parameters.
+            config (object):
+                An object containing configuration parameters.
+
                 - vocab_size (int): The size of the vocabulary.
                 - hidden_size (int): The size of the hidden state.
                 - pad_token_id (int): The index of the padding token.
@@ -1003,7 +1009,9 @@ class AlignTextSelfAttention(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters for the attention mechanism. It must have the following attributes:
+            config:
+                An object containing configuration parameters for the attention mechanism. It must have the following attributes:
+
                 - hidden_size (int): The size of the hidden states.
                 - num_attention_heads (int): The number of attention heads.
                 - embedding_size (optional, int): The size of the embeddings if different from hidden_size (default: None).
@@ -1064,11 +1072,15 @@ class AlignTextSelfAttention(nn.Cell):
             None.
 
         This method takes in a tensor 'x' and performs the following operations:
-        >   1. Computes the new shape of the tensor by appending the number of attention heads and attention head size dimensions to the existing shape.
-        >   2. Reshapes the tensor 'x' to the new shape calculated in the previous step.
-        >   3. Permutes the axes of the tensor 'x' to align the text self-attention scores, specifically the second and third dimensions are swapped.
 
-        The method then returns the tensor 'x' with the swapped and permuted axes, which can be used for further computations within the AlignTextSelfAttention class.
+        1. Computes the new shape of the tensor by appending the number of attention heads and attention head size
+        dimensions to the existing shape.
+        2. Reshapes the tensor 'x' to the new shape calculated in the previous step.
+        3. Permutes the axes of the tensor 'x' to align the text self-attention scores, specifically the second and
+        third dimensions are swapped.
+
+        The method then returns the tensor 'x' with the swapped and permuted axes, which can be used for further
+        computations within the AlignTextSelfAttention class.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -1226,14 +1238,15 @@ class AlignTextSelfOutput(nn.Cell):
 
         Args:
             self: The instance of the AlignTextSelfOutput class.
-            config: An object containing configuration parameters for the alignment text self output. It is expected to have the following attributes:
+            config: An object containing configuration parameters for the alignment text self output.
+                It is expected to have the following attributes:
             
                 - hidden_size (int): The size of the hidden state.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
                 - hidden_dropout_prob (float): The dropout probability for the hidden state.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -1250,15 +1263,18 @@ class AlignTextSelfOutput(nn.Cell):
 
         Args:
             self (AlignTextSelfOutput): An instance of the AlignTextSelfOutput class.
-            hidden_states (mindspore.Tensor): The hidden states.
+            hidden_states (mindspore.Tensor):
+                The hidden states.
             
                 - Shape: (batch_size, sequence_length, hidden_size).
-            input_tensor (mindspore.Tensor): The input tensor.
+            input_tensor (mindspore.Tensor):
+                The input tensor.
             
                 - Shape: (batch_size, sequence_length, hidden_size).
 
         Returns:
-            mindspore.Tensor: The aligned text self output tensor.
+            mindspore.Tensor:
+                The aligned text self output tensor.
             
                 - Shape: (batch_size, sequence_length, hidden_size).
 
@@ -1313,7 +1329,7 @@ class AlignTextAttention(nn.Cell):
             position_embedding_type (str, optional): Specifies the type of position embedding to be used. Defaults to None.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None
@@ -1333,7 +1349,7 @@ class AlignTextAttention(nn.Cell):
             heads: A list of integers representing the indices of attention heads to be pruned. If the list is empty, the method returns without performing any pruning.
 
         Returns:
-            None. The method does not return any value explicitly.
+            None.
 
         Raises:
             ValueError: If the length of the parameter 'heads' is not equal to 0 (indicating that there are attention heads to be pruned).
@@ -1430,19 +1446,17 @@ class AlignTextIntermediate(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object of type 'Config' that holds the configuration settings.
-
-                - This parameter is required for initializing the class and configuring its behavior.
+                This parameter is required for initializing the class and configuring its behavior.
                 It should be an instance of the 'Config' class defined elsewhere.
+                The 'Config' class should have the following attributes:
 
-                - The 'Config' class should have the following attributes:
-
-                    - hidden_size: An integer representing the size of the hidden layer.
-                    - intermediate_size: An integer representing the size of the intermediate layer.
-                    - hidden_act: Either a string indicating the activation function for the hidden layer,
-                      or a callable object representing the activation function itself.
-                      If it is a string, it should be one of the activation functions defined in the ACT2FN dictionary.
-                      If it is a callable object, it will be used directly as the activation function.
-                      Default is None.
+                - hidden_size: An integer representing the size of the hidden layer.
+                - intermediate_size: An integer representing the size of the intermediate layer.
+                - hidden_act: Either a string indicating the activation function for the hidden layer,
+                  or a callable object representing the activation function itself.
+                  If it is a string, it should be one of the activation functions defined in the ACT2FN dictionary.
+                  If it is a callable object, it will be used directly as the activation function.
+                  Default is None.
 
         Returns:
             None.
@@ -1517,7 +1531,7 @@ class AlignTextOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the config parameter is missing any of the required attributes.
@@ -1593,17 +1607,19 @@ class AlignTextLayer(nn.Cell):
 
         Args:
             self: The instance of the AlignTextLayer class.
-            config: A configuration object containing parameters for the AlignTextLayer.
+            config:
+                A configuration object containing parameters for the AlignTextLayer.
 
                 - Type: Config object
                 - Purpose: Contains settings and hyperparameters for the AlignTextLayer.
                 - Restrictions: Must be provided for proper initialization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            ValueError: Raised if self.add_cross_attention is True and self.is_decoder is False.
+            ValueError:
+                Raised if self.add_cross_attention is True and self.is_decoder is False.
 
                 - Purpose: Ensures that cross attention is only added when the model is used as a decoder.
         """
@@ -1724,10 +1740,10 @@ class AlignTextLayer(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -1765,7 +1781,7 @@ class AlignTextEncoder(nn.Cell):
                 - Restrictions: Must be a valid dictionary object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1918,10 +1934,10 @@ class AlignTextPooler(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: The method initializes the AlignTextPooler class and does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -2017,7 +2033,7 @@ class AlignTextModel(AlignPreTrainedModel):
             add_pooling_layer (bool, optional): A flag indicating whether to add a pooling layer. Defaults to True.
 
         Returns:
-            None: This method initializes the AlignTextModel instance with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -2044,7 +2060,7 @@ class AlignTextModel(AlignPreTrainedModel):
             None: This method returns None as it retrieves the input embeddings without any transformations.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -2057,7 +2073,7 @@ class AlignTextModel(AlignPreTrainedModel):
             value (any): The input embeddings value to be set for the model. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2328,7 +2344,7 @@ class AlignModel(AlignPreTrainedModel):
     It is designed to compute image-text similarity scores using pre-trained text and vision models.
     The class inherits from the `AlignPreTrainedModel` class.
 
-    Class Attributes:
+    Attributes:
         `projection_dim`: The dimension of the projection layer.
         `text_embed_dim`: The dimension of the text embeddings.
         `text_model`: An instance of the `AlignTextModel` class for processing text inputs.
@@ -2360,7 +2376,7 @@ class AlignModel(AlignPreTrainedModel):
                 - projection_dim (int): The dimension for the projection.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the config.text_config is not of type AlignTextConfig.
@@ -2410,7 +2426,7 @@ class AlignModel(AlignPreTrainedModel):
         r"""
         Returns:
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
-            applying the projection layer to the pooled output of [`AlignTextModel`].
+                applying the projection layer to the pooled output of [`AlignTextModel`].
 
         Example:
             ```python

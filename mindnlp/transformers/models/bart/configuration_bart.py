@@ -170,7 +170,7 @@ class BartConfig(PretrainedConfig):
             forced_eos_token_id (int, optional): The id of the forced end-of-sequence token. Defaults to 2.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             Warning: If the config does not include forced_bos_token_id in future versions.

@@ -52,11 +52,13 @@ class ResNetConvLayer(nn.Cell):
     """
     The ResNetConvLayer class represents a convolutional layer used in the ResNet neural network architecture. 
     
-    This class inherits from the nn.Cell class and is designed to process input data through a series of operations including convolution, normalization, and activation. 
+    This class inherits from the nn.Cell class and is designed to process input data through a series of operations
+    including convolution, normalization, and activation.
     
     Attributes:
         convolution (nn.Conv2d): The convolutional layer used for feature extraction.
-        normalization (nn.BatchNorm2d): The batch normalization layer used for normalizing the outputs of the convolutional layer.
+        normalization (nn.BatchNorm2d): The batch normalization layer used for normalizing the outputs of
+            the convolutional layer.
         activation (nn.Identity or callable): The activation function applied to the normalized outputs.
     
     Methods:
@@ -103,7 +105,7 @@ class ResNetConvLayer(nn.Cell):
             self: Instance of the ResNetConvLayer class.
                 Type: ResNetConvLayer
                 Purpose: Represents the current instance of the ResNetConvLayer class.
-                Restrictions: N/A
+                Restrictions: None.
 
             input: Input tensor for the convolution layer.
                 Type: mindspore.Tensor
@@ -111,12 +113,14 @@ class ResNetConvLayer(nn.Cell):
                 Restrictions: Should be a valid mindspore.Tensor.
 
         Returns:
-            A tensor representing the processed output after passing through the convolution layer:
-                >   - Type: mindspore.Tensor
-                >   - Purpose: Represents the transformed tensor after passing through the convolution layer.
+            hidden_state:
+                A tensor representing the processed output after passing through the convolution layer:
+
+                - Type: mindspore.Tensor
+                - Purpose: Represents the transformed tensor after passing through the convolution layer.
 
         Raises:
-            N/A
+            None.
         """
         hidden_state = self.convolution(input)
         hidden_state = self.normalization(hidden_state)
@@ -134,10 +138,12 @@ class ResNetEmbeddings(nn.Cell):
 
         Args:
             self: The instance of the ResNetEmbeddings class.
-            config (ResNetConfig): The configuration object that contains parameters for the ResNet embeddings.
-                >   - num_channels (int): The number of input channels.
-                >   - embedding_size (int): The size of the output embeddings.
-                >   - hidden_act (str): The activation function for the hidden layers.
+            config (ResNetConfig):
+                The configuration object that contains parameters for the ResNet embeddings.
+
+                - num_channels (int): The number of input channels.
+                - embedding_size (int): The size of the output embeddings.
+                - hidden_act (str): The activation function for the hidden layers.
 
         Returns:
             None
@@ -164,11 +170,14 @@ class ResNetEmbeddings(nn.Cell):
             mindspore.Tensor: The embeddings generated from the pixel values.
 
         Raises:
-            ValueError: If the number of channels in the pixel_values tensor does not match the number of channels set in the configuration.
+            ValueError: If the number of channels in the pixel_values tensor does not match the number of channels
+                set in the configuration.
 
-        This method takes in the pixel values of an image and generates embeddings using the ResNet model. It first checks if the number of channels in the pixel_values tensor matches the number of channels
-        set in the configuration. If they do not match, a ValueError is raised. Otherwise, the pixel_values tensor is passed through the embedder and then the pooler to generate the embeddings. The resulting
-        embeddings are returned as a mindspore.Tensor object.
+        This method takes in the pixel values of an image and generates embeddings using the ResNet model.
+        It first checks if the number of channels in the pixel_values tensor matches the number of channels
+        set in the configuration. If they do not match, a ValueError is raised. Otherwise, the pixel_values tensor
+        is passed through the embedder and then the pooler to generate the embeddings.
+        The resulting embeddings are returned as a mindspore.Tensor object.
         """
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
@@ -202,7 +211,7 @@ class ResNetShortCut(nn.Cell):
                 It must be a positive integer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -246,7 +255,7 @@ class ResNetBasicLayer(nn.Cell):
             activation (str, optional): The type of activation function to apply. Defaults to 'relu'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -343,10 +352,10 @@ class ResNetBottleNeckLayer(nn.Cell):
             hidden_state (Tensor): The input hidden state tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         residual = hidden_state
         hidden_state = self.layer(hidden_state)
@@ -380,7 +389,7 @@ class ResNetStage(nn.Cell):
             depth (int, optional): The depth of the ResNet stage. Defaults to 2.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config is not an instance of ResNetConfig.
@@ -427,7 +436,8 @@ class ResNetStage(nn.Cell):
 class ResNetEncoder(nn.Cell):
 
     """
-    ResNetEncoder is a class that represents a Residual Neural Network (ResNet) encoder. It is a subclass of nn.Cell and is used for constructing the encoder part of a ResNet model.
+    ResNetEncoder is a class that represents a Residual Neural Network (ResNet) encoder.
+    It is a subclass of nn.Cell and is used for constructing the encoder part of a ResNet model.
 
     Attributes:
         stages (nn.CellList): A list of ResNetStage instances representing the different stages of the ResNet encoder.
@@ -435,17 +445,26 @@ class ResNetEncoder(nn.Cell):
     Methods:
         __init__:
             Initializes a ResNetEncoder instance.
-            >   - Args:
-            >       - config (ResNetConfig): An instance of ResNetConfig class containing the configuration parameters for the ResNet encoder.
+
+            Args:
+
+            - config (ResNetConfig): An instance of ResNetConfig class containing the configuration parameters
+            for the ResNet encoder.
 
         construct:
             Constructs the ResNet encoder.
-            >   - Args:
-            >       - hidden_state (mindspore.Tensor): The input hidden state tensor.
-            >       - output_hidden_states (bool, optional): A flag indicating whether to output hidden states at each stage. Defaults to False.
-            >       - return_dict (bool, optional): A flag indicating whether to return the output as a BaseModelOutputWithNoAttention instance. Defaults to True.
-            >   - Returns:
-            >       - BaseModelOutputWithNoAttention: An instance of BaseModelOutputWithNoAttention containing the encoder output.
+
+            Args:
+
+            - hidden_state (mindspore.Tensor): The input hidden state tensor.
+            - output_hidden_states (bool, optional): A flag indicating whether to output hidden states at each stage.
+            Defaults to False.
+            - return_dict (bool, optional): A flag indicating whether to return the output as a
+            BaseModelOutputWithNoAttention instance. Defaults to True.
+
+            Returns:
+
+            - BaseModelOutputWithNoAttention: An instance of BaseModelOutputWithNoAttention containing the encoder output.
 
     """
     def __init__(self, config: ResNetConfig):
@@ -454,14 +473,18 @@ class ResNetEncoder(nn.Cell):
 
         Args:
             self: The current instance of the class.
-            config (ResNetConfig): The configuration object specifying the parameters for the ResNetEncoder. It is expected to have the following attributes:
-                >   - embedding_size (int): The size of the input embeddings.
-                >   - hidden_sizes (List[int]): A list of integers specifying the number of output channels for each ResNet stage.
-                >   - depths (List[int]): A list of integers specifying the number of residual blocks in each ResNet stage.
-                >   - downsample_in_first_stage (bool): A boolean indicating whether to perform downsampling in the first ResNet stage or not. If True, the stride is set to 2; otherwise, it is set to 1.
+            config (ResNetConfig): The configuration object specifying the parameters for the ResNetEncoder.
+                It is expected to have the following attributes:
+
+                - embedding_size (int): The size of the input embeddings.
+                - hidden_sizes (List[int]): A list of integers specifying the number of output channels for each
+                ResNet stage.
+                - depths (List[int]): A list of integers specifying the number of residual blocks in each ResNet stage.
+                - downsample_in_first_stage (bool): A boolean indicating whether to perform downsampling in the first
+                 ResNet stage or not. If True, the stride is set to 2; otherwise, it is set to 1.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -495,8 +518,8 @@ class ResNetEncoder(nn.Cell):
             return_dict (bool, optional): Whether to return the output as a dictionary. Defaults to True.
 
         Returns:
-            BaseModelOutputWithNoAttention: An instance of BaseModelOutputWithNoAttention containing the last hidden state
-            and optionally all hidden states if output_hidden_states is set to True.
+            BaseModelOutputWithNoAttention: An instance of BaseModelOutputWithNoAttention containing the
+                last hidden state and optionally all hidden states if output_hidden_states is set to True.
 
         Raises:
             ValueError: If hidden_state is not a valid mindspore.Tensor.
@@ -544,7 +567,7 @@ class ResNetPreTrainedModel(PreTrainedModel):
             module: The module for which the weights need to be initialized.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the module is of an unsupported type.
@@ -560,8 +583,9 @@ class ResNetPreTrainedModel(PreTrainedModel):
 class ResNetModel(ResNetPreTrainedModel):
 
     """
-    ResNetModel is a class that represents a ResNet model for image processing tasks. This class inherits from ResNetPreTrainedModel and includes methods for initializing the model and constructing its forward
-    pass.
+    ResNetModel is a class that represents a ResNet model for image processing tasks.
+    This class inherits from ResNetPreTrainedModel and includes methods for initializing the model and constructing
+    its forward pass.
 
     Attributes:
         config: The configuration parameters for the ResNetModel.
@@ -574,7 +598,8 @@ class ResNetModel(ResNetPreTrainedModel):
         construct: Constructs the forward pass of the model, generating output hidden states and a pooled output.
 
     Returns:
-        BaseModelOutputWithPoolingAndNoAttention: An output object containing the last hidden state, pooled output, and optional hidden states.
+        BaseModelOutputWithPoolingAndNoAttention: An output object containing the last hidden state, pooled output,
+            and optional hidden states.
     """
     def __init__(self, config):
         """
@@ -586,10 +611,10 @@ class ResNetModel(ResNetPreTrainedModel):
                 This configuration should include necessary settings for embedding, encoding, and pooling.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
         self.config = config
@@ -607,16 +632,24 @@ class ResNetModel(ResNetPreTrainedModel):
 
         Args:
             self: The object instance.
-            pixel_values (mindspore.Tensor): The input pixel values of the images. It should be a tensor of shape [batch_size, height, width, channels].
-            output_hidden_states (Optional[bool]): Whether to return hidden states of the encoder. Defaults to None. If not provided, it uses the value from the configuration.
-            return_dict (Optional[bool]): Whether to return the output as a dictionary. Defaults to None. If not provided, it uses the value from the configuration.
+            pixel_values (mindspore.Tensor): The input pixel values of the images.
+                It should be a tensor of shape [batch_size, height, width, channels].
+            output_hidden_states (Optional[bool]): Whether to return hidden states of the encoder. Defaults to None.
+                If not provided, it uses the value from the configuration.
+            return_dict (Optional[bool]): Whether to return the output as a dictionary. Defaults to None.
+                If not provided, it uses the value from the configuration.
 
         Returns:
-            BaseModelOutputWithPoolingAndNoAttention: An instance of the BaseModelOutputWithPoolingAndNoAttention class containing the following outputs:
-                >   - last_hidden_state (mindspore.Tensor): The last hidden state of the encoder. It has a shape of [batch_size, sequence_length, hidden_size].
-                >   - pooled_output (mindspore.Tensor): The pooled output of the encoder. It has a shape of [batch_size, hidden_size].
-                >   - hidden_states (Tuple[mindspore.Tensor]): A tuple of hidden states of the encoder if `output_hidden_states` is set to True. Each hidden state is a tensor of shape [batch_size, sequence_length,
-                    hidden_size].
+            BaseModelOutputWithPoolingAndNoAttention:
+                An instance of the BaseModelOutputWithPoolingAndNoAttention class containing the following outputs:
+
+                - last_hidden_state (mindspore.Tensor): The last hidden state of the encoder.
+                It has a shape of [batch_size, sequence_length, hidden_size].
+                - pooled_output (mindspore.Tensor): The pooled output of the encoder.
+                It has a shape of [batch_size, hidden_size].
+                - hidden_states (Tuple[mindspore.Tensor]): A tuple of hidden states of the encoder
+                if `output_hidden_states` is set to True. Each hidden state is a tensor of shape
+                [batch_size, sequence_length, hidden_size].
 
         Raises:
             None.
@@ -651,7 +684,8 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
 
     """
     ResNetForImageClassification is a class that represents a ResNet model for image classification tasks.
-    It inherits from the ResNetPreTrainedModel class and includes methods for initializing the model and performing image classification.
+    It inherits from the ResNetPreTrainedModel class and includes methods for initializing the model and
+    performing image classification.
 
     Attributes:
         num_labels (int): The number of labels for the classification task.
@@ -661,7 +695,8 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
 
     Methods:
         __init__: Initializes the ResNetForImageClassification model with the given configuration.
-        construct: Constructs the model for image classification, taking pixel values, labels, and optional parameters as input and returning the classification output.
+        construct: Constructs the model for image classification, taking pixel values, labels, and optional
+            parameters as input and returning the classification output.
 
     Parameters:
         pixel_values (mindspore.Tensor, optional): Tensor containing the pixel values of the input images.
@@ -670,7 +705,9 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
         return_dict (bool, optional): Flag to indicate whether to return the output as a dictionary.
 
     Returns:
-        An ImageClassifierOutputWithNoAttention object containing the classification output with optional loss value and hidden states.
+        ImageClassifierOutputWithNoAttention:
+            An ImageClassifierOutputWithNoAttention object containing the classification output with optional loss value
+            and hidden states.
 
     Notes:
         - Labels should be indices in the range [0, config.num_labels - 1].
@@ -685,11 +722,12 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
             self: The instance of the class.
             config (object): An object containing configuration parameters for the model.
                 It should have the following attributes:
-                >   - num_labels (int): The number of output labels.
-                >   - hidden_sizes (list): A list of integers representing hidden layer sizes.
+
+                - num_labels (int): The number of output labels.
+                - hidden_sizes (list): A list of integers representing hidden layer sizes.
 
         Returns:
-            None. This method initializes the ResNetForImageClassification instance with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not an object.
@@ -714,9 +752,10 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> ImageClassifierOutputWithNoAttention:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -758,10 +797,12 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
     """
     ResNetBackbone
 
-    This class represents a ResNet backbone for image processing tasks. It inherits from the ResNetPreTrainedModel and BackboneMixin classes.
+    This class represents a ResNet backbone for image processing tasks. It inherits from the ResNetPreTrainedModel
+    and BackboneMixin classes.
 
     Attributes:
-        num_features (List[int]): A list of integers representing the number of features in each hidden layer of the backbone.
+        num_features (List[int]): A list of integers representing the number of features in each
+            hidden layer of the backbone.
         embedder (ResNetEmbeddings): An instance of the ResNetEmbeddings class used for embedding pixel values.
         encoder (ResNetEncoder): An instance of the ResNetEncoder class used for encoding the embedded features.
         stage_names (List[str]): A list of strings representing the names of the stages in the backbone.
@@ -769,8 +810,8 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
         config (object): An object containing the configuration parameters for the ResNetBackbone.
 
     Methods:
-        __init__(self, config): Initializes the ResNetBackbone instance with the given configuration.
-        construct(self, pixel_values, output_hidden_states, return_dict): Constructs the backbone and returns the output.
+        __init__: Initializes the ResNetBackbone instance with the given configuration.
+        construct: Constructs the backbone and returns the output.
     """
     def __init__(self, config):
         """
@@ -782,10 +823,10 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
                 It includes settings such as embedding size, hidden layer sizes, and other backbone configurations.
 
         Returns:
-            None. This method initializes the ResNetBackbone object with the specified configuration.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
         super()._init_backbone(config)
@@ -801,6 +842,7 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BackboneOutput:
         """
+
         Returns:
             BackboneOutput
 
@@ -810,17 +852,17 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
             >>> import torch
             >>> from PIL import Image
             >>> import requests
-
+            ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
             >>> model = AutoBackbone.from_pretrained(
             ...     "microsoft/resnet-50", out_features=["stage1", "stage2", "stage3", "stage4"]
             ... )
-
+            ...
             >>> inputs = processor(image, return_tensors="pt")
-
+            ...
             >>> outputs = model(**inputs)
             >>> feature_maps = outputs.feature_maps
             >>> list(feature_maps[-1].shape)

@@ -124,7 +124,7 @@ class BitImageProcessor(BaseImageProcessor):
             do_convert_rgb (bool, optional): Whether to convert the image to RGB format. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

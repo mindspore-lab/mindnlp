@@ -211,7 +211,7 @@ class ErnieSelfAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding. Defaults to None.
 
         Returns:
-            None: This method initializes the attributes of the ErnieSelfAttention instance.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads and the config does not
@@ -422,7 +422,7 @@ class ErnieSelfOutput(nn.Cell):
             config (object): An object containing configuration parameters for the ErnieSelfOutput instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the configuration parameters are invalid or inconsistent.
@@ -605,7 +605,7 @@ class ErnieIntermediate(nn.Cell):
                 If provided as a string, it should be a key in ACT2FN dictionary.
 
         Returns:
-            None: This method initializes the ErnieIntermediate class with the specified configuration.
+            None.
 
         Raises:
             ValueError: If the configuration parameters are invalid or missing.
@@ -659,13 +659,15 @@ class ErnieOutput(nn.Cell):
 
         Args:
             self (ErnieOutput): The instance of the ErnieOutput class.
-            config: An object containing configuration parameters.
+            config:
+                An object containing configuration parameters.
+
                 - Type: Any
                 - Purpose: Configuration object specifying model settings.
                 - Restrictions: Must be compatible with the specified configuration format.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not of the expected type.
@@ -748,7 +750,7 @@ class ErnieLayer(nn.Cell):
                     attention.
 
         Returns:
-            None: This method initializes various attributes of the ErnieLayer instance.
+            None.
 
         Raises:
             ValueError: Raised if cross attention is added but the ErnieLayer is not used as a decoder model.
@@ -867,7 +869,7 @@ class ErnieLayer(nn.Cell):
                 the ErnieLayer instance.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -909,7 +911,7 @@ class ErnieEncoder(nn.Cell):
                 - num_hidden_layers (int): The number of hidden layers in the ErnieEncoder.
 
         Returns:
-            None: This method initializes the ErnieEncoder instance.
+            None.
 
         Raises:
             None.
@@ -1062,7 +1064,7 @@ class ErniePooler(nn.Cell):
             None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1342,7 +1344,7 @@ class ErnieOnlyNSPHead(nn.Cell):
             seq_relationship_score:
                 The calculated sequence relationship score based on the pooled output.
 
-                -Type: None
+                - Type: None
                 - Purpose: Represents the score indicating the relationship between two sequences.
 
         Raises:
@@ -1727,7 +1729,7 @@ class ErnieForPreTraining(ErniePreTrainedModel):
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__(config)
 
@@ -1750,7 +1752,7 @@ class ErnieForPreTraining(ErniePreTrainedModel):
                 from the model.
 
         Raises:
-            None specified.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -1764,7 +1766,7 @@ class ErnieForPreTraining(ErniePreTrainedModel):
             new_embeddings: The new embeddings to be set for the model predictions decoder. This can be of any type.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1925,10 +1927,10 @@ class ErnieForCausalLM(ErniePreTrainedModel):
             self (ErnieForCausalLM): The instance of the ErnieForCausalLM class.
 
         Returns:
-            None. This method returns the output embeddings from the model's predictions decoder layer.
+            decoder: This method returns the output embeddings from the model's predictions decoder layer.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -1943,7 +1945,7 @@ class ErnieForCausalLM(ErniePreTrainedModel):
                 It should be of the same shape as the existing embeddings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1953,7 +1955,7 @@ class ErnieForCausalLM(ErniePreTrainedModel):
             The new_embeddings should be of the same shape as the existing embeddings.
 
         Example:
-            ···python
+            ```python
             >>> model = ErnieForCausalLM()
             >>> new_embeddings = torch.Tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
             >>> model.set_output_embeddings(new_embeddings)
@@ -2159,11 +2161,15 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
         Description:
             This method initializes the 'ErnieForMaskedLM' class by setting the configuration and initializing the
             'ErnieModel' and 'ErnieOnlyMLMHead' objects.
+
             The 'config' parameter is an instance of the 'Config' class, which contains various configuration settings for the model.
             This method also logs a warning if the 'is_decoder' flag in the 'config' parameter is set to True,
             indicating that the model is being used as a decoder.
+
             The 'ErnieModel' object is initialized with the given 'config' and the 'add_pooling_layer' flag set to False.
+
             The 'ErnieOnlyMLMHead' object is also initialized with the given 'config'.
+
             Finally, the 'post_init' method is called to perform any additional initialization steps.
         """
         super().__init__(config)
@@ -2194,7 +2200,7 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
                 within the ErnieForMaskedLM model.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -2363,7 +2369,7 @@ class ErnieForNextSentencePrediction(ErniePreTrainedModel):
                 It should include necessary settings for model configuration.
 
         Returns:
-            None. This method initializes the ErnieForNextSentencePrediction instance with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -2638,7 +2644,7 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
             config: The configuration object containing various hyperparameters and settings for the model initialization.
 
         Returns:
-            None. This method initializes the ErnieForMultipleChoice instance.
+            None.
 
         Raises:
             TypeError: If the input parameters are not of the expected types.
@@ -2762,7 +2768,7 @@ class ErnieForTokenClassification(ErniePreTrainedModel):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layers.
 
         Returns:
-            None: This method initializes the instance attributes and does not return a value.
+            None.
 
         Raises:
             ValueError: If the config object is missing the num_labels attribute.
@@ -2878,7 +2884,7 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
                 - add_pooling_layer (bool): Flag indicating whether to add a pooling layer in the Ernie model.
 
         Returns:
-            None: This method initializes the ErnieForQuestionAnswering instance with the provided configuration settings.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected object type.
@@ -2974,6 +2980,7 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
 class UIEModelOutput(ModelOutput):
     """
     Output class for outputs of UIE.
+
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Total span extraction loss is the sum of a Cross-Entropy for the start and end positions.
@@ -3016,7 +3023,7 @@ class UIE(ErniePreTrainedModel):
             config (ErnieConfig): An instance of ErnieConfig containing the configuration parameters for the UIE model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

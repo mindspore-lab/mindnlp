@@ -230,13 +230,14 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
         encode_special_tokens (bool): Flag indicating whether to encode special tokens.
 
     Properties:
-        unk_token (str): Property for accessing the unknown token.
-        pad_token (str): Property for accessing the padding token.
-        eos_token (str): Property for accessing the end-of-sequence token.
-        unk_token_id (int): Property for accessing the ID of the unknown token.
-        pad_token_id (int): Property for accessing the ID of the padding token.
-        eos_token_id (int): Property for accessing the ID of the end-of-sequence token.
-        vocab_size (int): Property for accessing the size of the vocabulary.
+
+    - unk_token (str): Property for accessing the unknown token.
+    - pad_token (str): Property for accessing the padding token.
+    - eos_token (str): Property for accessing the end-of-sequence token.
+    - unk_token_id (int): Property for accessing the ID of the unknown token.
+    - pad_token_id (int): Property for accessing the ID of the padding token.
+    - eos_token_id (int): Property for accessing the ID of the end-of-sequence token.
+    - vocab_size (int): Property for accessing the size of the vocabulary.
 
     Methods:
         get_command(token): Retrieves the ID of a given token.
@@ -279,7 +280,7 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method initializes the ChatGLM3Tokenizer object.
+            None.
 
         Raises:
             None.
@@ -430,14 +431,14 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
             self (object):
                 Reference to the instance of ChatGLM3Tokenizer.
 
-                    - Purpose: Represents the current object instance.
-                    - Restrictions: Must be an instance of ChatGLM3Tokenizer.
+                - Purpose: Represents the current object instance.
+                - Restrictions: Must be an instance of ChatGLM3Tokenizer.
 
             value (any):
                 The new value to set for the unk_token attribute.
 
-                    - Purpose: Specifies the value to set for the unk_token attribute.
-                    - Restrictions: None.
+                - Purpose: Specifies the value to set for the unk_token attribute.
+                - Restrictions: None.
 
         Returns:
             None:
@@ -649,7 +650,7 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
             role (str): The role of the participant for the current input. It can be either 'user' or 'system'.
 
         Returns:
-            None. This method builds the input for the chat conversation and does not return any value.
+            None: This method builds the input for the chat conversation and does not return any value.
 
         Raises:
             TypeError: If the input_ids are not of the expected type.

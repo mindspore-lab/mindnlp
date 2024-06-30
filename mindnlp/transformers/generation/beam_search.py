@@ -53,7 +53,8 @@ class BeamScorer(ABC):
             Tuple[mindspore.Tensor]: A tuple containing the updated next tokens tensor.
         
         Raises:
-            NotImplementedError: This exception is raised when the method is called directly as it is an abstract method and should be implemented in a subclass.
+            NotImplementedError: This exception is raised when the method is called directly as it is an abstract
+                method and should be implemented in a subclass.
         """
         raise NotImplementedError("This is an abstract method.")
 
@@ -154,7 +155,7 @@ class BeamSearchScorer(BeamScorer):
                 maximum length restriction.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the num_beams parameter is not an integer strictly greater than 1, or if num_beams is 1 and
@@ -525,7 +526,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             max_length (Optional[int], default=None): The maximum length of output sequences.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If num_beams is not an integer strictly greater than 1 or if num_beam_groups is not an integer
@@ -534,8 +535,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         Note:
             - For `num_beams` == 1, it is recommended to use `greedy_search` instead.
             - The parameter `constraints` is a list of constraints that should be satisfied by the generated sequences.
-            - The parameter `length_penalty` is a scalar value that affects the length normalization penalty during beam search.
-            - The parameter `do_early_stopping` determines whether beam search should stop early if all beam hypotheses have reached the end token.
+            - The parameter `length_penalty` is a scalar value that affects the length normalization penalty
+            during beam search.
+            - The parameter `do_early_stopping` determines whether beam search should stop early if all beam hypotheses
+            have reached the end token.
             - The parameter `num_beam_hyps_to_keep` specifies the number of beam hypotheses to keep during beam search.
             - The parameter `num_beam_groups` determines the number of beam groups to use during beam search.
             - The parameter `max_length` specifies the maximum length of the output sequences.
@@ -587,7 +590,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 True if all processing is done, False otherwise.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self._done.all()
 
@@ -600,10 +603,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             n (int): The number of constraint states to generate.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return [ConstraintListState([constraint.copy() for constraint in self.constraints]) for _ in range(n)]
 
@@ -662,7 +665,9 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 Beam indices indicating to which beam hypothesis each token correspond.
 
         Returns:
-            `UserDict`: A dictionary composed of the fields as defined above:
+            `UserDict`:
+                A dictionary composed of the fields as defined above:
+
                 - **next_beam_scores** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Updated scores of
                 all non-finished beams.
                 - **next_beam_tokens** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Next tokens to be
@@ -782,7 +787,8 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         push_progress: bool = False,
     ):
         r"""
-        This method performs a step in the constrained beam search process to generate new sequences based on the input constraints.
+        This method performs a step in the constrained beam search process to generate new sequences based on
+        the input constraints.
 
         Args:
             self: The instance of the ConstrainedBeamSearchScorer class.
@@ -795,7 +801,8 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             push_progress (bool, optional): A flag indicating whether to push progress. Defaults to False.
 
         Returns:
-            None: This method does not return any value. Instead, it updates the sent_beam_scores, sent_beam_tokens, and sent_beam_indices in place.
+            None: This method does not return any value. Instead, it updates the sent_beam_scores, sent_beam_tokens,
+                and sent_beam_indices in place.
 
         Raises:
             None.
@@ -952,7 +959,8 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             final_beam_indices (mindspore.Tensor): The final indices of the beams.
             max_length (int): The maximum length of the output sequences.
             pad_token_id (Optional[int]): The token ID used for padding. Default is None.
-            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the end of sequence. Default is None.
+            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the
+                end of sequence. Default is None.
             beam_indices (Optional[mindspore.Tensor]): The indices of the beams. Default is None.
 
         Returns:

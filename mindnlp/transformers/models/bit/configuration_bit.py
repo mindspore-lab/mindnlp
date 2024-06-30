@@ -126,7 +126,7 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
             out_indices (list): List of output indices to align with stage names.
         
         Returns:
-            None. This method initializes the BitConfig instance with the provided configuration.
+            None.
         
         Raises:
             ValueError: If the provided layer_type is not supported.

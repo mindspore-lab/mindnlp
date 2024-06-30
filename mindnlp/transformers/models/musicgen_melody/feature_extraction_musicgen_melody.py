@@ -106,10 +106,11 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            ValueError: If the provided feature size, sampling rate, hop length, chunk length, n_fft, or num_chroma is invalid.
+            ValueError: If the provided feature size, sampling rate, hop length, chunk length, n_fft, or num_chroma
+                is invalid.
             TypeError: If the provided padding value is not a float.
             TypeError: If the provided return_attention_mask is not a boolean.
             TypeError: If stem_indices is not a list.
@@ -165,8 +166,8 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
 
     def _extract_stem_indices(self, audio, sampling_rate=None):
         """
-        Extracts stems from the output of the [Demucs](https://github.com/adefossez/demucs/tree/main) audio separation model,
-        then converts to mono-channel and resample to the feature extractor sampling rate.
+        Extracts stems from the output of the [Demucs](https://github.com/adefossez/demucs/tree/main) audio separation
+        model, then converts to mono-channel and resample to the feature extractor sampling rate.
 
         Args:
             audio (`mindspore.Tensor` of shape `(batch_size, num_stems, channel_size, audio_length)`):
@@ -216,10 +217,12 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         Main method to featurize and prepare for the model one or several sequence(s).
 
         Args:
-            audio (`mindspore.Tensor`, `np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[mindspore.Tensor]`, `List[List[float]]`):
-                The sequence or batch of sequences to be padded. Each sequence can be a mindspore tensor, a numpy array, a list of float
-                values, a list of numpy arrays, a list of mindspore tensors, or a list of list of float values.
-                If `audio` is the output of Demucs, it has to be a mindspore tensor of shape `(batch_size, num_stems, channel_size, audio_length)`.
+            audio (`mindspore.Tensor`, `np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[mindspore.Tensor]`,
+                `List[List[float]]`):
+                The sequence or batch of sequences to be padded. Each sequence can be a mindspore tensor, a numpy array,
+                a list of float values, a list of numpy arrays, a list of mindspore tensors, or a list of list of float
+                values. If `audio` is the output of Demucs, it has to be a mindspore tensor of shape
+                `(batch_size, num_stems, channel_size, audio_length)`.
                 Otherwise, it must be mono or stereo channel audio.
             truncation (`bool`, *optional*, default to `True`):
                 Activates truncation to cut input sequences longer than *max_length* to *max_length*.
@@ -230,9 +233,10 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
                 `>= 7.5` (Volta), or on TPUs which benefit from having sequence lengths be a multiple of 128.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
-                >   - `'pt'`: Return PyTorch `mindspore.Tensor` objects.
-                >   - `'np'`: Return Numpy `np.ndarray` objects.
+
+                - `'tf'`: Return TensorFlow `tf.constant` objects.
+                - `'pt'`: Return PyTorch `mindspore.Tensor` objects.
+                - `'np'`: Return Numpy `np.ndarray` objects.
             return_attention_mask (`bool`, *optional*):
                 Whether to return the attention mask. If left to the default, will return the attention mask according
                 to the specific feature_extractor's default.
@@ -246,12 +250,13 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `True`):
                 Select a strategy to pad the returned sequences (according to the model's padding side and padding
                 index) among:
-                >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
-                >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
-                >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+
+                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                sequence if provided).
+                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                acceptable input length for the model if that argument is not provided.
+                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                lengths).
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
             sampling_rate (`int`, *optional*):

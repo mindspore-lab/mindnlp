@@ -220,10 +220,10 @@ class BridgeTowerImageProcessor(BaseImageProcessor):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if "pad_and_return_pixel_mask" in kwargs:
             do_pad = kwargs.pop("pad_and_return_pixel_mask")

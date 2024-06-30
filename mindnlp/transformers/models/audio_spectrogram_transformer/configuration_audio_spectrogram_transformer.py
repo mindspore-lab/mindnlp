@@ -130,7 +130,7 @@ class ASTConfig(PretrainedConfig):
             num_mel_bins (int, optional): The number of Mel bins. Defaults to 128.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

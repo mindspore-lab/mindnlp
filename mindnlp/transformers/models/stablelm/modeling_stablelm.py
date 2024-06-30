@@ -152,7 +152,8 @@ def rotate_half(x):
 
 # Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+    """
+    Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -169,6 +170,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -707,6 +709,7 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
+
         Args:
             labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
@@ -719,13 +722,13 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
         Example:
             ```python
             >>> from transformers import AutoTokenizer, StableLmForCausalLM
-
+            ...
             >>> model = StableLmForCausalLM.from_pretrained("stabilityai/stablelm-3b-4e1t")
             >>> tokenizer = AutoTokenizer.from_pretrained("stabilityai/stablelm-3b-4e1t")
-
+            ...
             >>> prompt = "The weather is always wonderful in"
             >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
             >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]

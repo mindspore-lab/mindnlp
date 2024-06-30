@@ -85,12 +85,14 @@ class Wav2Vec2ConformerForPreTrainingOutput(ModelOutput):
         projected_quantized_states (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.proj_codevector_dim)`):
             Quantized extracted feature vectors projected to *config.proj_codevector_dim* representing the positive
             target vectors for contrastive loss.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
+            or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
+            `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -135,15 +137,15 @@ def _compute_mask_indices(
 
     Args:
         shape: The shape for which to compute masks. This should be of a tuple of size 2 where
-               the first element is the batch size and the second element is the length of the axis to span.
-        mask_prob:  The percentage of the whole axis (between 0 and 1) which will be masked. The number of
-                    independently generated mask spans of length `mask_length` is computed by
-                    `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
-                    actual percentage will be smaller.
+            the first element is the batch size and the second element is the length of the axis to span.
+        mask_prob: The percentage of the whole axis (between 0 and 1) which will be masked. The number of
+            independently generated mask spans of length `mask_length` is computed by
+            `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
+            actual percentage will be smaller.
         mask_length: size of the mask
         min_masks: minimum number of masked spans
         attention_mask: A (right-padded) attention mask which independently shortens the feature axis of
-                        each batch dimension.
+            each batch dimension.
     """
     batch_size, sequence_length = shape
 
@@ -658,7 +660,8 @@ class Wav2Vec2ConformerConvolutionModule(nn.Cell):
 
 
 class Wav2Vec2ConformerSelfAttention(nn.Cell):
-    """Construct an Wav2Vec2ConformerSelfAttention object.
+    """
+    Construct an Wav2Vec2ConformerSelfAttention object.
     Can be enhanced with rotary or relative position embeddings.
     """
 
@@ -1218,10 +1221,12 @@ WAV2VEC2_CONFORMER_INPUTS_DOCSTRING = r"""
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
             conversion into a tensor of type `mindspore.Tensor`. See [`Wav2Vec2Processor.__call__`] for details.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
-            >- [What are attention masks?](../glossary#attention-mask)
+            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
+            [What are attention masks?](../glossary#attention-mask)
 
             <Tip warning={true}>
 
@@ -1439,12 +1444,13 @@ class Wav2Vec2ConformerForPreTraining(Wav2Vec2ConformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Wav2Vec2ConformerForPreTrainingOutput]:
         r"""
-        mask_time_indices (`ops.BoolTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Indices to mask extracted features for contrastive loss. When in training mode, model learns to predict
-            masked extracted features in *config.proj_codevector_dim* space.
-        sampled_negative_indices (`ops.BoolTensor` of shape `(batch_size, sequence_length, num_negatives)`, *optional*):
-            Indices indicating which quantized target vectors are used as negative sampled vectors in contrastive loss.
-            Required input for pre-training.
+        Args:
+            mask_time_indices (`ops.BoolTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Indices to mask extracted features for contrastive loss. When in training mode, model learns to predict
+                masked extracted features in *config.proj_codevector_dim* space.
+            sampled_negative_indices (`ops.BoolTensor` of shape `(batch_size, sequence_length, num_negatives)`, *optional*):
+                Indices indicating which quantized target vectors are used as negative sampled vectors in contrastive loss.
+                Required input for pre-training.
 
         Returns:
             `Union[Tuple, Wav2Vec2ConformerForPreTrainingOutput]`
@@ -1455,13 +1461,13 @@ class Wav2Vec2ConformerForPreTraining(Wav2Vec2ConformerPreTrainedModel):
             >>> from transformers import AutoFeatureExtractor, Wav2Vec2ConformerForPreTraining
             >>> from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import _compute_mask_indices, _sample_negative_indices
             >>> from datasets import load_dataset
-
+            ...
             >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
             >>> model = Wav2Vec2ConformerForPreTraining.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
-
+            ...
             >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
             >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
-
+            ...
             >>> # compute masked indices
             >>> batch_size, raw_sequence_length = input_values.shape
             >>> sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
@@ -1477,17 +1483,16 @@ class Wav2Vec2ConformerForPreTraining(Wav2Vec2ConformerPreTrainedModel):
             >>> sampled_negative_indices = mindspore.Tensor(
             ...     data=sampled_negative_indices, dtype=mindspore.int64
             ... )
-
+            ...
             >>> with ops.no_grad():
             ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
-
+            ...
             >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
             >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
-
+            ...
             >>> # show that cosine similarity is much higher than random
             >>> cosine_sim[mask_time_indices.to(ops.bool)].mean() > 0.5
             tensor(True)
-
             >>> # for contrastive loss training model should be put into train mode
             >>> model = model.train()
             >>> loss = model(

@@ -77,13 +77,13 @@ class RemBertConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import RemBertModel, RemBertConfig
-
+        ...
         >>> # Initializing a RemBERT rembert style configuration
         >>> configuration = RemBertConfig()
-
+        ...
         >>> # Initializing a model from the rembert style configuration
         >>> model = RemBertModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

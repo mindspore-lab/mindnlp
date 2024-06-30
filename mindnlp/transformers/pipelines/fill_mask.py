@@ -96,7 +96,8 @@ class FillMaskPipeline(Pipeline):
 
         Args:
             self (FillMaskPipeline): The instance of the FillMaskPipeline class.
-            input_ids (GenericTensor): The input tensor containing token IDs. It should be compatible with the operations performed by the method.
+            input_ids (GenericTensor): The input tensor containing token IDs. It should be compatible with the
+                operations performed by the method.
 
         Returns:
             np.ndarray: An array of indices representing the positions of the masked tokens in the input tensor.
@@ -141,19 +142,19 @@ class FillMaskPipeline(Pipeline):
 
         Args:
             self: An instance of the FillMaskPipeline class.
-            model_inputs (GenericTensor): The input tensor(s) to the model. It can be either a single tensor or a list of tensors.
-                                         Each tensor should have an 'input_ids' field.
+            model_inputs (GenericTensor): The input tensor(s) to the model.
+                It can be either a single tensor or a list of tensors. Each tensor should have an 'input_ids' field.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method iterates through the input tensor(s) and checks if there is exactly one mask token present. If the 'model_inputs'
-        parameter is a list, it iterates through each tensor in the list and ensures that the first 'input_ids' tensor has exactly one
-        mask token. If 'model_inputs' is not a list, it assumes it is a single tensor and checks each 'input_ids' tensor to ensure
-        that it has exactly one mask token.
+        This method iterates through the input tensor(s) and checks if there is exactly one mask token present.
+        If the 'model_inputs' parameter is a list, it iterates through each tensor in the list and ensures that the
+        first 'input_ids' tensor has exactly one mask token. If 'model_inputs' is not a list, it assumes it is a single
+        tensor and checks each 'input_ids' tensor to ensure that it has exactly one mask token.
         """
         if isinstance(model_inputs, list):
             for model_input in model_inputs:
@@ -181,7 +182,7 @@ class FillMaskPipeline(Pipeline):
                 and values representing the corresponding GenericTensor objects.
 
         Raises:
-            This method does not raise any custom exceptions.
+            None.
         """
         if return_tensors is None:
             return_tensors = 'ms'
@@ -202,10 +203,10 @@ class FillMaskPipeline(Pipeline):
                 It should include key-value pairs for the input_ids that the model expects.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None specified.
+            None.
         """
         model_outputs = self.model(**model_inputs)
         model_outputs["input_ids"] = model_inputs["input_ids"]
@@ -222,12 +223,11 @@ class FillMaskPipeline(Pipeline):
             model_outputs (dict): The dictionary containing the model outputs, including 'input_ids' and 'logits'.
             top_k (int): The maximum number of top predictions to consider. Defaults to 5.
             target_ids (Tensor, optional): The tensor containing the target token IDs.
-
                 - If provided, only predictions for these target token IDs will be considered.
                 - If not provided, all token IDs will be considered.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If target_ids is provided and its shape is less than top_k.
@@ -296,8 +296,10 @@ class FillMaskPipeline(Pipeline):
 
         Note:
             - If a single target string is passed, it will be converted into a list containing that string.
-            - If a target token does not exist in the model vocabulary, it will be replaced with a meaningful token if possible.
-            - If a target token does not exist in the model vocabulary and cannot be replaced, it will be ignored and a warning will be logged.
+            - If a target token does not exist in the model vocabulary, it will be replaced with a meaningful
+            token if possible.
+            - If a target token does not exist in the model vocabulary and cannot be replaced, it will be ignored and
+            a warning will be logged.
 
         Example:
             ```python
@@ -351,7 +353,8 @@ class FillMaskPipeline(Pipeline):
 
     def _sanitize_parameters(self, top_k=None, targets=None, tokenizer_kwargs=None):
         """
-        This method '_sanitize_parameters' is defined in the class 'FillMaskPipeline'. It is responsible for sanitizing the input parameters for the FillMaskPipeline.
+        This method '_sanitize_parameters' is defined in the class 'FillMaskPipeline'.
+        It is responsible for sanitizing the input parameters for the FillMaskPipeline.
 
         Args:
             self (object): The instance of the FillMaskPipeline class.
@@ -401,13 +404,14 @@ class FillMaskPipeline(Pipeline):
             top_k (`int`, *optional*):
                 When passed, overrides the number of predictions to return.
 
-        Return:
-            A list or a list of list of `dict`: Each result comes as list of dictionaries with the following keys:
+        Returns:
+            A list or a list of list of `dict`:
+                Each result comes as list of dictionaries with the following keys:
 
-            - **sequence** (`str`) -- The corresponding input with the mask token prediction.
-            - **score** (`float`) -- The corresponding probability.
-            - **token** (`int`) -- The predicted token id (to replace the masked one).
-            - **token_str** (`str`) -- The predicted token (to replace the masked one).
+                - **sequence** (`str`) -- The corresponding input with the mask token prediction.
+                - **score** (`float`) -- The corresponding probability.
+                - **token** (`int`) -- The predicted token id (to replace the masked one).
+                - **token_str** (`str`) -- The predicted token (to replace the masked one).
         """
         outputs = super().__call__(inputs, **kwargs)
         if isinstance(inputs, list) and len(inputs) == 1:

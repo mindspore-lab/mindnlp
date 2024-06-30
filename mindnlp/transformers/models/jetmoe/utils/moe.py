@@ -62,7 +62,7 @@ class MoE(nn.Cell):
             None. This method initializes the MoE model with the specified parameters.
         
         Raises:
-            N/A
+            None.
         """
         super(MoE, self).__init__()
 

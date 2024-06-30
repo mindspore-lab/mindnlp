@@ -169,6 +169,7 @@ def chroma_filter_bank(
             the second element being the Gaussian half-width.
         start_at_c_chroma (`float`, *optional*, defaults to `True`):
             If True, the filter bank will start at the 'C' pitch class. Otherwise, it will start at 'A'.
+
     Returns:
         `np.ndarray` of shape `(num_frequency_bins, num_chroma)`
     """
@@ -412,11 +413,11 @@ def spectrogram(
 
     How this works:
 
-    >1. The input waveform is split into frames of size `frame_length` that are partially overlapping by `frame_length
+    1. The input waveform is split into frames of size `frame_length` that are partially overlapping by `frame_length
      - hop_length` samples.
-    >2. Each frame is multiplied by the window and placed into a buffer of size `fft_length`.
-    >3. The DFT is taken of each windowed frame.
-    >4. The results are stacked into a spectrogram.
+    2. Each frame is multiplied by the window and placed into a buffer of size `fft_length`.
+    3. The DFT is taken of each windowed frame.
+    4. The results are stacked into a spectrogram.
 
     We make a distinction between the following "blocks" of sample data, each of which may have a different lengths:
 
@@ -696,7 +697,7 @@ def stft(frames: np.array, windowing_function: np.array, fft_window_size: int = 
         ```python
         >>> from transformers.audio_utils import stft, fram_wave
         >>> import numpy as np
-
+        ...
         >>> audio = np.random.rand(50)
         >>> fft_window_size = 10
         >>> hop_length = 2

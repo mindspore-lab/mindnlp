@@ -76,13 +76,13 @@ class VisualBertConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import VisualBertConfig, VisualBertModel
-
+        ...
         >>> # Initializing a VisualBERT visualbert-vqa-coco-pre style configuration
         >>> configuration = VisualBertConfig.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
-
+        ...
         >>> # Initializing a model (with random weights) from the visualbert-vqa-coco-pre style configuration
         >>> model = VisualBertModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

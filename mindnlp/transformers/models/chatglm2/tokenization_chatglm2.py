@@ -32,7 +32,7 @@ class SPTokenizer:
                 The model file must exist as a valid file path. 
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             AssertionError: If the model_path provided is not a valid file path.
@@ -65,7 +65,7 @@ class SPTokenizer:
             s (str): The input string to be tokenized.
         
         Returns:
-            None. This method modifies the state of the SPTokenizer instance.
+            None: This method modifies the state of the SPTokenizer instance.
         
         Raises:
             None.
@@ -460,11 +460,13 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
 
         - single sequence: `[CLS] X [SEP]`
         - pair of sequences: `[CLS] A [SEP] B [SEP]`
+
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
             token_ids_1 (`List[int]`, *optional*):
                 Optional second list of IDs for sequence pairs.
+
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
@@ -484,6 +486,7 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
     ) -> dict:
         """
         Pad encoded inputs (on left/right and up to predefined length or max length in the batch)
+
         Args:
             encoded_inputs:
                 Dictionary of tokenized inputs (`List[int]`) or batch of tokenized inputs (`List[List[int]]`).

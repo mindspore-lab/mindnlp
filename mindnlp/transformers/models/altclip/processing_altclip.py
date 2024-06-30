@@ -52,7 +52,7 @@ class AltCLIPProcessor(ProcessorMixin):
             tokenizer (object, required): An object responsible for tokenizing input data.
         
         Returns:
-            None: This method initializes the AltCLIPProcessor instance.
+            None.
         
         Raises:
             ValueError: If 'image_processor' is not specified.

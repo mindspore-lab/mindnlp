@@ -47,7 +47,7 @@ class SeamlessM4TProcessor(ProcessorMixin):
             tokenizer (object): The tokenizer object used for processing.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -79,13 +79,16 @@ class SeamlessM4TProcessor(ProcessorMixin):
             kwargs (*optional*):
                 Remaining dictionary of keyword arguments that will be passed to the feature extractor and/or the
                 tokenizer.
+
         Returns:
-            [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
-            >   - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            >   - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-                  `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-                  `None`).
-            >   - **input_features** -- Audio input features to be fed to a model. Returned when `audios` is not `None`.
+            [`BatchEncoding`]:
+                A [`BatchEncoding`] with the following fields:
+
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                `None`).
+                - **input_features** -- Audio input features to be fed to a model. Returned when `audios` is not `None`.
         """
         sampling_rate = kwargs.pop("sampling_rate", None)
 
@@ -133,7 +136,8 @@ class SeamlessM4TProcessor(ProcessorMixin):
         Raises:
             None
 
-        This method retrieves the model input names from the tokenizer and feature extractor used by the SeamlessM4TProcessor. It then combines these names into a single list and removes any duplicates,
+        This method retrieves the model input names from the tokenizer and feature extractor used by the
+        SeamlessM4TProcessor. It then combines these names into a single list and removes any duplicates,
         returning the final list of model input names.
         """
         tokenizer_input_names = self.tokenizer.model_input_names

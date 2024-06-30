@@ -113,7 +113,7 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
             embedding_dim (int): The dimension of the embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -195,7 +195,7 @@ class BartAttention(nn.Cell):
             bsz (int): The batch size. It should be a positive integer.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None
@@ -380,7 +380,7 @@ class BartEncoderLayer(nn.Cell):
                 and encoder_ffn_dim.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -511,7 +511,7 @@ class BartDecoderLayer(nn.Cell):
                 This parameter is used to initialize the decoder layer with the specified configuration.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -831,7 +831,7 @@ class BartEncoder(BartPreTrainedModel):
             None: This method returns the embed_tokens attribute from BartEncoder, which represents the input embeddings.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embed_tokens
 
@@ -850,7 +850,7 @@ class BartEncoder(BartPreTrainedModel):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None
@@ -1044,10 +1044,10 @@ class BartDecoder(BartPreTrainedModel):
             self: An instance of the BartDecoder class.
 
         Returns:
-            None. This method does not return a value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
@@ -1061,8 +1061,7 @@ class BartDecoder(BartPreTrainedModel):
                 Should be of the appropriate type.
 
         Returns:
-            None:
-                This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1302,7 +1301,7 @@ class BartModel(BartPreTrainedModel):
                 - config.vocab_size (int): The size of the model's vocabulary.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BartConfig.
@@ -1369,11 +1368,7 @@ class BartModel(BartPreTrainedModel):
                 - Restrictions: None.
 
         Returns:
-            None:
-                The method returns None.
-
-                - Type: None
-                - Purpose: Indicates that the method does not return any specific value.
+            None.
 
         Raises:
             None.
@@ -1389,10 +1384,10 @@ class BartModel(BartPreTrainedModel):
             value (torch.Tensor): The input embeddings to be set. It should be a torch.Tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         self.shared = value
         self.encoder.embed_tokens = self.shared
@@ -1406,7 +1401,7 @@ class BartModel(BartPreTrainedModel):
             self: BartModel instance. The current instance of BartModel.
 
         Returns:
-            None. The encoder associated with the BartModel instance.
+            encoder: The encoder associated with the BartModel instance.
 
         Raises:
             None.
@@ -1422,11 +1417,11 @@ class BartModel(BartPreTrainedModel):
                 Represents the current instance of the BartModel class.
 
         Returns:
-            None
+            decoder:
                 This method returns the decoder associated with the BartModel instance.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.decoder
 
@@ -1571,7 +1566,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
             config (BartConfig): The configuration object for the BART model.
 
         Returns:
-            None: This method initializes the BART model with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -1593,8 +1588,8 @@ class BartForConditionalGeneration(BartPreTrainedModel):
                 This parameter refers to the current instance of the class.
 
         Returns:
-            None
-            Returns the encoder obtained from the model.
+            encoder:
+                Returns the encoder obtained from the model.
 
         Raises:
             None
@@ -1609,10 +1604,10 @@ class BartForConditionalGeneration(BartPreTrainedModel):
             self: An instance of the BartForConditionalGeneration class.
 
         Returns:
-            None: Returns the decoder module from the BartForConditionalGeneration model.
+            decoder: Returns the decoder module from the BartForConditionalGeneration model.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.get_decoder()
 
@@ -1671,11 +1666,11 @@ class BartForConditionalGeneration(BartPreTrainedModel):
                 It should always be passed as the first argument when calling this method.
 
         Returns:
-            None: This method returns the lm_head attribute of the BartForConditionalGeneration instance.
+            lm_head: This method returns the lm_head attribute of the BartForConditionalGeneration instance.
                 The lm_head attribute represents the output embeddings of the model.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -1692,7 +1687,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
             new_embeddings (Tensor): The new embeddings to be set as the output embeddings for the model.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
             TypeError: If the new_embeddings parameter is not of type Tensor.
@@ -1888,7 +1883,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
                 by reordering the cache based on the beam index.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1929,7 +1924,7 @@ class BartForSequenceClassification(BartPreTrainedModel):
                 It contains the model architecture and hyperparameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config is not an instance of BartConfig.
@@ -2229,10 +2224,10 @@ class BartDecoderWrapper(BartPreTrainedModel):
                 It should include all necessary parameters for configuring the BartDecoderWrapper.
 
         Returns:
-            None: This method initializes the BartDecoderWrapper instance.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
         self.decoder = BartDecoder(config)
@@ -2246,7 +2241,7 @@ class BartDecoderWrapper(BartPreTrainedModel):
             **kwargs: Arbitrary keyword arguments.
 
         Returns:
-            None: This method does not explicitly return a value.
+            None.
 
         Raises:
             Any exceptions raised by the self.decoder method may propagate to the caller.
@@ -2302,7 +2297,7 @@ class BartForCausalLM(BartPreTrainedModel):
                 Must contain the necessary settings for the model initialization.
 
         Returns:
-            None: This method initializes the BartForCausalLM instance with the provided configuration.
+            None.
 
         Raises:
             AttributeError: If the provided configuration is missing required attributes.
@@ -2328,7 +2323,7 @@ class BartForCausalLM(BartPreTrainedModel):
                 This parameter represents the current instance of the BartForCausalLM class.
 
         Returns:
-            None:
+            embed_tokens:
                 This method returns the input embeddings from the decoder of the BartForCausalLM model.
 
         Raises:
@@ -2346,10 +2341,10 @@ class BartForCausalLM(BartPreTrainedModel):
                 This should be a torch.Tensor representing the new input embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         self.model.decoder.embed_tokens = value
 
@@ -2360,10 +2355,10 @@ class BartForCausalLM(BartPreTrainedModel):
             self (BartForCausalLM): The instance of the BartForCausalLM class.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         """
         return self.lm_head
@@ -2380,7 +2375,7 @@ class BartForCausalLM(BartPreTrainedModel):
                 existing embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2401,7 +2396,7 @@ class BartForCausalLM(BartPreTrainedModel):
             decoder (nn.Module): The decoder module to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.

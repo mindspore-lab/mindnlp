@@ -81,13 +81,13 @@ class XLMRobertaConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import XLMRobertaConfig, XLMRobertaModel
-
+        ...
         >>> # Initializing a XLM-RoBERTa xlm-roberta-base style configuration
         >>> configuration = XLMRobertaConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the xlm-roberta-base style configuration
         >>> model = XLMRobertaModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -141,14 +141,16 @@ class XLMRobertaConfig(PretrainedConfig):
             classifier_dropout (float): The dropout probability for the classifier. Default is None.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If vocab_size, hidden_size, num_hidden_layers, num_attention_heads, intermediate_size, max_position_embeddings, type_vocab_size are not positive integers.
-            - ValueError: If hidden_dropout_prob, attention_probs_dropout_prob, initializer_range, layer_norm_eps, classifier_dropout are not in the range [0.0, 1.0].
-            - ValueError: If position_embedding_type is not 'absolute' or 'relative'.
-            - ValueError: If pad_token_id, bos_token_id, eos_token_id are not non-negative integers.
-            - TypeError: If classifier_dropout is not a float or None.
+            ValueError: If vocab_size, hidden_size, num_hidden_layers, num_attention_heads, intermediate_size,
+                max_position_embeddings, type_vocab_size are not positive integers.
+            ValueError: If hidden_dropout_prob, attention_probs_dropout_prob, initializer_range, layer_norm_eps,
+                classifier_dropout are not in the range [0.0, 1.0].
+            ValueError: If position_embedding_type is not 'absolute' or 'relative'.
+            ValueError: If pad_token_id, bos_token_id, eos_token_id are not non-negative integers.
+            TypeError: If classifier_dropout is not a float or None.
         """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 

@@ -234,7 +234,7 @@ class BeitImageProcessor(BaseImageProcessor):
                 The input label image to be processed. It should be a valid ImageInput object.
         
         Returns:
-            np.ndarray
+            np.ndarray:
                 Returns a numpy array representing the reduced label image.
         
         Raises:
@@ -412,7 +412,7 @@ class BeitImageProcessor(BaseImageProcessor):
             None: This method does not return any value. The processing is done in place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # Overrides the `__call__` method of the `Preprocessor` class such that the images and segmentation maps can both
         # be passed in as positional arguments.
@@ -592,8 +592,8 @@ class BeitImageProcessor(BaseImageProcessor):
 
         Returns:
             semantic_segmentation: `List[torch.Tensor]` of length `batch_size`, where each item is a semantic
-            segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
-            specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
+                segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
+                specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
         """
         # TODO: add support for other frameworks
         logits = outputs.logits

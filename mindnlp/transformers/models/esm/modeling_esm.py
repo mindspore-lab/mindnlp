@@ -57,7 +57,7 @@ def rotate_half(x):
         x (ndarray): The input array to be rotated. It should have a shape compatible with the chunk operation.
         
     Returns:
-        None: This function does not return any value.
+        None.
     
     Raises:
         None
@@ -76,7 +76,7 @@ def apply_rotary_pos_emb(x, cos, sin):
         sin (Tensor): Sine values for rotary positional embeddings.
         
     Returns:
-        None. The function modifies the input tensor x in-place by applying rotary positional embeddings.
+        None: The function modifies the input tensor x in-place by applying rotary positional embeddings.
     
     Raises:
         None.
@@ -127,7 +127,7 @@ class RotaryEmbedding(nn.Cell):
                 Must be a positive integer value.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -194,7 +194,8 @@ class RotaryEmbedding(nn.Cell):
         Note:
             - The rotary embedding is constructed using the provided q and k tensors.
             - The rotary embedding dimensions are determined by the dimensions of the input tensors.
-            - The rotary embedding is calculated using the cosine and sine tables obtained from the _update_cos_sin_tables method.
+            - The rotary embedding is calculated using the cosine and sine tables obtained from
+            the _update_cos_sin_tables method.
             - The cosine and sine tables are cached within the RotaryEmbedding instance.
         """
         self._cos_cached, self._sin_cached = self._update_cos_sin_tables(k, seq_dimension=-2)
@@ -213,7 +214,8 @@ class EsmContactPredictionHead(nn.Cell):
         bias=True,
         eos_idx: int = 2,
     ):
-        """Initializes an instance of the EsmContactPredictionHead class.
+        """
+        Initializes an instance of the EsmContactPredictionHead class.
         
         Args:
             self: An instance of the EsmContactPredictionHead class.
@@ -279,20 +281,22 @@ class EsmEmbeddings(nn.Cell):
         
         Args:
             self: EsmEmbeddings instance. A reference to the class instance.
-            config: object. A configuration object containing parameters for the embedding layer.
-                >   - vocab_size: int. The size of the vocabulary.
-                >   - hidden_size: int. The dimension of the hidden layer.
-                >   - pad_token_id: int. The index of the padding token in the vocabulary.
-                >   - emb_layer_norm_before: bool. Specifies whether layer normalization is applied before the embedding layer.
-                >   - layer_norm_eps: float. The epsilon value for layer normalization.
-                >   - hidden_dropout_prob: float. The dropout probability for the hidden layer.
-                >   - position_embedding_type: str. The type of position embedding ('absolute' by default).
-                >   - max_position_embeddings: int. The maximum number of positions for position embeddings.
-                >   - token_dropout: float. The token dropout probability.
-                >   - mask_token_id: int. The index of the mask token in the vocabulary.
+            config: object.
+                A configuration object containing parameters for the embedding layer.
+
+                - vocab_size: int. The size of the vocabulary.
+                - hidden_size: int. The dimension of the hidden layer.
+                - pad_token_id: int. The index of the padding token in the vocabulary.
+                - emb_layer_norm_before: bool. Specifies whether layer normalization is applied before the embedding layer.
+                - layer_norm_eps: float. The epsilon value for layer normalization.
+                - hidden_dropout_prob: float. The dropout probability for the hidden layer.
+                - position_embedding_type: str. The type of position embedding ('absolute' by default).
+                - max_position_embeddings: int. The maximum number of positions for position embeddings.
+                - token_dropout: float. The token dropout probability.
+                - mask_token_id: int. The index of the mask token in the vocabulary.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the config object does not contain the required attributes.
@@ -335,9 +339,9 @@ class EsmEmbeddings(nn.Cell):
             embeddings (torch.Tensor): The constructed embeddings tensor.
 
         Raises:
-            - ValueError: If both input_ids and inputs_embeds are None, or if position_ids is None and input_ids is None.
-            - TypeError: If input_ids, attention_mask, position_ids, or inputs_embeds are not of type torch.Tensor.
-            - RuntimeError: If there is a runtime error during the construction process.
+            ValueError: If both input_ids and inputs_embeds are None, or if position_ids is None and input_ids is None.
+            TypeError: If input_ids, attention_mask, position_ids, or inputs_embeds are not of type torch.Tensor.
+            RuntimeError: If there is a runtime error during the construction process.
         """
         if position_ids is None:
             if input_ids is not None:
@@ -404,8 +408,10 @@ class EsmSelfAttention(nn.Cell):
     """
     This class represents a self-attention mechanism for the ESM (Evolving Scalable Models) architecture.
     It calculates attention scores and produces context layers based on input hidden states.
-    The class provides functionalities for processing queries, keys, and values, handling position embeddings, and implementing attention mechanisms for transformers.
-    The class inherits from nn.Cell and includes methods for initializing the self-attention mechanism, swapping axes for attention scores, and constructing the attention mechanism.
+    The class provides functionalities for processing queries, keys, and values, handling position embeddings,
+    and implementing attention mechanisms for transformers.
+    The class inherits from nn.Cell and includes methods for initializing the self-attention mechanism,
+    swapping axes for attention scores, and constructing the attention mechanism.
     """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -413,20 +419,27 @@ class EsmSelfAttention(nn.Cell):
 
         Args:
             self: The object instance.
-            config: An object that contains configuration parameters for the self-attention layer.
-                >   - Type: object
-                >   - Purpose: Specifies the configuration settings for the self-attention layer.
-            position_embedding_type: The type of position embedding to use.
-                >   - Type: str
-                >   - Purpose: Specifies the type of position embedding to be used in the self-attention layer.
-                >   - Restrictions: If None, the default value is 'absolute'.
+            config:
+                An object that contains configuration parameters for the self-attention layer.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the self-attention layer.
+            position_embedding_type:
+                The type of position embedding to use.
+
+                - Type: str
+                - Purpose: Specifies the type of position embedding to be used in the self-attention layer.
+                - Restrictions: If None, the default value is 'absolute'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads and the config object does not have an 'embedding_size' attribute.
-                - Purpose: Raises an exception when the hidden size is not divisible by the number of attention heads, indicating an invalid configuration.
+            ValueError: If the hidden size is not a multiple of the number of attention heads and the config object
+                does not have an 'embedding_size' attribute.
+
+                - Purpose: Raises an exception when the hidden size is not divisible by the number of attention heads,
+                indicating an invalid configuration.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -462,14 +475,16 @@ class EsmSelfAttention(nn.Cell):
 
         Args:
             self (EsmSelfAttention): The instance of the EsmSelfAttention class.
-            x (mindspore.Tensor): The input tensor representing the scores for self-attention calculation. It should have a shape that can be reshaped to include the specified number of attention heads and
+            x (mindspore.Tensor): The input tensor representing the scores for self-attention calculation.
+                It should have a shape that can be reshaped to include the specified number of attention heads and
                 attention head size.
 
         Returns:
             mindspore.Tensor: The tensor after swapping and reshaping to prepare for self-attention calculation.
 
         Raises:
-            ValueError: If the input tensor shape is not compatible with the specified number of attention heads and attention head size.
+            ValueError: If the input tensor shape is not compatible with the specified number of attention heads
+                and attention head size.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -490,17 +505,29 @@ class EsmSelfAttention(nn.Cell):
 
         Args:
             self (EsmSelfAttention): The instance of the EsmSelfAttention class.
-            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states.
-            attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length) containing attention mask values. Default is None.
-            head_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (num_attention_heads,) containing the head mask values. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length, hidden_size) containing hidden states from the encoder. Default is None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length) containing attention mask values for the encoder. Default is None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key and value tensors. Default is None.
-            output_attentions (Optional[bool]): An optional boolean value indicating whether to output attention probabilities. Default is False.
+            hidden_states (mindspore.Tensor):
+                The input tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states.
+            attention_mask (Optional[mindspore.Tensor]):
+                An optional input tensor of shape (batch_size, sequence_length) containing attention mask values.
+                Default is None.
+            head_mask (Optional[mindspore.Tensor]):
+                An optional input tensor of shape (num_attention_heads,) containing the head mask values. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                An optional input tensor of shape (batch_size, sequence_length, hidden_size) containing hidden states
+                from the encoder. Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]):
+                An optional input tensor of shape (batch_size, sequence_length) containing attention mask values for
+                the encoder. Default is None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                An optional tuple of past key and value tensors. Default is None.
+            output_attentions (Optional[bool]):
+                An optional boolean value indicating whether to output attention probabilities. Default is False.
 
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the output context tensor of shape (batch_size, sequence_length, hidden_size) and optionally the attention probabilities tensor of shape (batch_size,
-                num_attention_heads, sequence_length, sequence_length) if output_attentions is True.
+            Tuple[mindspore.Tensor]:
+                A tuple containing the output context tensor of shape (batch_size, sequence_length, hidden_size)
+                and optionally the attention probabilities tensor of shape
+                (batch_size, num_attention_heads, sequence_length, sequence_length) if output_attentions is True.
 
         Raises:
             None
@@ -602,21 +629,23 @@ class EsmSelfOutput(nn.Cell):
 
     """
     The EsmSelfOutput class represents a self-output module for the ESM model.
-    This class inherits from nn.Cell and contains methods for initializing the module and constructing the output based on input hidden states and tensors.
+    This class inherits from nn.Cell and contains methods for initializing the module and constructing
+    the output based on input hidden states and tensors.
 
     Attributes:
         dense (nn.Dense): A dense layer with the specified hidden size for the ESM self-output module.
         dropout (nn.Dropout): A dropout layer with the specified dropout probability for the ESM self-output module.
 
     Methods:
-        __init__(config): Initializes the EsmSelfOutput module with the provided configuration.
-        construct(hidden_states, input_tensor): Constructs the output by applying the dense layer, dropout layer, and adding the input tensor to the hidden states.
+        __init__: Initializes the EsmSelfOutput module with the provided configuration.
+        construct: Constructs the output by applying the dense layer, dropout layer,
+            and adding the input tensor to the hidden states.
 
-    Example usage:
+    Example:
         ```python
-        config = Config(hidden_size=768, hidden_dropout_prob=0.1)
-        esm_self_output = EsmSelfOutput(config)
-        output = esm_self_output.construct(hidden_states, input_tensor)
+        >>> config = Config(hidden_size=768, hidden_dropout_prob=0.1)
+        >>> esm_self_output = EsmSelfOutput(config)
+        >>> output = esm_self_output.construct(hidden_states, input_tensor)
         ```
     """
     def __init__(self, config):
@@ -624,15 +653,17 @@ class EsmSelfOutput(nn.Cell):
 
         Args:
             self (EsmSelfOutput): The current instance of the class.
-            config: A configuration object used to customize the initialization.
+            config:
+                A configuration object used to customize the initialization.
+
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -643,11 +674,14 @@ class EsmSelfOutput(nn.Cell):
         The 'construct' method in the 'EsmSelfOutput' class processes the hidden states and input tensor to construct the output.
 
         Args:
-            hidden_states (tensor): The hidden states to be processed. It should be a tensor representing the hidden states of the model.
-            input_tensor (tensor): The input tensor to be combined with the processed hidden states. It should be a tensor representing the input data.
+            hidden_states (tensor): The hidden states to be processed.
+                It should be a tensor representing the hidden states of the model.
+            input_tensor (tensor): The input tensor to be combined with the processed hidden states.
+                It should be a tensor representing the input data.
 
         Returns:
-            tensor: The constructed output tensor, which is the result of processing the hidden states and combining them with the input tensor.
+            tensor: The constructed output tensor, which is the result of processing the hidden states
+                and combining them with the input tensor.
 
         Raises:
             None.
@@ -663,14 +697,13 @@ class EsmAttention(nn.Cell):
     """
     EsmAttention
 
-    This class represents an attention mechanism for the ESM model. It inherits from nn.Cell and contains methods for initializing the attention mechanism, pruning attention heads, and constructing the
-    attention output.
+    This class represents an attention mechanism for the ESM model. It inherits from nn.Cell and contains methods for
+    initializing the attention mechanism, pruning attention heads, and constructing the attention output.
 
     Methods:
-        __init__(self, config): Initializes the EsmAttention instance with the provided configuration.
-        prune_heads(self, heads): Prunes the specified attention heads from the EsmAttention instance.
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output
-            based on the provided input states and masks.
+        __init__: Initializes the EsmAttention instance with the provided configuration.
+        prune_heads: Prunes the specified attention heads from the EsmAttention instance.
+        construct: Constructs the attention output based on the provided input states and masks.
     """
     def __init__(self, config):
         """
@@ -681,10 +714,10 @@ class EsmAttention(nn.Cell):
             config: The configuration object containing the settings for the attention mechanism.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.self = EsmSelfAttention(config)
@@ -701,10 +734,10 @@ class EsmAttention(nn.Cell):
             heads (list): A list of integers representing the attention heads to be pruned.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         if len(heads) == 0:
             return
@@ -734,23 +767,23 @@ class EsmAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-            Args:
-                self (EsmAttention): The instance of the EsmAttention class.
-                hidden_states (tensor): The input hidden states for the attention mechanism.
-                attention_mask (tensor, optional): Mask for the attention scores. Defaults to None.
-                head_mask (tensor, optional): Mask for the individual attention heads. Defaults to None.
-                encoder_hidden_states (tensor, optional): Hidden states from the encoder. Defaults to None.
-                encoder_attention_mask (tensor, optional): Mask for the encoder attention scores. Defaults to None.
-                past_key_value (tuple, optional): Tuple containing the past key and value tensors. Defaults to None.
-                output_attentions (bool): Flag to indicate if the attention outputs should be returned. Defaults to False.
+        Args:
+            self (EsmAttention): The instance of the EsmAttention class.
+            hidden_states (tensor): The input hidden states for the attention mechanism.
+            attention_mask (tensor, optional): Mask for the attention scores. Defaults to None.
+            head_mask (tensor, optional): Mask for the individual attention heads. Defaults to None.
+            encoder_hidden_states (tensor, optional): Hidden states from the encoder. Defaults to None.
+            encoder_attention_mask (tensor, optional): Mask for the encoder attention scores. Defaults to None.
+            past_key_value (tuple, optional): Tuple containing the past key and value tensors. Defaults to None.
+            output_attentions (bool): Flag to indicate if the attention outputs should be returned. Defaults to False.
 
-            Returns:
-                tuple: A tuple containing the attention output and additional outputs from the attention mechanism.
+        Returns:
+            tuple: A tuple containing the attention output and additional outputs from the attention mechanism.
 
-            Raises:
-                ValueError: If the dimensions of input tensors are incompatible.
-                TypeError: If the input types are invalid or incompatible.
-                RuntimeError: If the method encounters a runtime issue during computation.
+        Raises:
+            ValueError: If the dimensions of input tensors are incompatible.
+            TypeError: If the input types are invalid or incompatible.
+            RuntimeError: If the method encounters a runtime issue during computation.
         """
         hidden_states_ln = self.LayerNorm(hidden_states)
         self_outputs = self.self(
@@ -770,23 +803,31 @@ class EsmAttention(nn.Cell):
 class EsmIntermediate(nn.Cell):
 
     """
-    The 'EsmIntermediate' class represents a neural network module that performs intermediate computations on input hidden states. This class inherits from the 'nn.Cell' class.
+    The 'EsmIntermediate' class represents a neural network module that performs intermediate computations
+    on input hidden states. This class inherits from the 'nn.Cell' class.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer that maps the input hidden states to an intermediate size.
+        dense (nn.Dense):
+            A fully connected layer that maps the input hidden states to an intermediate size.
 
     Methods:
         __init__: Initializes the 'EsmIntermediate' instance with the given configuration.
-            >   - Parameters:
-            >       - config: An object containing the configuration settings for the 'EsmIntermediate' instance.
-            >   - Returns:
-            >       - None
+
+            Parameters:
+
+                - config: An object containing the configuration settings for the 'EsmIntermediate' instance.
+            Returns:
+
+                - None
 
         construct: Performs the intermediate computations on the input hidden states.
-            >   - Parameters:
-            >       - hidden_states (mindspore.Tensor): The input hidden states to be processed.
-            >   - Returns:
-            >       - mindspore.Tensor: The processed hidden states after going through the intermediate computations.
+
+            Parameters:
+
+                - hidden_states (mindspore.Tensor): The input hidden states to be processed.
+            Returns:
+
+                - mindspore.Tensor: The processed hidden states after going through the intermediate computations.
     """
     def __init__(self, config):
         """
@@ -794,13 +835,15 @@ class EsmIntermediate(nn.Cell):
 
         Args:
             self: The instance of the EsmIntermediate class.
-            config: An object containing configuration parameters for the EsmIntermediate, including hidden_size and intermediate_size.
-                >   - Type: object
-                >   - Purpose: Specifies the configuration parameters for the EsmIntermediate.
-                >   - Restrictions: None
+            config: An object containing configuration parameters for the EsmIntermediate,
+                including hidden_size and intermediate_size.
+
+                - Type: object
+                - Purpose: Specifies the configuration parameters for the EsmIntermediate.
+                - Restrictions: None
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -817,7 +860,9 @@ class EsmIntermediate(nn.Cell):
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
 
         Returns:
-            mindspore.Tensor: The tensor representing the intermediate hidden states after applying the dense layer and the gelu activation function.
+            mindspore.Tensor:
+                The tensor representing the intermediate hidden states after applying the dense layer and the
+                gelu activation function.
 
         Raises:
             None
@@ -834,11 +879,12 @@ class EsmOutput(nn.Cell):
 
     This class inherits from nn.Cell and contains methods for initializing the class and constructing the output layer.
 
-    The __init__ method initializes the EsmOutput instance with the provided configuration. It sets up a dense layer with the specified intermediate and hidden sizes, and a dropout layer with the given dropout
-    probability.
+    The __init__ method initializes the EsmOutput instance with the provided configuration. It sets up a dense layer
+    with the specified intermediate and hidden sizes, and a dropout layer with the given dropout probability.
 
-    The construct method takes hidden_states and input_tensor as input and processes the hidden_states through the dense layer, applies dropout, and adds the input_tensor to the result. The processed
-    hidden_states are then returned.
+    The construct method takes hidden_states and input_tensor as input and processes the hidden_states through
+    the dense layer, applies dropout, and adds the input_tensor to the result. The processed hidden_states are then
+    returned.
 
     Note:
         This docstring is based on the provided information and does not include code signatures or any other code.
@@ -849,18 +895,20 @@ class EsmOutput(nn.Cell):
 
         Args:
             self (EsmOutput): The current instance of the EsmOutput class.
-            config (object): An object containing configuration parameters.
-                >   - intermediate_size (int): Size of the intermediate layer.
-                >   - hidden_size (int): Size of the hidden layer.
-                >   - hidden_dropout_prob (float): Dropout probability for the hidden layer.
+            config (object):
+                An object containing configuration parameters.
+
+                - intermediate_size (int): Size of the intermediate layer.
+                - hidden_size (int): Size of the hidden layer.
+                - hidden_dropout_prob (float): Dropout probability for the hidden layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config parameter does not contain the required attributes.
-            - RuntimeError: If there are issues during initialization of the dense or dropout layers.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config parameter does not contain the required attributes.
+            RuntimeError: If there are issues during initialization of the dense or dropout layers.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -894,7 +942,8 @@ class EsmOutput(nn.Cell):
 class EsmLayer(nn.Cell):
 
     """
-    The EsmLayer class represents a layer for the ESM (Evolved Transformer with Split Mixture of Experts) model. It is used for processing input data and performing self-attention and feed-forward operations.
+    The EsmLayer class represents a layer for the ESM (Evolved Transformer with Split Mixture of Experts) model.
+    It is used for processing input data and performing self-attention and feed-forward operations.
     This class inherits from the nn.Cell class.
 
     Attributes:
@@ -909,29 +958,33 @@ class EsmLayer(nn.Cell):
         LayerNorm (nn.LayerNorm): An instance of the nn.LayerNorm class for layer normalization.
 
     Methods:
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False):
-            Processes the input hidden states and performs self-attention and cross-attention (if applicable), and returns the outputs.
-        feed_forward_chunk(self, attention_output):
-            Performs layer normalization, intermediate processing, and produces the final layer output based on the attention output.
+        construct: Processes the input hidden states and performs self-attention and cross-attention (if applicable),
+            and returns the outputs.
+        feed_forward_chunk:
+            Performs layer normalization, intermediate processing, and produces the final layer output based on the
+            attention output.
 
     Raises:
         RuntimeError: If the class is not used as a decoder model while cross-attention is added.
-        AttributeError: If `encoder_hidden_states` are passed without instantiating cross-attention layers by setting `config.add_cross_attention=True`.
+        AttributeError: If `encoder_hidden_states` are passed without instantiating cross-attention layers
+            by setting `config.add_cross_attention=True`.
     """
     def __init__(self, config):
         """Initializes an instance of the EsmLayer class.
 
         Args:
             self: The EsmLayer instance.
-            config: The configuration options for the EsmLayer. This parameter expects an object of a specific class.
-                >   - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
-                >   - is_decoder (bool): Indicates whether the EsmLayer is used as a decoder model.
-                >   - add_cross_attention (bool): Indicates whether cross attention is added.
-                >   - hidden_size (int): The size of the hidden state.
-                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+            config: The configuration options for the EsmLayer.
+                This parameter expects an object of a specific class.
+
+                - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
+                - is_decoder (bool): Indicates whether the EsmLayer is used as a decoder model.
+                - add_cross_attention (bool): Indicates whether cross attention is added.
+                - hidden_size (int): The size of the hidden state.
+                - layer_norm_eps (float): The epsilon value for layer normalization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             RuntimeError: If cross attention is added and the EsmLayer is not used as a decoder model.
@@ -963,26 +1016,41 @@ class EsmLayer(nn.Cell):
         """
         Construct the EsmLayer.
 
-        This method constructs the EsmLayer by performing self-attention and cross-attention operations on the input hidden states.
+        This method constructs the EsmLayer by performing self-attention and cross-attention operations on the
+        input hidden states.
 
         Args:
             self (EsmLayer): An instance of the EsmLayer class.
             hidden_states (tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (tensor, optional): The attention mask of shape (batch_size, sequence_length) indicating which tokens should be attended to. Defaults to None.
-            head_mask (tensor, optional): The head mask of shape (num_heads,) or (num_layers, num_heads) indicating which heads should be masked out. Defaults to None.
-            encoder_hidden_states (tensor, optional): The hidden states of the encoder, if the EsmLayer is used as a decoder. Defaults to None.
-            encoder_attention_mask (tensor, optional): The attention mask for the encoder, if the EsmLayer is used as a decoder. Defaults to None.
-            past_key_value (tuple, optional): The tuple containing the past key and value tensors of shape (2, batch_size, num_heads, sequence_length, head_size), if available. Defaults to None.
+            attention_mask (tensor, optional):
+                The attention mask of shape (batch_size, sequence_length) indicating which tokens should be attended to.
+                Defaults to None.
+            head_mask (tensor, optional):
+                The head mask of shape (num_heads,) or (num_layers, num_heads) indicating which heads should be
+                masked out. Defaults to None.
+            encoder_hidden_states (tensor, optional):
+                The hidden states of the encoder, if the EsmLayer is used as a decoder. Defaults to None.
+            encoder_attention_mask (tensor, optional):
+                The attention mask for the encoder, if the EsmLayer is used as a decoder. Defaults to None.
+            past_key_value (tuple, optional):
+                The tuple containing the past key and value tensors of shape
+                (2, batch_size, num_heads, sequence_length, head_size), if available. Defaults to None.
             output_attentions (bool, optional): Whether to output attentions. Defaults to False.
 
         Returns:
-            tuple: A tuple containing the following elements:
-                >   - attention_output (tensor): The output of the self-attention operation of shape (batch_size, sequence_length, hidden_size).
-                >   - outputs (tuple): A tuple containing the intermediate outputs of the self-attention and cross-attention operations.
-                >   - present_key_value (tensor, optional): The present key and value tensors of shape (2, batch_size, num_heads, sequence_length, head_size), if the EsmLayer is used as a decoder.
+            tuple:
+                A tuple containing the following elements:
+
+                - attention_output (tensor): The output of the self-attention operation of shape
+                (batch_size, sequence_length, hidden_size).
+                - outputs (tuple): A tuple containing the intermediate outputs of the self-attention and cross-attention
+                operations.
+                - present_key_value (tensor, optional): The present key and value tensors of shape
+                (2, batch_size, num_heads, sequence_length, head_size), if the EsmLayer is used as a decoder.
 
         Raises:
-            AttributeError: If `encoder_hidden_states` are passed and the EsmLayer is not instantiated with cross-attention layers.
+            AttributeError: If `encoder_hidden_states` are passed and the EsmLayer is not instantiated with
+                cross-attention layers.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -1045,23 +1113,25 @@ class EsmLayer(nn.Cell):
             This method performs the feed-forward chunk operation within the EsmLayer class.
 
         Args:
-            self (EsmLayer): The instance of the EsmLayer class.
-                >   - Type: EsmLayer object
-                >   - Purpose: Represents the current instance of the EsmLayer class.
-                >   - Restrictions: Must be an instance of the EsmLayer class.
+            self (EsmLayer):
+                The instance of the EsmLayer class.
 
-            attention_output (tensor): The input tensor representing the attention output.
-                >   - Type: Tensor
-                >   - Purpose: Represents the attention output to be processed.
-                >   - Restrictions: Should be a valid input tensor.
+                - Type: EsmLayer object
+                - Purpose: Represents the current instance of the EsmLayer class.
+                - Restrictions: Must be an instance of the EsmLayer class.
+
+            attention_output (tensor):
+                The input tensor representing the attention output.
+
+                - Type: Tensor
+                - Purpose: Represents the attention output to be processed.
+                - Restrictions: Should be a valid input tensor.
 
         Returns:
-            None
-            >   - Type: None
-            >   - Purpose: The method does not return any value explicitly.
+            None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         attention_output_ln = self.LayerNorm(attention_output)
         intermediate_output = self.intermediate(attention_output_ln)
@@ -1072,26 +1142,29 @@ class EsmLayer(nn.Cell):
 class EsmEncoder(nn.Cell):
 
     """
-    The `EsmEncoder` class represents a Python class that serves as an encoder in the ESM (Encoder-Decoder Semantic Mapping) model. This class inherits from the `nn.Cell` class.
+    The `EsmEncoder` class represents a Python class that serves as an encoder in the ESM
+    (Encoder-Decoder Semantic Mapping) model. This class inherits from the `nn.Cell` class.
 
     The `EsmEncoder` class has the following attributes:
 
     Attributes:
         `config`: An object that encapsulates the configuration parameters for the encoder.
         `layer`: A list of `EsmLayer` instances, representing the individual layers of the encoder.
-        `emb_layer_norm_after`: An instance of the `nn.LayerNorm` class, used for layer normalization of the hidden states.
+        `emb_layer_norm_after`: An instance of the `nn.LayerNorm` class, used for layer normalization of the
+            hidden states.
         `gradient_checkpointing`: A boolean flag indicating whether gradient checkpointing is enabled.
 
     The `EsmEncoder` class provides the following methods:
 
     Methods:
-        `__init__(self, config)`: Initializes an instance of the `EsmEncoder` class.
-        `construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_values=None, use_cache=None, output_attentions=False,
-            output_hidden_states=False, return_dict=True)`: Constructs the encoder layers and returns the final hidden states.
+        `__init__`: Initializes an instance of the `EsmEncoder` class.
+        `construct`: Constructs the encoder layers and returns the final hidden states.
 
-    Please note that this class assumes the existence of the `EsmLayer` class, which represents the individual layers of the encoder. The `EsmLayer` class is not defined within this docstring.
+    Please note that this class assumes the existence of the `EsmLayer` class, which represents the individual layers
+    of the encoder. The `EsmLayer` class is not defined within this docstring.
 
-    For more details on the purpose and functionality of the `EsmEncoder` class, please refer to the code implementation and associated documentation.
+    For more details on the purpose and functionality of the `EsmEncoder` class, please refer to the code implementation
+    and associated documentation.
     """
     def __init__(self, config):
         """
@@ -1101,12 +1174,13 @@ class EsmEncoder(nn.Cell):
             self: The instance of the EsmEncoder class.
             config: A dictionary containing configuration parameters for the EsmEncoder.
                 It is expected to have the following keys:
-                    >   - num_hidden_layers: An integer specifying the number of hidden layers.
-                    >   - hidden_size: An integer specifying the size of the hidden layers.
-                    >   - layer_norm_eps: A float specifying the epsilon value for layer normalization.
+
+                - num_hidden_layers: An integer specifying the number of hidden layers.
+                - hidden_size: An integer specifying the size of the hidden layers.
+                - layer_norm_eps: A float specifying the epsilon value for layer normalization.
 
         Returns:
-            None. This method initializes the EsmEncoder instance with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -1150,7 +1224,7 @@ class EsmEncoder(nn.Cell):
             None
 
         Raises:
-            - Warning: If `use_cache=True` is incompatible with `config.gradient_checkpointing=True`.
+            Warning: If `use_cache=True` is incompatible with `config.gradient_checkpointing=True`.
         """
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1225,7 +1299,8 @@ class EsmPooler(nn.Cell):
     The EsmPooler class inherits from the nn.Cell class, which is a base class for all neural network cells in MindSpore.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer that takes the hidden states as input and output the pooled representation.
+        dense (nn.Dense):
+            A fully connected layer that takes the hidden states as input and output the pooled representation.
         activation (nn.Tanh): An activation function that is applied to the output of the dense layer.
 
     Methods:
@@ -1233,14 +1308,15 @@ class EsmPooler(nn.Cell):
             This method takes the hidden states tensor as input and returns the pooled representation.
 
     Usage:
-        To use the EsmPooler, instantiate an object of this class and call the construct() method passing the hidden states tensor.
+        To use the EsmPooler, instantiate an object of this class and call the construct() method passing the
+        hidden states tensor.
 
     Example:
         ```python
         >>> config = {
         >>>     'hidden_size': 768
         >>> }
-
+        ...
         >>> pooler = EsmPooler(config)
         >>> hidden_states = mindspore.Tensor(np.random.randn(5, 10, 768), dtype=mindspore.float32)
         >>> pooled_output = pooler.construct(hidden_states)
@@ -1252,19 +1328,22 @@ class EsmPooler(nn.Cell):
 
         Args:
             self (EsmPooler): The instance of the EsmPooler class.
-            config (object): An object containing configuration settings.
-                >   - hidden_size (int): The size of the hidden layer.
-                    It specifies the dimensions for the Dense layer and activation function.
+            config (object):
+                An object containing configuration settings.
+
+                - hidden_size (int): The size of the hidden layer.
+                It specifies the dimensions for the Dense layer and activation function.
+
                 Note:
                     The config object must have the required attributes for successful initialization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - AttributeError: If the necessary attributes are missing in the config object.
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the hidden_size value is invalid or out of range.
+            AttributeError: If the necessary attributes are missing in the config object.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the hidden_size value is invalid or out of range.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1346,13 +1425,14 @@ class EsmModel(EsmPreTrainedModel):
         Args:
             self: The instance of the class.
             config (object): The configuration object containing various settings for the model.
-            add_pooling_layer (bool, optional): A flag indicating whether to include a pooling layer in the model. Default is True.
+            add_pooling_layer (bool, optional): A flag indicating whether to include a pooling layer in the model.
+                Default is True.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__(config)
         self.config = config
@@ -1377,10 +1457,10 @@ class EsmModel(EsmPreTrainedModel):
             self: An instance of the EsmModel class.
 
         Returns:
-            None: This method returns the word embeddings for input data, represented as a tensor.
+            word_embeddings: This method returns the word embeddings for input data, represented as a tensor.
 
         Raises:
-            N/A
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1393,7 +1473,7 @@ class EsmModel(EsmPreTrainedModel):
             value: The input embeddings to be set. This should be of type `torch.Tensor`.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1424,23 +1504,26 @@ class EsmModel(EsmPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors
+                of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1537,10 +1620,10 @@ class EsmModel(EsmPreTrainedModel):
             attention_mask (Tensor): The attention mask for the input tokens.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         attns = self(tokens, attention_mask=attention_mask, return_dict=True, output_attentions=True).attentions
         attns = ops.stack(attns, axis=1)  # Matches the original model layout
@@ -1559,15 +1642,20 @@ class EsmForMaskedLM(EsmPreTrainedModel):
     Represents an ESM (Evolutionary Scale Modeling) model for masked language modeling (MLM), inheriting from EsmPreTrainedModel.
     This class provides the functionality to perform masked language modeling using the ESM model.
 
-    The EsmForMaskedLM class contains methods for initializing the model, getting and setting output embeddings, constructing the model, and predicting contacts. The model architecture includes an ESM model
-    and a language modeling head (lm_head). The construct method takes input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
-    output_hidden_states, and return_dict as input arguments and returns the masked language modeling loss and other outputs. The predict_contacts method takes tokens and attention_mask as input and returns the
-    predicted contacts using the ESM model.
+    The EsmForMaskedLM class contains methods for initializing the model, getting and setting output embeddings,
+    constructing the model, and predicting contacts.
+    The model architecture includes an ESM model and a language modeling head (lm_head).
+    The construct method takes input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states,
+    encoder_attention_mask, labels, output_attentions, output_hidden_states, and return_dict as input arguments and
+    returns the masked language modeling loss and other outputs.
+    The predict_contacts method takes tokens and attention_mask as input and returns the predicted contacts using the
+    ESM model.
 
     Note:
         - If using `EsmForMaskedLM`, ensure `config.is_decoder=False` for bi-directional self-attention.
-        - Labels for computing the masked language modeling loss should be indices in `[-100, 0, ..., config.vocab_size]`. Tokens with indices set to `-100` are ignored (masked), and the loss is only computed for
-            the tokens with labels in `[0, ..., config.vocab_size]`.
+        - Labels for computing the masked language modeling loss should be indices in `[-100, 0, ..., config.vocab_size]`.
+        Tokens with indices set to `-100` are ignored (masked), and the loss is only computed for the tokens with labels
+        in `[0, ..., config.vocab_size]`.
 
     """
     _tied_weights_keys = ["lm_head.decoder.weight"]
@@ -1582,10 +1670,10 @@ class EsmForMaskedLM(EsmPreTrainedModel):
                 It must have attributes like 'is_decoder', 'add_pooling_layer', and 'init_weights'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -1608,10 +1696,10 @@ class EsmForMaskedLM(EsmPreTrainedModel):
             self: An instance of the EsmForMaskedLM class.
 
         Returns:
-            None. The method returns the output embeddings for the language model head.
+            decoder: The method returns the output embeddings for the language model head.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lm_head.decoder
 
@@ -1624,11 +1712,11 @@ class EsmForMaskedLM(EsmPreTrainedModel):
             new_embeddings (torch.nn.Module): The new embeddings to be set as output embeddings for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided new_embeddings is not of type torch.nn.Module.
-            - AttributeError: If the lm_head.decoder attribute is not present in the EsmForMaskedLM instance.
+            TypeError: If the provided new_embeddings is not of type torch.nn.Module.
+            AttributeError: If the lm_head.decoder attribute is not present in the EsmForMaskedLM instance.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -1694,13 +1782,15 @@ class EsmForMaskedLM(EsmPreTrainedModel):
         Args:
             self (EsmForMaskedLM): The instance of the EsmForMaskedLM class.
             tokens (Tensor): The input tokens for prediction.
-            attention_mask (Tensor): The attention mask for the input tokens. It masks the tokens that should not be attended to, specifying which tokens should be attended to and which should not.
+            attention_mask (Tensor): The attention mask for the input tokens.
+                It masks the tokens that should not be attended to, specifying which tokens should be attended to
+                and which should not.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         return self.esm.predict_contacts(tokens, attention_mask=attention_mask)
 
@@ -1713,7 +1803,9 @@ class EsmLMHead(nn.Cell):
 
         Args:
             self (EsmLMHead): The instance of the class.
-            config: An object that contains the configuration parameters for the EsmLMHead. It should have the following attributes:
+            config: An object that contains the configuration parameters for the EsmLMHead.
+                It should have the following attributes:
+
                 - hidden_size (int): The size of the hidden layers.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
                 - vocab_size (int): The size of the vocabulary.
@@ -1740,7 +1832,7 @@ class EsmLMHead(nn.Cell):
             features (tensor): Input features for constructing the output.
 
         Returns:
-            None. The constructed output is returned as a tensor.
+            None: The constructed output is returned as a tensor.
 
         Raises:
             None.
@@ -1757,7 +1849,8 @@ class EsmLMHead(nn.Cell):
 class EsmForSequenceClassification(EsmPreTrainedModel):
 
     """
-    This class represents an ESM (Evoformer) model for sequence classification tasks. It is a subclass of EsmPreTrainedModel, which provides the underlying architecture and functionality.
+    This class represents an ESM (Evoformer) model for sequence classification tasks.
+    It is a subclass of EsmPreTrainedModel, which provides the underlying architecture and functionality.
 
     Attributes:
         num_labels (int): The number of labels for the classification task.
@@ -1766,8 +1859,8 @@ class EsmForSequenceClassification(EsmPreTrainedModel):
         classifier (EsmClassificationHead): The classification head for the ESM model.
 
     Methods:
-        __init__(self, config): Initializes the EsmForSequenceClassification instance.
-        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the ESM model for sequence classification.
+        __init__: Initializes the EsmForSequenceClassification instance.
+        construct: Constructs the ESM model for sequence classification.
 
     """
     def __init__(self, config):
@@ -1776,16 +1869,18 @@ class EsmForSequenceClassification(EsmPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the model.
-                Type: object
-                Purpose: To configure the model and its components.
-                Restrictions: Must be a valid configuration object.
+            config:
+                An object containing the configuration parameters for the model.
+
+                - Type: object
+                - Purpose: To configure the model and its components.
+                - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1865,14 +1960,19 @@ class EsmForSequenceClassification(EsmPreTrainedModel):
 class EsmForTokenClassification(EsmPreTrainedModel):
 
     """
-    EsmForTokenClassification is a class that represents a token classification model based on the ESM (Evoformer Sequence Model) architecture. This class extends EsmPreTrainedModel to leverage pre-trained
-    weights and configurations for efficient token classification tasks. It includes methods for initializing the model, constructing the forward pass, and computing the token classification loss.
+    EsmForTokenClassification is a class that represents a token classification model based on the ESM
+    (Evoformer Sequence Model) architecture. This class extends EsmPreTrainedModel to leverage pre-trained
+    weights and configurations for efficient token classification tasks. It includes methods for initializing the model,
+    constructing the forward pass, and computing the token classification loss.
 
-    The __init__ method initializes the EsmForTokenClassification model with configurable parameters such as the number of labels, dropout probability, and hidden layer sizes. It also sets up the ESM model,
-    dropout layer, and the classifier for token classification.
+    The __init__ method initializes the EsmForTokenClassification model with configurable parameters such as the number
+    of labels, dropout probability, and hidden layer sizes. It also sets up the ESM model, dropout layer, and the
+    classifier for token classification.
 
-    The construct method defines the forward pass of the model, taking input tensors such as input_ids, attention_mask, position_ids, etc., and returning the token classification output. It computes the logits
-    for token classification based on the sequence_output from the ESM model and calculates the cross-entropy loss if labels are provided. The method allows for returning additional outputs like hidden states and
+    The construct method defines the forward pass of the model, taking input tensors such as input_ids, attention_mask,
+    position_ids, etc., and returning the token classification output.
+    It computes the logits for token classification based on the sequence_output from the ESM model and calculates the
+    cross-entropy loss if labels are provided. The method allows for returning additional outputs like hidden states and
     attentions based on the return_dict parameter.
 
     Note:
@@ -1884,18 +1984,20 @@ class EsmForTokenClassification(EsmPreTrainedModel):
 
         Args:
             self: The instance of the EsmForTokenClassification class.
-            config: An instance of the configuration class containing the model configuration parameters.
-                >   - Type: object
-                >   - Purpose: Specifies the configuration settings for the model.
-                >   - Restrictions: Must be a valid instance of the configuration class.
+            config:
+                An instance of the configuration class containing the model configuration parameters.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the model.
+                - Restrictions: Must be a valid instance of the configuration class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not of the correct type.
-            - ValueError: If the config.num_labels is not provided or is invalid.
-            - RuntimeError: If an error occurs during the initialization process.
+            TypeError: If the config parameter is not of the correct type.
+            ValueError: If the config.num_labels is not provided or is invalid.
+            RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1965,13 +2067,15 @@ class EsmClassificationHead(nn.Cell):
         
         Args:
             self (EsmClassificationHead): The instance of the class.
-            config: An object containing configuration parameters for the head.
-                Type: object
-                Purpose: The configuration for the classification head.
-                Restrictions: Must be a valid configuration object.
+            config:
+                An object containing configuration parameters for the head.
+
+                - Type: object
+                - Purpose: The configuration for the classification head.
+                - Restrictions: Must be a valid configuration object.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -1991,7 +2095,7 @@ class EsmClassificationHead(nn.Cell):
                 It represents the input features for classification.
         
         Returns:
-            None. The method modifies the EsmClassificationHead instance in-place.
+            None: The method modifies the EsmClassificationHead instance in-place.
         
         Raises:
             ValueError: If the features tensor is not of the expected shape.

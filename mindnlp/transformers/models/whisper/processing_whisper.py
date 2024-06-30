@@ -47,10 +47,10 @@ class WhisperProcessor(ProcessorMixin):
                 This should be an object representing the tokenization mechanism.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__(feature_extractor, tokenizer)
         self.current_processor = self.feature_extractor
@@ -61,13 +61,16 @@ class WhisperProcessor(ProcessorMixin):
         Method: get_decoder_prompt_ids
         
         Description:
-        This method retrieves the decoder prompt IDs for a given task and language. It utilizes the tokenizer to obtain the prompt IDs.
+            This method retrieves the decoder prompt IDs for a given task and language.
+            It utilizes the tokenizer to obtain the prompt IDs.
         
         Args:
             self: The instance of the WhisperProcessor class.
             task (optional): A string representing the task for which decoder prompt IDs are required. Defaults to None.
-            language (optional): A string representing the language for which decoder prompt IDs are required. Defaults to None.
-            no_timestamps (optional): A boolean indicating whether to include timestamps in the decoder prompt IDs. Defaults to True.
+            language (optional): A string representing the language for which decoder prompt IDs are required.
+                Defaults to None.
+            no_timestamps (optional): A boolean indicating whether to include timestamps in the decoder prompt IDs.
+                Defaults to True.
 
         Returns:
             None
@@ -76,13 +79,14 @@ class WhisperProcessor(ProcessorMixin):
             None
 
         Note:
-            The decoder prompt IDs are obtained by calling the tokenizer's get_decoder_prompt_ids method with the specified task, language, and no_timestamps parameters. The returned decoder prompt IDs are then
+            The decoder prompt IDs are obtained by calling the tokenizer's get_decoder_prompt_ids method with the
+            specified task, language, and no_timestamps parameters. The returned decoder prompt IDs are then
             returned by this method.
 
-        Example usage:
+        Example:
             ```python
-            processor = WhisperProcessor()
-            decoder_prompt_ids = processor.get_decoder_prompt_ids(task='translation', language='english', no_timestamps=True)
+            >>> processor = WhisperProcessor()
+            >>> decoder_prompt_ids = processor.get_decoder_prompt_ids(task='translation', language='english', no_timestamps=True)
             ```
         """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
@@ -147,7 +151,8 @@ class WhisperProcessor(ProcessorMixin):
                 Default value: 'np'.
         
         Returns:
-            None: This method does not return any value directly. Instead, it returns the prompt IDs using the WhisperProcessor's tokenizer.
+            None: This method does not return any value directly. Instead, it returns the prompt IDs using the
+                WhisperProcessor's tokenizer.
         
         Raises:
             ValueError: If the specified return_tensors value is not one of the allowed options.

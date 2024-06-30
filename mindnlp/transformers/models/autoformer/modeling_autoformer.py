@@ -187,7 +187,7 @@ class AutoformerFeatureEmbedder(nn.Cell):
                 The length of this list should be the same as the length of 'cardinalities'.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             TypeError: If 'cardinalities' or 'embedding_dims' is not of type List[int].
@@ -259,10 +259,10 @@ class AutoformerStdScaler(nn.Cell):
                 - minimum_scale (float, optional): The minimum scale value. Defaults to 1e-05.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         super().__init__()
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
@@ -281,7 +281,8 @@ class AutoformerStdScaler(nn.Cell):
             observed_indicator (mindspore.Tensor): The observed indicator tensor.
 
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing three tensors.
+            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+                A tuple containing three tensors.
             
                 - The first tensor represents the scaled data, obtained by subtracting the location and dividing by the scale.
                 - The second tensor represents the location, calculated as the weighted sum of the data.
@@ -426,7 +427,7 @@ class AutoformerNOPScaler(nn.Cell):
             config (AutoformerConfig): An instance of AutoformerConfig containing configuration parameters for the scaler.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -504,7 +505,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
             padding_idx (Optional[int], optional): Index of the padding token. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -554,7 +555,7 @@ class AutoformerValueEmbedding(nn.Cell):
             d_model (int): The size of the output model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -572,10 +573,10 @@ class AutoformerValueEmbedding(nn.Cell):
             x: The input value to be embedded.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.value_projection(x)
 
@@ -598,11 +599,11 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
             config (AutoformerConfig):
                 The configuration object containing the settings for the AutoformerSeriesDecompositionLayer.
 
-                    - `moving_average` (int): The size of the moving average kernel for the average pooling operation.
-                    Must be a positive integer.
+                - `moving_average` (int): The size of the moving average kernel for the average pooling operation.
+                Must be a positive integer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -644,7 +645,7 @@ class AutoformerLayernorm(nn.Cell):
                 It should have the attribute 'd_model' representing the model dimension.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -661,10 +662,10 @@ class AutoformerLayernorm(nn.Cell):
             x (tensor): The input tensor to be processed by the method.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         x_hat = self.layernorm(x)
         bias = ops.mean(x_hat, axis=1).unsqueeze(1).tile((1, x.shape[1], 1))
@@ -986,7 +987,7 @@ class AutoformerEncoderLayer(nn.Cell):
                 The config parameter is used to set up the layer's components accordingly.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1255,7 +1256,7 @@ class AutoformerPreTrainedModel(PreTrainedModel):
             cell: The cell whose weights need to be initialized.
 
         Returns:
-            None. This method initializes the weights of the given cell in-place.
+            None: This method initializes the weights of the given cell in-place.
 
         Raises:
             None.
@@ -1451,7 +1452,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
                 - decoder_layers (int): The number of decoder layers to be created.
 
         Returns:
-            None: This method initializes various attributes and does not return any value.
+            None.
 
         Raises:
             ValueError: Raised if the 'prediction_length' config parameter is not specified.
@@ -2064,7 +2065,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             config (AutoformerConfig): An object containing the configuration settings for AutoformerForPrediction.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the 'config.distribution_output' is not 'student_t' or 'normal'.

@@ -98,14 +98,16 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                        using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                    BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            BPE-dropout.
         add_bos_token (`bool`, *optional*, defaults to `True`):
             Whether to add a beginning of sequence token at the start of sequences.
         add_eos_token (`bool`, *optional*, defaults to `False`):
@@ -165,10 +167,10 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             use_default_system_prompt (bool, optional): Whether to use the default system prompt.
 
         Returns:
-            None: This method initiates the CodeLlamaTokenizer instance.
+            None.
 
         Raises:
-            - MissingBackendError: If the required backend 'protobuf' is not available.
+            MissingBackendError: If the required backend 'protobuf' is not available.
         """
         requires_backends(self, "protobuf")
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
@@ -231,20 +233,23 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
 
     def get_spm_processor(self):
         """
-        This method initializes and returns a SentencePieceProcessor object for tokenizing text using the SentencePiece library.
+        This method initializes and returns a SentencePieceProcessor object for tokenizing text using
+        the SentencePiece library.
 
         Args:
             self: The instance of the CodeLlamaTokenizer class.
 
         Returns:
-            None. However, the method initializes and returns a tokenizer object of type spm.SentencePieceProcessor.
+            spm.SentencePieceProcessor: A tokenizer object of type spm.SentencePieceProcessor.
 
         Raises:
-            This method does not explicitly raise any exceptions. However, potential exceptions that may occur during the method execution include:
-                >   - FileNotFoundError: If the specified vocab_file cannot be found.
-                >   - IOError: If there are issues with reading the vocab_file.
-                >   - ValueError: If the provided sp_model_kwargs are invalid or missing required information.
-                >   - Any other relevant exceptions that may occur during the loading and initialization of the tokenizer.
+            None:
+                However, potential exceptions that may occur during the method execution include:
+
+                - FileNotFoundError: If the specified vocab_file cannot be found.
+                - IOError: If there are issues with reading the vocab_file.
+                - ValueError: If the provided sp_model_kwargs are invalid or missing required information.
+                - Any other relevant exceptions that may occur during the loading and initialization of the tokenizer.
         """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         with open(self.vocab_file, "rb") as f:
@@ -267,23 +272,25 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             self: An instance of the CodeLlamaTokenizer class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method retrieves the prefix token that is used for tokenizing code in the CodeLlamaTokenizer class. The prefix token serves as a marker or indicator to identify the start of a code block or
-        expression. It is used during the tokenization process to correctly identify and separate different parts of the code.
+        This method retrieves the prefix token that is used for tokenizing code in the CodeLlamaTokenizer class.
+        The prefix token serves as a marker or indicator to identify the start of a code block or expression.
+        It is used during the tokenization process to correctly identify and separate different parts of the code.
 
-        Note that the prefix token is an internal attribute of the CodeLlamaTokenizer class, and it is not meant to be modified directly. To change the prefix token, use the appropriate setter method or modify
-        the underlying implementation of the class if necessary.
+        Note that the prefix token is an internal attribute of the CodeLlamaTokenizer class, and it is not meant to
+        be modified directly. To change the prefix token, use the appropriate setter method or modify the underlying
+        implementation of the class if necessary.
 
-        Example usage:
+        Example:
             ```python
-            tokenizer = CodeLlamaTokenizer()
-            prefix = tokenizer.prefix_token
-            print(prefix)
-            # Output: '>>'
+            >>> tokenizer = CodeLlamaTokenizer()
+            >>> prefix = tokenizer.prefix_token
+            >>> print(prefix)
+            >>> # Output: '>>'
             ```
         """
         return self._prefix_token
@@ -297,7 +304,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.
 
         Returns:
-            None: If the prefix token is None, the method returns None. Otherwise, it returns the ID associated with the prefix token.
+            None: If the prefix token is None, the method returns None.
+                Otherwise, it returns the ID associated with the prefix token.
 
         Raises:
             None
@@ -309,17 +317,19 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
     @property
     def middle_token(self):
         """
-        This method 'middle_token' is a property method defined in the class 'CodeLlamaTokenizer' that retrieves the middle token stored in the instance.
+        This method 'middle_token' is a property method defined in the class 'CodeLlamaTokenizer' that
+        retrieves the middle token stored in the instance.
 
         Args:
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.
                 This parameter refers to the current instance of the class.
 
         Returns:
-            None: This method returns the middle token stored in the instance. If no middle token is set, it returns None.
+            None: This method returns the middle token stored in the instance.
+                If no middle token is set, it returns None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self._middle_token
 
@@ -337,8 +347,10 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
 
-        This method returns the middle ID of the CodeLlamaTokenizer instance. If the middle token is None, it returns None. The middle ID is obtained by converting the middle token to its corresponding ID
-        using the 'convert_tokens_to_ids' method.
+        This method returns the middle ID of the CodeLlamaTokenizer instance.
+        If the middle token is None, it returns None.
+        The middle ID is obtained by converting the middle token to its corresponding ID using the
+        'convert_tokens_to_ids' method.
         """
         if self._middle_token is None:
             return None
@@ -376,8 +388,10 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
 
-        This method retrieves the ID corresponding to the suffix token. If the suffix token is None, the method returns None. The suffix token is obtained by converting the suffix token to its corresponding ID
-        using the convert_tokens_to_ids method.
+        This method retrieves the ID corresponding to the suffix token.
+        If the suffix token is None, the method returns None.
+        The suffix token is obtained by converting the suffix token to its corresponding ID using
+        the convert_tokens_to_ids method.
         """
         if self._suffix_token is None:
             return None
@@ -395,7 +409,7 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             None: This method returns the end-of-text token value stored in the instance.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self._eot_token
 
@@ -409,7 +423,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
 
         Returns:
             None: If the '_eot_token' attribute is None, the method returns None.
-            int: If the '_eot_token' attribute is not None, the method returns the integer value obtained by converting the token to its corresponding ID using the 'convert_tokens_to_ids' method.
+            int: If the '_eot_token' attribute is not None, the method returns the integer value obtained
+                by converting the token to its corresponding ID using the 'convert_tokens_to_ids' method.
 
         Raises:
             No specific exceptions are raised by this method.
@@ -438,20 +453,26 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             self (CodeLlamaTokenizer): An instance of the CodeLlamaTokenizer class.
             prefix (str): The prefix string to tokenize.
             suffix (str, optional): The suffix string to tokenize. Defaults to None.
-            suffix_first (bool, optional): Flag indicating whether to place the suffix before the prefix. Defaults to False.
+            suffix_first (bool, optional): Flag indicating whether to place the suffix before the prefix.
+                Defaults to False.
 
         Returns:
             List[int]: A list of integers representing the tokens generated from the prefix and suffix.
 
         Raises:
-            ValueError: If the input includes a prefix and a suffix used for the infilling task, or if the model does not support infilling.
+            ValueError: If the input includes a prefix and a suffix used for the infilling task,
+                or if the model does not support infilling.
 
         Note:
-            - The `prefix` and `suffix` parameters are used to split the input on the `fill_token` token to create a suffix and prefix.
+            - The `prefix` and `suffix` parameters are used to split the input on the `fill_token` token to
+            create a suffix and prefix.
             - If only a prefix is provided, the method tokenizes the prefix and returns the resulting tokens.
-            - If a prefix and suffix are provided, the method tokenizes both and returns the tokens in the specified order.
-            - The `suffix_first` parameter takes precedence over the class attribute `suffix_first` if both are provided.
-            - The method removes special tokens from the beginning of the tokens list if they match the specified conditions.
+            - If a prefix and suffix are provided, the method tokenizes both and returns the tokens in the
+            specified order.
+            - The `suffix_first` parameter takes precedence over the class attribute `suffix_first`
+            if both are provided.
+            - The method removes special tokens from the beginning of the tokens list if they match the
+            specified conditions.
             - The method replaces occurrences of the `SPIECE_UNDERLINE` token in the prefix with a space.
         """
         # add a prefix space to `prefix`
@@ -573,7 +594,7 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             list: A list representing the input sequences with special tokens added based on the configuration settings.
 
         Raises:
-            - None.
+            None.
         """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
@@ -722,7 +743,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Method: __getstate__
 
         Description:
-            This method is used to retrieve the state of the CodeLlamaTokenizer object for serialization purposes. It returns a dictionary representing the current state of the object.
+            This method is used to retrieve the state of the CodeLlamaTokenizer object for serialization purposes.
+            It returns a dictionary representing the current state of the object.
 
         Args:
             self: The instance of the CodeLlamaTokenizer class.
@@ -731,7 +753,7 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             None: This method does not return any value. Instead, it modifies the state dictionary and returns None.
 
         Raises:
-            - None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -740,21 +762,26 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
 
     def __setstate__(self, d):
         """
-        This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the object based on the provided dictionary 'd'. It reconstructs the object's state including
-        the SentencePiece model by loading it from a serialized proto.
+        This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the
+        object based on the provided dictionary 'd'. It reconstructs the object's state including the SentencePiece
+        model by loading it from a serialized proto.
 
         Args:
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.
-            d (dict): A dictionary containing the state information to be set. It should include the necessary attributes for the object's state reconstruction.
+            d (dict): A dictionary containing the state information to be set.
+                It should include the necessary attributes for the object's state reconstruction.
 
         Returns:
-            None: This method does not return any value explicitly. It operates by modifying the internal state of the object.
+            None: This method does not return any value explicitly.
+                It operates by modifying the internal state of the object.
 
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions that could be raised during the execution may include but are not limited to:
-                >   - TypeError: If the input 'd' is not a dictionary.
-                >   - ValueError: If the input 'd' does not contain the required state information.
-                >   - Any exceptions related to the SentencePieceProcessor initialization or loading process.
+            None:
+                However, potential exceptions that could be raised during the execution may include but are not limited to:
+
+                - TypeError: If the input 'd' is not a dictionary.
+                - ValueError: If the input 'd' does not contain the required state information.
+                - Any exceptions related to the SentencePieceProcessor initialization or loading process.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)

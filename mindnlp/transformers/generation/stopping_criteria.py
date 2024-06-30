@@ -63,7 +63,7 @@ class MaxLengthCriteria(StoppingCriteria):
             max_length (int): The maximum length to be set for the criteria. It must be a positive integer.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_length is not a positive integer.
@@ -112,7 +112,7 @@ class MaxNewTokensCriteria(StoppingCriteria):
             max_new_tokens (int): The maximum number of new tokens allowed.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             FutureWarning: If the MaxNewTokensCriteria class is deprecated.
@@ -143,7 +143,7 @@ class MaxNewTokensCriteria(StoppingCriteria):
                 the MaxNewTokensCriteria instance; otherwise, returns False.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return input_ids.shape[-1] >= self.max_length
 
@@ -172,7 +172,7 @@ class MaxTimeCriteria(StoppingCriteria):
                 Defaults to None, in which case the current time will be used.
         
         Returns:
-            None: This method only initializes the MaxTimeCriteria object.
+            None.
         
         Raises:
             None.
@@ -197,7 +197,7 @@ class MaxTimeCriteria(StoppingCriteria):
                 exceeds the maximum allowed time defined by self.max_time.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return time.time() - self.initial_timestamp > self.max_time
 
@@ -217,7 +217,7 @@ class StoppingCriteriaList(list):
             bool: Returns a boolean value indicating whether any of the stopping criteria have been met.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return any(criteria(input_ids, scores) for criteria in self)
 

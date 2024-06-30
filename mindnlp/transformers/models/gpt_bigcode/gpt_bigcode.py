@@ -75,9 +75,9 @@ class GPTBigCodeAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters.
-                    Must have attributes: multi_query (bool), hidden_size (int), num_attention_heads (int),
-                    scale_attn_weights (bool), attention_softmax_in_fp32 (bool), scale_attention_softmax_in_fp32 (bool),
-                    attn_pdrop (float), resid_pdrop (float).
+                Must have attributes: multi_query (bool), hidden_size (int), num_attention_heads (int),
+                scale_attn_weights (bool), attention_softmax_in_fp32 (bool), scale_attention_softmax_in_fp32 (bool),
+                attn_pdrop (float), resid_pdrop (float).
             is_cross_attention: A boolean indicating whether cross-attention is enabled.
             layer_idx: An integer representing the layer index.
         
@@ -138,7 +138,7 @@ class GPTBigCodeAttention(nn.Cell):
             dtype (str): The data type for the mask value. Should be a valid data type.
         
         Returns:
-            None. Returns the mask value for the specified data type.
+            mask_value: Returns the mask value for the specified data type.
         
         Raises:
             ValueError: If the mask value is None or has a different data type from the specified dtype.
@@ -153,19 +153,28 @@ class GPTBigCodeAttention(nn.Cell):
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
-        This method calculates and applies attention mechanism to the input query, key, and value tensors in the GPTBigCodeAttention class.
+        This method calculates and applies attention mechanism to the input query, key, and value tensors in the
+        GPTBigCodeAttention class.
         
         Args:
             self: The GPTBigCodeAttention instance.
-            query (Tensor): The input query tensor with shape (batch_size, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length * num_heads, hidden_size) if multi_query is True.
-            key (Tensor): The input key tensor with shape (batch_size * num_heads, hidden_size, sequence_length) if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
-            value (Tensor): The input value tensor with shape (batch_size * num_heads, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
-            attention_mask (Tensor, optional): A tensor with shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) containing attention masks
-                to be applied to the attention scores. Default is None.
-            head_mask (Tensor, optional): A tensor with shape (batch_size, num_heads, sequence_length) representing the head mask to be applied to the attention weights. Default is None.
+            query (Tensor): The input query tensor with shape (batch_size, sequence_length, hidden_size)
+                if multi_query is False, or (batch_size, sequence_length * num_heads, hidden_size) if multi_query is True.
+            key (Tensor): The input key tensor with shape (batch_size * num_heads, hidden_size, sequence_length)
+                if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
+            value (Tensor): The input value tensor with shape (batch_size * num_heads, sequence_length, hidden_size)
+                if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
+            attention_mask (Tensor, optional):
+                A tensor with shape (batch_size, sequence_length) or
+                (batch_size, num_heads, sequence_length, sequence_length) containing attention masks  to be applied to
+                the attention scores. Default is None.
+            head_mask (Tensor, optional):
+                A tensor with shape (batch_size, num_heads, sequence_length) representing the head mask to be applied
+                to the attention weights. Default is None.
 
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing the attention output tensor and the attention weights tensor of the specified shapes.
+            Tuple[Tensor, Tensor]:
+                A tuple containing the attention output tensor and the attention weights tensor of the specified shapes.
 
         Raises:
             ValueError: If the shapes of the input tensors are not compatible for the attention calculation.
@@ -274,17 +283,20 @@ class GPTBigCodeAttention(nn.Cell):
             layer_past (Optional[mindspore.Tensor]): Past hidden states for the layer. Default is None.
             attention_mask (Optional[mindspore.Tensor]): Mask to prevent attention to certain positions. Default is None.
             head_mask (Optional[mindspore.Tensor]): Mask for individual attention heads. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from encoder if cross-attention is used. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from encoder if cross-attention is used.
+                Default is None.
             encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention. Default is None.
             use_cache (Optional[bool]): Whether to cache the key-value pair for future calls. Default is False.
             output_attentions (Optional[bool]): Whether to output the attention weights. Default is False.
 
         Returns:
             Union[Tuple[mindspore.Tensor, Optional[mindspore.Tensor]], Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]]:
-            Tuple containing the attention output tensor and optionally the present key-value pair and attention weights.
+                Tuple containing the attention output tensor and optionally the present key-value pair and attention
+                weights.
 
         Raises:
-            - ValueError: If 'q_attn' weights are not defined for cross-attention or if class is not instantiated with 'is_cross_attention=True'.
+            ValueError: If 'q_attn' weights are not defined for cross-attention or if class is not instantiated
+                with 'is_cross_attention=True'.
         """
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn") or not self.is_cross_attention:
@@ -362,15 +374,19 @@ class GPTBigCodeMLP(nn.Cell):
 
     def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
-        This method constructs a multi-layer perceptron for the GPT (Generative Pretrained Transformer) model using the provided hidden states.
+        This method constructs a multi-layer perceptron for the GPT (Generative Pretrained Transformer) model
+        using the provided hidden states.
 
         Args:
             self: The instance of the GPTBigCodeMLP class.
-            hidden_states (Optional[Tuple[mindspore.Tensor]]): The hidden states to be processed by the multi-layer perceptron. It is an optional tuple of mindspore.Tensor containing the input hidden states.
+            hidden_states (Optional[Tuple[mindspore.Tensor]]):
+                The hidden states to be processed by the multi-layer perceptron.
+                It is an optional tuple of mindspore.Tensor containing the input hidden states.
                 If not provided, the method will default to None.
 
         Returns:
-            mindspore.Tensor: A tensor representing the processed hidden states after passing through the multi-layer perceptron.
+            mindspore.Tensor:
+                A tensor representing the processed hidden states after passing through the multi-layer perceptron.
 
         Raises:
             None
@@ -450,11 +466,13 @@ class GPTBigCodeBlock(nn.Cell):
             output_attentions (Optional[bool]): Flag to indicate whether to output attentions.
 
         Returns:
-            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]]: The output of the method which may include the hidden states and
-            optionally attention scores.
+            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]]:
+                The output of the method which may include the hidden states and optionally attention scores.
 
         Raises:
-            - ValueError: If `encoder_hidden_states` are passed but the cross-attention layers are not instantiated with the flag `config.add_cross_attention=True`.
+            ValueError:
+                If `encoder_hidden_states` are passed but the cross-attention layers are not instantiated with the
+                flag `config.add_cross_attention=True`.
         """
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -554,10 +572,10 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
             value (bool): The boolean value indicating whether to enable gradient checkpointing for the module.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the module is not an instance of GPTBigCodeModel.
+            TypeError: If the module is not an instance of GPTBigCodeModel.
         """
         if isinstance(module, GPTBigCodeModel):
             module.gradient_checkpointing = value
@@ -572,7 +590,7 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
             value (bool): The value to set the gradient checkpointing flag to. Default is False.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -617,24 +635,26 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         Args:
             self(GPTBigCodeModel):
                 The instance of the GPTBigCodeModel class.
-            config(Config):  An instance of the Config class containing configuration parameters for the model. The configuration parameters include:
-                >   - multi_query: bool
-                    Specifies if the model supports multiple queries.
-                >   - hidden_size: int
-                    Specifies the dimension of the hidden layers.
-                >   - vocab_size: int
-                    Specifies the size of the vocabulary.
-                >   - max_position_embeddings: int
-                    Specifies the maximum number of positions for embeddings.
-                >   - embd_pdrop: float
-                    Specifies the dropout probability for the embeddings.
-                >   - num_hidden_layers: int
-                    Specifies the number of hidden layers in the model.
-                >   - layer_norm_epsilon: float
-                    Specifies the epsilon value for layer normalization.
+            config(Config):  An instance of the Config class containing configuration parameters for the model.
+                The configuration parameters include:
+
+                - multi_query: bool
+                Specifies if the model supports multiple queries.
+                - hidden_size: int
+                Specifies the dimension of the hidden layers.
+                - vocab_size: int
+                Specifies the size of the vocabulary.
+                - max_position_embeddings: int
+                Specifies the maximum number of positions for embeddings.
+                - embd_pdrop: float
+                Specifies the dropout probability for the embeddings.
+                - num_hidden_layers: int
+                Specifies the number of hidden layers in the model.
+                - layer_norm_epsilon: float
+                Specifies the epsilon value for layer normalization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -672,7 +692,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
             None: This method returns the input embeddings which are of type None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.wte
 
@@ -682,13 +702,14 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         Args:
             self (GPTBigCodeModel): The instance of the GPTBigCodeModel class.
-            new_embeddings (object): The new input embeddings to be set for the model. It can be of any valid type.
+            new_embeddings (object): The new input embeddings to be set for the model.
+                It can be of any valid type.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.wte = new_embeddings
 
@@ -714,22 +735,26 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         Args:
             self (GPTBigCodeModel): The instance of the GPTBigCodeModel class.
             input_ids (Optional[mindspore.Tensor], optional): The input sequence tensor. Defaults to None.
-            past_key_values (Optional[List[mindspore.Tensor]], optional): List of tensors containing the past key values of the model. Defaults to None.
+            past_key_values (Optional[List[mindspore.Tensor]], optional):
+                List of tensors containing the past key values of the model. Defaults to None.
             attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor. Defaults to None.
             token_type_ids (Optional[mindspore.Tensor], optional): The token type ids tensor. Defaults to None.
             position_ids (Optional[mindspore.Tensor], optional): The position ids tensor. Defaults to None.
             head_mask (Optional[mindspore.Tensor], optional): The head mask tensor. Defaults to None.
             inputs_embeds (Optional[mindspore.Tensor], optional): The input embeddings tensor. Defaults to None.
-            encoder_hidden_states (Optional[mindspore.Tensor], optional): The hidden states of the encoder. Defaults to None.
-            encoder_attention_mask (Optional[mindspore.Tensor], optional): The attention mask for the encoder. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor], optional): The hidden states of the encoder.
+                Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor], optional): The attention mask for the encoder.
+                Defaults to None.
             use_cache (Optional[bool], optional): Whether to use cache. Defaults to None.
             output_attentions (Optional[bool], optional): Whether to output attentions. Defaults to None.
             output_hidden_states (Optional[bool], optional): Whether to output hidden states. Defaults to None.
             return_dict (Optional[bool], optional): Whether to return a dictionary. Defaults to None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The output of the GPTBigCodeModel. Returns a tuple or a BaseModelOutputWithPastAndCrossAttentions object depending on the value of
-            return_dict.
+            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The output of the GPTBigCodeModel.
+                Returns a tuple or a BaseModelOutputWithPastAndCrossAttentions object depending on the value of
+                return_dict.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
@@ -897,13 +922,14 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
 
         Args:
             self (object): The instance of the class.
-            config (object): A configuration object containing settings for the GPTBigCodeForCausalLM model. It should include parameters such as n_embd (embedding dimension) and vocab_size (vocabulary size).
+            config (object): A configuration object containing settings for the GPTBigCodeForCausalLM model.
+                It should include parameters such as n_embd (embedding dimension) and vocab_size (vocabulary size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         super().__init__(config)
         self.transformer = GPTBigCodeModel(config)
@@ -921,10 +947,10 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             self (GPTBigCodeForCausalLM): The instance of the GPTBigCodeForCausalLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -937,10 +963,10 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             new_embeddings (object): The new embeddings to be set as output embeddings for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -952,17 +978,20 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             self (GPTBigCodeForCausalLM): An instance of the GPTBigCodeForCausalLM class.
             input_ids (torch.Tensor): The input tensor of shape [batch_size, sequence_length].
             past_key_values (tuple, optional): The tuple of past key values. Default is None.
-            inputs_embeds (torch.Tensor, optional): The embedded inputs tensor of shape [batch_size, sequence_length, embedding_size]. Default is None.
+            inputs_embeds (torch.Tensor, optional):
+                The embedded inputs tensor of shape [batch_size, sequence_length, embedding_size]. Default is None.
 
         Returns:
-            dict: A dictionary containing the model inputs for generation. The dictionary may contain the following keys:
-                >   - 'inputs_embeds' (torch.Tensor): The embedded inputs tensor.
-                >   - 'input_ids' (torch.Tensor): The input tensor.
-                >   - 'past_key_values' (tuple): The tuple of past key values.
-                >   - 'use_cache' (bool): Whether to use cache.
-                >   - 'position_ids' (torch.Tensor): The position ids tensor.
-                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
-                >   - 'token_type_ids' (torch.Tensor): The token type ids tensor.
+            dict: A dictionary containing the model inputs for generation.
+                The dictionary may contain the following keys:
+
+                - 'inputs_embeds' (torch.Tensor): The embedded inputs tensor.
+                - 'input_ids' (torch.Tensor): The input tensor.
+                - 'past_key_values' (tuple): The tuple of past key values.
+                - 'use_cache' (bool): Whether to use cache.
+                - 'position_ids' (torch.Tensor): The position ids tensor.
+                - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                - 'token_type_ids' (torch.Tensor): The token type ids tensor.
 
         Raises:
             None.
@@ -1222,15 +1251,18 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: An object containing configuration settings for the model. It must have the following attributes:
-                >   - num_labels: An integer specifying the number of output labels.
-                >   - classifier_dropout: (optional) A float specifying the dropout rate for the classifier layer.
-                >   - hidden_dropout: (optional) A float specifying the dropout rate for hidden layers.
+            config: An object containing configuration settings for the model.
+                It must have the following attributes:
+
+                - num_labels: An integer specifying the number of output labels.
+                - classifier_dropout: (optional) A float specifying the dropout rate for the classifier layer.
+                - hidden_dropout: (optional) A float specifying the dropout rate for hidden layers.
+
                 Note:
                     If both classifier_dropout and hidden_dropout are provided, classifier_dropout takes precedence.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.

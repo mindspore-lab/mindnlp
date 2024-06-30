@@ -387,7 +387,7 @@ class Blip2Config(PretrainedConfig):
             num_query_tokens (int, optional): The number of query tokens. Defaults to 32.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

@@ -212,7 +212,7 @@ class BigBirdSelfAttention(nn.Cell):
             is_decoder (bool): Flag indicating if the self-attention mechanism is used in a decoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError:
@@ -410,7 +410,7 @@ class BigBirdBlockSparseAttention(nn.Cell):
             seed (Optional[int]): The random seed for reproducibility. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
@@ -1444,7 +1444,7 @@ class BigBirdSelfOutput(nn.Cell):
             hidden_dropout_prob (float): The dropout probability for hidden layers.
 
         Returns:
-            None: This method initializes the BigBirdSelfOutput class with the specified configuration.
+            None.
 
         Raises:
             ValueError: If the provided config does not contain the required parameters.
@@ -1509,7 +1509,7 @@ class BigBirdAttention(nn.Cell):
             seed (optional): An integer representing the random seed for reproducible results.
 
         Returns:
-            None: This method initializes the BigBirdAttention class.
+            None.
 
         Raises:
             ValueError: If the attention_type specified in the config is neither 'original_full' nor 'block_sparse'.
@@ -1539,7 +1539,7 @@ class BigBirdAttention(nn.Cell):
             value: str, the attention type to be set. It must be either 'original_full' or 'block_sparse'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided value is not 'original_full' or 'block_sparse'.
@@ -1657,7 +1657,7 @@ class BigBirdIntermediate(nn.Cell):
                 - hidden_act: A string or a function representing the activation function for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -1791,7 +1791,7 @@ class BigBirdLayer(nn.Cell):
             seed: An integer used for random seed initialization. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If add_cross_attention is True but the model is not set as a decoder model.
@@ -1820,7 +1820,7 @@ class BigBirdLayer(nn.Cell):
             value (str): The attention type to be set. It can only be 'original_full' or 'block_sparse'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided attention type is not 'original_full' or 'block_sparse'.
@@ -1880,7 +1880,7 @@ class BigBirdLayer(nn.Cell):
             output_attentions (bool): Whether to output attentions. Default is False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If `encoder_hidden_states` are passed and cross-attention layers are not instantiated
@@ -2015,10 +2015,10 @@ class BigBirdEncoder(nn.Cell):
                 - num_hidden_layers: An integer representing the number of hidden layers in the encoder configuration.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.config = config
@@ -2038,7 +2038,7 @@ class BigBirdEncoder(nn.Cell):
             value (str): The attention type to be set. It can only be set to either 'original_full' or 'block_sparse'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided value is not 'original_full' or 'block_sparse'.
@@ -2202,7 +2202,7 @@ class BigBirdPredictionHeadTransform(nn.Cell):
 
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_act (str or function): Activation function for the hidden layer. If it's a string, it refers to
-                    a predefined activation function in the ACT2FN dictionary; otherwise, it should be a custom activation function.
+                a predefined activation function in the ACT2FN dictionary; otherwise, it should be a custom activation function.
                 - layer_norm_eps (float): The epsilon value for LayerNorm.
 
         Returns:
@@ -2354,21 +2354,21 @@ class BigBirdOnlyMLMHead(nn.Cell):
         __init__:
             Initializes a BigBirdOnlyMLMHead object.
 
-            - Args:
+            Args:
 
-                - config (BigBirdConfig): The configuration object for the BigBird transformer model.
+            - config (BigBirdConfig): The configuration object for the BigBird transformer model.
 
         construct:
             Generates prediction scores for masked language modeling tasks.
 
-            - Args:
+            Args:
 
-                - sequence_output (mindspore.Tensor):
-                The output tensor from the preceding layer of the BigBird transformer model.
+            - sequence_output (mindspore.Tensor):
+            The output tensor from the preceding layer of the BigBird transformer model.
 
-            - Returns:
+            Returns:
 
-                - mindspore.Tensor: The prediction scores for the MLM tasks.
+            - mindspore.Tensor: The prediction scores for the MLM tasks.
     """
     def __init__(self, config):
         """
@@ -2381,7 +2381,7 @@ class BigBirdOnlyMLMHead(nn.Cell):
                 This parameter is required for initializing the BigBirdLMPredictionHead object.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             TypeError: If the config parameter is not a dictionary or if it is missing required keys.
@@ -2424,24 +2424,24 @@ class BigBirdOnlyNSPHead(nn.Cell):
         __init__(self, config):
             Initializes an instance of the BigBirdOnlyNSPHead class.
 
-            - Args:
+            Args:
 
-                - config (object): An object containing the configuration parameters for the NSP head.
+            - config (object): An object containing the configuration parameters for the NSP head.
 
-            - Returns:
+            Returns:
 
-                - None
+            - None
 
         construct(self, pooled_output):
             Constructs and returns the next sentence prediction score based on the given pooled_output.
 
-            - Args:
+            Args:
 
-                - pooled_output (Tensor): A tensor representing the pooled output from the previous layer.
+            - pooled_output (Tensor): A tensor representing the pooled output from the previous layer.
 
-            - Returns:
+            Returns:
 
-                - seq_relationship_score (Tensor): A tensor representing the next sentence prediction score.
+            - seq_relationship_score (Tensor): A tensor representing the next sentence prediction score.
     """
     def __init__(self, config):
         """
@@ -2470,10 +2470,10 @@ class BigBirdOnlyNSPHead(nn.Cell):
             pooled_output (tensor): The pooled output tensor representing the sequence information.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -2713,7 +2713,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
             add_pooling_layer (bool): Flag to indicate whether to add a pooling layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2752,10 +2752,10 @@ class BigBirdModel(BigBirdPreTrainedModel):
             self: An instance of the BigBirdModel class.
 
         Returns:
-            None. The method returns the word embeddings stored in the BigBirdModel instance.
+            word_embeddings: The method returns the word embeddings stored in the BigBirdModel instance.
 
         Raises:
-            None.
+            word_embeddings
         """
         return self.embeddings.word_embeddings
 
@@ -2768,7 +2768,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
             value: The new input embeddings to be set. This should be an instance of a compatible embedding object.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2782,7 +2782,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
 
         This method does not return any value, as it directly modifies the input embeddings of the BigBirdModel instance.
 
-        Example usage:
+        Example:
             ```python
             >>> model = BigBirdModel()
             >>> embeddings = WordEmbeddings()
@@ -2800,7 +2800,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
             value (str): The specified attention type to set. It can only be either 'original_full' or 'block_sparse'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the value provided is not 'original_full' or 'block_sparse'.
@@ -2832,25 +2832,27 @@ class BigBirdModel(BigBirdPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[BaseModelOutputWithPoolingAndCrossAttentions, Tuple[mindspore.Tensor]]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
 
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors
-        of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors
+                of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -3049,10 +3051,8 @@ class BigBirdModel(BigBirdPreTrainedModel):
             Create 3D attention mask from a 2D tensor mask.
 
             Args:
-                from_blocked_mask: 2D Tensor of shape [batch_size,
-                from_seq_length//from_block_size, from_block_size].
-                to_blocked_mask: int32 Tensor of shape [batch_size,
-                to_seq_length//to_block_size, to_block_size].
+                from_blocked_mask: 2D Tensor of shape [batch_size, from_seq_length//from_block_size, from_block_size].
+                to_blocked_mask: int32 Tensor of shape [batch_size, to_seq_length//to_block_size, to_block_size].
 
             Returns:
                 float Tensor of shape [batch_size, 1, from_seq_length//from_block_size-4, from_block_size,
@@ -3182,7 +3182,7 @@ class BigBirdForPreTraining(BigBirdPreTrainedModel):
                 This can be a tensor or any object that can be assigned to the output embeddings attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3359,10 +3359,10 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
             self (BigBirdForMaskedLM): The instance of the BigBirdForMaskedLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -3376,10 +3376,10 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
                 It can be of any valid type supported for model embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self.cls.predictions.decoder = new_embeddings
 
@@ -3399,10 +3399,11 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[MaskedLMOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
             Union[MaskedLMOutput, Tuple[mindspore.Tensor]]
@@ -3559,7 +3560,7 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
                 - is_decoder (bool): Indicates whether the model is used as a decoder. If False, a warning message is logged.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3589,10 +3590,10 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
             self (BigBirdForCausalLM): The instance of the BigBirdForCausalLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -3632,27 +3633,28 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[CausalLMOutputWithCrossAttentions, Tuple[mindspore.Tensor]]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -3784,7 +3786,7 @@ class BigBirdClassificationHead(nn.Cell):
                 - num_labels (int): The number of output labels.
 
         Returns:
-            None: This method initializes the BigBirdClassificationHead instance with the specified configuration parameters.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -3813,7 +3815,7 @@ class BigBirdClassificationHead(nn.Cell):
             None: This method does not return any value directly, but modifies the input features tensor in place.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
@@ -3852,7 +3854,7 @@ class BigBirdForSequenceClassification(BigBirdPreTrainedModel):
             config: The configuration object containing the model configuration.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -3996,7 +3998,7 @@ class BigBirdForMultipleChoice(BigBirdPreTrainedModel):
             config: An object containing configuration settings for the BigBirdModel.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the method 'post_init' is not implemented in the derived class.
@@ -4216,10 +4218,10 @@ class BigBirdForQuestionAnsweringHead(nn.Cell):
             encoder_output (Tensor): The output tensor from the encoder.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dropout(encoder_output)
         hidden_states = self.intermediate(hidden_states)
@@ -4289,7 +4291,7 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
             add_pooling_layer (bool, optional): A boolean indicating whether to add a pooling layer. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None

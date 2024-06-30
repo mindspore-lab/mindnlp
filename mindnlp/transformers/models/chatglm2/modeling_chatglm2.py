@@ -49,7 +49,7 @@ def default_init(cls, *args, **kwargs):
         cls (class): The class to be instantiated.
         
     Returns:
-        None. Returns an instance of the input class with the provided arguments and keyword arguments.
+        None: Returns an instance of the input class with the provided arguments and keyword arguments.
     
     Raises:
         None.
@@ -140,23 +140,26 @@ class PrefixEncoder(nn.Cell):
     Output shape: (batch-size, prefix-length, 2*layers*hidden)
     """
     def __init__(self, config: ChatGLM2Config):
-        """Initialize the PrefixEncoder object.
+        """
+        Initialize the PrefixEncoder object.
 
-            Args:
-                config (ChatGLM2Config): The configuration object that holds the parameters for the PrefixEncoder.
-                    - `prefix_projection` (bool): Flag indicating whether to use the prefix projection.
-                    - `num_layers` (int): The number of layers.
-                    - `kv_channels` (int): The number of channels in key-value projection.
-                    - `multi_query_group_num` (int): The number of multi-query groups.
-                    - `pre_seq_len` (int): The length of the prefix sequence.
-                    - `hidden_size` (int): The size of the hidden layer.
+        Args:
+            config (ChatGLM2Config):
+                The configuration object that holds the parameters for the PrefixEncoder.
 
-            Returns:
-                None
+                - `prefix_projection` (bool): Flag indicating whether to use the prefix projection.
+                - `num_layers` (int): The number of layers.
+                - `kv_channels` (int): The number of channels in key-value projection.
+                - `multi_query_group_num` (int): The number of multi-query groups.
+                - `pre_seq_len` (int): The length of the prefix sequence.
+                - `hidden_size` (int): The size of the hidden layer.
 
-            Raises:
-                None
-            """
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         super().__init__()
         self.prefix_projection = config.prefix_projection
         if self.prefix_projection:
@@ -256,7 +259,7 @@ class RotaryEmbedding(nn.Cell):
             dtype (str, optional): The data type to be used. Defaults to None.
 
         Returns:
-            None. This method initializes the RotaryEmbedding object with the specified parameters.
+            None.
 
         Raises:
             TypeError: If dim is not an integer or if original_impl is not a boolean.
@@ -305,7 +308,7 @@ class RotaryEmbedding(nn.Cell):
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.construct_impl(max_seq_len, self.dim, dtype=self.inv_freq.dtype)
 
@@ -386,7 +389,7 @@ class LayerNorm(nn.LayerNorm):
             dtype (mindspore.dtype, optional): The data type of the input tensor. Defaults to mindspore.float32.
 
         Returns:
-            None. This method initializes an instance of the LayerNorm class.
+            None.
 
         Raises:
             None.
@@ -458,7 +461,7 @@ class RMSNorm(nn.Cell):
             hidden_states (mindspore.Tensor): A tensor containing the hidden states. It should have a shape (batch_size, sequence_length, hidden_size).
 
         Returns:
-            None. This method modifies the hidden_states tensor in-place.
+            None: This method modifies the hidden_states tensor in-place.
 
         Raises:
             TypeError: If the hidden_states parameter is not of type mindspore.Tensor.
@@ -522,7 +525,7 @@ class CoreAttention(nn.Cell):
             layer_number (int): The layer number to be assigned to the CoreAttention object.
 
         Returns:
-            None. This method initializes the CoreAttention object with the specified configuration and layer number.
+            None.
 
         Raises:
             None.
@@ -916,7 +919,7 @@ class MLP(nn.Cell):
                 states. The output tensor represents the result of applying the MLP layers to the input hidden states.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # [s, b, 4hp]
         intermediate_parallel = self.dense_h_to_4h(hidden_states)
@@ -1064,7 +1067,7 @@ class GLMTransformer(nn.Cell):
                 - num_layers (int): The number of layers in the GLMTransformer.
 
         Returns:
-            None. This method initializes the GLMTransformer object with the specified configuration.
+            None.
 
         Raises:
             None.
@@ -1250,9 +1253,9 @@ class Embedding(nn.Cell):
             config (ChatGLM2Config):
                 An instance of the ChatGLM2Config class containing the configuration parameters for the Embedding object.
 
-                   - type: ChatGLM2Config
-                   - purpose: Specifies the configuration parameters for the Embedding object.
-                   - restrictions: None
+               - type: ChatGLM2Config
+               - purpose: Specifies the configuration parameters for the Embedding object.
+               - restrictions: None
 
         Returns:
             None
@@ -1362,10 +1365,10 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
             self (ChatGLM2Model): The instance of the ChatGLM2Model class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embedding.word_embeddings
 
@@ -1379,10 +1382,10 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
             dtype (mindspore.dtype, optional): The data type of the returned prompt. Defaults to mindspore.float16.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1)
         past_key_values = self.prefix_encoder(prefix_tokens).astype(dtype)
@@ -1490,10 +1493,10 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
                 This value determines the precision of the quantization. Valid values are positive integers.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
 
 
@@ -1765,7 +1768,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         response = response.strip()
         response = response.replace("[[训练时间]]", "2023年")
@@ -1786,7 +1789,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         The method takes in a tokenizer instance, a user query, and optionally a list of previous queries and their
         respective responses. It then builds the input tensors using the provided tokenizer by calling the build_prompt
@@ -1810,7 +1813,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 
         Returns:
             None: This method does not return any value, but it populates the 'inputs' variable with the encoded input prompt
-            and returns it.
+                and returns it.
 
         Raises:
             None.

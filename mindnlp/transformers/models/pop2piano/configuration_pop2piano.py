@@ -111,7 +111,8 @@ class Pop2PianoConfig(PretrainedConfig):
             d_kv (int, optional): The dimensionality of the key and value matrices. Defaults to 64.
             d_ff (int, optional): The dimensionality of the feed-forward network. Defaults to 2048.
             num_layers (int, optional): The number of layers in the model. Defaults to 6.
-            num_decoder_layers (int, optional): The number of decoder layers in the model. If not provided, it defaults to the same value as num_layers.
+            num_decoder_layers (int, optional): The number of decoder layers in the model.
+                If not provided, it defaults to the same value as num_layers.
             num_heads (int, optional): The number of attention heads. Defaults to 8.
             relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
             relative_attention_max_distance (int, optional): The maximum distance for relative attention. Defaults to 128.
@@ -126,7 +127,7 @@ class Pop2PianoConfig(PretrainedConfig):
             dense_act_fn (str, optional): The activation function for the dense layer. Defaults to 'relu'.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

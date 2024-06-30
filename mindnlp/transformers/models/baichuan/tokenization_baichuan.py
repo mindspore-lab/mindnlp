@@ -84,7 +84,7 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If vocab_file is not a string.
@@ -132,7 +132,7 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
             None: This method does not return any value. It modifies the state of the instance in-place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -149,7 +149,7 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
                 This dictionary is used to update the internal state of the object.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If the input parameters are not of the expected types.

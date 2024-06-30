@@ -170,13 +170,13 @@ class WhisperConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import WhisperConfig, WhisperModel
-
+        ...
         >>> # Initializing a Whisper tiny style configuration
         >>> configuration = WhisperConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the tiny style configuration
         >>> model = WhisperModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -271,10 +271,10 @@ class WhisperConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.vocab_size = vocab_size
         self.num_mel_bins = num_mel_bins

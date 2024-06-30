@@ -70,7 +70,7 @@ class BertGenerationSelfOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for hidden layers.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -136,7 +136,7 @@ class BertGenerationSelfAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding to use. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: 
@@ -185,7 +185,7 @@ class BertGenerationSelfAttention(nn.Cell):
                 The shape of the tensor is adjusted to facilitate attention head calculations.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -511,9 +511,10 @@ class BertGenerationIntermediate(nn.Cell):
             None.
 
         This method takes in the hidden states tensor and performs the following operations:
-        >   1. Applies dense transformation to the hidden states using the self.dense layer.
-        >   2. Applies the intermediate activation function (self.intermediate_act_fn) to the transformed hidden states.
-        >   3. Returns the generated intermediate output tensor.
+
+        1. Applies dense transformation to the hidden states using the self.dense layer.
+        2. Applies the intermediate activation function (self.intermediate_act_fn) to the transformed hidden states.
+        3. Returns the generated intermediate output tensor.
 
         Note:
             - The hidden_states tensor should have a shape compatible with the self.dense layer.
@@ -563,7 +564,7 @@ class BertGenerationOutput(nn.Cell):
                 - Restrictions: Must include necessary parameters for model initialization.
 
         Returns:
-            None： This method initializes the BertGenerationOutput instance.
+            None.
 
         Raises:
             ValueError: If the provided configuration is invalid or missing required parameters.
@@ -645,7 +646,7 @@ class BertGenerationLayer(nn.Cell):
                 - add_cross_attention (bool): Determines if cross-attention is added to the layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If add_cross_attention is True but the layer is not used as a decoder model, 
@@ -767,9 +768,9 @@ class BertGenerationLayer(nn.Cell):
                 through the feed-forward process.
 
         Raises:
-            No specific exceptions are raised within this method under normal circumstances. 
-            However, potential exceptions could arise from the 'output' method or other internal operations 
-            called within this method.
+            None:
+                However, potential exceptions could arise from the 'output' method or other internal operations
+                called within this method.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -987,7 +988,7 @@ class BertGenerationEmbeddings(nn.Cell):
             past_key_values_length (int): The length of past key values. Default is 0.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are None.
@@ -1071,7 +1072,7 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
                 This dictionary must include the necessary settings for the embeddings and encoder components.
 
         Returns:
-            None. This method does not return any value explicitly.
+            None.
 
         Raises:
             None
@@ -1093,10 +1094,10 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
             self: The instance of the BertGenerationEncoder class.
 
         Returns:
-            None: This method returns the word embeddings for input.
+            word_embeddings: This method returns the word embeddings for input.
 
         Raises:
-            None
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1109,7 +1110,7 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
             value: The input embeddings to be set. This should be of type `torch.Tensor`.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1310,7 +1311,7 @@ class BertGenerationOnlyLMHead(nn.Cell):
             None: This method modifies the bias attribute of the decoder in-place.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
         self.bias = self.decoder.bias
@@ -1342,7 +1343,7 @@ class BertGenerationDecoder(BertGenerationPreTrainedModel):
                 a standalone component.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1382,10 +1383,10 @@ class BertGenerationDecoder(BertGenerationPreTrainedModel):
             new_embeddings: The new embeddings to set for the decoder. Should be of type compatible with the decoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.lm_head.decoder = new_embeddings
 

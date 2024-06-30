@@ -91,7 +91,7 @@ class _BaseAutoModelClass:
                 - Purpose: Represents the current instance of the class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             EnvironmentError: If the __init__ method is called directly. 
@@ -115,7 +115,7 @@ class _BaseAutoModelClass:
                 It should be of a type that is recognized by the `_model_mapping` dictionary.
         
         Returns:
-            None: This method does not return a value.
+            None.
         
         Raises:
             ValueError: If the `config` object is not recognized as a valid configuration class for this `AutoModel` class.
@@ -123,11 +123,11 @@ class _BaseAutoModelClass:
                 which are determined by the `_model_mapping` dictionary.
         
         Note:
-            >1. The `config` parameter should be of a type that is present in the `_model_mapping` dictionary.
+            1. The `config` parameter should be of a type that is present in the `_model_mapping` dictionary.
                 The `_model_mapping` dictionary maps configuration types to model classes.
-            >2. This method is a class method, denoted by the `@classmethod` decorator.
+            2. This method is a class method, denoted by the `@classmethod` decorator.
                 It can be called directly on the class object without needing to create an instance of the class.
-            >3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
+            3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
                 to perform the conversion from the configuration object to an instance of the model class.
         """
         if type(config) in cls._model_mapping.keys():
@@ -146,7 +146,8 @@ class _BaseAutoModelClass:
         
         Args:
             cls (class): The class object that the method is called on.
-            pretrained_model_name_or_path (str): The name or path of the pretrained model. It can be a local file path or a remote repository URL.
+            pretrained_model_name_or_path (str): The name or path of the pretrained model.
+                It can be a local file path or a remote repository URL.
         
         Returns:
             None
@@ -262,10 +263,10 @@ def insert_head_doc(docstring, head_doc=""):
         head_doc (str): The head type to insert into the docstring. It is used to modify the description of the model class.
     
     Returns:
-        None: This function does not return any value.
+        None.
     
     Raises:
-        None: This function does not raise any exceptions.
+        None.
     """
     if len(head_doc) > 0:
         return docstring.replace(
@@ -352,10 +353,10 @@ class _LazyAutoMapping(OrderedDict):
             model_mapping (dict): A dictionary that represents the mapping of model values.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         self._config_mapping = config_mapping
         self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
@@ -422,7 +423,7 @@ class _LazyAutoMapping(OrderedDict):
             attr (str): The attribute to be loaded from the module.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ModuleNotFoundError: If the specified module for the model type is not found.
@@ -463,7 +464,8 @@ class _LazyAutoMapping(OrderedDict):
             default (any): The default value to be returned if the key is not present in the mapping.
         
         Returns:
-            If the key is present in the mapping, the method returns the value associated with the key. If the key is not present, the method returns the specified default value.
+            If the key is present in the mapping, the method returns the value associated with the key.
+            If the key is not present, the method returns the specified default value.
         
         Raises:
             KeyError: If the specified key is not present in the mapping, the method raises a KeyError.
@@ -545,10 +547,10 @@ class _LazyAutoMapping(OrderedDict):
                 Represents the current instance of the class for which the iterator is being generated.
         
         Returns:
-            None. This method returns an iterator over the keys of the instance.
+            None: This method returns an iterator over the keys of the instance.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return iter(self.keys())
 

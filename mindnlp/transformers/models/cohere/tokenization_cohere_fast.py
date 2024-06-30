@@ -237,9 +237,9 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
 
         The output should look something like:
 
-        <|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ preamble }}<|END_OF_TURN_TOKEN|><BOS_TOKEN><|START_OF_TURN_TOKEN|>
+        ```<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ preamble }}<|END_OF_TURN_TOKEN|><BOS_TOKEN><|START_OF_TURN_TOKEN|>
         <|USER_TOKEN|>{{ How are you? }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
-        {{ I am doing well! }}<|END_OF_TURN_TOKEN|>
+        {{ I am doing well! }}<|END_OF_TURN_TOKEN|>```
 
         Use add_generation_prompt to add a prompt for the model to generate a response:
 
@@ -480,12 +480,13 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
 
         Returns:
             Conditional return:
+
                 - `str`: A rendered prompt string.
                 - if tokenize=True:
                 `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
                 output is ready to pass to the model, either directly or via methods like `generate()`.
 
-        Examples:
+        Example:
             ```python
             >>> tokenizer = CohereTokenizerFast.from_pretrained("CohereForAI/c4ai-command-r-v01")
             >>> tools = [
@@ -553,9 +554,13 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
                 }
             ]\\`\\`\\`<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
             ```
+
+            ```python
             >>> inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
             >>> outputs = model.generate(inputs, max_new_tokens=128)
             >>> print(tokenizer.decode(outputs[0]))
+            ```
+
             Action: ```json
             [
                 {
@@ -616,23 +621,26 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
                 Maximum length (in tokens) to use for padding or truncation. Has no effect if tokenize is `False`. If
                 not specified, the tokenizer's `max_length` attribute will be used as a default.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
-                >- If set, will return tensors of a particular framework. Has no effect if tokenize is `False`. Acceptable
-                    values are:
-                >   - `'tf'`: Return TensorFlow `tf.Tensor` objects.
-                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                >   - `'np'`: Return NumPy `np.ndarray` objects.
-                >   - `'jax'`: Return JAX `jnp.ndarray` objects.
+                If set, will return tensors of a particular framework. Has no effect if tokenize is `False`. Acceptable
+                values are:
+
+                - `'tf'`: Return TensorFlow `tf.Tensor` objects.
+                - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                - `'np'`: Return NumPy `np.ndarray` objects.
+                - `'jax'`: Return JAX `jnp.ndarray` objects.
             return_dict (`bool`, *optional*, defaults to `False`):
                 Whether to return a dictionary with named outputs. Has no effect if tokenize is `False`.
             **tokenizer_kwargs: Additional kwargs to pass to the tokenizer.
 
-        Returns: Conditional return:
-            >- `str`: A rendered prompt string.
-            >- or if tokenize=True:
-            >- `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
-                output is ready to pass to the model, either directly or via methods like `generate()`.
+        Returns:
+            Conditional return:
 
-        Examples:
+                - `str`: A rendered prompt string.
+                - or if tokenize=True:
+                - `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
+                    output is ready to pass to the model, either directly or via methods like `generate()`.
+
+        Example:
             ```python
             >>> tokenizer = CohereTokenizerFast.from_pretrained('CohereForAI/c4ai-command-r-v01')
             ...

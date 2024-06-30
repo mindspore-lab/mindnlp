@@ -159,20 +159,22 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
         Method: normalize
         
         Description:
-            This method in the class QuestionAnsweringArgumentHandler is used to normalize the input item for question answering.
+            This method in the class QuestionAnsweringArgumentHandler is used to normalize the input item for
+            question answering.
         
         Args:
             self: (object) The instance of the QuestionAnsweringArgumentHandler class.
             item: (SquadExample or dict) The input item to be normalized.
-
                 - If the item is a SquadExample instance, it is returned as is.
                 - If it is a dictionary, it should contain keys 'question' and 'context'.
-                The 'question' key should not be None or empty.
-                The 'context' key should not be None or empty.
-                The item can also be a dictionary to create a SquadExample using QuestionAnsweringPipeline.create_sample method.
+
+                    - The 'question' key should not be None or empty.
+                    - The 'context' key should not be None or empty.
+                    - The item can also be a dictionary to create a SquadExample using
+                    QuestionAnsweringPipeline.create_sample method.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             KeyError: Raised if the input dictionary does not contain the keys 'question' and 'context'.
@@ -196,7 +198,8 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
 
     def __call__(self, *args, **kwargs):
         """
-        This method handles various input types and formats for Question Answering (QA) arguments and normalizes them for processing.
+        This method handles various input types and formats for Question Answering (QA) arguments and normalizes
+        them for processing.
 
         Args:
             self (QuestionAnsweringArgumentHandler): The instance of the QuestionAnsweringArgumentHandler class.
@@ -292,7 +295,7 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: This method initializes the QuestionAnsweringPipeline object.
+            None.
 
         Raises:
             None.
@@ -349,9 +352,11 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         Args:
             self (QuestionAnsweringPipeline): An instance of the QuestionAnsweringPipeline class.
             padding (str, optional): The padding method to be used. Defaults to None.
-            topk (int, optional): [DEPRECATED] The number of top answers to consider. Use top_k instead. Defaults to None.
+            topk (int, optional): [DEPRECATED] The number of top answers to consider. Use top_k instead.
+                Defaults to None.
             top_k (int, optional): The number of top answers to consider. Defaults to None.
-            doc_stride (int, optional): The stride between chunks when splitting a long document into chunks. Defaults to None.
+            doc_stride (int, optional): The stride between chunks when splitting a long document into chunks.
+                Defaults to None.
             max_answer_len (int, optional): The maximum length of the generated answer. Defaults to None.
             max_seq_len (int, optional): The maximum sequence length. Defaults to None.
             max_question_len (int, optional): The maximum length of the question. Defaults to None.
@@ -432,8 +437,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                 Attempts to align the answer to real words. Improves quality on space separated langages. Might hurt on
                 non-space-separated languages (like Japanese or Chinese)
 
-        Return:
-            A `dict` or a list of `dict`: Each result comes as a dictionary with the following keys:
+        Returns:
+            A `dict` or a list of `dict`:
+                Each result comes as a dictionary with the following keys:
 
                 - **score** (`float`) -- The probability associated to the answer.
                 - **start** (`int`) -- The character start index of the answer (in the tokenized version of the input).
@@ -581,7 +587,8 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         """
         Forward method for the QuestionAnsweringPipeline class.
 
-        This method processes the input data and performs the forward pass through the model to generate predictions for question answering.
+        This method processes the input data and performs the forward pass through the model to
+        generate predictions for question answering.
 
         Args:
             self (QuestionAnsweringPipeline): An instance of the QuestionAnsweringPipeline class.
@@ -627,7 +634,7 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                 If successful, it updates the answers list based on the processing logic.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         min_null_score = 1000000  # large and positive
         answers = []
@@ -710,7 +717,8 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             self, enc: "tokenizers.Encoding", s: int, e: int, sequence_index: int, align_to_words: bool
     ) -> Tuple[int, int]:
         """
-        This method retrieves the start and end character indices corresponding to the specified token indices within a given sequence.
+        This method retrieves the start and end character indices corresponding to the specified token indices
+        within a given sequence.
 
         Args:
             self: The instance of the QuestionAnsweringPipeline class.
@@ -725,7 +733,8 @@ class QuestionAnsweringPipeline(ChunkPipeline):
 
         Raises:
             Exception: If an error occurs during the process of retrieving the character indices, an Exception is raised.
-                This may occur if the token-to-word or word-to-chars mappings are not available or encounter an unexpected issue.
+                This may occur if the token-to-word or word-to-chars mappings are not available or encounter an
+                unexpected issue.
         """
         if align_to_words:
             try:

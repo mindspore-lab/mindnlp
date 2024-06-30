@@ -278,7 +278,7 @@ class AutoImageProcessor:
             self: The object itself.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             EnvironmentError:

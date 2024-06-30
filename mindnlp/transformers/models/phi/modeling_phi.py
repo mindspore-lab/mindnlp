@@ -55,16 +55,21 @@ def _get_unpad_data(attention_mask):
     
     Args:
         attention_mask (Tensor): A 2D tensor representing the attention mask for the input data. 
-            Each element indicates whether the corresponding position in the input sequence is a valid token (1) or a padding token (0).
+            Each element indicates whether the corresponding position in the input sequence is a valid token (1)
+            or a padding token (0).
     
     Returns:
-        tuple: A tuple containing the following elements:
-            >   - indices (Tensor): A 1D tensor of indices indicating the positions of valid tokens in the flattened attention_mask.
-            >   - cu_seqlens (Tensor): A 1D tensor of cumulative sequence lengths up to each batch element.
-            >   - max_seqlen_in_batch (int): The maximum sequence length among the batch elements.
+        tuple:
+            A tuple containing the following elements:
+
+            - indices (Tensor): A 1D tensor of indices indicating the positions of valid tokens in the
+            flattened attention_mask.
+            - cu_seqlens (Tensor): A 1D tensor of cumulative sequence lengths up to each batch element.
+            - max_seqlen_in_batch (int): The maximum sequence length among the batch elements.
 
     Raises:
-        ValueError: If the attention_mask is not a valid tensor or if there are issues with calculating the required data.
+        ValueError: If the attention_mask is not a valid tensor or if there are issues with calculating
+            the required data.
     """
     seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
@@ -81,7 +86,8 @@ def _get_unpad_data(attention_mask):
 class PhiRotaryEmbedding(nn.Cell):
 
     """
-    The PhiRotaryEmbedding class represents a rotational positional embedding for neural network models. It inherits from nn.Cell and provides functionality for constructing rotational embeddings based on
+    The PhiRotaryEmbedding class represents a rotational positional embedding for neural network models.
+    It inherits from nn.Cell and provides functionality for constructing rotational embeddings based on
     input sequences and sequence lengths.
 
     Attributes:
@@ -94,14 +100,17 @@ class PhiRotaryEmbedding(nn.Cell):
         sin_cached (Tensor): Precomputed sine values for positional embeddings.
 
     Methods:
-        _set_cos_sin_cache(self, seq_len, dtype):
-            Precomputes and caches cosine and sine values for positional embeddings based on the specified sequence length and data type.
+        _set_cos_sin_cache:
+            Precomputes and caches cosine and sine values for positional embeddings based on the specified sequence
+            length and data type.
 
-        construct(self, x, seq_len=None):
-            Constructs the rotational positional embedding for the input sequence based on the specified sequence length or the maximum cached sequence length.
+        construct:
+            Constructs the rotational positional embedding for the input sequence based on the specified sequence
+            length or the maximum cached sequence length.
 
     Note:
-        This docstring is based on the provided code snippet and may need additional details or context to fully describe the class and its functionality.
+        This docstring is based on the provided code snippet and may need additional details or context to fully
+        describe the class and its functionality.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -110,11 +119,12 @@ class PhiRotaryEmbedding(nn.Cell):
         Args:
             self: The instance of the class.
             dim (int): The dimensionality of the embeddings.
-            max_position_embeddings (int, optional): The maximum number of position embeddings to generate. Default is 2048.
+            max_position_embeddings (int, optional): The maximum number of position embeddings to generate. 
+                Default is 2048.
             base (int, optional): The base value used in the calculation. Default is 10000.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If dim is not a positive integer.
@@ -137,7 +147,8 @@ class PhiRotaryEmbedding(nn.Cell):
     def _set_cos_sin_cache(self, seq_len, dtype):
         """Sets the cosine and sine cache for PhiRotaryEmbedding.
 
-        This method sets the cosine and sine cache for PhiRotaryEmbedding based on the given sequence length and data type.
+        This method sets the cosine and sine cache for PhiRotaryEmbedding based on the given sequence 
+        length and data type.
 
         Args:
             self (PhiRotaryEmbedding): The PhiRotaryEmbedding instance.
@@ -145,10 +156,10 @@ class PhiRotaryEmbedding(nn.Cell):
             dtype (torch.dtype): The desired data type for the cache.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
@@ -169,16 +180,19 @@ class PhiRotaryEmbedding(nn.Cell):
             seq_len (int, optional): The length of the sequence. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If `seq_len` is greater than `max_seq_len_cached`.
 
-        This method constructs a PhiRotaryEmbedding by calculating and returning the cosine and sine cached values based on the input tensor `x` and the provided sequence length `seq_len`. If `seq_len` is not
-        specified, the method returns the cosine and sine cached values for the entire sequence. The returned values are converted to the same data type as `x`.
+        This method constructs a PhiRotaryEmbedding by calculating and returning the cosine and sine cached values 
+        based on the input tensor `x` and the provided sequence length `seq_len`. If `seq_len` is not specified, 
+        the method returns the cosine and sine cached values for the entire sequence. 
+        The returned values are converted to the same data type as `x`.
 
-        If the specified `seq_len` is greater than the `max_seq_len_cached` value, the method internally updates the cached values by calling the `_set_cos_sin_cache` method. This method should be called
-        before accessing the cached values to ensure they are up to date.
+        If the specified `seq_len` is greater than the `max_seq_len_cached` value, the method internally updates the 
+        cached values by calling the `_set_cos_sin_cache` method. This method should be called before accessing the 
+        cached values to ensure they are up to date.
 
         Note that this method does not modify the instance's state and only returns the calculated cached values.
         """
@@ -207,10 +221,10 @@ class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
             scaling_factor (float, optional): The scaling factor applied to the embeddings. Defaults to 1.0.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
@@ -229,8 +243,10 @@ class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
         Raises:
             None.
 
-        This method sets the cosine and sine cache for the PhiLinearScalingRotaryEmbedding layer. It creates an array of range values from 0 to the maximum sequence length and divides it by the scaling factor.
-        It then creates an array of frequencies by taking the outer product of the range values and the inverse frequency values. The cosine and sine of the frequencies are then computed and stored in the cache. The
+        This method sets the cosine and sine cache for the PhiLinearScalingRotaryEmbedding layer.
+        It creates an array of range values from 0 to the maximum sequence length and divides it by the scaling factor.
+        It then creates an array of frequencies by taking the outer product of the range values and the inverse
+        frequency values. The cosine and sine of the frequencies are then computed and stored in the cache. The
         maximum sequence length cached is stored in the instance variable max_seq_len_cached."""
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
@@ -258,7 +274,7 @@ class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
             scaling_factor (float): The scaling factor applied to the embeddings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -270,7 +286,8 @@ class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
         '''
         _set_cos_sin_cache method in the PhiDynamicNTKScalingRotaryEmbedding class.
 
-        This method is used to set the cosine and sine cache for the rotary position embeddings based on the given sequence length and data type.
+        This method is used to set the cosine and sine cache for the rotary position embeddings based on the
+        given sequence length and data type.
 
         Args:
             self (PhiDynamicNTKScalingRotaryEmbedding): The instance of the PhiDynamicNTKScalingRotaryEmbedding class.
@@ -278,11 +295,11 @@ class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
             dtype: The data type for the cache values.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the sequence length is less than or equal to 0.
-            - TypeError: If the input data type is not compatible with the operations performed within the method.
+            ValueError: If the sequence length is less than or equal to 0.
+            TypeError: If the input data type is not compatible with the operations performed within the method.
         '''
         self.max_seq_len_cached = seq_len
 
@@ -328,6 +345,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -342,9 +360,11 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 class PhiMLP(nn.Cell):
 
     """
-    PhiMLP represents a Multi-Layer Perceptron (MLP) neural network with configurable hidden layer sizes and activation functions.
+    PhiMLP represents a Multi-Layer Perceptron (MLP) neural network with configurable hidden layer sizes and
+    activation functions.
 
-    This class inherits from nn.Cell and implements the forward pass of the MLP by defining the layers and activation functions.
+    This class inherits from nn.Cell and implements the forward pass of the MLP by defining the layers and
+    activation functions.
 
     Attributes:
         config (object): A configuration object that specifies the MLP architecture parameters.
@@ -368,16 +388,18 @@ class PhiMLP(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (object): An object containing configuration parameters for the PhiMLP model.
-                >   - Type: Custom object
-                >   - Purpose: Stores various configuration parameters for the model.
-                >   - Restrictions: None
+            config (object):
+                An object containing configuration parameters for the PhiMLP model.
+
+                - Type: Custom object
+                - Purpose: Stores various configuration parameters for the model.
+                - Restrictions: None
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.config = config
@@ -438,7 +460,8 @@ class PhiAttention(nn.Cell):
             ValueError: If the hidden_size is not divisible by num_heads.
             TypeError: If config is not an instance of PhiConfig.
             TypeError: If layer_idx is not an integer or None.
-            Warning: If layer_idx is None, it is not recommended and may lead to errors during forward call if caching is used.
+            Warning: If layer_idx is None, it is not recommended and may lead to errors during forward call
+                if caching is used.
 
         Note:
             This method initializes the PhiAttention class with the given configuration and layer index.
@@ -496,20 +519,24 @@ class PhiAttention(nn.Cell):
             self: The instance of the PhiAttention class.
 
         Returns:
-            None. This method modifies the rotary_emb attribute of the instance.
+            None: This method modifies the rotary_emb attribute of the instance.
 
         Raises:
             ValueError: If the RoPE scaling type is unknown.
 
-        The method initializes the RoPE based on the configuration provided. If the rope_scaling is not specified, the method initializes a PhiRotaryEmbedding object with the given partial_rotary_factor and
+        The method initializes the RoPE based on the configuration provided. If the rope_scaling is not specified,
+        the method initializes a PhiRotaryEmbedding object with the given partial_rotary_factor and
         max_position_embeddings.
 
-        If rope_scaling is specified, the method checks the scaling_type. If the scaling_type is 'linear', it initializes a PhiLinearScalingRotaryEmbedding object with the given partial_rotary_factor,
-        max_position_embeddings, scaling_factor, and base. If the scaling_type is 'dynamic', it initializes a PhiDynamicNTKScalingRotaryEmbedding object with the given partial_rotary_factor, max_position_embeddings,
-        scaling_factor, and base.
+        If rope_scaling is specified, the method checks the scaling_type. If the scaling_type is 'linear',
+        it initializes a PhiLinearScalingRotaryEmbedding object with the given partial_rotary_factor,
+        max_position_embeddings, scaling_factor, and base. If the scaling_type is 'dynamic',
+        it initializes a PhiDynamicNTKScalingRotaryEmbedding object with the given partial_rotary_factor,
+        max_position_embeddings, scaling_factor, and base.
 
         Note:
-            RoPE stands for Rotary Position Embedding and is used to incorporate positional information in the attention mechanism.
+            RoPE stands for Rotary Position Embedding and is used to incorporate positional information in the
+            attention mechanism.
 
         """
         if self.config.rope_scaling is None:
@@ -552,20 +579,27 @@ class PhiAttention(nn.Cell):
 
         Args:
             self: The instance of the class.
-            hidden_states (mindspore.Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor with shape (batch_size, 1, sequence_length, sequence_length) to mask the attention scores.
-            position_ids (Optional[mindspore.Tensor]): An optional tensor representing the position indices of input tokens with shape (batch_size, sequence_length).
-            past_key_value (Optional[Cache]): An optional cache structure for storing previous key and value states during auto-regressive decoding.
+            hidden_states (mindspore.Tensor): The input hidden states with shape
+                (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor with shape
+                (batch_size, 1, sequence_length, sequence_length) to mask the attention scores.
+            position_ids (Optional[mindspore.Tensor]): An optional tensor representing the position indices of
+                input tokens with shape (batch_size, sequence_length).
+            past_key_value (Optional[Cache]): An optional cache structure for storing previous key and value states
+                during auto-regressive decoding.
             output_attentions (bool): A boolean flag indicating whether to return the attention weights.
             use_cache (bool): A boolean flag indicating whether to use caching for key and value states.
 
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
-            optional attention weights tensor, and optional updated cache structure.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
+                optional attention weights tensor, and optional updated cache structure.
 
         Raises:
-            ValueError: If the cache structure has changed since version v4.36 and the layer index is not initialized when using the cache for auto-regressive decoding.
-            ValueError: If the shape of attention weights does not match (batch_size, num_heads, sequence_length, sequence_length).
+            ValueError: If the cache structure has changed since version v4.36 and the layer index is not initialized
+                when using the cache for auto-regressive decoding.
+            ValueError: If the shape of attention weights does not match
+                (batch_size, num_heads, sequence_length, sequence_length).
             ValueError: If the shape of attention mask does not match (batch_size, 1, sequence_length, sequence_length).
             ValueError: If the shape of attn_output does not match (batch_size, num_heads, sequence_length, hidden_size).
         '''
@@ -665,13 +699,16 @@ class PhiDecoderLayer(nn.Cell):
     """
     PhiDecoderLayer represents a single layer of the Phi decoder model.
 
-    This class inherits from nn.Cell and contains methods for initializing the layer and constructing the layer's computations.
+    This class inherits from nn.Cell and contains methods for initializing the layer and constructing the
+    layer's computations.
 
-    The __init__ method initializes the PhiDecoderLayer with the provided configuration and layer index. It sets up the self-attention mechanism, multi-layer perceptron, layer normalization, and residual
-    dropout.
+    The __init__ method initializes the PhiDecoderLayer with the provided configuration and layer index.
+    It sets up the self-attention mechanism, multi-layer perceptron, layer normalization, and residual dropout.
 
-    The construct method takes hidden_states as input and applies layer normalization. It then computes the self-attention outputs, optionally returning attention weights and caching key-value states. The
-    method also computes the feed-forward hidden states and returns the final layer outputs, optionally including attention weights and key-value states in the output tuple.
+    The construct method takes hidden_states as input and applies layer normalization. It then computes the
+    self-attention outputs, optionally returning attention weights and caching key-value states. The method also
+    computes the feed-forward hidden states and returns the final layer outputs, optionally including attention weights
+    and key-value states in the output tuple.
     """
     def __init__(self, config: PhiConfig, layer_idx: int):
         """
@@ -683,11 +720,11 @@ class PhiDecoderLayer(nn.Cell):
             layer_idx (int): An integer representing the index of the layer within the PhiDecoderLayer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not of type PhiConfig.
-            - ValueError: If the layer_idx parameter is not an integer.
+            TypeError: If the config parameter is not of type PhiConfig.
+            ValueError: If the layer_idx parameter is not an integer.
         """
         super().__init__()
         self.self_attn = PHI_ATTENTION_CLASSES["eager"](config, layer_idx=layer_idx)
@@ -752,19 +789,23 @@ class PhiDecoderLayer(nn.Cell):
 class PhiPreTrainedModel(PreTrainedModel):
 
     """
-    This class represents a PhiPreTrainedModel, which is a subclass of PreTrainedModel. It is designed for pre-training models using the Phi framework.
+    This class represents a PhiPreTrainedModel, which is a subclass of PreTrainedModel.
+    It is designed for pre-training models using the Phi framework.
 
-    The class includes a method called _init_weights which initializes the weights of the model's cells. The method takes a cell object as an argument and sets the weights and biases for the cell based on the
+    The class includes a method called _init_weights which initializes the weights of the model's cells.
+    The method takes a cell object as an argument and sets the weights and biases for the cell based on the
     configuration settings.
 
-    If the cell is an instance of nn.Dense, the method sets the weight data using the initializer function with a normal distribution and the specified standard deviation. It also sets the bias data to zeros
-    if the cell has a bias.
+    If the cell is an instance of nn.Dense, the method sets the weight data using the initializer function with a
+    normal distribution and the specified standard deviation. It also sets the bias data to zeros if the cell has a bias.
 
-    If the cell is an instance of nn.Embedding, the method generates random weight values from a normal distribution with a mean of 0 and the specified standard deviation. If the cell has a padding index, the
-    weight value at that index is set to 0. The weight data is then set for the cell.
+    If the cell is an instance of nn.Embedding, the method generates random weight values from a normal distribution
+    with a mean of 0 and the specified standard deviation. If the cell has a padding index, the weight value at that
+    index is set to 0. The weight data is then set for the cell.
 
     Note:
-        This docstring does not include signatures or any other code. Please refer to the actual code implementation for more details.
+        This docstring does not include signatures or any other code. Please refer to the actual code implementation
+        for more details.
     """
     config_class = PhiConfig
     base_model_prefix = "model"
@@ -781,11 +822,12 @@ class PhiPreTrainedModel(PreTrainedModel):
             cell (nn.Module): The neural network cell for which the weights and biases are initialized.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the cell type is neither nn.Dense nor nn.Embedding.
-            TypeError: If the cell type is not recognized or if there are issues with setting the data for weights and biases.
+            TypeError: If the cell type is not recognized or if there are issues with setting the data for
+                weights and biases.
             IndexError: If there are issues with indexing while setting the weight values.
         """
         std = self.config.initializer_range
@@ -813,31 +855,39 @@ class PhiModel(PhiPreTrainedModel):
 
         Args:
             self: The instance of the PhiModel class.
-            config (PhiConfig): The configuration object containing the model's hyperparameters and settings.
-                >   - `config` is of type PhiConfig.
-                >   - It specifies the configuration for the PhiModel.
-                >   - This object is used to set various attributes of the PhiModel instance.
-                >   - The attributes set are:
-                >       - `padding_idx`: The index to use for padding in the input sequence.
-                        It is initialized with the value of `config.pad_token_id`.
-                >       - `vocab_size`: The size of the vocabulary, i.e., the total number of unique tokens.
-                        It is initialized with the value of `config.vocab_size`.
-                >       - `embed_tokens`: The embedding layer for the input tokens.
-                        It is an instance of `nn.Embedding` and is initialized with the values:
-                >           - `config.vocab_size`: The size of the vocabulary.
-                >           - `config.hidden_size`: The dimensionality of the hidden state.
-                >           - `self.padding_idx`: The index used for padding.
-                >       - `embed_dropout`: The dropout layer applied to the input embeddings.
-                            It is an instance of `nn.Dropout` and is initialized with the dropout probability `config.embd_pdrop`.
-                >       - `layers`: A list of PhiDecoderLayer instances representing the decoder layers of the model.
-                          It is initialized as a `nn.CellList` containing `config.num_hidden_layers` PhiDecoderLayer instances.
-                          Each PhiDecoderLayer instance is created using the `PhiDecoderLayer` constructor with `config` and `layer_idx`.
-                >       - `final_layernorm`: The layer normalization applied to the final hidden state.
-                          It is an instance of `nn.LayerNorm` and is initialized with the following attributes:
-                >           - `[config.hidden_size]`: The normalized shape of the input tensor.
-                >           - `epsilon=config.layer_norm_eps`: The epsilon value added to the denominator for numerical stability.
-                >       - `gradient_checkpointing`: A boolean flag indicating whether gradient checkpointing is enabled.
-                            It is initialized as `False`.
+            config (PhiConfig):
+                The configuration object containing the model's hyperparameters and settings.
+
+                `config` is of type PhiConfig.
+                It specifies the configuration for the PhiModel.
+                This object is used to set various attributes of the PhiModel instance.
+                The attributes set are:
+
+                - `padding_idx`: The index to use for padding in the input sequence.
+                It is initialized with the value of `config.pad_token_id`.
+                - `vocab_size`: The size of the vocabulary, i.e., the total number of unique tokens.
+                It is initialized with the value of `config.vocab_size`.
+                - `embed_tokens`: The embedding layer for the input tokens.
+                It is an instance of `nn.Embedding` and is initialized with the values:
+
+                    - `config.vocab_size`: The size of the vocabulary.
+                    - `config.hidden_size`: The dimensionality of the hidden state.
+                    - `self.padding_idx`: The index used for padding.
+
+                - `embed_dropout`: The dropout layer applied to the input embeddings.
+                It is an instance of `nn.Dropout` and is initialized with the dropout probability `config.embd_pdrop`.
+                - `layers`: A list of PhiDecoderLayer instances representing the decoder layers of the model.
+                It is initialized as a `nn.CellList` containing `config.num_hidden_layers` PhiDecoderLayer instances.
+                Each PhiDecoderLayer instance is created using the `PhiDecoderLayer` constructor with `config` and `layer_idx`.
+                - `final_layernorm`: The layer normalization applied to the final hidden state.
+                It is an instance of `nn.LayerNorm` and is initialized with the following attributes:
+
+                    - `[config.hidden_size]`: The normalized shape of the input tensor.
+                    - `epsilon=config.layer_norm_eps`: The epsilon value added to the denominator for numerical stability.
+
+                - `gradient_checkpointing`: A boolean flag indicating whether gradient checkpointing is enabled.
+                It is initialized as `False`.
+
         Raises:
             None.
 
@@ -867,10 +917,10 @@ class PhiModel(PhiPreTrainedModel):
             self (PhiModel): The instance of the PhiModel class.
 
         Returns:
-            None: This method does not explicitly return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
@@ -880,14 +930,15 @@ class PhiModel(PhiPreTrainedModel):
 
         Args:
             self (PhiModel): The instance of the PhiModel class.
-            value: The input embeddings to be set for the PhiModel. It should be a tensor or an object that can be assigned to self.embed_tokens.
+            value: The input embeddings to be set for the PhiModel.
+                It should be a tensor or an object that can be assigned to self.embed_tokens.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided value is not compatible with the expected input embeddings format.
-            - ValueError: If the provided value is empty or invalid.
+            TypeError: If the provided value is not compatible with the expected input embeddings format.
+            ValueError: If the provided value is empty or invalid.
         """
         self.embed_tokens = value
 
@@ -904,27 +955,39 @@ class PhiModel(PhiPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
-        This method constructs the PhiModel using the specified input parameters and returns the output as a tuple or a BaseModelOutputWithPast object.
+        This method constructs the PhiModel using the specified input parameters and returns the output as a tuple or
+        a BaseModelOutputWithPast object.
 
         Args:
             self: The instance of the class.
-            input_ids (mindspore.Tensor, optional): The input tensor containing the token ids for the model input. Defaults to None.
-            attention_mask (mindspore.Tensor, optional): An optional tensor providing the attention mask for the input. Defaults to None.
-            position_ids (mindspore.Tensor, optional): An optional tensor representing the position ids for the input. Defaults to None.
-            past_key_values (List[mindspore.Tensor], optional): An optional list of tensors containing the past key values. Defaults to None.
-            inputs_embeds (mindspore.Tensor, optional): An optional tensor representing the embedded inputs. Defaults to None.
+            input_ids (mindspore.Tensor, optional): The input tensor containing the token ids for the model input.
+                Defaults to None.
+            attention_mask (mindspore.Tensor, optional): An optional tensor providing the attention mask for the input.
+                Defaults to None.
+            position_ids (mindspore.Tensor, optional): An optional tensor representing the position ids for the input.
+                Defaults to None.
+            past_key_values (List[mindspore.Tensor], optional): An optional list of tensors containing the past key values.
+                Defaults to None.
+            inputs_embeds (mindspore.Tensor, optional): An optional tensor representing the embedded inputs.
+                Defaults to None.
             use_cache (bool, optional): An optional boolean flag indicating whether to use caching. Defaults to None.
-            output_attentions (bool, optional): An optional boolean flag indicating whether to output attentions. Defaults to None.
-            output_hidden_states (bool, optional): An optional boolean flag indicating whether to output hidden states. Defaults to None.
-            return_dict (bool, optional): An optional boolean flag indicating whether to return a dictionary. Defaults to None.
+            output_attentions (bool, optional): An optional boolean flag indicating whether to output attentions.
+                Defaults to None.
+            output_hidden_states (bool, optional): An optional boolean flag indicating whether to output hidden states.
+                Defaults to None.
+            return_dict (bool, optional): An optional boolean flag indicating whether to return a dictionary.
+                Defaults to None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The output is either a tuple containing the hidden states, next_cache, all_hidden_states, and all_self_attns or a BaseModelOutputWithPast object containing
-            the last hidden state, past key values, hidden states, and attentions.
+            Union[Tuple, BaseModelOutputWithPast]: The output is either a tuple containing the hidden states,
+                next_cache, all_hidden_states, and all_self_attns or a BaseModelOutputWithPast object containing
+                the last hidden state, past key values, hidden states, and attentions.
 
         Raises:
-            ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously or if neither input_ids nor inputs_embeds are specified.
-            Warning: If `use_cache=True` is incompatible with gradient checkpointing, a warning is raised to indicate that `use_cache` will be set to False.
+            ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously or if neither input_ids
+                nor inputs_embeds are specified.
+            Warning: If `use_cache=True` is incompatible with gradient checkpointing, a warning is raised to indicate
+                that `use_cache` will be set to False.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1024,25 +1087,27 @@ class PhiModel(PhiPreTrainedModel):
 class PhiForCausalLM(PhiPreTrainedModel):
 
     """
-    The `PhiForCausalLM` class represents a Phi model for causal language modeling. It inherits from `PhiPreTrainedModel` and provides methods for initializing the model, getting and setting input and output
-    embeddings, setting the decoder, constructing the model, preparing inputs for generation, and reordering cache. The `PhiForCausalLM` class also includes detailed type annotations and example usage.
+    The `PhiForCausalLM` class represents a Phi model for causal language modeling. It inherits from `PhiPreTrainedModel`
+    and provides methods for initializing the model, getting and setting input and output embeddings, setting the
+    decoder, constructing the model, preparing inputs for generation, and reordering cache.
+    The `PhiForCausalLM` class also includes detailed type annotations and example usage.
 
     The class includes the following methods:
-    >   - `__init__(self, config)`: Initializes the PhiForCausalLM model with the provided configuration.
-    >   - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-    >   - `set_input_embeddings(self, value)`: Sets the input embeddings of the model to the provided value.
-    >   - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-    >   - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model to the provided new_embeddings.
-    >   - `set_decoder(self, decoder)`: Sets the decoder of the model to the provided decoder.
-    >   - `get_decoder(self)`: Returns the decoder of the model.
-    >   - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)`: Constructs the model for causal
-            language modeling with the specified inputs and returns the outputs.
-    >   - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for generation based on the provided input_ids, past_key_values,
-            attention_mask, and inputs_embeds.
-    >   - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past_key_values based on the specified beam index.
 
-    The class docstring includes detailed descriptions of the methods, their arguments, and return values, as well as an example usage demonstrating how to use the `PhiForCausalLM` class for generating text
-    using the model.
+    - `__init__`: Initializes the PhiForCausalLM model with the provided configuration.
+    - `get_input_embeddings`: Returns the input embeddings of the model.
+    - `set_input_embeddings`: Sets the input embeddings of the model to the provided value.
+    - `get_output_embeddings`: Returns the output embeddings of the model.
+    - `set_output_embeddings`: Sets the output embeddings of the model to the provided new_embeddings.
+    - `set_decoder`: Sets the decoder of the model to the provided decoder.
+    - `get_decoder`: Returns the decoder of the model.
+    - `construct`: Constructs the model for causal language modeling with the specified inputs and returns the outputs.
+    - `prepare_inputs_for_generation`: Prepares the inputs for generation based on the provided input_ids,
+    past_key_values, attention_mask, and inputs_embeds.
+    - `_reorder_cache`: Reorders the past_key_values based on the specified beam index.
+
+    The class docstring includes detailed descriptions of the methods, their arguments, and return values, as well as
+    an example usage demonstrating how to use the `PhiForCausalLM` class for generating text using the model.
 
     """
     _tied_weights_keys = ["lm_head.weight"]
@@ -1054,12 +1119,14 @@ class PhiForCausalLM(PhiPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config (object): The configuration object containing the necessary parameters for the Phi model.
-                >   - config.vocab_size (int): The size of the vocabulary.
-                >   - config.hidden_size (int): The size of the hidden state of the model.
+            config (object):
+                The configuration object containing the necessary parameters for the Phi model.
+
+                - config.vocab_size (int): The size of the vocabulary.
+                - config.hidden_size (int): The size of the hidden state of the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1081,10 +1148,10 @@ class PhiForCausalLM(PhiPreTrainedModel):
                 Represents the current object instance.
 
         Returns:
-            None: This method returns the input embeddings as obtained from the model's embed_tokens attribute.
+            embed_tokens: This method returns the input embeddings as obtained from the model's embed_tokens attribute.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
@@ -1095,13 +1162,14 @@ class PhiForCausalLM(PhiPreTrainedModel):
 
         Args:
             self (PhiForCausalLM): The instance of the PhiForCausalLM class.
-            value (Tensor): The input embeddings to be set for the model. It should be a tensor of appropriate shape and type.
+            value (Tensor): The input embeddings to be set for the model.
+                It should be a tensor of appropriate shape and type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         self.model.embed_tokens = value
 
@@ -1114,11 +1182,11 @@ class PhiForCausalLM(PhiPreTrainedModel):
             self: An instance of the PhiForCausalLM class.
 
         Returns:
-            None. The method returns the output embeddings for the PhiForCausalLM model. These embeddings are used to map the
-            output tokens to a continuous representation.
+            None: The method returns the output embeddings for the PhiForCausalLM model.
+                These embeddings are used to map the output tokens to a continuous representation.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -1136,7 +1204,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
                 existing architecture.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1151,10 +1219,10 @@ class PhiForCausalLM(PhiPreTrainedModel):
             decoder: The decoder object to be set for the model. It should be an instance of the decoder class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            This method does not explicitly raise any exceptions.
+            None.
         """
         self.model = decoder
 
@@ -1167,10 +1235,10 @@ class PhiForCausalLM(PhiPreTrainedModel):
             self: An instance of the PhiForCausalLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         This method retrieves the decoder model that is used for PhiForCausalLM. The decoder model is an essential component
         of the PhiForCausalLM class and is responsible for generating output based on the input data. The decoder model
@@ -1206,13 +1274,13 @@ class PhiForCausalLM(PhiPreTrainedModel):
         Example:
             ```python
             >>> from transformers import AutoTokenizer, PhiForCausalLM
-
+            ...
             >>> model = PhiForCausalLM.from_pretrained("microsoft/phi-1")
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1")
-
+            ...
             >>> prompt = "This is an example script ."
             >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
             >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -1275,18 +1343,23 @@ class PhiForCausalLM(PhiPreTrainedModel):
         Args:
             self (PhiForCausalLM): An instance of PhiForCausalLM class.
             input_ids (torch.Tensor): A tensor of shape (batch_size, sequence_length) containing input sequence tokens.
-            past_key_values (Cache or tuple or None): A cache object or tuple of two tensors containing previously computed key and value pairs for the attention mechanism.
-                If None, no caching is performed.
-            attention_mask (torch.Tensor or None): An optional tensor of shape (batch_size, sequence_length) containing a mask to avoid performing attention on padding tokens.
-            inputs_embeds (torch.Tensor or None): An optional tensor of shape (batch_size, sequence_length, hidden_size) containing precomputed embeddings for the input sequence.
+            past_key_values (Cache or tuple or None): A cache object or tuple of two tensors containing previously
+                computed key and value pairs for the attention mechanism. If None, no caching is performed.
+            attention_mask (torch.Tensor or None): An optional tensor of shape (batch_size, sequence_length)
+                containing a mask to avoid performing attention on padding tokens.
+            inputs_embeds (torch.Tensor or None): An optional tensor of shape (batch_size, sequence_length, hidden_size)
+                containing precomputed embeddings for the input sequence.
 
         Returns:
-            model_inputs (dict): A dictionary containing the following keys:
-                >   - 'input_ids': The input sequence tokens tensor.
-                >   - 'position_ids': The tensor of positional encoding for the input sequence.
-                >   - 'past_key_values': The cache object or tuple of two tensors containing previously computed key and value pairs for the attention mechanism.
-                >   - 'use_cache': A boolean indicating whether to use caching.
-                >   - 'attention_mask': The tensor containing the attention mask for the input sequence.
+            model_inputs (dict):
+                A dictionary containing the following keys:
+
+                - 'input_ids': The input sequence tokens tensor.
+                - 'position_ids': The tensor of positional encoding for the input sequence.
+                - 'past_key_values': The cache object or tuple of two tensors containing previously computed key and
+                value pairs for the attention mechanism.
+                - 'use_cache': A boolean indicating whether to use caching.
+                - 'attention_mask': The tensor containing the attention mask for the input sequence.
 
         Raises:
             None.
@@ -1351,11 +1424,12 @@ class PhiForCausalLM(PhiPreTrainedModel):
         Reorders the cache of past key values based on the given beam index.
 
         Args:
-            past_key_values (tuple): A tuple containing past key values for each layer. Each element in the tuple is a tensor representing the past key values.
+            past_key_values (tuple): A tuple containing past key values for each layer. Each element in the tuple is
+                a tensor representing the past key values.
             beam_idx (Tensor): A tensor containing the indices of the beams to reorder the cache based on.
 
         Returns:
-            None. The method modifies the cache in place.
+            None: The method modifies the cache in place.
 
         Raises:
             ValueError: If the input past_key_values or beam_idx are not in the expected format.
@@ -1374,7 +1448,8 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
 
     """PhiForSequenceClassification
 
-    This class is a sequence classification model that uses the PHI algorithm for natural language processing tasks. It inherits from the PhiPreTrainedModel class.
+    This class is a sequence classification model that uses the PHI algorithm for natural language processing tasks.
+    It inherits from the PhiPreTrainedModel class.
 
     Attributes:
         config (PhiConfig): The model configuration class instance.
@@ -1383,11 +1458,10 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         score (nn.Dense): The dense layer for scoring hidden states.
 
     Methods:
-        __init__(self, config): Initializes a new PhiForSequenceClassification instance.
-        get_input_embeddings(self): Retrieves the input embeddings from the model.
-        set_input_embeddings(self, value): Sets the input embeddings for the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence
-            classification.
+        __init__: Initializes a new PhiForSequenceClassification instance.
+        get_input_embeddings: Retrieves the input embeddings from the model.
+        set_input_embeddings: Sets the input embeddings for the model.
+        construct: Constructs the model for sequence classification.
 
     """
     def __init__(self, config):
@@ -1396,13 +1470,15 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters for the model.
-                >   - Type: object
-                >   - Purpose: Configuration object specifying the model's settings.
-                >   - Restrictions: Must be a valid configuration object.
+            config:
+                An object containing configuration parameters for the model.
+
+                - Type: object
+                - Purpose: Configuration object specifying the model's settings.
+                - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1439,7 +1515,7 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
             value (Tensor): The new input embeddings tensor to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1537,23 +1613,29 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
 class PhiForTokenClassification(PhiPreTrainedModel):
 
     """
-    This class represents a PhiForTokenClassification model, which is used for token classification tasks such as Named Entity Recognition (NER) or Part-of-Speech (POS) tagging. It is a subclass of the
-    PhiPreTrainedModel.
+    This class represents a PhiForTokenClassification model, which is used for token classification tasks such as
+    Named Entity Recognition (NER) or Part-of-Speech (POS) tagging. It is a subclass of the PhiPreTrainedModel.
 
-    The PhiForTokenClassification class initializes with a PhiConfig object, which contains the configuration parameters for the model. It sets the number of labels for the classification task and creates an
-    instance of the PhiModel based on the provided configuration.
+    The PhiForTokenClassification class initializes with a PhiConfig object, which contains the configuration parameters
+    for the model. It sets the number of labels for the classification task and creates an instance of the PhiModel
+    based on the provided configuration.
 
-    The class also handles the initialization of the classifier dropout, which can be set either through the 'classifier_dropout' parameter in the config or the 'hidden_dropout' parameter. If neither is
-    provided, a default dropout rate of 0.1 is used.
+    The class also handles the initialization of the classifier dropout, which can be set either through the
+    'classifier_dropout' parameter in the config or the 'hidden_dropout' parameter. If neither is provided, a default
+    dropout rate of 0.1 is used.
 
-    The 'construct' method is used to perform the forward pass of the model. It takes several input tensors such as 'input_ids', 'past_key_values', 'attention_mask', 'inputs_embeds', and 'labels'. It also
-    supports various optional arguments such as 'use_cache', 'output_attentions', 'output_hidden_states', and 'return_dict'.
+    The 'construct' method is used to perform the forward pass of the model. It takes several input tensors such as
+    'input_ids', 'past_key_values', 'attention_mask', 'inputs_embeds', and 'labels'. It also supports various optional
+    arguments such as 'use_cache', 'output_attentions', 'output_hidden_states', and 'return_dict'.
 
-    The 'labels' tensor is optional and represents the ground truth labels for computing the sequence classification/regression loss. The indices in 'labels' should be in the range of [0, config.num_labels -
-    1]. If 'config.num_labels == 1', a regression loss (Mean-Square loss) is computed. If 'config.num_labels > 1', a classification loss (Cross-Entropy) is computed.
+    The 'labels' tensor is optional and represents the ground truth labels for computing the sequence
+    classification/regression loss. The indices in 'labels' should be in the range of [0, config.num_labels - 1].
+    If 'config.num_labels == 1', a regression loss (Mean-Square loss) is computed. If 'config.num_labels > 1',
+    a classification loss (Cross-Entropy) is computed.
 
-    The 'construct' method returns either a tuple of logits and other model outputs or a TokenClassifierOutput object depending on the 'return_dict' parameter. If 'labels' are provided, the method also
-    computes the loss using the logits and the ground truth labels.
+    The 'construct' method returns either a tuple of logits and other model outputs or a TokenClassifierOutput object
+    depending on the 'return_dict' parameter. If 'labels' are provided, the method also computes the loss using the
+    logits and the ground truth labels.
 
     Please note that the class inherits additional functionality and attributes from the PhiPreTrainedModel superclass.
 

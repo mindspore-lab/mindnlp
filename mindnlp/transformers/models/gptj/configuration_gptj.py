@@ -64,13 +64,13 @@ class GPTJConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import GPTJModel, GPTJConfig
-
+        >>>
         >>> # Initializing a GPT-J 6B configuration
         >>> configuration = GPTJConfig()
-
+        >>>
         >>> # Initializing a model from the configuration
         >>> model = GPTJModel(configuration)
-
+        >>>
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

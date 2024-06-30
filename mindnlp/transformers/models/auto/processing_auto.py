@@ -157,7 +157,7 @@ class AutoProcessor:
             self (object): The instance of the AutoProcessor class.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
             EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be

@@ -125,10 +125,10 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             sp_model_kwargs (Optional[Dict[str, Any]]): Additional keyword arguments for the SentencePiece model. Defaults to None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         # Mask token behave like a normal word, i.e. include the space before it and
         # is included in the raw text, there should be a match in a non-normalized sentence.
@@ -177,7 +177,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             text (str): The input text for which the offset mapping is to be generated.
         
         Returns:
-            None: This method returns None.
+            None.
         
         Raises:
             None
@@ -240,7 +240,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         
         Returns:
             dict: A dictionary representing the vocabulary of the tokenizer. It contains the original vocabulary 
-            along with any added tokens.
+                along with any added tokens.
         
         Raises:
             None.
@@ -252,13 +252,15 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Method: __getstate__
         
         Description:
-            This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
+            This method is used to retrieve the state of an instance of the ErnieMTokenizer class.
+            It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set
+            to None.
 
         Args:
             self: An instance of the ErnieMTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -277,7 +279,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             d (dict): The serialized state dictionary containing the attributes to be set.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -377,7 +379,8 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             None: This method returns None. The token ID can be obtained via the 'vocab' attribute in the ErnieMTokenizer class.
 
         Raises:
-            KeyError: If the token is not found in the vocabulary and the unknown token (self.unk_token) is also not present in the vocabulary.
+            KeyError: If the token is not found in the vocabulary and the unknown token (self.unk_token) is also not
+                present in the vocabulary.
         """
         return self.vocab.get(token, self.vocab.get(self.unk_token))
 
@@ -390,14 +393,16 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         r"""
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An ErnieM sequence has the following format:
-        >   - single sequence: `[CLS] X [SEP]`
-        >   - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
+
+        - single sequence: `[CLS] X [SEP]`
+        - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
             token_ids_1 (`List[int]`, *optional*):
                 Optional second list of IDs for sequence pairs.
+
         Returns:
             `List[int]`: List of input_id with the appropriate special tokens.
         """
@@ -412,14 +417,15 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Build offset map from a pair of offset map by concatenating and adding offsets of special tokens. An Ernie-M
         offset_mapping has the following format:
 
-        >   - single sequence: `(0,0) X (0,0)`
-        >   - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
+        - single sequence: `(0,0) X (0,0)`
+        - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
 
         Args:
             offset_mapping_ids_0 (`List[tuple]`):
                 List of char offsets to which the special tokens will be added.
             offset_mapping_ids_1 (`List[tuple]`, *optional*):
                 Optional second list of wordpiece offsets for offset mapping pairs.
+
         Returns:
             `List[tuple]`: List of wordpiece offsets with the appropriate offsets of special tokens.
         """
@@ -440,6 +446,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
                 Optional second list of IDs for sequence pairs.
             already_has_special_tokens (`str`, *optional*, defaults to `False`):
                 Whether or not the token list is already formatted with special tokens for the model.
+
         Returns:
             `List[int]`:
                 The list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
@@ -469,6 +476,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
                 The first tokenized sequence.
             token_ids_1 (`List[int]`, *optional*):
                 The second tokenized sequence.
+
         Returns:
             `List[int]`: The token type ids.
         """

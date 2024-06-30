@@ -73,7 +73,7 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     Example:
         ```python
         >>> from transformers import MBartTokenizerFast
-
+        ...
         >>> tokenizer = MBartTokenizerFast.from_pretrained(
         ...     "facebook/mbart-large-en-ro", src_lang="en_XX", tgt_lang="ro_RO"
         ... )
@@ -126,7 +126,7 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -182,8 +182,9 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
 
-        This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it
-        corresponds to an existing file, the method returns True. Otherwise, it returns False.
+        This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified
+        by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it corresponds to an
+        existing file, the method returns True. Otherwise, it returns False.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -199,13 +200,14 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
 
         Args:
             self (MBartTokenizerFast): The instance of the MBartTokenizerFast class.
-            new_src_lang (str): The new source language to be set for the tokenizer. It should be a string representing the language code.
+            new_src_lang (str): The new source language to be set for the tokenizer.
+                It should be a string representing the language code.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the new source language provided is not a string.
+            TypeError: If the new source language provided is not a string.
         """
         self._src_lang = new_src_lang
         self.set_src_lang_special_tokens(self._src_lang)
@@ -219,8 +221,8 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
 
         An MBART sequence has the following format, where `X` represents the sequence:
 
-        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -324,10 +326,10 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
                 This parameter is required to access the methods and attributes of the class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return self.set_src_lang_special_tokens(self.src_lang)
 
@@ -339,16 +341,17 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the MBartTokenizerFast class.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
-            initialization.
+            This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode,
+            the tokenizer is configured to tokenize text according to the target language specified during initialization.
 
-        The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class. This parameter is required to access the tokenizer instance and perform the necessary operations to
+        The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class.
+        This parameter is required to access the tokenizer instance and perform the necessary operations to
         switch to the target mode.
 
         The method does not raise any exceptions.
@@ -404,7 +407,8 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary
+                for a slow tokenizer.
             FileNotFoundError: If the specified save_directory does not exist.
         """
         if not self.can_save_slow_tokenizer:

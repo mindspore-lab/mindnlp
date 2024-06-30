@@ -66,6 +66,7 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
                 - `nbest_size > 1`: samples from the nbest_size results.
                 - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
+
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
             BPE-dropout.
     """
@@ -97,7 +98,7 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
 
         Returns:
-            None: This method initializes the BertGenerationTokenizer object.
+            None.
 
         Raises:
             TypeError: If the vocab_file is not a valid string path or if sp_model_kwargs is not a valid dictionary.
@@ -131,10 +132,10 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             self (BertGenerationTokenizer): The current instance of the BertGenerationTokenizer class.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.sp_model.get_piece_size()
 
@@ -180,7 +181,7 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             self: Instance of the BertGenerationTokenizer class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

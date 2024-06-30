@@ -123,7 +123,7 @@ class ErnieMConfig(PretrainedConfig):
             act_dropout (float): The dropout rate for the activation function. Default is 0.0.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

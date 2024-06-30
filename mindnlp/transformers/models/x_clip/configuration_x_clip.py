@@ -66,13 +66,13 @@ class XCLIPTextConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import XCLIPTextModel, XCLIPTextConfig
-
+        ...
         >>> # Initializing a XCLIPTextModel with microsoft/xclip-base-patch32 style configuration
         >>> configuration = XCLIPTextConfig()
-
+        ...
         >>> # Initializing a XCLIPTextConfig from the microsoft/xclip-base-patch32 style configuration
         >>> model = XCLIPTextModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -183,13 +183,13 @@ class XCLIPVisionConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import XCLIPVisionModel, XCLIPVisionConfig
-
+        ...
         >>> # Initializing a XCLIPVisionModel with microsoft/xclip-base-patch32 style configuration
         >>> configuration = XCLIPVisionConfig()
-
+        ...
         >>> # Initializing a XCLIPVisionModel model from the microsoft/xclip-base-patch32 style configuration
         >>> model = XCLIPVisionModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

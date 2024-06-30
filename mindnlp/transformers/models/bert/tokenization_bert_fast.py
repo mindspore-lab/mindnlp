@@ -235,7 +235,7 @@ class BertTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method initializes the BertTokenizerFast class.
+            None.
         
         Raises:
             Exception: If an error occurs during the initialization process.

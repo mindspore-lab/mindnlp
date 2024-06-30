@@ -130,7 +130,7 @@ class BertGenerationConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If any of the input arguments are invalid.

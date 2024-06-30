@@ -128,7 +128,7 @@ class BgeM3Config(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If any of the parameters are invalid or out of range.

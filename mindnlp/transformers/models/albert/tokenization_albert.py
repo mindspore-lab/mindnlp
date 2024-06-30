@@ -254,10 +254,11 @@ class AlbertTokenizer(PreTrainedTokenizer):
             self: An instance of the 'AlbertTokenizer' class.
 
         Returns:
-            None: This method does not explicitly return a value. However, it modifies the state of the object by setting the 'sp_model' attribute to None.
+            None: This method does not explicitly return a value.
+                However, it modifies the state of the object by setting the 'sp_model' attribute to None.
 
         Raises:
-            N/A: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -272,7 +273,7 @@ class AlbertTokenizer(PreTrainedTokenizer):
             d (dict): The dictionary containing the state of the instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -320,10 +321,10 @@ class AlbertTokenizer(PreTrainedTokenizer):
             inputs (str): The input text to be preprocessed.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())

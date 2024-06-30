@@ -43,10 +43,10 @@ class Constraint(ABC):
             self: Constraint instance being initialized.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         # test for the above condition
         self.test()
@@ -176,7 +176,7 @@ class PhrasalConstraint(Constraint):
                 This parameter is required and should be a non-empty list of positive integers.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If token_ids is not a non-empty list or if it contains non-positive integers.
@@ -220,7 +220,7 @@ class PhrasalConstraint(Constraint):
             token_id (int): The ID of the token to be advanced.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the `token_id` parameter is not of type int.
@@ -242,17 +242,19 @@ class PhrasalConstraint(Constraint):
             token_id (int): The ID of the token to update the state with.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the `token_id` is not an integer.
 
-        This method updates the state of the PhrasalConstraint object by either advancing the fulfillment index, marking the constraint as completed, or resetting the state. The method returns None.
+        This method updates the state of the PhrasalConstraint object by either advancing the fulfillment index,
+        marking the constraint as completed, or resetting the state. The method returns None.
 
         If the `token_id` is not an integer, a ValueError is raised with a descriptive error message.
 
         Note:
-            The method modifies the state of the PhrasalConstraint object by updating the fulfillment index, completion status, and potentially resetting the state.
+            The method modifies the state of the PhrasalConstraint object by updating the fulfillment index,
+            completion status, and potentially resetting the state.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` has to be an `int`, but is {token_id} of type {type(token_id)}")
@@ -278,14 +280,17 @@ class PhrasalConstraint(Constraint):
         Resets the state of the PhrasalConstraint object.
 
         Args:
-            self: PhrasalConstraint - The instance of the PhrasalConstraint class.
+            self:
+                PhrasalConstraint
+
+                - The instance of the PhrasalConstraint class.
                 Represents the current PhrasalConstraint object to be reset.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.completed = False
         self.fulfilled_idx = 0
@@ -316,7 +321,8 @@ class PhrasalConstraint(Constraint):
 
         Returns:
             PhrasalConstraint: A new instance of the PhrasalConstraint class with a copy of the token_ids.
-            If stateful is True, the new instance will also have the same seq_len, fulfilled_idx, and completed attributes as the original instance.
+                If stateful is True, the new instance will also have the same seq_len, fulfilled_idx,
+                and completed attributes as the original instance.
 
         Raises:
             None.
@@ -384,7 +390,7 @@ class DisjunctiveTrie:
                 trie, and the current sequence has reached a leaf node.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         next_tokens = self.next_tokens(current_seq)
 
@@ -399,10 +405,10 @@ class DisjunctiveTrie:
             root (dict): The root node of the Disjunctive Trie from which the leaf count should be calculated.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         next_nodes = list(root.values())
         if len(next_nodes) == 0:
@@ -433,11 +439,11 @@ class DisjunctiveConstraint(Constraint):
         Args:
             self: The instance of the DisjunctiveConstraint class.
             nested_token_ids (List[List[int]]): A list of lists containing positive integers representing token IDs.
-                This parameter is required and must be a non-empty list of lists. Each inner list represents a sequence of token IDs.
-                Each token ID should be a positive integer (greater than or equal to 0).
+                This parameter is required and must be a non-empty list of lists. Each inner list represents a
+                sequence of token IDs. Each token ID should be a positive integer (greater than or equal to 0).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If nested_token_ids is not a list or is an empty list.
@@ -522,7 +528,7 @@ class DisjunctiveConstraint(Constraint):
             token_id (int): The identifier of the token to be processed. It must be of type 'int'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the token_id provided is not of type 'int'.
@@ -554,10 +560,10 @@ class DisjunctiveConstraint(Constraint):
             self: The instance of the DisjunctiveConstraint class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         self.completed = False
         self.current_seq = []
@@ -570,10 +576,10 @@ class DisjunctiveConstraint(Constraint):
             self (DisjunctiveConstraint): The instance of the DisjunctiveConstraint class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.completed:
             # since this can be completed without reaching max height
@@ -597,8 +603,10 @@ class DisjunctiveConstraint(Constraint):
             None.
 
         Note:
-            - If stateful is set to True, the new instance will have the same values for seq_len, current_seq, and completed as the current instance.
-            - If stateful is set to False, the new instance will have default values for seq_len, current_seq, and completed.
+            - If stateful is set to True, the new instance will have the same values for seq_len, current_seq,
+            and completed as the current instance.
+            - If stateful is set to False, the new instance will have default values for seq_len, current_seq,
+            and completed.
 
         Example:
             ```python
@@ -646,10 +654,10 @@ class ConstraintListState:
             constraints (List[Constraint]): A list of Constraint objects representing the constraints.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.constraints = constraints
 
@@ -668,7 +676,7 @@ class ConstraintListState:
             self: ConstraintListState - The instance of the ConstraintListState class.
 
         Returns:
-            None: This method does not explicitly return any value.
+            None.
 
         Raises:
             None
@@ -683,20 +691,19 @@ class ConstraintListState:
         certain constraints.
 
         Args:
-            self: An instance of the 'ConstraintListState' class.
+            self:
+                An instance of the 'ConstraintListState' class.
 
                 - Type: object
                 - Purpose: Represents the current instance of the class.
                 - Restrictions: None
 
         Returns:
-            The method returns a value of type None:
-
-            - Purpose: The method calculates and returns the bank value based on the complete and in-progress constraints
-                as well as the maximum sequence length.
+            bank value: The method calculates and returns the bank value based on the complete and in-progress
+                constraints as well as the maximum sequence length.
 
         Raises:
-            No explicit exceptions are raised within this method.
+            None.
         """
         add = 0
         if self.inprogress_constraint:
@@ -757,23 +764,27 @@ class ConstraintListState:
 
     def add(self, token_id: int):
         """
-        This method 'add' belongs to the class 'ConstraintListState' and is used to update the state based on the provided token_id.
+        This method 'add' belongs to the class 'ConstraintListState' and is used to update the state based on the
+        provided token_id.
 
         Args:
-            self: Represents the instance of the 'ConstraintListState' class.
+            self:
+                Represents the instance of the 'ConstraintListState' class.
 
                 - Type: ConstraintListState
                 - Purpose: Allows access to the attributes and methods of the class instance.
                 - Restrictions: None
 
-            token_id: Represents the token identifier that needs to be processed.
+            token_id:
+                Represents the token identifier that needs to be processed.
 
                 - Type: int
                 - Purpose: Specifies the token identifier to be processed within the constraints.
                 - Restrictions: Must be of integer type.
 
         Returns:
-            The method returns a tuple containing two boolean values, 'complete' and 'stepped'.
+            tuple:
+                The method returns a tuple containing two boolean values, 'complete' and 'stepped'.
 
                 - Type: Tuple (bool, bool)
                 - Purpose:
@@ -785,7 +796,8 @@ class ConstraintListState:
         
         Raises:
             ValueError: Raised when the 'token_id' parameter is not of integer type.
-            RuntimeError: Raised when the update operation does not yield incremental progress despite the advancement condition being met.
+            RuntimeError: Raised when the update operation does not yield incremental progress
+                despite the advancement condition being met.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` should be an `int`, but is `{token_id}`.")
@@ -868,13 +880,16 @@ class ConstraintListState:
         
         Args:
             self (ConstraintListState): The current instance of the ConstraintListState class.
-            stateful (bool): A flag indicating whether to include stateful constraints in the copy. Defaults to True. If set to True, the copy will include complete_constraints and inprogress_constraint.
+            stateful (bool): A flag indicating whether to include stateful constraints in the copy. Defaults to True.
+                If set to True, the copy will include complete_constraints and inprogress_constraint.
         
         Returns:
-            ConstraintListState: A new instance of the ConstraintListState class with copied constraints based on the specified stateful parameter.
+            ConstraintListState:
+                A new instance of the ConstraintListState class with copied constraints based on the specified
+                stateful parameter.
         
         Raises:
-            None
+            None.
         """
         new_state = ConstraintListState(self.constraints)  # we actually never though self.constraints objects
         # throughout this process. So it's at initialization state.

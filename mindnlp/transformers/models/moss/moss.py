@@ -80,16 +80,18 @@ class MossAttention(nn.Cell):
         
         Args:
             self (MossAttention): The current instance of MossAttention.
-            config (object): A configuration object containing the following attributes:
-                >   - max_position_embeddings (int): The maximum number of positions for positional embeddings.
-                >   - attn_pdrop (float): The dropout probability for attention weights.
-                >   - resid_pdrop (float): The dropout probability for residual connections.
-                >   - hidden_size (int): The dimension of the hidden state.
-                >   - num_attention_heads (int): The number of attention heads for multi-head attention.
-                >   - rotary_dim (int): The dimension for rotary position embeddings.
+            config (object):
+                A configuration object containing the following attributes:
+
+                - max_position_embeddings (int): The maximum number of positions for positional embeddings.
+                - attn_pdrop (float): The dropout probability for attention weights.
+                - resid_pdrop (float): The dropout probability for residual connections.
+                - hidden_size (int): The dimension of the hidden state.
+                - num_attention_heads (int): The number of attention heads for multi-head attention.
+                - rotary_dim (int): The dimension for rotary position embeddings.
 
         Returns:
-            None. This method initializes the MossAttention object.
+            None.
 
         Raises:
             ValueError: If the `embed_dim` is not divisible by `num_attention_heads`.
@@ -142,7 +144,7 @@ class MossAttention(nn.Cell):
             mp_num (int): The number of parallel processes.
 
         Returns:
-            None. This method modifies the input tensor in-place.
+            None: This method modifies the input tensor in-place.
 
         Raises:
             None.
@@ -267,11 +269,11 @@ class MossAttention(nn.Cell):
 
         Returns:
             Union[Tuple[Tensor, Tuple[Tensor]], Optional[Tuple[Tensor, Tuple[Tensor], Tuple[Tensor, ...]]]]:
-            A tuple containing the attention output tensor and the present state, or None if use_cache is False.
-            If output_attentions is True, also includes the attention weights tensor.
+                A tuple containing the attention output tensor and the present state, or None if use_cache is False.
+                If output_attentions is True, also includes the attention weights tensor.
 
         Raises:
-            N/A
+            None.
         """
         qkv = self.qkv_proj(hidden_states)
         # TODO(enijkamp): factor out number of logical TPU-v4 cores or make forward pass agnostic
@@ -404,16 +406,18 @@ class MossBlock(nn.Cell):
 
         Args:
             self (MossBlock): The instance of MossBlock.
-            config (object): An object containing configuration parameters for the MossBlock. This object should have the following attributes:
-                >   - n_inner (int or None): The inner dimension size. If None, defaults to 4 times the embedding size.
-                >   - n_embd (int): The embedding size.
-                >   - layer_norm_epsilon (float): The epsilon value for LayerNorm.
+            config (object): An object containing configuration parameters for the MossBlock.
+                This object should have the following attributes:
+
+                - n_inner (int or None): The inner dimension size. If None, defaults to 4 times the embedding size.
+                - n_embd (int): The embedding size.
+                - layer_norm_epsilon (float): The epsilon value for LayerNorm.
 
         Returns:
             None: This method initializes the MossBlock instance with the specified configuration parameters.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
@@ -446,8 +450,10 @@ class MossBlock(nn.Cell):
             output_attentions (Optional[bool]): Whether to output the attention weights. Defaults to False.
 
         Returns:
-            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]: A tuple containing the output tensor after applying the self-attention and feed-forward layers. If `use_cache` is True, the tuple
-            includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
+            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]:
+                A tuple containing the output tensor after applying the self-attention and feed-forward layers.
+                If `use_cache` is True, the tuple includes the hidden states and the past hidden states for the
+                self-attention layer. Otherwise, the tuple only includes the hidden states.
 
         Raises:
             None
@@ -529,7 +535,7 @@ class MossPreTrainedModel(PreTrainedModel):
                 If False, gradient checkpointing is disabled for the specified cell.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -609,15 +615,18 @@ class MossModel(MossPreTrainedModel):
 
         Args:
             self: The current instance of the class.
-            config: An object containing configuration parameters for the model. It should have the following attributes:
-                >   - n_embd (int): The embedding dimension.
-                >   - vocab_size (int): The size of the vocabulary.
-                >   - embd_pdrop (float): The dropout probability for the embedding layer.
-                >   - n_layer (int): The number of MossBlocks to be used in the model.
-                >   - layer_norm_epsilon (float): A small value added to the variance to avoid division by zero in LayerNorm.
-                >   - rotary_dim (int): The dimension of the rotary positional encoding. It should be less than or equal to n_ctx // num_attention_heads.
-                >   - n_ctx (int): The length of the input sequence.
-                >   - num_attention_heads (int): The number of attention heads in each MossBlock.
+            config: An object containing configuration parameters for the model.
+                It should have the following attributes:
+
+                - n_embd (int): The embedding dimension.
+                - vocab_size (int): The size of the vocabulary.
+                - embd_pdrop (float): The dropout probability for the embedding layer.
+                - n_layer (int): The number of MossBlocks to be used in the model.
+                - layer_norm_epsilon (float): A small value added to the variance to avoid division by zero in LayerNorm.
+                - rotary_dim (int): The dimension of the rotary positional encoding.
+                It should be less than or equal to n_ctx // num_attention_heads.
+                - n_ctx (int): The length of the input sequence.
+                - num_attention_heads (int): The number of attention heads in each MossBlock.
 
         Returns:
             None
@@ -831,12 +840,14 @@ class MossForCausalLM(MossPreTrainedModel):
 
         Args:
             self (MossForCausalLM): The current instance of the MossForCausalLM class.
-            config (object): An object containing configuration parameters.
-                >   - wbits (int): Number of bits for weight quantization. Default is 32.
-                >   - groupsize (int): Size of the weight quantization group. Default is 128.
+            config (object):
+                An object containing configuration parameters.
+
+                - wbits (int): Number of bits for weight quantization. Default is 32.
+                - groupsize (int): Size of the weight quantization group. Default is 128.
 
         Returns:
-            None. This method initializes the MossForCausalLM instance.
+            None.
 
         Raises:
             None.

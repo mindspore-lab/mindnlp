@@ -165,7 +165,7 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             strip_accents (str, optional): Flag to indicate whether to strip accents. Defaults to None.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the vocabulary file specified by 'vocab_file' does not exist.
@@ -211,10 +211,10 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             self (DistilBertTokenizer): The instance of the DistilBertTokenizer class.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         return self.basic_tokenizer.do_lower_case
 
@@ -507,10 +507,10 @@ class BasicTokenizer:
                 Defaults to True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if never_split is None:
             never_split = []
@@ -656,7 +656,7 @@ class WordpieceTokenizer:
             max_input_chars_per_word (int, optional): The maximum number of characters allowed per word. Default is 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is less than or equal to 0.
