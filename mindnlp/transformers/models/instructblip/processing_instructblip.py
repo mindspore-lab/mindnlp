@@ -24,7 +24,6 @@ from ...image_utils import ImageInput
 from ...processing_utils import ProcessorMixin
 from ...tokenization_utils_base import PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
 from ....utils import TensorType
-from ..auto import AutoTokenizer
 
 
 class InstructBlipProcessor(ProcessorMixin):
