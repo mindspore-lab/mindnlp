@@ -111,7 +111,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
     ):
         """
         This method initializes an instance of the WeightStandardizedConv2d class.
-        
+
         Args:
             self (object): The instance of the class.
             in_channel (int): The number of input channels.
@@ -138,7 +138,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
             out_channels,
             kernel_size,
             stride=stride,
-            pad_mode='pad' if padding != 0 else 'same',
+            pad_mode='pad' if padding != 0 else 'valid',
             padding=padding,
             dilation=dilation,
             group=groups,
@@ -1427,6 +1427,7 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
 
                 - embedding_size (int): The size of the input embedding.
                 - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
+                
         Returns:
             None
 
