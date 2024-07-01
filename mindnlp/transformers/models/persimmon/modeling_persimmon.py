@@ -32,12 +32,10 @@ import mindspore as ms
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
-from ...cache_utils import Cache, DynamicCache, StaticCache
-from ...modeling_attn_mask_utils import AttentionMaskConverter
+from ...cache_utils import Cache, DynamicCache
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -1045,7 +1043,7 @@ class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == ms.int64 or labels.dtype == ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
