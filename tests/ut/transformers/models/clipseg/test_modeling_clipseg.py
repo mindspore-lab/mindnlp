@@ -581,7 +581,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
                 print(k, v.shape)
             loss = model(**inputs).loss
 
-    #@slow
+    @slow
     def test_model_from_pretrained(self):
         model_name = "CIDAS/clipseg-rd64-refined"
         model = CLIPSegModel.from_pretrained(model_name, ignore_mismatched_sizes=True)
