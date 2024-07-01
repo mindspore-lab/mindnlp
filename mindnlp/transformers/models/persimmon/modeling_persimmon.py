@@ -883,64 +883,6 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
         )
         return model_inputs
 
-    def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
-    ):
-        """
-        Method to prepare inputs for generation in the LlamaForCausalLM class.
-
-        Args:
-            self (object): The instance of the class.
-            input_ids (torch.Tensor): The input tensor representing tokenized input sequence.
-            past_key_values (tuple, optional): Tuple containing past key values for autoregressive generation. Default is None.
-            attention_mask (torch.Tensor, optional): Mask tensor indicating attention areas. Default is None.
-            inputs_embeds (torch.Tensor, optional): Embedding tensor for the input tokens. Default is None.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            dict: A dictionary containing the prepared model inputs including 'input_ids', 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
-
-        Raises:
-            ValueError: If the input_ids shape is incorrect or if attention_mask is not provided.
-            TypeError: If the position_ids are not of type torch.Tensor.
-            RuntimeError: If an unexpected error occurs during position_ids calculation.
-        """
-        if past_key_values is not None:
-            past_length = past_key_values[0][0].shape[2]
-
-            # Some generation methods already pass only the last input ID
-            if input_ids.shape[1] > past_length:
-                remove_prefix_length = past_length
-            else:
-                # Default to old behavior: keep only final ID
-                remove_prefix_length = input_ids.shape[1] - 1
-
-            input_ids = input_ids[:, remove_prefix_length:]
-
-        position_ids = kwargs.get("position_ids", None)
-        if attention_mask is not None and position_ids is None:
-            # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
-            if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
-
-        # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
-            model_inputs = {"inputs_embeds": inputs_embeds}
-        else:
-            model_inputs = {"input_ids": input_ids}
-
-        model_inputs.update(
-            {
-                "position_ids": position_ids,
-                "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
-                "attention_mask": attention_mask,
-            }
-        )
-        return model_inputs
-
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
         reordered_past = ()
