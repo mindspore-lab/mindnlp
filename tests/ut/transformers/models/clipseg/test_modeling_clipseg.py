@@ -584,7 +584,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "CIDAS/clipseg-rd64-refined"
-        model = CLIPSegModel.from_pretrained(model_name)
+        model = CLIPSegModel.from_pretrained(model_name, from_pt=True)
         self.assertIsNotNone(model)
 
 
