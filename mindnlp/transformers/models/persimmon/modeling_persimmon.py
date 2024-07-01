@@ -32,21 +32,21 @@ import mindspore as ms
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.modules.functional import finfo
+from mindnlp.utils import logging
+
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
-from ...modeling_attn_mask_utils import (
-    AttentionMaskConverter,
-)
+from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from mindnlp.modules.functional import finfo
 from ...modeling_utils import PreTrainedModel
-from mindnlp.utils import logging
 from .configuration_persimmon import PersimmonConfig
+
 
 
 logger = logging.get_logger(__name__)
@@ -89,7 +89,6 @@ class PersimmonRotaryEmbedding(nn.Cell):
             self.cos_cached[:seq_len].to(dtype=x.dtype),
             self.sin_cached[:seq_len].to(dtype=x.dtype),
         )
-# //无误
 
 # Copied from transformers.models.falcon.modeling_falcon.FalconLinearScalingRotaryEmbedding with Falcon->Persimmon
 class PersimmonLinearScalingRotaryEmbedding(PersimmonRotaryEmbedding):
@@ -110,7 +109,6 @@ class PersimmonLinearScalingRotaryEmbedding(PersimmonRotaryEmbedding):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-# //无误
 
 
 # Copied from transformers.models.falcon.modeling_falcon.FalconDynamicNTKScalingRotaryEmbedding with Falcon->Persimmon
@@ -177,7 +175,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
-# //无误
 
 # Copied from transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXMLP with GPTNeoX->Persimmon
 class PersimmonMLP(nn.Cell):
@@ -193,7 +190,6 @@ class PersimmonMLP(nn.Cell):
         hidden_states = self.dense_4h_to_h(hidden_states)
         return hidden_states
 
-# //无误
 
 
 class PersimmonAttention(nn.Cell):
@@ -229,10 +225,10 @@ class PersimmonAttention(nn.Cell):
 
         if self.qk_layernorm:
             self.q_layernorm = nn.LayerNorm(
-                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps, elementwise_affine=True
+                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps
             )
             self.k_layernorm = nn.LayerNorm(
-                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps, elementwise_affine=True
+                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps
             )
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self._init_rope()
@@ -379,7 +375,6 @@ class PersimmonAttention(nn.Cell):
 
         return attn_output, attn_weights, past_key_value
 
-# //无误
 
 class PersimmonDecoderLayer(nn.Cell):
     def __init__(self, config: PersimmonConfig, layer_idx: int):
@@ -455,7 +450,6 @@ class PersimmonDecoderLayer(nn.Cell):
 
         return outputs
 
-# //无误
 
 class PersimmonPreTrainedModel(PreTrainedModel):
     config_class = PersimmonConfig
@@ -475,9 +469,8 @@ class PersimmonPreTrainedModel(PreTrainedModel):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx is not None:
                 weight[cell.padding_idx] = 0
-                
             cell.weight.set_data(ms.Tensor(weight, cell.weight.dtype))
-# // 无误
+
 
 class PersimmonModel(PersimmonPreTrainedModel):
     """
@@ -521,8 +514,8 @@ class PersimmonModel(PersimmonPreTrainedModel):
         return_dict: Optional[bool] = None,
         cache_position: Optional[ms.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -627,88 +620,87 @@ class PersimmonModel(PersimmonPreTrainedModel):
         )
 
     # Copied from transformers.models.llama.modeling_llama.LlamaModel._update_causal_mask
-    def _update_causal_mask(
-        self,
-        attention_mask: ms.Tensor,
-        input_tensor: ms.Tensor,
-        cache_position: ms.Tensor,
-        past_key_values: Cache,
-        output_attentions: bool,
-    ):
-        # TODO: As of torch==2.2.0, the `attention_mask` passed to the model in `generate` is 2D and of dynamic length even when the static
-        # KV cache is used. This is an issue for torch.compile which then recaptures cudagraphs at each decode steps due to the dynamic shapes.
-        # (`recording cudagraph tree for symint key 13`, etc.), which is VERY slow. A workaround is `@torch.compiler.disable`, but this prevents using
-        # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
+    # def _update_causal_mask(
+    #     self,
+    #     attention_mask: ms.Tensor,
+    #     input_tensor: ms.Tensor,
+    #     cache_position: ms.Tensor,
+    #     past_key_values: Cache,
+    #     output_attentions: bool,
+    # ):
+    #     # TODO: As of torch==2.2.0, the `attention_mask` passed to the model in `generate` is 2D and of dynamic length even when the static
+    #     # KV cache is used. This is an issue for torch.compile which then recaptures cudagraphs at each decode steps due to the dynamic shapes.
+    #     # (`recording cudagraph tree for symint key 13`, etc.), which is VERY slow. A workaround is `@torch.compiler.disable`, but this prevents using
+    #     # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
 
-        if self.config._attn_implementation == "flash_attention_2":
-            if attention_mask is not None and 0.0 in attention_mask:
-                return attention_mask
-            return None
+    #     if self.config._attn_implementation == "flash_attention_2":
+    #         if attention_mask is not None and 0.0 in attention_mask:
+    #             return attention_mask
+    #         return None
 
-        # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
-        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
-        # to infer the attention mask.
-        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
-        using_static_cache = isinstance(past_key_values, StaticCache)
+    #     # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
+    #     # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
+    #     # to infer the attention mask.
+    #     past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+    #     using_static_cache = isinstance(past_key_values, StaticCache)
 
-        # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
-        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
-            if AttentionMaskConverter._ignore_causal_mask_sdpa(
-                attention_mask,
-                inputs_embeds=input_tensor,
-                past_key_values_length=past_seen_tokens,
-                is_training=self.training,
-            ):
-                return None
+    #     # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
+    #     if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+    #         if AttentionMaskConverter._ignore_causal_mask_sdpa(
+    #             attention_mask,
+    #             inputs_embeds=input_tensor,
+    #             past_key_values_length=past_seen_tokens,
+    #             is_training=self.training,
+    #         ):
+    #             return None
 
-        dtype = input_tensor.dtype
-        # min_dtype = torch.finfo(dtype).min
-        min_dtype = finfo(dtype=dtype,attr="min")
-        sequence_length = input_tensor.shape[1]
-        if using_static_cache:
-            target_length = past_key_values.get_max_length()
-        else:
-            target_length = (
-                attention_mask.shape[-1]
-                if isinstance(attention_mask, ms.Tensor)
-                else past_seen_tokens + sequence_length + 1
-            )
+    #     dtype = input_tensor.dtype
+    #     # min_dtype = torch.finfo(dtype).min
+    #     min_dtype = finfo(dtype=dtype,attr="min")
+    #     sequence_length = input_tensor.shape[1]
+    #     if using_static_cache:
+    #         target_length = past_key_values.get_max_length()
+    #     else:
+    #         target_length = (
+    #             attention_mask.shape[-1]
+    #             if isinstance(attention_mask, ms.Tensor)
+    #             else past_seen_tokens + sequence_length + 1
+    #         )
 
-        if attention_mask is not None and attention_mask.dim() == 4:
-            # in this case we assume that the mask comes already in inverted form and requires no inversion or slicing
-            if attention_mask.max() != 0:
-                raise ValueError("Custom 4D attention mask should be passed in inverted form with max==0`")
-            causal_mask = attention_mask
-        else:
-            causal_mask = ops.full(
-                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
-            )
-            if sequence_length != 1:
-                # causal_mask = torch.triu(causal_mask, diagonal=1)
-                causal_mask = ops.triu(causal_mask, diagonal=1)
-            causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
-            if attention_mask is not None:
-                causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
-                mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-                padding_mask = padding_mask == 0
-                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                    padding_mask, min_dtype
-                )
-        if (
-            self.config._attn_implementation == "sdpa"
-            and attention_mask is not None
-            and not output_attentions
-        ):
-            # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
-            # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
-            # Details: https://github.com/pytorch/pytorch/issues/110213
-            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
+    #     if attention_mask is not None and attention_mask.dim() == 4:
+    #         # in this case we assume that the mask comes already in inverted form and requires no inversion or slicing
+    #         if attention_mask.max() != 0:
+    #             raise ValueError("Custom 4D attention mask should be passed in inverted form with max==0`")
+    #         causal_mask = attention_mask
+    #     else:
+    #         causal_mask = ops.full(
+    #             (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
+    #         )
+    #         if sequence_length != 1:
+    #             # causal_mask = torch.triu(causal_mask, diagonal=1)
+    #             causal_mask = ops.triu(causal_mask, diagonal=1)
+    #         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+    #         causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
+    #         if attention_mask is not None:
+    #             causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
+    #             mask_length = attention_mask.shape[-1]
+    #             padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+    #             padding_mask = padding_mask == 0
+    #             causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+    #                 padding_mask, min_dtype
+    #             )
+    #     if (
+    #         self.config._attn_implementation == "sdpa"
+    #         and attention_mask is not None
+    #         and not output_attentions
+    #     ):
+    #         # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
+    #         # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
+    #         # Details: https://github.com/pytorch/pytorch/issues/110213
+    #         causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
 
-        return causal_mask
+    #     return causal_mask
 
-# //wuwu
 
 class PersimmonForCausalLM(PersimmonPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
@@ -747,7 +739,8 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    
+
+
     def construct(
         self,
         input_ids: ms.Tensor = None,
@@ -832,14 +825,15 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
+
         )
-        
+
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         """
         Method to prepare inputs for generation in the LlamaForCausalLM class.
-        
+
         Args:
             self (object): The instance of the class.
             input_ids (torch.Tensor): The input tensor representing tokenized input sequence.
@@ -847,10 +841,10 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
             attention_mask (torch.Tensor, optional): Mask tensor indicating attention areas. Default is None.
             inputs_embeds (torch.Tensor, optional): Embedding tensor for the input tokens. Default is None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             dict: A dictionary containing the prepared model inputs including 'input_ids', 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
-        
+
         Raises:
             ValueError: If the input_ids shape is incorrect or if attention_mask is not provided.
             TypeError: If the position_ids are not of type torch.Tensor.
@@ -974,7 +968,6 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
             )
         return reordered_past
 
-# //wuwu
 # Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with LLAMA->PERSIMMON,Llama->Persimmon
 class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
     def __init__(self, config):
@@ -1078,7 +1071,6 @@ class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
             attentions=transformer_outputs.attentions,
         )
 
-# // wuwu
 # Copied from transformers.models.llama.modeling_llama.LlamaForTokenClassification with Llama->Persimmon, LLAMA->PERSIMMON
 class PersimmonForTokenClassification(PersimmonPreTrainedModel):
     def __init__(self, config):

@@ -215,7 +215,7 @@ class PersimmonModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = PersimmonForCausalLM(config=config)
-        
+
         model.set_train(False)
 
         # first forward pass
@@ -290,7 +290,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
             "text-classification": PersimmonForSequenceClassification,
             "token-classification": PersimmonForTokenClassification,
             # "token-classification": PersimmonForTokenClassification,
-            
+
             # TODO (ydshieh): check why these two fail. Fix them or skip them in a better way.
             # "text-generation": PersimmonForCausalLM,
             # "zero-shot": PersimmonForSequenceClassification,
@@ -332,7 +332,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = PersimmonForSequenceClassification(config)
-        
+
         model.set_train(False)
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
@@ -395,7 +395,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
         set_seed(42)  # Fixed seed at init time so the two models get the same random weights
         original_model = PersimmonModel(config)
-        
+
         original_model.set_train(False)
         original_short_output = original_model(short_input).last_hidden_state
         original_long_output = original_model(long_input).last_hidden_state
@@ -403,7 +403,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
         set_seed(42)  # Fixed seed at init time so the two models get the same random weights
         config.rope_scaling = {"type": scaling_type, "factor": 10.0}
         scaled_model = PersimmonModel(config)
-        
+
         scaled_model.set_train(False)
         scaled_short_output = scaled_model(short_input).last_hidden_state
         scaled_long_output = scaled_model(long_input).last_hidden_state
@@ -418,71 +418,6 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
         # The output should be different for long inputs
         self.assertFalse(np.allclose(original_long_output.asnumpy() , scaled_long_output.asnumpy() , atol=1e-5))
 
-    # # Copied from tests.models.falcon.test_modeling_falcon.FalconModelTest.test_model_rope_scaling with Falcon->Persimmon
-    # def test_model_rope_scaling(self):
-    #     config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-    #     hidden_size = config.hidden_size
-    #     num_heads = config.num_attention_heads
-    #     head_dim = hidden_size // num_heads
-    #     scaling_factor = 10
-    #     short_input_length = 10
-    #     long_input_length = int(config.max_position_embeddings * 1.5)
-
-    #     # Inputs
-    #     x = ops.randn(1, dtype=mindspore.float32)  # used exlusively to get the dtype and the device
-
-    #     # Sanity check original RoPE
-    #     original_rope = PersimmonRotaryEmbedding(
-    #         head_dim,
-    #         max_position_embeddings=config.max_position_embeddings,
-    #         base=config.rope_theta,
-    #     )
-    #     original_cos_short, original_sin_short = original_rope(x, short_input_length)
-    #     original_cos_long, original_sin_long = original_rope(x, long_input_length)
-        
-
-        
-    #     assert_allclose(original_cos_short.asnumpy(), original_cos_long[:short_input_length, :].asnumpy())
-    #     assert_allclose(original_sin_short.asnumpy(), original_sin_long[:short_input_length, :].asnumpy())
-
-    #     # Sanity check linear RoPE scaling
-    #     # New position "x" should match original position with index "x/scaling_factor"
-    #     linear_scaling_rope = PersimmonLinearScalingRotaryEmbedding(
-    #         head_dim,
-    #         max_position_embeddings=config.max_position_embeddings,
-    #         base=config.rope_theta,
-    #         scaling_factor=scaling_factor,
-    #     )
-    #     linear_cos_short, linear_sin_short = linear_scaling_rope(x, short_input_length)
-    #     linear_cos_long, linear_sin_long = linear_scaling_rope(x, long_input_length)
-    #     assert_allclose(linear_cos_short.asnumpy(), linear_cos_long[:short_input_length, :].asnumpy())
-    #     assert_allclose(linear_sin_short.asnumpy(), linear_sin_long[:short_input_length, :].asnumpy())
-    #     for new_position in range(0, long_input_length, scaling_factor):
-    #         original_position = int(new_position // scaling_factor)
-            
-    #         assert_allclose(linear_cos_long[new_position, :].asnumpy(), original_cos_long[original_position, :].asnumpy())
-    #         assert_allclose(linear_sin_long[new_position, :].asnumpy(), original_sin_long[original_position, :].asnumpy())
-
-    #     # Sanity check Dynamic NTK RoPE scaling
-    #     # Scaling should only be observed after a long input is fed. We can observe that the frequencies increase
-    #     # with scaling_factor (or that `inv_freq` decreases)
-    #     ntk_scaling_rope = PersimmonDynamicNTKScalingRotaryEmbedding(
-    #         head_dim,
-    #         max_position_embeddings=config.max_position_embeddings,
-    #         base=config.rope_theta,
-    #         scaling_factor=scaling_factor,
-    #     )
-    #     ntk_cos_short, ntk_sin_short = ntk_scaling_rope(x, short_input_length)
-    #     ntk_cos_long, ntk_sin_long = ntk_scaling_rope(x, long_input_length)
-        
-    #     assert_allclose(ntk_cos_short.asnumpy(), original_cos_short.asnumpy())
-    #     assert_allclose(ntk_sin_short.asnumpy(), original_sin_short.asnumpy())
-    #     with self.assertRaises(AssertionError):
-    #         assert_allclose(ntk_cos_long.asnumpy(), original_cos_long.asnumpy())
-    #     with self.assertRaises(AssertionError):
-    #         assert_allclose(ntk_sin_long.asnumpy(), original_sin_long.asnumpy())
-    #     self.assertTrue((ntk_scaling_rope.inv_freq <= original_rope.inv_freq).all())
-
 
 @require_mindspore
 class PersimmonIntegrationTest(unittest.TestCase):
@@ -490,7 +425,7 @@ class PersimmonIntegrationTest(unittest.TestCase):
     # @require_torch_accelerator
     # @require_bitsandbytes
     def test_model_8b_chat_logits(self):
-        
+
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
         model = PersimmonForCausalLM.from_pretrained(
             "adept/persimmon-8b-chat"
