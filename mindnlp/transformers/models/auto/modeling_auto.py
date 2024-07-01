@@ -64,6 +64,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMModel"),
         ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
+        ("clipseg", ("CLIPSegModel","CLIPSegVisionModel")),
+        ("clipseg_vision_model","CLIPSegVisionModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("convbert", "ConvBertModel"),
         ("convnext", "ConvNextModel"),

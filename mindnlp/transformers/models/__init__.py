@@ -51,6 +51,7 @@ from . import (
     canine,
     clap,
     clip,
+    clipseg,
     codegen,
     cohere,
     cogvlm,
@@ -229,6 +230,7 @@ from .camembert import *
 from .canine import *
 from .clap import *
 from .clip import *
+from .clipseg import *
 from .codegen import *
 from .cohere import *
 from .cogvlm import *
@@ -406,6 +408,7 @@ __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
+__all__.extend(clipseg.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)

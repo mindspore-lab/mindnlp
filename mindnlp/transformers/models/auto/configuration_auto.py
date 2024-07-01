@@ -57,6 +57,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMConfig"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
+        ("clipseg", "CLIPSegConfig"),
+        ("clipseg_vision_model","CLIPSegVisionConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("cohere", "CohereConfig"),
@@ -424,6 +426,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("clipseg", "CLIPSeg"),
+        ("clipseg_vision_model","CLIPSegVisionModel"),
         ("code_llama", "CodeLlama"),
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
@@ -680,6 +683,7 @@ SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(
         ("kosmos-2", "kosmos2"),
         ("maskformer-swin", "maskformer"),
         ("clip_vision_model", "clip"),
+        ("clipseg_vision_model","clipseg"),
         ("xclip", "x_clip"),
     ]
 )
