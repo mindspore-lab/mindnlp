@@ -277,7 +277,7 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
 
     def test_model_inference_batched(self):
         # Load sample checkpoint from Tortoise TTS
-        model = UnivNetModel.from_pretrained("dg845/univnet-dev")
+        model = UnivNetModel.from_pretrained("dg845/univnet-dev", from_pt=True)
         model.set_train(False)
 
         # Get batched noise and spectrogram inputs.
@@ -330,7 +330,7 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
 
     def test_model_inference_unbatched(self):
         # Load sample checkpoint from Tortoise TTS
-        model = UnivNetModel.from_pretrained("dg845/univnet-dev")
+        model = UnivNetModel.from_pretrained("dg845/univnet-dev", from_pt=True)
         model.set_train(False)
 
         # Get unbatched noise and spectrogram inputs.
