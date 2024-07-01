@@ -17,37 +17,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Persimmon model."""
+"""MindNLP Persimmon model."""
 
 import math
 from typing import List, Optional, Tuple, Union
 
-# import torch
-# import torch.utils.checkpoint
-# from torch import nn
-# from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-
 import numpy as np
+
 import mindspore as ms
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
-from ...modeling_attn_mask_utils import (
-    AttentionMaskConverter,
-)
+from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from mindnlp.modules.functional import finfo
 from ...modeling_utils import PreTrainedModel
 from .configuration_persimmon import PersimmonConfig
+
 
 
 
