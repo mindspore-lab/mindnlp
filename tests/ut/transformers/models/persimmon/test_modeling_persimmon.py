@@ -421,7 +421,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
 @require_mindspore
 class PersimmonIntegrationTest(unittest.TestCase):
-    @slow
+    # @slow
     # @require_torch_accelerator
     # @require_bitsandbytes
     def test_model_8b_chat_logits(self):
@@ -447,7 +447,7 @@ class PersimmonIntegrationTest(unittest.TestCase):
         del model
         gc.collect()
 
-    @slow
+    # @slow
     # @require_torch_accelerator
     # @require_torch_fp16
     # @require_bitsandbytes
