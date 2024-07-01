@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+CLIPSeg Model
+"""
 from . import configuration_clipseg, modeling_clipseg, processing_clipseg
 from .configuration_clipseg import *
 from .modeling_clipseg import *

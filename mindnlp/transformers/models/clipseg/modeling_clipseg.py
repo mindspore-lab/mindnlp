@@ -1365,4 +1365,4 @@ __all__ = [
     "CLIPSegVisionModel",
     "CLIPSegForImageSegmentation",
     "CLIPSegDecoder",
-]   
+]
