@@ -602,7 +602,7 @@ class CLIPSegModelIntegrationTest(unittest.TestCase):
     def test_inference_image_segmentation(self):
         model_name = "CIDAS/clipseg-rd64-refined"
         processor = CLIPSegProcessor.from_pretrained(model_name, ignore_mismatched_sizes=True)
-        model = CLIPSegForImageSegmentation.from_pretrained(model_name)
+        model = CLIPSegForImageSegmentation.from_pretrained(model_name,ignore_mismatched_sizes=True)
 
         image = prepare_img()
         texts = ["a cat", "a remote", "a blanket"]
