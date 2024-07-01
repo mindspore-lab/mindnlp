@@ -601,7 +601,7 @@ class CLIPSegModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_image_segmentation(self):
         model_name = "CIDAS/clipseg-rd64-refined"
-        processor = CLIPSegProcessor.from_pretrained(model_name)
+        processor = CLIPSegProcessor.from_pretrained(model_name, ignore_mismatched_sizes=True)
         model = CLIPSegForImageSegmentation.from_pretrained(model_name)
 
         image = prepare_img()
