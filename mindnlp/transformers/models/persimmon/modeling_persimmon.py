@@ -883,78 +883,63 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
         )
         return model_inputs
 
-    # def prepare_inputs_for_generation(
-    #     self,
-    #     input_ids,
-    #     past_key_values=None,
-    #     attention_mask=None,
-    #     inputs_embeds=None,
-    #     cache_position=None,
-    #     use_cache=True,
-    #     **kwargs,
-    # ):
-    #     past_length = 0
-    #     if past_key_values is not None:
-    #         # Past key values are always initialized with a `Cache` object -> no need for if-else anymore
-    #         past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
-    #         max_cache_length = (
-    #             ms.Tensor(past_key_values.get_max_length())
-    #             if past_key_values.get_max_length() is not None
-    #             else None
-    #         )
-    #         cache_length = past_length if max_cache_length is None else ops.min(max_cache_length, past_length)
+    def prepare_inputs_for_generation(
+        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+    ):
+        """
+        Method to prepare inputs for generation in the LlamaForCausalLM class.
 
-    #         # Keep only the unprocessed tokens:
-    #         # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
-    #         # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as
-    #         # input)
-    #         if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-    #             input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
-    #         # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
-    #         # input_ids based on the past_length.
-    #         elif past_length < input_ids.shape[1]:
-    #             input_ids = input_ids[:, past_length:]
-    #         # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
+        Args:
+            self (object): The instance of the class.
+            input_ids (torch.Tensor): The input tensor representing tokenized input sequence.
+            past_key_values (tuple, optional): Tuple containing past key values for autoregressive generation. Default is None.
+            attention_mask (torch.Tensor, optional): Mask tensor indicating attention areas. Default is None.
+            inputs_embeds (torch.Tensor, optional): Embedding tensor for the input tokens. Default is None.
+            **kwargs: Additional keyword arguments.
 
-    #         # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
-    #         if (
-    #             max_cache_length is not None
-    #             and attention_mask is not None
-    #             and cache_length + input_ids.shape[1] > max_cache_length
-    #         ):
-    #             attention_mask = attention_mask[:, -max_cache_length:]
+        Returns:
+            dict: A dictionary containing the prepared model inputs including 'input_ids', 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
 
-    #     position_ids = kwargs.get("position_ids", None)
-    #     if attention_mask is not None and position_ids is None:
-    #         # create position_ids on the fly for batch generation
-    #         position_ids = attention_mask.long().cumsum(-1) - 1
-    #         # position_ids.masked_fill_(attention_mask == 0, 1)
-    #         position_ids = position_ids.masked_fill(attention_mask == 0, 1)
-    #         if past_key_values:
-    #             position_ids = position_ids[:, -input_ids.shape[1] :]
+        Raises:
+            ValueError: If the input_ids shape is incorrect or if attention_mask is not provided.
+            TypeError: If the position_ids are not of type torch.Tensor.
+            RuntimeError: If an unexpected error occurs during position_ids calculation.
+        """
+        if past_key_values is not None:
+            past_length = past_key_values[0][0].shape[2]
 
-    #     # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-    #     if inputs_embeds is not None and past_length == 0:
-    #         model_inputs = {"inputs_embeds": inputs_embeds}
-    #     else:
-    #         model_inputs = {"input_ids": input_ids}
+            # Some generation methods already pass only the last input ID
+            if input_ids.shape[1] > past_length:
+                remove_prefix_length = past_length
+            else:
+                # Default to old behavior: keep only final ID
+                remove_prefix_length = input_ids.shape[1] - 1
 
-    #     input_length = position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]
-    #     if cache_position is None:
-    #         cache_position = ops.arange(past_length, past_length + input_length)
-    #     elif use_cache:
-    #         cache_position = cache_position[-input_length:]
+            input_ids = input_ids[:, remove_prefix_length:]
 
-    #     model_inputs.update(
-    #         {
-    #             "position_ids": position_ids,
-    #             "past_key_values": past_key_values,
-    #             "use_cache": use_cache,
-    #             "attention_mask": attention_mask,
-    #             "cache_position": cache_position,
-    #         }
-    #     )
-    #     return model_inputs
+        position_ids = kwargs.get("position_ids", None)
+        if attention_mask is not None and position_ids is None:
+            # create position_ids on the fly for batch generation
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
+            if past_key_values:
+                position_ids = position_ids[:, -input_ids.shape[1] :]
+
+        # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
+        if inputs_embeds is not None and past_key_values is None:
+            model_inputs = {"inputs_embeds": inputs_embeds}
+        else:
+            model_inputs = {"input_ids": input_ids}
+
+        model_inputs.update(
+            {
+                "position_ids": position_ids,
+                "past_key_values": past_key_values,
+                "use_cache": kwargs.get("use_cache"),
+                "attention_mask": attention_mask,
+            }
+        )
+        return model_inputs
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
