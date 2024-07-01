@@ -606,7 +606,7 @@ class CLIPSegModelIntegrationTest(unittest.TestCase):
 
         image = prepare_img()
         texts = ["a cat", "a remote", "a blanket"]
-        inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="pt")
+        inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="ms")
 
         # forward pass
         outputs = model(**inputs)
