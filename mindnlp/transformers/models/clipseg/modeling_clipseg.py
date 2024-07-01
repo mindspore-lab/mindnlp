@@ -1109,7 +1109,7 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
             transposed_kernels = (config.vision_config.patch_size // 4, config.vision_config.patch_size // 4)
 
             self.transposed_convolution = nn.SequentialCell(
-                nn.Conv2d(config.reduce_dim, config.reduce_dim, kernel_size=3, padding=1),
+                nn.Conv2d(config.reduce_dim, config.reduce_dim, kernel_size=3),
                 nn.ReLU(),
                 nn.Conv2dTranspose(
                     config.reduce_dim,
