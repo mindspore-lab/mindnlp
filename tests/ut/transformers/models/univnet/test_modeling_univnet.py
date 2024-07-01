@@ -70,7 +70,9 @@ class UnivNetModelTester:
         return noise_sequence
 
     def prepare_config_and_inputs(self):
-        spectrogram = floats_tensor([self.batch_size, self.seq_length, self.num_mel_bins], scale=1.0)
+        spectrogram = floats_tensor(
+            [self.batch_size, self.seq_length, self.num_mel_bins], scale=1.0
+        )
         noise_sequence = self.prepare_noise_sequence()
         # noise_sequence = noise_sequence
         config = self.get_config()
@@ -120,7 +122,10 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
     def setUp(self):
         self.model_tester = UnivNetModelTester(self)
         self.config_tester = ConfigTester(
-            self, config_class=UnivNetConfig, has_text_modality=False, common_properties=["num_mel_bins"]
+            self,
+            config_class=UnivNetConfig,
+            has_text_modality=False,
+            common_properties=["num_mel_bins"],
         )
 
     @unittest.skip(reason="fix this once it gets more usage")
@@ -146,21 +151,29 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
             expected_arg_names = [
                 "input_features",
             ]
-            self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            self.assertListEqual(
+                arg_names[: len(expected_arg_names)], expected_arg_names
+            )
 
     @unittest.skip(reason="UnivNetModel does not output hidden_states.")
     def test_hidden_states_output(self):
         pass
 
-    @unittest.skip(reason="UnivNetModel.forward does not accept an inputs_embeds argument.")
+    @unittest.skip(
+        reason="UnivNetModel.forward does not accept an inputs_embeds argument."
+    )
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip(reason="UnivNetModel does not use input embeddings and thus has no get_input_embeddings method.")
+    @unittest.skip(
+        reason="UnivNetModel does not use input embeddings and thus has no get_input_embeddings method."
+    )
     def test_model_get_set_embeddings(self):
         pass
 
-    @unittest.skip(reason="UnivNetModel does not support all arguments tested, such as output_hidden_states.")
+    @unittest.skip(
+        reason="UnivNetModel does not support all arguments tested, such as output_hidden_states."
+    )
     def test_model_outputs_equivalence(self):
         pass
 
@@ -195,10 +208,13 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             model.set_train(False)
-            outputs = model(
-                inputs["input_features"][:1], inputs["noise_sequence"][:1]
-            )[0]
-            self.assertTrue(outputs.shape[0] == 1, msg="Unbatched input should create batched output with bsz = 1")
+            outputs = model(inputs["input_features"][:1], inputs["noise_sequence"][:1])[
+                0
+            ]
+            self.assertTrue(
+                outputs.shape[0] == 1,
+                msg="Unbatched input should create batched output with bsz = 1",
+            )
 
 
 # @slow
@@ -209,13 +225,18 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
 
     def _load_datasamples(self, num_samples, sampling_rate=24000):
         ds = load_dataset(
-            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation", trust_remote_code=True
+            "hf-internal-testing/librispeech_asr_dummy",
+            "clean",
+            split="validation",
+            trust_remote_code=True,
         )
         ds = ds.cast_column("audio", Audio(sampling_rate=sampling_rate))
         # automatic decoding with librispeech
         speech_samples = ds.sort("id").select(range(num_samples))[:num_samples]["audio"]
 
-        return [x["array"] for x in speech_samples], [x["sampling_rate"] for x in speech_samples]
+        return [x["array"] for x in speech_samples], [
+            x["sampling_rate"] for x in speech_samples
+        ]
 
     def get_inputs(self, num_samples: int = 3, noise_length: int = 10, seed: int = 0):
         # Note: hardcode model_in_channels -> 64
@@ -233,7 +254,9 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
             spectrogram_shape = [100, noise_length]
         else:
             spectrogram_shape = [num_samples, 100, noise_length]
-        spectrogram = floats_tensor(spectrogram_shape, scale=1.0, rng=random.Random(seed))
+        spectrogram = floats_tensor(
+            spectrogram_shape, scale=1.0, rng=random.Random(seed)
+        )
         # Note: spectrogram should already be on torch_device
 
         # Permute to match diffusers implementation
@@ -267,11 +290,38 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
 
         EXPECTED_MEAN = ms.tensor(-0.19989729)
         EXPECTED_STDDEV = ms.tensor(0.35230172)
-        EXPECTED_SLICE = ms.tensor([-0.3408, -0.6045, -0.5052, 0.1160, -0.1556, -0.0405, -0.3024, -0.5290, -0.5019])
-        print("111",waveform_mean.asnumpy())
-        self.assertTrue(np.allclose(waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-3, rtol=1e-3))
-        self.assertTrue(np.allclose(waveform_stddev.asnumpy(), EXPECTED_STDDEV.asnumpy(), atol=1e-4, rtol=1e-5))
-        self.assertTrue(np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(),atol=5e-4, rtol=1e-5))
+        EXPECTED_SLICE = ms.tensor(
+            [
+                -0.3408,
+                -0.6045,
+                -0.5052,
+                0.1160,
+                -0.1556,
+                -0.0405,
+                -0.3024,
+                -0.5290,
+                -0.5019,
+            ]
+        )
+        print("111", waveform_mean.asnumpy())
+        self.assertTrue(
+            np.allclose(
+                waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-3, rtol=1e-3
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_stddev.asnumpy(),
+                EXPECTED_STDDEV.asnumpy(),
+                atol=1e-4,
+                rtol=1e-5,
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=5e-4, rtol=1e-5
+            )
+        )
 
     def test_model_inference_unbatched(self):
         # Load sample checkpoint from Tortoise TTS
@@ -290,22 +340,55 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
 
         EXPECTED_MEAN = ms.tensor(-0.22895093)
         EXPECTED_STDDEV = ms.tensor(0.33986747)
-        EXPECTED_SLICE = ms.tensor([-0.3276, -0.5504, -0.3484, 0.3574, -0.0373, -0.1826, -0.4880, -0.6431, -0.5162])
-        print("111",waveform_slice.asnumpy())
-        self.assertTrue(np.allclose(waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-4, rtol=1e-5))
-        self.assertTrue(np.allclose(waveform_stddev.asnumpy(), EXPECTED_STDDEV.asnumpy(), atol=1e-4, rtol=1e-5))
-        self.assertTrue(np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-3, rtol=1e-5))
+        EXPECTED_SLICE = ms.tensor(
+            [
+                -0.3276,
+                -0.5504,
+                -0.3484,
+                0.3574,
+                -0.0373,
+                -0.1826,
+                -0.4880,
+                -0.6431,
+                -0.5162,
+            ]
+        )
+        print("111", waveform_slice.asnumpy())
+        self.assertTrue(
+            np.allclose(
+                waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-4, rtol=1e-5
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_stddev.asnumpy(),
+                EXPECTED_STDDEV.asnumpy(),
+                atol=1e-4,
+                rtol=1e-5,
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-3, rtol=1e-5
+            )
+        )
 
     def test_integration(self):
         feature_extractor = UnivNetFeatureExtractor.from_pretrained("dg845/univnet-dev")
         model = UnivNetModel.from_pretrained("dg845/univnet-dev")
         model.set_train(False)
-        audio, sr = self._load_datasamples(1, sampling_rate=feature_extractor.sampling_rate)
+        audio, sr = self._load_datasamples(
+            1, sampling_rate=feature_extractor.sampling_rate
+        )
 
-        input_features = feature_extractor(audio, sampling_rate=sr[0], return_tensors="ms").input_features
+        input_features = feature_extractor(
+            audio, sampling_rate=sr[0], return_tensors="ms"
+        ).input_features
         # input_features = input_features
 
-        input_speech = self.get_inputs(num_samples=1, noise_length=input_features.shape[1])
+        input_speech = self.get_inputs(
+            num_samples=1, noise_length=input_features.shape[1]
+        )
         input_speech["input_features"] = input_features
 
         waveform = model(**input_speech)[0]
@@ -321,6 +404,21 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         EXPECTED_SLICE = ms.tensor([-4.3934e-04, -1.8203e-04, -3.3033e-04, -3.8716e-04, -1.6125e-04, 3.5389e-06, -3.3149e-04, -3.7613e-04, -2.3331e-04])
         # fmt: on
 
-        self.assertTrue(np.allclose(waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=5e-6, rtol=1e-5))
-        self.assertTrue(np.allclose(waveform_stddev.asnumpy(), EXPECTED_STDDEV.asnumpy(), atol=1e-4, rtol=1e-5))
-        self.assertTrue(np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=5e-6, rtol=1e-5))
+        self.assertTrue(
+            np.allclose(
+                waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=5e-6, rtol=1e-5
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_stddev.asnumpy(),
+                EXPECTED_STDDEV.asnumpy(),
+                atol=1e-4,
+                rtol=1e-5,
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=5e-6, rtol=1e-5
+            )
+        )
