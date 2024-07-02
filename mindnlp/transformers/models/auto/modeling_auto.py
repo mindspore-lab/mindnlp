@@ -898,6 +898,7 @@ MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaModel"),
         ("deberta-v2", "DebertaV2Model"),
         ("distilbert", "DistilBertModel"),
+        ("donut-swin", "DonutSwinModel"),
         ("electra", "ElectraModel"),
         ("flaubert", "FlaubertModel"),
         ("longformer", "LongformerModel"),
