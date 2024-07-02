@@ -117,6 +117,7 @@ from . import (
     marian,
     mask2former,
     mbart,
+    mbart50,
     mctct,
     megatron_bert,
     minicpm,
@@ -301,6 +302,7 @@ from .mamba import *
 from .marian import *
 from .mask2former import *
 from .mbart import *
+from .mbart50 import *
 from .mctct import *
 from .megatron_bert import *
 from .minicpm import *
@@ -484,6 +486,7 @@ __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
+__all__.extend(mbart50.__all__)
 __all__.extend(mctct.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
