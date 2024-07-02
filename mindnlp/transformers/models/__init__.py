@@ -201,6 +201,7 @@ from . import (
     xlm_roberta,
     xlm_roberta_xl,
     xlnet,
+    vilt,
 )
 
 from .owlv2 import *
@@ -367,6 +368,7 @@ from .time_series_transformer import *
 from .timesformer import *
 from .univnet import *
 from .videomae import *
+from .vilt import *
 from .vipllava import *
 from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
@@ -552,6 +554,7 @@ __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
+__all__.extend(vilt.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
