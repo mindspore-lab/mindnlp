@@ -120,6 +120,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("persimmon", "PersimmonModel"),
         ("phi", "PhiModel"),
         ("phi3", "Phi3Model"),
+        ("plbart", "PLBartModel"),
         ("qdqbert", "QDQBertModel"),
         ("qwen2", "Qwen2Model"),
         ("qwen2_moe", "Qwen2MoeModel"),

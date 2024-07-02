@@ -122,6 +122,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("persimmon", "PersimmonConfig"),
         ("phi", "PhiConfig"),
         ("phi3", "Phi3Config"),
+        ("plbart", "PLBartConfig"),
         ("qdqbert", "QDQBertConfig"),
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),

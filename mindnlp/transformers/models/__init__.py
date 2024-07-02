@@ -139,6 +139,7 @@ from . import (
     persimmon,
     phi,
     phi3,
+    plbart,
     poolformer,
     pop2piano,
     qdqbert,
@@ -316,6 +317,7 @@ from .pegasus import *
 from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .plbart import *
 from .poolformer import *
 from .pop2piano import *
 from .qdqbert import *
@@ -492,6 +494,7 @@ __all__.extend(pegasus.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
