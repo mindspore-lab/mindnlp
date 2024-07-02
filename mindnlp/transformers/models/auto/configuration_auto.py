@@ -119,6 +119,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
         ("pegasus", "PegasusConfig"),
+        ("persimmon", "PersimmonConfig"),
         ("phi", "PhiConfig"),
         ("phi3", "Phi3Config"),
         ("qdqbert", "QDQBertConfig"),

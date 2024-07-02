@@ -282,6 +282,7 @@ ACT2CLS = {
     "mish": nn.Mish,
     "quick_gelu": nn.FastGelu,
     "relu": nn.ReLU,
+    "relu2": ReLUSquaredActivation,
     "relu6": nn.ReLU6,
     "sigmoid": nn.Sigmoid,
     "silu": nn.SiLU,
