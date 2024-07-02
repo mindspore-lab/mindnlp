@@ -129,6 +129,7 @@ from . import (
     mobilevit,
     mpnet,
     mpt,
+    mluke,
     musicgen,
     musicgen_melody,
     mvp,
@@ -313,6 +314,7 @@ from .mobilenet_v1 import *
 from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
+from .mluke import *
 from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
@@ -492,6 +494,7 @@ __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
+__all__.extend(mluke.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilenet_v2.__all__)
