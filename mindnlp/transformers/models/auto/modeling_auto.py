@@ -49,6 +49,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("blenderbot-small", "BlenderbotSmallModel"),
         ("blip", "BlipModel"),
         ("blip-2", "Blip2Model"),
+        ("instructblip","InstructBlipVisionModel"),
         ("bloom", "BloomModel"),
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
@@ -63,6 +64,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMModel"),
         ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
+        ("clipseg", ("CLIPSegModel","CLIPSegVisionModel")),
+        ("clipseg_vision_model","CLIPSegVisionModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("convbert", "ConvBertModel"),
         ("convnext", "ConvNextModel"),
@@ -117,8 +120,10 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("openelm", "OpenELMModel"),
         ("opt", "OPTModel"),
         ("pegasus", "PegasusModel"),
+        ("persimmon", "PersimmonModel"),
         ("phi", "PhiModel"),
         ("phi3", "Phi3Model"),
+        ("plbart", "PLBartModel"),
         ("qdqbert", "QDQBertModel"),
         ("qwen2", "Qwen2Model"),
         ("qwen2_moe", "Qwen2MoeModel"),
@@ -143,6 +148,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("tapas", "TapasModel"),
         ("time_series_transformer", "TimeSeriesTransformerModel"),
         ("timesformer", "TimesformerModel"),
+        ("univnet", "UnivNetModel"),
         ("videomae", "VideoMAEModel"),
         ("vision_text_dual_encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
@@ -159,6 +165,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
+        ("umt5","UMT5Model")
     ]
 )
 
@@ -175,10 +182,9 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("flava", "FlavaForPreTraining"),
-        ("focalnet","FocalnetForpreTraining"),
         ("funnel", "FunnelForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
-        ("ibert", "IBertForPreTraining"),
+        ("ibert", "IBertForMaskedLM"),
         ("mamba", "MambaForCausalLM"),
         ("minicpm", "MiniCPMForCausalLM"),
         ("mvp", "MvpForConditionalGeneration"),
@@ -284,6 +290,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("openelm", "OpenELMForCausalLM"),
         ("opt", "OPTForCausalLM"),
         ("pegasus", "PegasusForCausalLM"),
+        ("persimmon", "PersimmonForCausalLM"),
         ("phi", "PhiForCausalLM"),
         ("phi3", "Phi3ForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
@@ -534,6 +541,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralForSequenceClassification"),
         ("mvp", "MvpForSequenceClassification"),
         ("opt", "OPTForSequenceClassification"),
+        ("persimmon", "PersimmonForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
         ("phi3", "Phi3ForSequenceClassification"),
         ("qwen2", "Qwen2ForSequenceClassification"),
@@ -632,6 +640,7 @@ MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipForQuestionAnswering"),
         ("blip-2", "Blip2ForConditionalGeneration"),
         ("vilt", "ViltForQuestionAnswering"),
+        ("instructblip", "InstructBlipForConditionalGeneration")
     ]
 )
 
@@ -687,6 +696,7 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("mra", "MraForTokenClassification"),
         ("nezha", "NezhaForTokenClassification"),
         ("nystromformer", "NystromformerForTokenClassification"),
+        ("persimmon", "PersimmonForTokenClassification"),
         ("phi", "PhiForTokenClassification"),
         ("phi3", "Phi3ForTokenClassification"),
         ("qdqbert", "QDQBertForTokenClassification"),
@@ -850,6 +860,7 @@ MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("chinese_clip", "ChineseCLIPModel"),
         ("clip", "CLIPModel"),
         ("clipseg", "CLIPSegModel"),
+        ("instructblip","InstructBlipVisionModel"),
     ]
 )
 
