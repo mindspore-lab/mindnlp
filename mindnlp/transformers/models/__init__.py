@@ -131,6 +131,7 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
+    nougat,
     nystromformer,
     olmo,
     oneformer,
@@ -138,8 +139,10 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    persimmon,
     phi,
     phi3,
+    plbart,
     poolformer,
     pop2piano,
     qdqbert,
@@ -174,6 +177,7 @@ from . import (
     timesformer,
     tinybert,
     umt5,
+    univnet,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -310,6 +314,7 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nougat import *
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -317,8 +322,10 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .plbart import *
 from .poolformer import *
 from .pop2piano import *
 from .qdqbert import *
@@ -352,6 +359,7 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .univnet import *
 from .videomae import *
 from .vipllava import *
 from .vision_encoder_decoder import *
@@ -488,6 +496,7 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -495,8 +504,10 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
@@ -530,6 +541,7 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
