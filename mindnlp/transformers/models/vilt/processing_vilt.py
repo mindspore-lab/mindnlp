@@ -107,7 +107,7 @@ class ViltProcessor(ProcessorMixin):
             **kwargs,
         )
         # add pixel_values + pixel_mask
-        encoding_image_processor = self.current_processor(images, return_tensors=return_tensors)
+        encoding_image_processor = self.image_processor(images, return_tensors=return_tensors)
         encoding.update(encoding_image_processor)
 
         return encoding

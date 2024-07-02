@@ -567,7 +567,7 @@ class ViltModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.tensor([-12.5061, -12.5123, -12.5174])
         logits_slice_np = outputs.logits.asnumpy()[0, 0, :3]
         expected_slice_np = expected_slice.asnumpy()
-        self.assertTrue(np.allclose(logits_slice_np, expected_slice_np, atol=0.5))
+        self.assertTrue(np.allclose(logits_slice_np, expected_slice_np, atol=1e-3))
 
         # verify masked token prediction equals "cats"
         predicted_id = outputs.logits[0, 4, :].argmax(-1).item()
@@ -583,6 +583,7 @@ class ViltModelIntegrationTest(unittest.TestCase):
         inputs = processor(image, text, return_tensors="ms")
 
         # forward pass
+        model.set_train(False)
         outputs = model(**inputs)
 
         # verify the logits
@@ -593,7 +594,7 @@ class ViltModelIntegrationTest(unittest.TestCase):
         logits_np = outputs.logits[0, :3].asnumpy()
         expected_slice_np = expected_slice.asnumpy()
 
-        self.assertTrue(np.allclose(logits_np, expected_slice_np, atol=0.3))
+        self.assertTrue(np.allclose(logits_np, expected_slice_np, atol=5e-2))
 
         # compute loss
         vqa_labels = [[2, 3, 155, 800]]
@@ -653,4 +654,4 @@ class ViltModelIntegrationTest(unittest.TestCase):
         logits_np = outputs.logits[0, :3].asnumpy()
         expected_slice_np =expected_slice.asnumpy()
 
-        self.assertTrue(np.allclose(logits_np, expected_slice_np, atol=8))
+        self.assertTrue(np.allclose(logits_np, expected_slice_np, atol=1))

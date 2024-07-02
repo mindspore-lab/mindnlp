@@ -148,6 +148,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("timesformer", "TimesformerConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vilt", "VilTConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),

@@ -159,7 +159,7 @@ class ViltEmbeddings(nn.Cell):
         select = []
         for i, (v, nv, p) in enumerate(zip(valid_nums, non_valid_nums, pad_nums)):
             if p <= 0:
-                valid_choice = ops.multinomial(ops.ones(v).float(), max_image_length)
+                valid_choice = ops.multinomial(ops.ones(v).float(), max_image_length, replacement=False)
                 select.append(valid_row_idx[i][valid_choice])
             else:
                 pad_choice = ops.multinomial(ops.ones(nv).float(), p, replacement=True)
@@ -265,7 +265,7 @@ class TextEmbeddings(nn.Cell):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=ops.long)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -298,7 +298,7 @@ class ViltPatchEmbeddings(nn.Cell):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
 
     def construct(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -785,7 +785,7 @@ class ViltModel(ViltPreTrainedModel):
         text_batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones(((text_batch_size, seq_length)))
+            attention_mask = ops.ones((text_batch_size, seq_length))
 
         if pixel_values is not None and image_embeds is not None:
             raise ValueError("You cannot specify both pixel_values and image_embeds at the same time")
@@ -1039,7 +1039,7 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
         # Classifier head
         self.classifier = nn.SequentialCell(
             nn.Dense(config.hidden_size, config.hidden_size * 2),
-            nn.LayerNorm(config.hidden_size * 2),
+            nn.LayerNorm(config.hidden_size * 2, epsilon= 1e-5),
             nn.GELU(),
             nn.Dense(config.hidden_size * 2, config.num_labels),
         )
