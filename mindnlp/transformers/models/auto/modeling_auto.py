@@ -49,7 +49,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("blenderbot-small", "BlenderbotSmallModel"),
         ("blip", "BlipModel"),
         ("blip-2", "Blip2Model"),
-        ("instructblip","InstructBlipVisionModel"),
+        ("instructblip", "InstructBlipVisionModel"),
         ("bloom", "BloomModel"),
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
@@ -64,8 +64,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMModel"),
         ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
-        ("clipseg", ("CLIPSegModel","CLIPSegVisionModel")),
-        ("clipseg_vision_model","CLIPSegVisionModel"),
+        ("clipseg", ("CLIPSegModel", "CLIPSegVisionModel")),
+        ("clipseg_vision_model", "CLIPSegVisionModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("convbert", "ConvBertModel"),
         ("convnext", "ConvNextModel"),
@@ -84,7 +84,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconModel"),
         ("fastspeech2_conformer", "FastSpeech2ConformerModel"),
         ("flava", "FlavaModel"),
-        ("focalnet","FocalNetModel"),
+        ("focalnet", "FocalNetModel"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
         ("gemma", "GemmaModel"),
         ("git", "GitModel"),
@@ -101,19 +101,20 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("jetmoe", "JetMoEModel"),
         ("led", "LEDModel"),
         ("llama", "LlamaModel"),
+        ("lxmert", "LxmertModel"),
         ("mamba", "MambaModel"),
         ("marian", "MarianModel"),
         ("mask2former", "Mask2FormerModel"),
         ("mbart", "MBartModel"),
-        ("mctct","MCTCTModel"),
+        ("mctct", "MCTCTModel"),
         ("minicpm", "MiniCPMModel"),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
-        ("mobilenet_v1","MobileNetV1Model"),
-        ("mobilenet_v2","MobileNetV2Model"),
+        ("mobilenet_v1", "MobileNetV1Model"),
+        ("mobilenet_v2", "MobileNetV2Model"),
         ("mvp", "MvpModel"),
         ("olmo", "OlmoModel"),
-        ("owlv2","Owlv2Model"),
+        ("owlv2", "Owlv2Model"),
         ("owlv2_vision_model", "Owlv2VisionModel"),
         ("owlv2_text_model", "Owlv2TextModel"),
         ("oneformer", "OneFormerModel"),
@@ -165,7 +166,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
-        ("umt5","UMT5Model")
+        ("umt5", "UMT5Model"),
     ]
 )
 
@@ -185,6 +186,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("funnel", "FunnelForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("ibert", "IBertForMaskedLM"),
+        ("lxmert", "LxmertForPreTraining"),
         ("mamba", "MambaForCausalLM"),
         ("minicpm", "MiniCPMForCausalLM"),
         ("mvp", "MvpForConditionalGeneration"),
@@ -477,7 +479,7 @@ MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bigbird_pegasus", "BigBirdPegasusForConditionalGeneration"),
         ("blenderbot", "BlenderbotForConditionalGeneration"),
         ("blenderbot-small", "BlenderbotSmallForConditionalGeneration"),
-        ('chatglm', "ChatGLMForConditionalGeneration"),
+        ("chatglm", "ChatGLMForConditionalGeneration"),
         ("encoder-decoder", "EncoderDecoderModel"),
         ("fsmt", "FSMTForConditionalGeneration"),
         ("gptsan-japanese", "GPTSanJapaneseForConditionalGeneration"),
@@ -640,7 +642,7 @@ MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipForQuestionAnswering"),
         ("blip-2", "Blip2ForConditionalGeneration"),
         ("vilt", "ViltForQuestionAnswering"),
-        ("instructblip", "InstructBlipForConditionalGeneration")
+        ("instructblip", "InstructBlipForConditionalGeneration"),
     ]
 )
 
@@ -860,7 +862,7 @@ MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("chinese_clip", "ChineseCLIPModel"),
         ("clip", "CLIPModel"),
         ("clipseg", "CLIPSegModel"),
-        ("instructblip","InstructBlipVisionModel"),
+        ("instructblip", "InstructBlipVisionModel"),
     ]
 )
 
@@ -1002,11 +1004,14 @@ MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES = OrderedDict(
 
 MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 MODEL_FOR_PRETRAINING_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_PRETRAINING_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_PRETRAINING_MAPPING_NAMES
+)
 MODEL_WITH_LM_HEAD_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_WITH_LM_HEAD_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_WITH_LM_HEAD_MAPPING_NAMES
+)
 MODEL_FOR_CAUSAL_LM_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_CAUSAL_LM_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
+)
 
 MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES
@@ -1026,7 +1031,8 @@ MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES
 )
 MODEL_FOR_VISION_2_SEQ_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES
+)
 MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES
 )
@@ -1034,15 +1040,18 @@ MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES
 )
 MODEL_FOR_MASKED_LM_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_MASKED_LM_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_MASKED_LM_MAPPING_NAMES
+)
 
 MODEL_FOR_OBJECT_DETECTION_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_OBJECT_DETECTION_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_OBJECT_DETECTION_MAPPING_NAMES
+)
 MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES
 )
 MODEL_FOR_DEPTH_ESTIMATION_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_DEPTH_ESTIMATION_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_DEPTH_ESTIMATION_MAPPING_NAMES
+)
 MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES
 )
@@ -1059,7 +1068,8 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES
 )
 MODEL_FOR_MULTIPLE_CHOICE_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES
+)
 MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING_NAMES
 )
@@ -1067,36 +1077,45 @@ MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES
 )
 MODEL_FOR_CTC_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_CTC_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_CTC_MAPPING_NAMES
+)
 MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES
+)
 MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING_NAMES
 )
 MODEL_FOR_AUDIO_XVECTOR_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_AUDIO_XVECTOR_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_AUDIO_XVECTOR_MAPPING_NAMES
+)
 
 MODEL_FOR_TEXT_TO_SPECTROGRAM_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_TEXT_TO_SPECTROGRAM_MAPPING_NAMES
 )
 
 MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING_NAMES
+)
 
 MODEL_FOR_BACKBONE_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_BACKBONE_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_BACKBONE_MAPPING_NAMES
+)
 
 MODEL_FOR_MASK_GENERATION_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_MASK_GENERATION_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_MASK_GENERATION_MAPPING_NAMES
+)
 
 MODEL_FOR_TEXT_ENCODING_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES
+)
 
 MODEL_FOR_IMAGE_TO_IMAGE_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_TO_IMAGE_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_TO_IMAGE_MAPPING_NAMES
+)
 
 MODEL_FOR_IMAGE_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_MAPPING_NAMES)
+    CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_MAPPING_NAMES
+)
 
 MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES
@@ -1104,26 +1123,25 @@ MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING = _LazyAutoMapping(
 
 
 class AutoModelForMaskGeneration(_BaseAutoModelClass):
-
     """
     Represents a class for generating masks automatically based on a given model.
     This class inherits functionality from the _BaseAutoModelClass, providing methods and attributes for mask generation.
     """
+
     _model_mapping = MODEL_FOR_MASK_GENERATION_MAPPING
 
 
 class AutoModelForTextEncoding(_BaseAutoModelClass):
-
     """
     The AutoModelForTextEncoding class represents a model for encoding text data.
     It is a subclass of the _BaseAutoModelClass and inherits its behavior and attributes.
     This class provides functionality for automatically encoding text data and can be used for various natural language processing tasks.
     """
+
     _model_mapping = MODEL_FOR_TEXT_ENCODING_MAPPING
 
 
 class AutoModelForImageToImage(_BaseAutoModelClass):
-
     """
     Represents an automatic model for image-to-image tasks.
 
@@ -1142,11 +1160,11 @@ class AutoModelForImageToImage(_BaseAutoModelClass):
         the specifics of their image transformation requirements.
 
     """
+
     _model_mapping = MODEL_FOR_IMAGE_TO_IMAGE_MAPPING
 
 
 class AutoModel(_BaseAutoModelClass):
-
     """
     Represents an automated model for performing various tasks related to vehicle models.
 
@@ -1154,23 +1172,24 @@ class AutoModel(_BaseAutoModelClass):
     It includes methods for data processing, model training, evaluation, and prediction.
     The AutoModel class serves as a foundation for building automated systems that work with vehicle models efficiently.
     """
+
     _model_mapping = MODEL_MAPPING
 
 
 class AutoModelForPreTraining(_BaseAutoModelClass):
-
     """
     Represents a Python class for an auto model used for pre-training natural language processing (NLP) tasks.
     This class inherits functionality from the _BaseAutoModelClass, providing a foundation for pre-training NLP models.
     It encapsulates methods and attributes specific to pre-training tasks, allowing for efficient development and training of NLP models.
     """
+
     _model_mapping = MODEL_FOR_PRETRAINING_MAPPING
+
 
 # Private on purpose, the public class will add the deprecation warnings.
 
 
 class _AutoModelWithLMHead(_BaseAutoModelClass):
-
     """
     This class represents an automatic model with a language modeling head, implementing the functionality of generating text based on given input.
 
@@ -1201,21 +1220,21 @@ class _AutoModelWithLMHead(_BaseAutoModelClass):
         >>> generated_text = model.generate(inputs)
         ```
     """
+
     _model_mapping = MODEL_WITH_LM_HEAD_MAPPING
 
 
 class AutoModelForCausalLM(_BaseAutoModelClass):
-
     """
     Represents a Python class for an automatic model tailored for Causal Language Modeling tasks.
     This class inherits from the _BaseAutoModelClass and provides functionality for training, fine-tuning, and utilizing models for causal language modeling tasks.
     It includes methods for loading pre-trained models, generating text sequences, and evaluating model performance.
     """
+
     _model_mapping = MODEL_FOR_CAUSAL_LM_MAPPING
 
 
 class AutoModelForMaskedLM(_BaseAutoModelClass):
-
     """
     Represents a class for automatically generating masked language model outputs based on a pre-trained model.
 
@@ -1224,31 +1243,31 @@ class AutoModelForMaskedLM(_BaseAutoModelClass):
     It provides a convenient interface for utilizing pre-trained language models to predict masked tokens
     within a given input sequence.
     """
+
     _model_mapping = MODEL_FOR_MASKED_LM_MAPPING
 
 
 class AutoModelForSeq2SeqLM(_BaseAutoModelClass):
-
     """
     Represents a class for automatic generation of models for sequence-to-sequence language modeling tasks.
     This class inherits functionality from the _BaseAutoModelClass, providing a base for creating and customizing
     sequence-to-sequence language models for various natural language processing applications.
     """
+
     _model_mapping = MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
 
 
 class AutoModelForSequenceClassification(_BaseAutoModelClass):
-
     """
     The 'AutoModelForSequenceClassification' class represents an automatic model for sequence classification tasks in Python.
     This class inherits functionality from the '_BaseAutoModelClass' class and provides a high-level interface for
     creating and utilizing pre-trained models for sequence classification tasks.
     """
+
     _model_mapping = MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING
 
 
 class AutoModelForQuestionAnswering(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for question answering in Python. It is a subclass of the _BaseAutoModelClass,
     which provides a base implementation for automatic models.
@@ -1293,11 +1312,11 @@ class AutoModelForQuestionAnswering(_BaseAutoModelClass):
         which provides a wide range of pre-trained models for various NLP tasks.
         It is recommended to refer to the transformers documentation for more details on using this class and customizing its behavior.
     """
+
     _model_mapping = MODEL_FOR_QUESTION_ANSWERING_MAPPING
 
 
 class AutoModelForTableQuestionAnswering(_BaseAutoModelClass):
-
     """
     AutoModelForTableQuestionAnswering is a Python class that represents a model for table-based question answering tasks.
     This class inherits from the _BaseAutoModelClass, providing functionality for processing and generating answers for questions related to tables.
@@ -1318,11 +1337,11 @@ class AutoModelForTableQuestionAnswering(_BaseAutoModelClass):
     The class facilitates the integration of table question answering functionality into larger projects,
     providing a powerful and efficient solution for handling such tasks within a Python environment.
     """
+
     _model_mapping = MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING
 
 
 class AutoModelForVisualQuestionAnswering(_BaseAutoModelClass):
-
     """
     Represents a specialized model class for visual question answering (VQA) tasks.
 
@@ -1351,32 +1370,32 @@ class AutoModelForVisualQuestionAnswering(_BaseAutoModelClass):
 
     For detailed information on the implementation and usage of AutoModelForVisualQuestionAnswering, please refer to the official documentation or codebase.
     """
+
     _model_mapping = MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING
 
 
 class AutoModelForDocumentQuestionAnswering(_BaseAutoModelClass):
-
     """
     This class represents an auto model for document question answering tasks.
     It inherits from the _BaseAutoModelClass, providing functionalities for processing text input
     and generating answers to questions based on the provided document context.
     """
+
     _model_mapping = MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING
 
 
 class AutoModelForTokenClassification(_BaseAutoModelClass):
-
     """
     AutoModelForTokenClassification is a class that represents an automatic model for token classification in Python.
     It inherits from _BaseAutoModelClass and provides functionality for token classification tasks.
     This class is designed to be used with pre-trained models and offers methods for token classification tasks,
     such as named entity recognition and part-of-speech tagging.
     """
+
     _model_mapping = MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING
 
 
 class AutoModelForMultipleChoice(_BaseAutoModelClass):
-
     """
     Represents a class for automatically generating a model for multiple choice tasks.
 
@@ -1393,11 +1412,11 @@ class AutoModelForMultipleChoice(_BaseAutoModelClass):
     enabling seamless integration of machine learning capabilities into applications and workflows
     dealing with multiple choice question answering.
     """
+
     _model_mapping = MODEL_FOR_MULTIPLE_CHOICE_MAPPING
 
 
 class AutoModelForNextSentencePrediction(_BaseAutoModelClass):
-
     """
     A class representing an autoencoder model for next sentence prediction.
 
@@ -1409,11 +1428,11 @@ class AutoModelForNextSentencePrediction(_BaseAutoModelClass):
         base_model_prefix (str): The prefix for the base model.
 
     """
+
     _model_mapping = MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING
 
 
 class AutoModelForZeroShotImageClassification(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for zero-shot image classification in Python.
 
@@ -1456,11 +1475,11 @@ class AutoModelForZeroShotImageClassification(_BaseAutoModelClass):
         fine_tune(self, new_data, new_labels): Fine-tunes the pre-trained model on new data and labels for transfer learning.
 
     """
+
     _model_mapping = MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING
 
 
 class AutoModelForUniversalSegmentation(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for universal segmentation in Python.
     It is a subclass of the _BaseAutoModelClass, which provides a base implementation for automatic models.
@@ -1507,12 +1526,12 @@ class AutoModelForUniversalSegmentation(_BaseAutoModelClass):
 
     For more details on the usage and available models, refer to the documentation and examples provided with this class.
     """
+
     _model_mapping = MODEL_FOR_UNIVERSAL_SEGMENTATION_MAPPING
 
 
 class AutoModelForInstanceSegmentation(_BaseAutoModelClass):
-
-    """"
+    """ "
     Represents a class for automatic model generation for instance segmentation tasks.
 
     This class provides functionality for automatically generating models tailored for instance segmentation,
@@ -1529,11 +1548,11 @@ class AutoModelForInstanceSegmentation(_BaseAutoModelClass):
     Usage:
         (Include any usage examples or guidelines here)
     """
+
     _model_mapping = MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING
 
 
 class AutoModelForObjectDetection(_BaseAutoModelClass):
-
     """
     Represents a class for automatic model selection and configuration for object detection tasks.
 
@@ -1544,30 +1563,30 @@ class AutoModelForObjectDetection(_BaseAutoModelClass):
     and model evaluation, making it a convenient and efficient tool for automating the process
     of model selection and configuration for object detection applications.
     """
+
     _model_mapping = MODEL_FOR_OBJECT_DETECTION_MAPPING
 
 
 class AutoModelForZeroShotObjectDetection(_BaseAutoModelClass):
-
     """
     The AutoModelForZeroShotObjectDetection class represents an automatic model for zero-shot object detection.
     It inherits from the _BaseAutoModelClass and provides functionality for detecting objects in images without
     the need for training on specific object classes.
     """
+
     _model_mapping = MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING
 
 
 class AutoModelForDepthEstimation(_BaseAutoModelClass):
-
     """
     Represents a specialized class for automatically generating models for depth estimation tasks.
     This class inherits functionality from the _BaseAutoModelClass to provide a base structure for creating depth estimation models.
     """
+
     _model_mapping = MODEL_FOR_DEPTH_ESTIMATION_MAPPING
 
 
 class AutoModelForVideoClassification(_BaseAutoModelClass):
-
     """
     Represents a class for automatic model selection for video classification tasks.
 
@@ -1576,11 +1595,11 @@ class AutoModelForVideoClassification(_BaseAutoModelClass):
     It inherits functionality from the _BaseAutoModelClass, providing a foundation for automatic model selection
     with a focus on video classification tasks.
     """
+
     _model_mapping = MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING
 
 
 class AutoModelForVision2Seq(_BaseAutoModelClass):
-
     """
     AutoModelForVision2Seq is a Python class that represents an automatic model for vision-to-sequence tasks.
     This class inherits from the _BaseAutoModelClass, providing additional functionalities specific to vision-to-sequence tasks.
@@ -1617,21 +1636,21 @@ class AutoModelForVision2Seq(_BaseAutoModelClass):
         >>> outputs = model.forward(visual_features, sequence_input)
         ```
     """
+
     _model_mapping = MODEL_FOR_VISION_2_SEQ_MAPPING
 
 
 class AutoModelForAudioClassification(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for audio classification tasks. It inherits from the _BaseAutoModelClass,
     providing functionalities for processing audio data and making predictions for classification.
     The class provides methods and attributes for training, evaluating, and using the model for audio classification tasks.
     """
+
     _model_mapping = MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING
 
 
 class AutoModelForCTC(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for Connectionist Temporal Classification (CTC) tasks in Python.
 
@@ -1657,11 +1676,11 @@ class AutoModelForCTC(_BaseAutoModelClass):
     For more details on the available methods and functionalities of the 'AutoModelForCTC' class, refer to the documentation and code comments.
 
     """
+
     _model_mapping = MODEL_FOR_CTC_MAPPING
 
 
 class AutoModelForSpeechSeq2Seq(_BaseAutoModelClass):
-
     """
     This class represents an automatic model for speech sequence-to-sequence (Seq2Seq) tasks in Python.
 
@@ -1692,11 +1711,11 @@ class AutoModelForSpeechSeq2Seq(_BaseAutoModelClass):
 
     Please refer to the documentation of the '_BaseAutoModelClass' for more details on general model functionalities and best practices for training and fine-tuning models.
     """
+
     _model_mapping = MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
 
 
 class AutoModelForAudioFrameClassification(_BaseAutoModelClass):
-
     """
     Represents an auto model for audio frame classification tasks.
 
@@ -1713,11 +1732,11 @@ class AutoModelForAudioFrameClassification(_BaseAutoModelClass):
     This class is intended to be extended and customized for specific audio classification projects,
     allowing for efficient development and experimentation in the audio signal processing domain.
     """
+
     _model_mapping = MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING
 
 
 class AutoModelForAudioXVector(_BaseAutoModelClass):
-
     """
     The 'AutoModelForAudioXVector' class is a specialized class for automatic audio feature extraction using x-vectors.
     It is designed to provide a convenient interface for extracting audio features and performing various machine
@@ -1740,11 +1759,11 @@ class AutoModelForAudioXVector(_BaseAutoModelClass):
     It simplifies the process of extracting and working with x-vector features, enabling users to focus on
     their specific machine learning tasks without having to worry about the underlying implementation details.
     """
+
     _model_mapping = MODEL_FOR_AUDIO_XVECTOR_MAPPING
 
 
 class AutoModelForTextToSpectrogram(_BaseAutoModelClass):
-
     """
     Represents a Python class for generating spectrograms from text using an auto model for text-to-spectrogram conversion.
     This class inherits from the _BaseAutoModelClass, providing additional functionality and customization options
@@ -1763,11 +1782,11 @@ class AutoModelForTextToSpectrogram(_BaseAutoModelClass):
     Note:
         Please refer to the _BaseAutoModelClass documentation for inherited methods and attributes.
     """
+
     _model_mapping = MODEL_FOR_TEXT_TO_SPECTROGRAM_MAPPING
 
 
 class AutoModelForTextToWaveform(_BaseAutoModelClass):
-
     """
     AutoModelForTextToWaveform is a Python class that represents an automatic model for converting text to waveform data.
     This class inherits from the _BaseAutoModelClass, which provides a base implementation for automatic models.
@@ -1801,11 +1820,11 @@ class AutoModelForTextToWaveform(_BaseAutoModelClass):
         >>> model.load_model('saved_model')
         ```
     """
+
     _model_mapping = MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING
 
 
 class AutoBackbone(_BaseAutoModelClass):
-
     """
     Represents an AutoBackbone Python class that inherits from _BaseAutoModelClass.
 
@@ -1834,11 +1853,11 @@ class AutoBackbone(_BaseAutoModelClass):
         the common functionality and attributes available in the AutoBackbone class.
 
     """
+
     _model_mapping = MODEL_FOR_BACKBONE_MAPPING
 
 
 class AutoModelWithLMHead(_AutoModelWithLMHead):
-
     """
     This class represents a deprecated version of `AutoModelWithLMHead` and will be removed in a future version.
     It is recommended to use `AutoModelForCausalLM` for causal language models, `AutoModelForMaskedLM`
@@ -1874,6 +1893,7 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
         This class is deprecated and should not be used in new implementations.
         Please refer to the appropriate classes mentioned above based on your specific use case.
     """
+
     @classmethod
     def from_config(cls, config):
         """
@@ -1925,4 +1945,6 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
             "`AutoModelForSeq2SeqLM` for encoder-decoder models.",
             FutureWarning,
         )
-        return super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        return super().from_pretrained(
+            pretrained_model_name_or_path, *model_args, **kwargs
+        )

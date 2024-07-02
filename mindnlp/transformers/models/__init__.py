@@ -113,6 +113,7 @@ from . import (
     llava_next,
     longformer,
     luke,
+    lxmert,
     mamba,
     marian,
     mask2former,
@@ -299,6 +300,7 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
+from .lxmert import *
 from .mamba import *
 from .marian import *
 from .mask2former import *
@@ -484,6 +486,7 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(lxmert.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(mask2former.__all__)
