@@ -77,16 +77,16 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BartTokenizerFast
-
-    >>> tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import BartTokenizerFast
+        ...
+        >>> tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -174,7 +174,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         This method initializes an instance of the BartTokenizerFast class.
-        
+
         Args:
             self: The instance of the BartTokenizerFast class.
             vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
@@ -191,12 +191,12 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
             add_prefix_space (bool, optional): Whether to add prefix space. Defaults to False.
             trim_offsets (bool, optional): Whether to trim offsets. Defaults to True.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         # we have to specify that this tokens is special otherwise adding it will reset the normalized flag to `False` in `add_special_tokens`
         mask_token = (
@@ -286,16 +286,17 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
         This method '_batch_encode_plus' is defined in the class 'BartTokenizerFast' and is responsible for batch encoding input sequences.
-        
+
         Args:
-        - self: An instance of the 'BartTokenizerFast' class.
-        
+            self: An instance of the 'BartTokenizerFast' class.
+
         Returns:
-        - BatchEncoding: A dictionary-like object containing the encoded inputs.
-        
+            BatchEncoding: A dictionary-like object containing the encoded inputs.
+
         Raises:
-        - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False. In such cases, it indicates that the tokenizer needs to be instantiated with
-'add_prefix_space=True' to work with pretokenized inputs.
+            ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False.
+                In such cases, it indicates that the tokenizer needs to be instantiated with
+                'add_prefix_space=True' to work with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -310,21 +311,21 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
         This method encodes inputs into a batch encoding using the BartTokenizerFast class.
-        
+
         Args:
             self (BartTokenizerFast): The instance of the BartTokenizerFast class.
-            
+
             *args: Variable length argument list.
-            
+
             **kwargs: Arbitrary keyword arguments.
                 is_split_into_words (bool, optional): Indicates whether the input is split into words. Defaults to False.
-        
+
         Returns:
             BatchEncoding: A batch encoding containing the encoded inputs.
-        
+
         Raises:
-            ValueError: If is_split_into_words is True and add_prefix_space is False, a ValueError is raised indicating that 
-            the BartTokenizerFast instance needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
+            ValueError: If is_split_into_words is True and add_prefix_space is False, a ValueError is raised indicating that
+                the BartTokenizerFast instance needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -339,17 +340,17 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         '''
         Save the vocabulary files for the tokenizer.
-        
+
         Args:
             self (BartTokenizerFast): The instance of the BartTokenizerFast class.
             save_directory (str): The directory where the vocabulary files will be saved.
             filename_prefix (Optional[str]): The prefix to be added to the filename of the saved vocabulary files. Default is None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the filenames of the saved vocabulary files.
-        
+
         Raises:
-            - Any exceptions raised by the underlying tokenizer model.save method.
+            None: Any exceptions raised by the underlying tokenizer model.save method.
         '''
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
@@ -357,17 +358,17 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """
         This method builds inputs with special tokens for the BartTokenizerFast class.
-        
+
         Args:
-        - self: The instance of the BartTokenizerFast class.
-        - token_ids_0: A list of token IDs representing the first sequence.
-        - token_ids_1: A list of token IDs representing the second sequence. This parameter is optional and defaults to None.
-        
+            self: The instance of the BartTokenizerFast class.
+            token_ids_0: A list of token IDs representing the first sequence.
+            token_ids_1: A list of token IDs representing the second sequence. This parameter is optional and defaults to None.
+
         Returns:
-        None. The method modifies the input token lists in place.
-        
+            None: The method modifies the input token lists in place.
+
         Raises:
-        No specific exceptions are raised by this method.
+            None.
         """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:

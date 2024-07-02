@@ -53,7 +53,8 @@ class BeamScorer(ABC):
             Tuple[mindspore.Tensor]: A tuple containing the updated next tokens tensor.
         
         Raises:
-            NotImplementedError: This exception is raised when the method is called directly as it is an abstract method and should be implemented in a subclass.
+            NotImplementedError: This exception is raised when the method is called directly as it is an abstract
+                method and should be implemented in a subclass.
         """
         raise NotImplementedError("This is an abstract method.")
 
@@ -71,10 +72,14 @@ class BeamScorer(ABC):
         
         Args:
             self (BeamScorer): The instance of the BeamScorer class.
-            input_ids (mindspore.Tensor): The input tensor with shape (batch_size, beam_width, sequence_length) containing the input token IDs.
-            next_scores (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the scores for the next tokens.
-            next_tokens (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the IDs of the next tokens.
-            next_indices (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the indices of the next tokens.
+            input_ids (mindspore.Tensor): The input tensor with shape (batch_size, beam_width, sequence_length)
+                containing the input token IDs.
+            next_scores (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the scores
+                for the next tokens.
+            next_tokens (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the IDs of
+                the next tokens.
+            next_indices (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the indices
+                of the next tokens.
             max_length (int): The maximum length of the sequence.
             
         Returns:
@@ -142,17 +147,21 @@ class BeamSearchScorer(BeamScorer):
             batch_size (int): The size of the batch.
             num_beams (int): The number of beams to use in the beam search.
             length_penalty (Optional[float], default=1.0): The length penalty factor to apply during beam search.
-            do_early_stopping (Optional[Union[bool, str]], default=False): Determines whether to perform early stopping during beam search. Can be a boolean value or a string.
+            do_early_stopping (Optional[Union[bool, str]], default=False): Determines whether to perform early stopping
+                during beam search. Can be a boolean value or a string.
             num_beam_hyps_to_keep (Optional[int], default=1): The number of beam hypotheses to keep.
             num_beam_groups (Optional[int], default=1): The number of beam groups to use during beam search.
-            max_length (Optional[int]): The maximum length of the generated sequences. If not specified, there is no maximum length restriction.
+            max_length (Optional[int]): The maximum length of the generated sequences. If not specified, there is no
+                maximum length restriction.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            ValueError: If the num_beams parameter is not an integer strictly greater than 1, or if num_beams is 1 and do_early_stopping is not used.
-            ValueError: If the num_beam_groups parameter is not an integer smaller or equal than num_beams, or if num_beams is not divisible by num_beam_groups.
+            ValueError: If the num_beams parameter is not an integer strictly greater than 1, or if num_beams is 1 and
+                do_early_stopping is not used.
+            ValueError: If the num_beam_groups parameter is not an integer smaller or equal than num_beams, or if
+                num_beams is not divisible by num_beam_groups.
         """
         self.num_beams = num_beams
         self.length_penalty = length_penalty
@@ -205,11 +214,13 @@ class BeamSearchScorer(BeamScorer):
         Raises:
             None.
         
-        This method returns True if the internal '_done' attribute, which represents the completion status of the BeamSearchScorer instance, is set to True for all elements. Otherwise, it returns False. The
-'_done' attribute is a container that holds the completion status of each element in the BeamSearchScorer instance.
-        
+        This method returns True if the internal '_done' attribute, which represents the completion status of the
+        BeamSearchScorer instance, is set to True for all elements. Otherwise, it returns False. The '_done' attribute
+        is a container that holds the completion status of each element in the BeamSearchScorer instance.
+
         Note:
-            The '_done' attribute is expected to be a container with elements that can be evaluated as boolean values. If the '_done' attribute contains non-boolean elements, unexpected behavior may occur.
+            The '_done' attribute is expected to be a container with elements that can be evaluated as boolean values.
+            If the '_done' attribute contains non-boolean elements, unexpected behavior may occur.
         """
         return self._done.all()
 
@@ -226,7 +237,7 @@ class BeamSearchScorer(BeamScorer):
     ) -> Dict[str, mindspore.Tensor]:
         r"""
         This method processes input data for beam search scoring in a BeamSearchScorer instance.
-        
+
         Args:
             self: BeamSearchScorer instance.
             input_ids (mindspore.Tensor): The input tensor containing token IDs.
@@ -234,17 +245,19 @@ class BeamSearchScorer(BeamScorer):
             next_tokens (mindspore.Tensor): The tensor containing the IDs of next tokens.
             next_indices (mindspore.Tensor): The tensor containing indices of next tokens.
             pad_token_id (Optional[int]): The ID of the padding token. Default is None.
-            eos_token_id (Optional[Union[int, List[int]]]): The ID or list of IDs indicating end-of-sequence tokens. Default is None.
+            eos_token_id (Optional[Union[int, List[int]]]): The ID or list of IDs indicating end-of-sequence tokens.
+                Default is None.
             beam_indices (Optional[mindspore.Tensor]): The tensor containing beam indices. Default is None.
             group_index (Optional[int]): The index of the group. Default is 0.
-        
+
         Returns:
             Dict[str, mindspore.Tensor]: A dictionary containing the processed beam scores, tokens, and indices.
-        
+
         Raises:
             ValueError: If the input batch size does not match the expected group size.
             ValueError: If the expected group size does not match the group size used by the beam scorer.
-            ValueError: If the generated beams are greater than or equal to the specified number of beams without defining eos_token_id and pad_token.
+            ValueError: If the generated beams are greater than or equal to the specified number of beams
+                without defining eos_token_id and pad_token.
             ValueError: If the number of generated beams is less than the specified number of beams.
             ValueError: If an error occurs during beam search processing.
         """
@@ -347,25 +360,27 @@ class BeamSearchScorer(BeamScorer):
         beam_indices: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
         r"""
-        This method finalizes the beam search process by selecting the best beam hypotheses and constructing the final output sequences.
-        
+        This method finalizes the beam search process by selecting the best beam hypotheses and constructing the
+        final output sequences.
+
         Args:
-        - self: The instance of the class BeamSearchScorer.
-        - input_ids (mindspore.Tensor): The input tensor containing token IDs.
-        - final_beam_scores (mindspore.Tensor): The final scores of the selected beam hypotheses.
-        - final_beam_tokens (mindspore.Tensor): The token IDs of the final beam hypotheses.
-        - final_beam_indices (mindspore.Tensor): The indices of the final beam hypotheses.
-        - max_length (int): The maximum length of the output sequences.
-        - pad_token_id (Optional[int]): The token ID used for padding, default is None.
-        - eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the end of sequence, default is None.
-        - beam_indices (Optional[mindspore.Tensor]): The indices of the beam hypotheses, default is None.
-        
+            self: The instance of the class BeamSearchScorer.
+            input_ids (mindspore.Tensor): The input tensor containing token IDs.
+            final_beam_scores (mindspore.Tensor): The final scores of the selected beam hypotheses.
+            final_beam_tokens (mindspore.Tensor): The token IDs of the final beam hypotheses.
+            final_beam_indices (mindspore.Tensor): The indices of the final beam hypotheses.
+            max_length (int): The maximum length of the output sequences.
+            pad_token_id (Optional[int]): The token ID used for padding, default is None.
+            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the end of
+                sequence, default is None.
+            beam_indices (Optional[mindspore.Tensor]): The indices of the beam hypotheses, default is None.
+
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the final output sequences ('sequences' key), the scores of the sequences ('sequence_scores' key), and the indices of the beam hypotheses ('beam_indices'
-key).
-        
+            Tuple[mindspore.Tensor]: A tuple containing the final output sequences ('sequences' key), the scores of
+                the sequences ('sequence_scores' key), and the indices of the beam hypotheses ('beam_indices' key).
+
         Raises:
-        - ValueError: Raised if 'pad_token_id' is not defined when necessary.
+            ValueError: Raised if 'pad_token_id' is not defined when necessary.
         """
         batch_size = len(self._beam_hyps) // self.num_beam_groups
 
@@ -454,7 +469,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
     r"""
     [`BeamScorer`] implementing constrained beam search decoding.
 
-
     Args:
         batch_size (`int`):
             Batch Size of `input_ids` for which standard beam search decoding is run in parallel.
@@ -499,7 +513,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
     ):
         r"""
         Initializes an instance of the ConstrainedBeamSearchScorer class.
-        
+
         Args:
             self: The instance of the class.
             batch_size (int): The number of examples in a batch.
@@ -510,18 +524,21 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             num_beam_hyps_to_keep (Optional[int], default=1): The number of beam hypotheses to keep during beam search.
             num_beam_groups (Optional[int], default=1): The number of beam groups to use during beam search.
             max_length (Optional[int], default=None): The maximum length of output sequences.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If num_beams is not an integer strictly greater than 1 or if num_beam_groups is not an integer smaller or equal than num_beams or if num_beam_groups is not divisible by num_beams.
-        
+            ValueError: If num_beams is not an integer strictly greater than 1 or if num_beam_groups is not an integer
+                smaller or equal than num_beams or if num_beam_groups is not divisible by num_beams.
+
         Note:
             - For `num_beams` == 1, it is recommended to use `greedy_search` instead.
             - The parameter `constraints` is a list of constraints that should be satisfied by the generated sequences.
-            - The parameter `length_penalty` is a scalar value that affects the length normalization penalty during beam search.
-            - The parameter `do_early_stopping` determines whether beam search should stop early if all beam hypotheses have reached the end token.
+            - The parameter `length_penalty` is a scalar value that affects the length normalization penalty
+            during beam search.
+            - The parameter `do_early_stopping` determines whether beam search should stop early if all beam hypotheses
+            have reached the end token.
             - The parameter `num_beam_hyps_to_keep` specifies the number of beam hypotheses to keep during beam search.
             - The parameter `num_beam_groups` determines the number of beam groups to use during beam search.
             - The parameter `max_length` specifies the maximum length of the output sequences.
@@ -563,49 +580,50 @@ class ConstrainedBeamSearchScorer(BeamScorer):
     def is_done(self) -> bool:
         r"""
         Method to check if the ConstrainedBeamSearchScorer instance has completed processing.
-        
+
         Args:
             self (ConstrainedBeamSearchScorer): The instance of ConstrainedBeamSearchScorer on which the method is called.
                 This parameter is required to access the internal state of the scorer.
-                
+
         Returns:
             bool: Returns a boolean value indicating whether the processing is completed (True) or not (False).
                 True if all processing is done, False otherwise.
-                
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self._done.all()
 
     def make_constraint_states(self, n):
         r"""
         Generates a list of constraint states for a ConstrainedBeamSearchScorer object.
-        
+
         Args:
             self (ConstrainedBeamSearchScorer): The instance of the ConstrainedBeamSearchScorer class.
             n (int): The number of constraint states to generate.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return [ConstraintListState([constraint.copy() for constraint in self.constraints]) for _ in range(n)]
 
     def check_completes_constraints(self, sequence):
         r"""
         This method checks if the given sequence completes constraints in the ConstrainedBeamSearchScorer class.
-        
+
         Args:
             self (ConstrainedBeamSearchScorer): The instance of the ConstrainedBeamSearchScorer class.
             sequence (list): A list representing the input sequence to be checked for completing constraints.
-        
+
         Returns:
-            None: This method does not return any value explicitly. It updates the state of the ConstrainedBeamSearchScorer instance.
-        
+            None: This method does not return any value explicitly.
+                It updates the state of the ConstrainedBeamSearchScorer instance.
+
         Raises:
-            N/A
+            None.
         """
         new_state = self.make_constraint_states(1)[0]
         new_state.reset(sequence)
@@ -646,16 +664,14 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             beam_indices (`mindspore.Tensor`, *optional*):
                 Beam indices indicating to which beam hypothesis each token correspond.
 
-        Return:
-            `UserDict`: A dictionary composed of the fields as defined above:
+        Returns:
+            `UserDict`:
+                A dictionary composed of the fields as defined above:
 
                 - **next_beam_scores** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Updated scores of
-                  all
-                non-finished beams.
-
+                all non-finished beams.
                 - **next_beam_tokens** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Next tokens to be
-                  added
-                to the non-finished beam_hypotheses.
+                added to the non-finished beam_hypotheses.
                 - **next_beam_indices** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Beam indices
                 indicating to which beam the next tokens shall be added.
         """
@@ -771,8 +787,9 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         push_progress: bool = False,
     ):
         r"""
-        This method performs a step in the constrained beam search process to generate new sequences based on the input constraints.
-        
+        This method performs a step in the constrained beam search process to generate new sequences based on
+        the input constraints.
+
         Args:
             self: The instance of the ConstrainedBeamSearchScorer class.
             batch_idx (int): The index of the batch being processed.
@@ -782,12 +799,13 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             sent_beam_tokens (mindspore.Tensor): The tokens of the current beam hypotheses.
             sent_beam_indices (mindspore.Tensor): The indices of the current beam hypotheses.
             push_progress (bool, optional): A flag indicating whether to push progress. Defaults to False.
-        
+
         Returns:
-            None: This method does not return any value. Instead, it updates the sent_beam_scores, sent_beam_tokens, and sent_beam_indices in place.
-        
+            None: This method does not return any value. Instead, it updates the sent_beam_scores, sent_beam_tokens,
+                and sent_beam_indices in place.
+
         Raises:
-            N/A
+            None.
         """
         # sent_beam_tokens are the next {num_beams} number of tokens that are under consideration for this beam
         # (candidate next tokens)
@@ -932,23 +950,24 @@ class ConstrainedBeamSearchScorer(BeamScorer):
     ) -> Tuple[mindspore.Tensor]:
         r"""
         This method finalizes the beam search process in the ConstrainedBeamSearchScorer class.
-        
+
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing token IDs.
-        - final_beam_scores (mindspore.Tensor): The final scores of the beams.
-        - final_beam_tokens (mindspore.Tensor): The final tokens of the beams.
-        - final_beam_indices (mindspore.Tensor): The final indices of the beams.
-        - max_length (int): The maximum length of the output sequences.
-        - pad_token_id (Optional[int]): The token ID used for padding. Default is None.
-        - eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the end of sequence. Default is None.
-        - beam_indices (Optional[mindspore.Tensor]): The indices of the beams. Default is None.
-        
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing token IDs.
+            final_beam_scores (mindspore.Tensor): The final scores of the beams.
+            final_beam_tokens (mindspore.Tensor): The final tokens of the beams.
+            final_beam_indices (mindspore.Tensor): The final indices of the beams.
+            max_length (int): The maximum length of the output sequences.
+            pad_token_id (Optional[int]): The token ID used for padding. Default is None.
+            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the
+                end of sequence. Default is None.
+            beam_indices (Optional[mindspore.Tensor]): The indices of the beams. Default is None.
+
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the final sequences, sequence scores, and beam indices.
-        
+            Tuple[mindspore.Tensor]: A tuple containing the final sequences, sequence scores, and beam indices.
+
         Raises:
-        - ValueError: Raised if 'pad_token_id' is not defined.
+            ValueError: Raised if 'pad_token_id' is not defined.
         """
         batch_size = len(self._beam_hyps)
 

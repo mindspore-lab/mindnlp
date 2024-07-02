@@ -116,19 +116,20 @@ FEATURE_EXTRACTOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, FEATURE_EXTRA
 def feature_extractor_class_from_name(class_name: str):
     """
     Retrieves the feature extractor class based on the given class name.
-    
+
     Args:
         class_name (str): The name of the feature extractor class to retrieve.
-    
+
     Returns:
         The feature extractor class corresponding to the given class name.
         If no matching class is found, returns None.
-    
+
     Raises:
         AttributeError: If an attribute error occurs while retrieving the feature extractor class.
-    
+
     Note:
         This function searches for the feature extractor class in the following places:
+
         1. In the mapping of feature extractor names to their corresponding module names.
            If a match is found, the class is imported from the respective module.
         2. In the additional content of the feature extractor mapping.
@@ -177,8 +178,7 @@ def get_feature_extractor_config(
         pretrained_model_name_or_path (`str` or `os.PathLike`):
             This can be either:
 
-            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
-              hf-mirror.com.
+            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on hf-mirror.com.
             - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
@@ -212,21 +212,21 @@ def get_feature_extractor_config(
     Returns:
         `Dict`: The configuration of the tokenizer.
 
-    Examples:
-
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    tokenizer_config = get_tokenizer_config("google-bert/bert-base-uncased")
-    # This model does not have a tokenizer config so the result will be an empty dict.
-    tokenizer_config = get_tokenizer_config("FacebookAI/xlm-roberta-base")
-
-    # Save a pretrained tokenizer locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
-    tokenizer.save_pretrained("tokenizer-test")
-    tokenizer_config = get_tokenizer_config("tokenizer-test")
-    ```"""
+    Example:
+        ```python
+        >>> # Download configuration from hf-mirror.com and cache.
+        >>> tokenizer_config = get_tokenizer_config("google-bert/bert-base-uncased")
+        >>> # This model does not have a tokenizer config so the result will be an empty dict.
+        >>> tokenizer_config = get_tokenizer_config("FacebookAI/xlm-roberta-base")
+        ...
+        >>> # Save a pretrained tokenizer locally and you can reload its config
+        >>> from transformers import AutoTokenizer
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
+        >>> tokenizer.save_pretrained("tokenizer-test")
+        >>> tokenizer_config = get_tokenizer_config("tokenizer-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -273,11 +273,11 @@ class AutoFeatureExtractor:
             self: An instance of the AutoFeatureExtractor class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)`
-method.' 
+            EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be
+                instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)` method.'
         """
         raise EnvironmentError(
             "AutoFeatureExtractor is designed to be instantiated "
@@ -346,17 +346,17 @@ method.'
 
         </Tip>
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoFeatureExtractor
-
-        >>> # Download feature extractor from hf-mirror.com and cache.
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
-
-        >>> # If feature extractor files are in a directory (e.g. feature extractor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # feature_extractor = AutoFeatureExtractor.from_pretrained("./test/saved_model/")
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoFeatureExtractor
+            ...
+            >>> # Download feature extractor from hf-mirror.com and cache.
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+            ...
+            >>> # If feature extractor files are in a directory (e.g. feature extractor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # feature_extractor = AutoFeatureExtractor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

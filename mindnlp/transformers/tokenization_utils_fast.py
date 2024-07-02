@@ -93,43 +93,49 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             None.
         
         Raises:
-            ValueError: If the tokenizer cannot be instantiated from any of the following:
+            ValueError:
+                If the tokenizer cannot be instantiated from any of the following:
+                
                 1. A `tokenizers` library serialization file.
                 2. A slow tokenizer instance to convert.
                 3. An equivalent slow tokenizer class to instantiate and convert.
+
                 You need to have sentencepiece installed to convert a slow tokenizer to a fast one.
             ValueError: If `from_slow` is True, but `slow_tokenizer` is None and `slow_tokenizer_class` is None.
                 Also, make sure you have sentencepiece installed if the tokenizer is based on sentencepiece.
-        
+
         Note:
             This method takes the following optional keyword arguments:
+
             - `tokenizer_object`: An existing tokenizer object.
             - `__slow_tokenizer`: A slow tokenizer object.
             - `tokenizer_file`: A file containing a serialized tokenizer object.
             - `from_slow`: A boolean indicating whether the tokenizer should be converted from a slow version.
             - `added_tokens_decoder`: A dictionary mapping index to token for additional tokens.
-        
+
             If `tokenizer_object` is provided, a deep copy of it is used as the fast tokenizer.
             If `fast_tokenizer_file` is provided and `from_slow` is False, the fast tokenizer is loaded from the file.
             If `slow_tokenizer` is provided, it is converted to a fast tokenizer.
             If `slow_tokenizer_class` is provided, it is instantiated and then converted to a fast tokenizer.
-        
+
             The `kwargs` dictionary is updated with the initialization arguments of the slow tokenizer if `slow_tokenizer` is not None.
-        
+
             The tokenizer's truncation and padding settings are applied to the `kwargs` dictionary.
-        
+
             The `added_tokens_decoder` dictionary is used to add additional tokens to the tokenizer.
             Tokens are added in sorted order based on their index, and special tokens are added in a separate step.
-        
+
             If any tokens are added, they are encoded and added to the tokenizer's encoder.
             Additionally, special tokens that are not present in the encoder or the added tokens are added as well.
-        
+
             The `added_tokens_decoder` dictionary is updated with the added tokens.
-        
+
         Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast()
             >>> tokenizer.__init__()
-        
+            ```
+
         """
         tokenizer_object = kwargs.pop("tokenizer_object", None)
         slow_tokenizer = kwargs.pop("__slow_tokenizer", None)
@@ -234,15 +240,16 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def is_fast(self) -> bool:
         r"""
         Method 'is_fast' in the class 'PreTrainedTokenizerFast'.
-        
+
         Args:
             self: PreTrainedTokenizerFast - The instance of the PreTrainedTokenizerFast class.
                 This parameter represents the tokenizer object itself.
-        
+
         Returns:
-            bool - A boolean value indicating whether the tokenizer is considered fast.
+            bool:
+                A boolean value indicating whether the tokenizer is considered fast.
                 Returns True if the tokenizer is fast.
-        
+
         Raises:
             None.
         """
@@ -266,17 +273,17 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def get_vocab(self) -> Dict[str, int]:
         r"""
         Retrieve the vocabulary of the tokenizer including any added tokens.
-        
+
         Args:
             self (PreTrainedTokenizerFast): An instance of the PreTrainedTokenizerFast class.
                 The tokenizer instance from which to retrieve the vocabulary.
-                
+
         Returns:
             Dict[str, int]: A dictionary mapping strings (tokens) to integers (indices) representing the vocabulary.
                 The keys are token strings and the values are the corresponding indices in the vocabulary.
-                
+
         Raises:
-            N/A
+            None.
         """
         return self._tokenizer.get_vocab(with_added_tokens=True)
 
@@ -284,24 +291,27 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def vocab(self) -> Dict[str, int]:
         r"""
         This method retrieves the vocabulary of the `PreTrainedTokenizerFast` class instance.
-        
+
         Args:
             self: An instance of the `PreTrainedTokenizerFast` class.
-        
+
         Returns:
-            A dictionary with string keys and integer values representing the vocabulary of the tokenizer.
-        
+            `Dict[str, int]`:
+                A dictionary with string keys and integer values representing the vocabulary of the tokenizer.
+
         Raises:
             None.
-        
+
         Note:
             The vocabulary is obtained by invoking the `get_vocab()` method of the tokenizer instance.
-        
+
         Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast()
             >>> vocab = tokenizer.vocab()
             >>> print(vocab)
             {'word1': 0, 'word2': 1, 'word3': 2, ...}
+            ```
         """
         return self.get_vocab()
 
@@ -421,20 +431,20 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def _convert_token_to_id_with_added_voc(self, token: str) -> int:
         r"""
         Converts a token to its corresponding ID using the provided tokenizer with added vocabulary.
-        
+
         Args:
             self (PreTrainedTokenizerFast): An instance of the PreTrainedTokenizerFast class.
                 This parameter represents the tokenizer object through which the token will be converted to ID.
             token (str): The token to convert to an ID.
                 This parameter is a string representing the token that needs to be converted.
-        
+
         Returns:
             int: The integer ID corresponding to the input token.
                 If the token is found in the tokenizer's vocabulary, the method returns the ID associated with the token.
                 If the token is not found, the method returns the unknown token ID specified by 'unk_token_id'.
-        
+
         Raises:
-            None: This method does not raise any exceptions explicitly.
+            None.
         """
         index = self._tokenizer.token_to_id(token)
         if index is None:
@@ -444,14 +454,14 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def _convert_id_to_token(self, index: int) -> Optional[str]:
         r"""
         Converts an index to a token.
-        
+
         Args:
             self (PreTrainedTokenizerFast): The instance of the PreTrainedTokenizerFast class.
             index (int): The index to be converted to a token. It should be a non-negative integer.
-        
+
         Returns:
             Optional[str]: Returns the token corresponding to the given index, or None if the index is out of range.
-        
+
         Raises:
             ValueError: If the index is negative.
             TypeError: If the index is not an integer.
@@ -461,17 +471,18 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def _add_tokens(self, new_tokens: List[Union[str, AddedToken]], special_tokens=False) -> int:
         r"""
         This method adds new tokens to the tokenizer.
-        
+
         Args:
             self (PreTrainedTokenizerFast): The instance of the PreTrainedTokenizerFast class.
-            new_tokens (List[Union[str, AddedToken]]): A list of new tokens to be added to the tokenizer. Each token can be either a string or an AddedToken object.
+            new_tokens (List[Union[str, AddedToken]]): A list of new tokens to be added to the tokenizer.
+                Each token can be either a string or an AddedToken object.
             special_tokens (bool): A flag indicating whether the new tokens are special tokens. Defaults to False.
-        
+
         Returns:
             int: The number of tokens added to the tokenizer.
-        
+
         Raises:
-            N/A
+            None
         """
         if special_tokens:
             return self._tokenizer.add_special_tokens(new_tokens)
@@ -529,16 +540,16 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         r"""
         '''
         Tokenizes the given text into a list of strings.
-        
+
         Args:
             text (str): The input text to be tokenized.
             pair (Optional[str]): The optional second input text to be tokenized in pair with the first text. Defaults to None.
             add_special_tokens (bool): A flag indicating whether to add special tokens during tokenization. Defaults to False.
             **kwargs: Additional keyword arguments for tokenization.
-        
+
         Returns:
             List[str]: A list of strings representing the tokenized text.
-        
+
         Raises:
             None.
         '''
@@ -638,12 +649,14 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         verbose: bool = True,
     ) -> BatchEncoding:
         r"""
-        This method `_batch_encode_plus` is defined in the class `PreTrainedTokenizerFast`. It takes 17 parameters and returns a value of type `BatchEncoding`.
-        
+        This method `_batch_encode_plus` is defined in the class `PreTrainedTokenizerFast`.
+        It takes 17 parameters and returns a value of type `BatchEncoding`.
+
         Args:
             self: An instance of the class `PreTrainedTokenizerFast`.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]): A list of input texts or text pairs. Each element can be of type
-`TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]):
+                A list of input texts or text pairs. Each element can be of type `TextInput`, `TextInputPair`,
+                `PreTokenizedInput`, or `PreTokenizedInputPair`.
             add_special_tokens (bool, optional): Whether to add special tokens to the encoded sequences. Defaults to True.
             padding_strategy (PaddingStrategy, optional): The strategy to use for padding. Defaults to `PaddingStrategy.DO_NOT_PAD`.
             truncation_strategy (TruncationStrategy, optional): The strategy to use for truncation. Defaults to `TruncationStrategy.DO_NOT_TRUNCATE`.
@@ -659,13 +672,13 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             return_offsets_mapping (bool, optional): Whether to return offsets mapping. Defaults to False.
             return_length (bool, optional): Whether to return the length of each sequence. Defaults to False.
             verbose (bool, optional): Whether to display verbose information. Defaults to True.
-        
+
         Returns:
             BatchEncoding: An object containing the sanitized tokens and encodings of the input sequences.
-        
+
         Raises:
             TypeError: If `batch_text_or_text_pairs` is not a list or tuple.
-        
+
         """
         if not isinstance(batch_text_or_text_pairs, (tuple, list)):
             raise TypeError(
@@ -753,34 +766,37 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         **kwargs,
     ) -> BatchEncoding:
         r"""
-        This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded inputs along with additional information.
-        
+        This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded
+        inputs along with additional information.
+
         Args:
-        - self: The instance of the class.
-        - text: The input text to be encoded. It can be either a string or a list of tokens.
-        - text_pair: (Optional) The second input text to be encoded in case of pair encoding. It can be either a string or a list of tokens. Defaults to None.
-        - add_special_tokens: A boolean indicating whether to add special tokens to the encoded inputs. Defaults to True.
-        - padding_strategy: An enum from PaddingStrategy indicating the padding strategy to be applied during encoding. Defaults to PaddingStrategy.DO_NOT_PAD.
-        - truncation_strategy: An enum from TruncationStrategy indicating the truncation strategy to be applied during encoding. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
-        - max_length: (Optional) The maximum length of the encoded sequence. Defaults to None.
-        - stride: The stride to use when applying truncation. Defaults to 0.
-        - is_split_into_words: A boolean indicating whether the input text is already pre-tokenized into words. Defaults to False.
-        - pad_to_multiple_of: (Optional) The resulting tensor will be padded to be a multiple of pad_to_multiple_of. Defaults to None.
-        - return_tensors: (Optional) A boolean indicating whether to return tensors instead of lists of integers. Defaults to None.
-        - return_token_type_ids: (Optional) A boolean indicating whether to return token type ids. Defaults to None.
-        - return_attention_mask: (Optional) A boolean indicating whether to return attention masks. Defaults to None.
-        - return_overflowing_tokens: A boolean indicating whether to return overflowing tokens information. Defaults to False.
-        - return_special_tokens_mask: A boolean indicating whether to return special tokens masks. Defaults to False.
-        - return_offsets_mapping: A boolean indicating whether to return the offsets mapping. Defaults to False.
-        - return_length: A boolean indicating whether to return the length of the encoded inputs. Defaults to False.
-        - verbose: A boolean indicating whether to display verbose logs. Defaults to True.
-        - **kwargs: Additional keyword arguments to be passed to the underlying encoding method.
-        
+            self: The instance of the class.
+            text: The input text to be encoded. It can be either a string or a list of tokens.
+            text_pair: (Optional) The second input text to be encoded in case of pair encoding. It can be either a string or a list of tokens. Defaults to None.
+            add_special_tokens: A boolean indicating whether to add special tokens to the encoded inputs. Defaults to True.
+            padding_strategy: An enum from PaddingStrategy indicating the padding strategy to be applied during encoding. Defaults to PaddingStrategy.DO_NOT_PAD.
+            truncation_strategy: An enum from TruncationStrategy indicating the truncation strategy to be applied during encoding. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
+            max_length: (Optional) The maximum length of the encoded sequence. Defaults to None.
+            stride: The stride to use when applying truncation. Defaults to 0.
+            is_split_into_words: A boolean indicating whether the input text is already pre-tokenized into words. Defaults to False.
+            pad_to_multiple_of: (Optional) The resulting tensor will be padded to be a multiple of pad_to_multiple_of. Defaults to None.
+            return_tensors: (Optional) A boolean indicating whether to return tensors instead of lists of integers. Defaults to None.
+            return_token_type_ids: (Optional) A boolean indicating whether to return token type ids. Defaults to None.
+            return_attention_mask: (Optional) A boolean indicating whether to return attention masks. Defaults to None.
+            return_overflowing_tokens: A boolean indicating whether to return overflowing tokens information. Defaults to False.
+            return_special_tokens_mask: A boolean indicating whether to return special tokens masks. Defaults to False.
+            return_offsets_mapping: A boolean indicating whether to return the offsets mapping. Defaults to False.
+            return_length: A boolean indicating whether to return the length of the encoded inputs. Defaults to False.
+            verbose: A boolean indicating whether to display verbose logs. Defaults to True.
+            **kwargs: Additional keyword arguments to be passed to the underlying encoding method.
+
         Returns:
-        A BatchEncoding object containing the encoded inputs and additional information such as token type ids, attention masks, special tokens masks, offsets mapping, and length of the encoded inputs.
-        
+            `BatchEncoding`
+                A BatchEncoding object containing the encoded inputs and additional information such as
+                token type ids, attention masks, special tokens masks, offsets mapping, and length of the encoded inputs.
+
         Raises:
-        None
+            None
         """
         batched_input = [(text, text_pair)] if text_pair else [text]
         batched_output = self._batch_encode_plus(
@@ -821,16 +837,16 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
         r"""
         Converts a list of tokens into a string representation using the backend tokenizer's decoder.
-        
+
         Args:
             self (PreTrainedTokenizerFast): An instance of the PreTrainedTokenizerFast class.
             tokens (List[str]): A list of tokens to be converted into a string.
-        
+
         Returns:
             str: A string representation of the input tokens after decoding.
-        
+
         Raises:
-            N/A
+            None
         """
         return self.backend_tokenizer.decoder.decode(tokens)
 
@@ -843,26 +859,30 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     ) -> str:
         r"""
         Decodes a list of token IDs into a string representation using the tokenizer.
-        
+
         Args:
             self (PreTrainedTokenizerFast): An instance of the PreTrainedTokenizerFast class.
             token_ids (Union[int, List[int]]): A single token ID or a list of token IDs.
             skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
-            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces. If set to None, the value from self.clean_up_tokenization_spaces is used. Defaults to None.
+            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces.
+                If set to None, the value from self.clean_up_tokenization_spaces is used. Defaults to None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             str: The decoded text representation of the input token IDs.
-        
+
         Raises:
             None
-        
+
         Note:
             - If token_ids is an integer, it is converted to a list containing that integer.
-            - The use_source_tokenizer argument can be passed as a keyword argument in kwargs to enable/disable using the source tokenizer for decoding.
-            - If clean_up_tokenization_spaces is True, the resulting text will have any extra spaces introduced during tokenization removed by calling the clean_up_tokenization() method.
-        
-        Examples:
+            - The use_source_tokenizer argument can be passed as a keyword argument in kwargs to enable/disable
+            using the source tokenizer for decoding.
+            - If clean_up_tokenization_spaces is True, the resulting text will have any extra spaces introduced during
+            tokenization removed by calling the clean_up_tokenization() method.
+
+        Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast(...)
             >>> input_ids = tokenizer.encode("Hello, world!")
             >>> tokenizer._decode(input_ids)
@@ -873,6 +893,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             '10'
             >>> tokenizer._decode(10, clean_up_tokenization_spaces=True)
             '10'
+            ```
         """
         self._decode_use_source_tokenizer = kwargs.pop("use_source_tokenizer", False)
 
@@ -969,8 +990,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
                 Additional keyword arguments passed along to the trainer from the 🤗 Tokenizers library.
 
         Returns:
-            [`PreTrainedTokenizerFast`]: A new tokenizer of the same type as the original one, trained on
-            `text_iterator`.
+            [`PreTrainedTokenizerFast`]:
+                A new tokenizer of the same type as the original one, trained on `text_iterator`.
 
         """
         tokenizer_json = json.loads(self._tokenizer.to_str())

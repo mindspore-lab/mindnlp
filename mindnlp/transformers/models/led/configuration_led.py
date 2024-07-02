@@ -33,7 +33,6 @@ class LEDConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 50265):
             Vocabulary size of the LED model. Defines the number of different tokens that can be represented by the
@@ -79,19 +78,19 @@ class LEDConfig(PretrainedConfig):
             Whether or not the model should return the last key/values attentions (not used by all models)
 
     Example:
-
-    ```python
-    >>> from transformers import LEDModel, LEDConfig
-
-    >>> # Initializing a LED allenai/led-base-16384 style configuration
-    >>> configuration = LEDConfig()
-
-    >>> # Initializing a model from the allenai/led-base-16384 style configuration
-    >>> model = LEDModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import LEDModel, LEDConfig
+        ...
+        >>> # Initializing a LED allenai/led-base-16384 style configuration
+        >>> configuration = LEDConfig()
+        ...
+        >>> # Initializing a model from the allenai/led-base-16384 style configuration
+        >>> model = LEDModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "led"
     attribute_map = {

@@ -819,7 +819,6 @@ class RoCBertPreTrainedModel(PreTrainedModel):
 
 class RoCBertModel(RoCBertPreTrainedModel):
     """
-
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
     cross-attention is added between the self-attention layers, following the architecture described in [Attention is
     all you need](https://arxiv.org/abs/1706.03762) by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
@@ -891,23 +890,25 @@ class RoCBertModel(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors
+                of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = (
             output_attentions
@@ -1075,6 +1076,7 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
         **kwargs,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
+        Args:
             attack_input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
                 attack sample ids for computing the contrastive loss. Indices should be in `[-100, 0, ...,
                 config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
@@ -1105,32 +1107,32 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
                 Used to hide legacy arguments that have been deprecated.
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], MaskedLMOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, RoCBertForPreTraining
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
-        >>> model = RoCBertForPreTraining.from_pretrained("weiweishi/roc-bert-base-zh")
-
-        >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
-        >>> attack_inputs = {}
-        >>> for key in list(inputs.keys()):
-        ...     attack_inputs[f"attack_{key}"] = inputs[key]
-        >>> label_inputs = {}
-        >>> for key in list(inputs.keys()):
-        ...     label_inputs[f"labels_{key}"] = inputs[key]
-
-        >>> inputs.update(label_inputs)
-        >>> inputs.update(attack_inputs)
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        >>> logits.shape
-        torch.Size([1, 11, 21128])
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, RoCBertForPreTraining
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
+            >>> model = RoCBertForPreTraining.from_pretrained("weiweishi/roc-bert-base-zh")
+            ...
+            >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
+            >>> attack_inputs = {}
+            >>> for key in list(inputs.keys()):
+            ...     attack_inputs[f"attack_{key}"] = inputs[key]
+            >>> label_inputs = {}
+            >>> for key in list(inputs.keys()):
+            ...     label_inputs[f"labels_{key}"] = inputs[key]
+            ...
+            >>> inputs.update(label_inputs)
+            >>> inputs.update(attack_inputs)
+            >>> outputs = model(**inputs)
+            ...
+            >>> logits = outputs.logits
+            >>> logits.shape
+            torch.Size([1, 11, 21128])
+            ```
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1278,31 +1280,32 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Example:
-        ```python
-        >>> from transformers import AutoTokenizer, RoCBertForMaskedLM
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
-        >>> model = RoCBertForMaskedLM.from_pretrained("weiweishi/roc-bert-base-zh")
-
-        >>> inputs = tokenizer("法国是首都[MASK].", return_tensors="pt")
-
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
-
-        >>> # retrieve index of {mask}
-        >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
-
-        >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
-        >>> tokenizer.decode(predicted_token_id)
-        '.'
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, RoCBertForMaskedLM
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
+            >>> model = RoCBertForMaskedLM.from_pretrained("weiweishi/roc-bert-base-zh")
+            ...
+            >>> inputs = tokenizer("法国是首都[MASK].", return_tensors="pt")
+            ...
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
+            ...
+            >>> # retrieve index of {mask}
+            >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
+            ...
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> tokenizer.decode(predicted_token_id)
+            '.'
+            ```
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1434,53 +1437,54 @@ class RoCBertForCausalLM(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
         r"""
-        encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
-            only required when the model is used as a decoder in a Sequence to Sequence model.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
+                `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
+                `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
+                only required when the model is used as a decoder in a Sequence to Sequence model.
 
-            Contains pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
-            blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
+                blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, RoCBertForCausalLM, RoCBertConfig
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
-        >>> config = RoCBertConfig.from_pretrained("weiweishi/roc-bert-base-zh")
-        >>> config.is_decoder = True
-        >>> model = RoCBertForCausalLM.from_pretrained("weiweishi/roc-bert-base-zh", config=config)
-
-        >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.logits
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, RoCBertForCausalLM, RoCBertConfig
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("weiweishi/roc-bert-base-zh")
+            >>> config = RoCBertConfig.from_pretrained("weiweishi/roc-bert-base-zh")
+            >>> config.is_decoder = True
+            >>> model = RoCBertForCausalLM.from_pretrained("weiweishi/roc-bert-base-zh", config=config)
+            ...
+            >>> inputs = tokenizer("你好，很高兴认识你", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> prediction_logits = outputs.logits
+            ```
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1617,10 +1621,11 @@ class RoCBertForSequenceClassification(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1714,10 +1719,11 @@ class RoCBertForMultipleChoice(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1830,8 +1836,9 @@ class RoCBertForTokenClassification(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1901,14 +1908,15 @@ class RoCBertForQuestionAnswering(RoCBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict

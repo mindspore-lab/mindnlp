@@ -96,17 +96,15 @@ class BartphoTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
+            
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
+            - `nbest_size = {0,1}`: No sampling is performed.
+            - `nbest_size > 1`: samples from the nbest_size results.
+            - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+            using forward-filtering-and-backward-sampling algorithm.
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            BPE-dropout.
 
     Attributes:
         sp_model (`SentencePieceProcessor`):
@@ -133,7 +131,7 @@ class BartphoTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initializes a new instance of the BartphoTokenizer class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str): The path to the vocabulary file.
@@ -147,10 +145,10 @@ class BartphoTokenizer(PreTrainedTokenizer):
             mask_token (str, optional): The masking token. Defaults to '<mask>'.
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -197,15 +195,15 @@ class BartphoTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         This method '__getstate__' in the class 'BartphoTokenizer' is used to provide the state of the object for pickling.
-        
+
         Args:
             self: An instance of the BartphoTokenizer class. Represents the current object whose state needs to be retrieved.
-        
+
         Returns:
             None: This method returns None after setting the 'sp_model' attribute to None and serializing the 'sp_model_proto' attribute.
-        
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -214,19 +212,24 @@ class BartphoTokenizer(PreTrainedTokenizer):
 
     def __setstate__(self, d):
         """
-        This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the
-instance of the class, and 'd' which is a dictionary representing the state to be restored.
-        
+        This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the 
+        object's state from a dictionary representation. 
+        It takes two parameters, 'self' which refers to the instance of the class, and 'd' which is a dictionary 
+        representing the state to be restored.
+
         Args:
             self (BartphoTokenizer): The instance of the BartphoTokenizer class.
-            d (dict): A dictionary representing the state to be restored. It contains the data necessary to reconstruct the object's state.
-        
+            d (dict): A dictionary representing the state to be restored. 
+                It contains the data necessary to reconstruct the object's state.
+
         Returns:
-            None: This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions that could arise during the execution of this method may include, but are not limited to, those
-related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
+            None:
+                However, potential exceptions that could arise during the execution of this method may include, 
+                but are not limited to, those related to the initialization of the 'SentencePieceProcessor' instance or 
+                its 'LoadFromSerializedProto' method.
         """
         self.__dict__ = d
 
@@ -360,7 +363,7 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
             List[str]: A list of tokenized strings representing the text.
         
         Raises:
-            N/A
+            None
         """
         return self.sp_model.encode(text, out_type=str)
 
@@ -382,20 +385,20 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
-            Saves the vocabulary files to the specified directory.
-        
-            Args:
-                self (BartphoTokenizer): An instance of the BartphoTokenizer class.
-                save_directory (str): The directory where the vocabulary files will be saved.
-                filename_prefix (Optional[str], optional): The prefix to be added to the filenames (default: None).
-        
-            Returns:
-                Tuple[str]: A tuple containing the paths of the saved vocabulary files.
-        
-            Raises:
-                FileNotFoundError: If the save_directory does not exist.
-                IsADirectoryError: If the specified save_directory is not a directory.
-            """
+        Saves the vocabulary files to the specified directory.
+
+        Args:
+            self (BartphoTokenizer): An instance of the BartphoTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filenames (default: None).
+
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files.
+
+        Raises:
+            FileNotFoundError: If the save_directory does not exist.
+            IsADirectoryError: If the specified save_directory is not a directory.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

@@ -75,20 +75,20 @@ class Data2VecTextConfig(PretrainedConfig):
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
 
-    Examples:
-
-    ```python
-    >>> from mindnlp.transformers import Data2VecTextConfig, Data2VecTextModel
-
-    >>> # Initializing a Data2VecText facebook/data2vec-text-base style configuration
-    >>> configuration = Data2VecTextConfig()
-
-    >>> # Initializing a model (with random weights) from the facebook/data2vec-text-base style configuration
-    >>> model = Data2VecTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from mindnlp.transformers import Data2VecTextConfig, Data2VecTextModel
+        ...
+        >>> # Initializing a Data2VecText facebook/data2vec-text-base style configuration
+        >>> configuration = Data2VecTextConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the facebook/data2vec-text-base style configuration
+        >>> model = Data2VecTextModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "data2vec-text"
 

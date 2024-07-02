@@ -132,21 +132,24 @@ class DecisionTransformerGPT2Attention(nn.Cell):
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
-        This method _upcast_and_reordered_attn in the class GPT2Attention performs upcasting and reordering operations for the attention mechanism in a GPT-2 model.
+        This method _upcast_and_reordered_attn in the class GPT2Attention performs upcasting and reordering operations
+        for the attention mechanism in a GPT-2 model.
         
         Args:
             self (GPT2Attention): The instance of the GPT2Attention class.
             query (Tensor): The input query tensor with shape (batch_size, num_heads, query_sequence_length, depth).
             key (Tensor): The input key tensor with shape (batch_size, num_heads, key_sequence_length, depth).
             value (Tensor): The input value tensor with shape (batch_size, num_heads, key_sequence_length, depth).
-            attention_mask (Tensor, optional): An optional tensor defining additional attention masks with shape (batch_size, num_heads, query_sequence_length, key_sequence_length).
+            attention_mask (Tensor, optional): An optional tensor defining additional attention masks with shape
+                (batch_size, num_heads, query_sequence_length, key_sequence_length).
             head_mask (Tensor, optional): An optional tensor that masks specific heads of the attention mechanism.
         
         Returns:
-            None. The method returns the computed attention output and attention weights.
+            None: The method returns the computed attention output and attention weights.
         
         Raises:
-            RuntimeError: Raised if there is an error during upcasting and the resulting attention weights do not have the expected data type 'mindspore.float32'.
+            RuntimeError: Raised if there is an error during upcasting and the resulting attention weights
+                do not have the expected data type 'mindspore.float32'.
         """
         bsz, num_heads, q_seq_len, dk = query.shape
         _, _, k_seq_len, _ = key.shape
@@ -633,10 +636,8 @@ class DecisionTransformerPreTrainedModel(PreTrainedModel):
 
 class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
     """
-
     The model builds upon the GPT2 architecture to perform autoregressive prediction of actions in an offline RL
     setting. Refer to the paper for more details: https://arxiv.org/abs/2106.01345
-
     """
 
     def __init__(self, config):
@@ -678,42 +679,43 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], DecisionTransformerOutput]:
         r"""
         Returns:
+            `Union[Tuple[mindspore.Tensor], DecisionTransformerOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import DecisionTransformerModel
-        >>> import torch
-
-        >>> model = DecisionTransformerModel.from_pretrained("edbeeching/decision-transformer-gym-hopper-medium")
-        >>> # evaluation
-        >>> model = model.to(device)
-        >>> model.eval()
-
-        >>> env = gym.make("Hopper-v3")
-        >>> state_dim = env.observation_space.shape[0]
-        >>> act_dim = env.action_space.shape[0]
-
-        >>> state = env.reset()
-        >>> states = torch.from_numpy(state).reshape(1, 1, state_dim).to(device=device, dtype=torch.float32)
-        >>> actions = torch.zeros((1, 1, act_dim), device=device, dtype=torch.float32)
-        >>> rewards = torch.zeros(1, 1, device=device, dtype=torch.float32)
-        >>> target_return = torch.tensor(TARGET_RETURN, dtype=torch.float32).reshape(1, 1)
-        >>> timesteps = torch.tensor(0, device=device, dtype=torch.long).reshape(1, 1)
-        >>> attention_mask = torch.zeros(1, 1, device=device, dtype=torch.float32)
-
-        >>> # forward pass
-        >>> with torch.no_grad():
-        ...     state_preds, action_preds, return_preds = model(
-        ...         states=states,
-        ...         actions=actions,
-        ...         rewards=rewards,
-        ...         returns_to_go=target_return,
-        ...         timesteps=timesteps,
-        ...         attention_mask=attention_mask,
-        ...         return_dict=False,
-        ...     )
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import DecisionTransformerModel
+            >>> import torch
+            ...
+            >>> model = DecisionTransformerModel.from_pretrained("edbeeching/decision-transformer-gym-hopper-medium")
+            >>> # evaluation
+            >>> model = model.to(device)
+            >>> model.eval()
+            ...
+            >>> env = gym.make("Hopper-v3")
+            >>> state_dim = env.observation_space.shape[0]
+            >>> act_dim = env.action_space.shape[0]
+            ...
+            >>> state = env.reset()
+            >>> states = torch.from_numpy(state).reshape(1, 1, state_dim).to(device=device, dtype=torch.float32)
+            >>> actions = torch.zeros((1, 1, act_dim), device=device, dtype=torch.float32)
+            >>> rewards = torch.zeros(1, 1, device=device, dtype=torch.float32)
+            >>> target_return = torch.tensor(TARGET_RETURN, dtype=torch.float32).reshape(1, 1)
+            >>> timesteps = torch.tensor(0, device=device, dtype=torch.long).reshape(1, 1)
+            >>> attention_mask = torch.zeros(1, 1, device=device, dtype=torch.float32)
+            ...
+            >>> # forward pass
+            >>> with torch.no_grad():
+            ...     state_preds, action_preds, return_preds = model(
+            ...         states=states,
+            ...         actions=actions,
+            ...         rewards=rewards,
+            ...         returns_to_go=target_return,
+            ...         timesteps=timesteps,
+            ...         attention_mask=attention_mask,
+            ...         return_dict=False,
+            ...     )
+            ```
+        """
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (

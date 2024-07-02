@@ -165,7 +165,7 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             strip_accents (str, optional): Flag to indicate whether to strip accents. Defaults to None.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the vocabulary file specified by 'vocab_file' does not exist.
@@ -211,10 +211,10 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             self (DistilBertTokenizer): The instance of the DistilBertTokenizer class.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         return self.basic_tokenizer.do_lower_case
 
@@ -256,10 +256,12 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             `add_tokens` method. The resulting dictionary is returned as the output of this method.
         
         Example:
+            ```python
             >>> tokenizer = DistilBertTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<pad>': 0, '<s>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4, '<cls>': 5, '<sep>': 6, '<eod>': 7, '<eop>': 8}
+            ```
         """
         return dict(self.vocab, **self.added_tokens_encoder)
 
@@ -267,29 +269,31 @@ class DistilBertTokenizer(PreTrainedTokenizer):
     def _tokenize(self, text, split_special_tokens=False):
         """
         Tokenizes a given text into a list of tokens using the DistilBertTokenizer.
-        
+
         Args:
             self (DistilBertTokenizer): An instance of the DistilBertTokenizer class.
             text (str): The input text to be tokenized.
             split_special_tokens (bool): Flag indicating whether to split special tokens or not. Default is False.
-        
+
         Returns:
             list: A list of tokens generated from the input text.
-        
+
         Raises:
             None.
-        
+
         Note:
             This method tokenizes the input text by either using the basic tokenizer followed by the wordpiece tokenizer,
             or directly using the wordpiece tokenizer, depending on the value of `do_basic_tokenize` attribute of the tokenizer.
             If `do_basic_tokenize` is True, special tokens are never split unless `split_special_tokens` is True.
             The resulting tokens are returned as a list.
-        
+
         Example:
-            tokenizer = DistilBertTokenizer()
-            tokens = tokenizer._tokenize("Hello world!")
-            print(tokens)
-            # Output: ['hello', 'world', '!']
+            ```python
+            >>> tokenizer = DistilBertTokenizer()
+            >>> tokens = tokenizer._tokenize("Hello world!")
+            >>> print(tokens)
+            >>> # Output: ['hello', 'world', '!']
+            ```
         """
         split_tokens = []
         if self.do_basic_tokenize:
@@ -409,30 +413,32 @@ class DistilBertTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Saves the vocabulary of the DistilBertTokenizer to a file.
-        
+
         Args:
             self (DistilBertTokenizer): An instance of the DistilBertTokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved.
             filename_prefix (Optional[str], optional): An optional prefix to prepend to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path of the saved vocabulary file.
-        
+
         Raises:
             None.
-        
+
         Note:
             The vocabulary file will be saved in the specified directory with the filename constructed using the provided
             filename_prefix (if any) and the default vocabulary file name ('vocab.txt'). If the save_directory is not a valid
             directory, the vocabulary file will be saved with the provided save_directory as the filename.
-        
+
             The vocabulary file will contain each token in the vocabulary, separated by a newline character. The tokens will be
             sorted based on their token indices. If the token indices are not consecutive, a warning message will be logged.
             This can indicate a corrupted vocabulary.
-        
+
         Example:
-            tokenizer = DistilBertTokenizer()
-            tokenizer.save_vocabulary('/path/to/save', 'my_model')
+            ```python
+            >>> tokenizer = DistilBertTokenizer()
+            >>> tokenizer.save_vocabulary('/path/to/save', 'my_model')
+            ```
         """
         index = 0
         if os.path.isdir(save_directory):
@@ -487,20 +493,24 @@ class BasicTokenizer:
     ):
         """
         Initializes an instance of the BasicTokenizer class.
-        
+
         Args:
             self: The instance of the class.
-            do_lower_case (bool, optional): Specifies whether the tokenizer should convert text to lowercase. Defaults to True.
+            do_lower_case (bool, optional): Specifies whether the tokenizer should convert text to lowercase.
+                Defaults to True.
             never_split (list, optional): A list of tokens that should never be split. Defaults to None.
-            tokenize_chinese_chars (bool, optional): Specifies whether the tokenizer should tokenize Chinese characters. Defaults to True.
-            strip_accents (None or str, optional): Specifies whether accents should be stripped from tokens. Defaults to None.
-            do_split_on_punc (bool, optional): Specifies whether the tokenizer should split tokens on punctuation marks. Defaults to True.
-        
+            tokenize_chinese_chars (bool, optional): Specifies whether the tokenizer should tokenize Chinese characters.
+                Defaults to True.
+            strip_accents (None or str, optional): Specifies whether accents should be stripped from tokens.
+                Defaults to None.
+            do_split_on_punc (bool, optional): Specifies whether the tokenizer should split tokens on punctuation marks.
+                Defaults to True.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if never_split is None:
             never_split = []
@@ -515,7 +525,7 @@ class BasicTokenizer:
         Basic Tokenization of a piece of text. For sub-word tokenization, see WordPieceTokenizer.
 
         Args:
-            never_split (`List[str]`, *optional*)
+            never_split (`List[str]`, *optional*):
                 Kept for backward compatibility purposes. Now implemented directly at the base class level (see
                 [`PreTrainedTokenizer.tokenize`]) List of token not to split.
         """
@@ -646,7 +656,7 @@ class WordpieceTokenizer:
             max_input_chars_per_word (int, optional): The maximum number of characters allowed per word. Default is 100.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is less than or equal to 0.

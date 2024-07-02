@@ -48,7 +48,7 @@ class StableLmConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 32):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -97,13 +97,13 @@ class StableLmConfig(PretrainedConfig):
             The id of the `EOS` token in the vocabulary.
 
     Example:
-
-    ```python
-    >>> from transformers import StableLmModel, StableLmConfig
-
-    >>> # Initializing a StableLM stablelm-3b style configuration
-    >>> configuration = StableLmConfig()
-    ```"""
+        ```python
+        >>> from transformers import StableLmModel, StableLmConfig
+        ...
+        >>> # Initializing a StableLM stablelm-3b style configuration
+        >>> configuration = StableLmConfig()
+        ```
+    """
 
     model_type = "stablelm"
     keys_to_ignore_at_inference = ["past_key_values"]

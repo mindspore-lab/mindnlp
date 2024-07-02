@@ -60,19 +60,19 @@ class Blip2VisionConfig(PretrainedConfig):
             Whether to add a bias to the queries and values in the self-attention layers.
 
     Example:
-
-    ```python
-    >>> from transformers import Blip2VisionConfig, Blip2VisionModel
-
-    >>> # Initializing a Blip2VisionConfig with Salesforce/blip2-opt-2.7b style configuration
-    >>> configuration = Blip2VisionConfig()
-
-    >>> # Initializing a Blip2VisionModel (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
-    >>> model = Blip2VisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import Blip2VisionConfig, Blip2VisionModel
+        ...
+        >>> # Initializing a Blip2VisionConfig with Salesforce/blip2-opt-2.7b style configuration
+        >>> configuration = Blip2VisionConfig()
+        ...
+        >>> # Initializing a Blip2VisionModel (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
+        >>> model = Blip2VisionModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blip_2_vision_model"
 
     def __init__(
@@ -92,7 +92,7 @@ class Blip2VisionConfig(PretrainedConfig):
     ):
         """
         Initializes an instance of the Blip2VisionConfig class.
-        
+
         Args:
             self: The instance of the class.
             hidden_size (int, optional): The size of the hidden layers. Defaults to 1408.
@@ -106,10 +106,10 @@ class Blip2VisionConfig(PretrainedConfig):
             attention_dropout (float, optional): The dropout rate for attention layers. Defaults to 0.0.
             initializer_range (float, optional): The range for weight initialization. Defaults to 1e-10.
             qkv_bias (bool, optional): Whether to include bias in the query, key, value layers. Defaults to True.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -131,18 +131,22 @@ class Blip2VisionConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         Method to create a Blip2VisionConfig instance from a pretrained model.
-        
+
         Args:
             cls (type): The class object itself.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name or path of the pretrained model to load.
-            
+            pretrained_model_name_or_path (Union[str, os.PathLike]):
+                A string representing the name or path of the pretrained model to load.
+
         Returns:
-            PretrainedConfig: An instance of the Blip2VisionConfig class initialized with the configuration obtained from the pretrained model.
-            
+            PretrainedConfig:
+                An instance of the Blip2VisionConfig class initialized with the configuration obtained from the pretrained model.
+
         Raises:
-            - KeyError: If the 'model_type' key is not found in the configuration dictionary.
-            - AttributeError: If the 'model_type' key is present in the configuration dictionary but the class does not have a 'model_type' attribute.
-            - Warning: If the model type in the configuration dictionary does not match the class's model type, a warning is logged to alert the user.
+            KeyError: If the 'model_type' key is not found in the configuration dictionary.
+            AttributeError: If the 'model_type' key is present in the configuration dictionary
+                but the class does not have a 'model_type' attribute.
+            Warning: If the model type in the configuration dictionary does not match the class's model type,
+                a warning is logged to alert the user.
         """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -207,19 +211,19 @@ class Blip2QFormerConfig(PretrainedConfig):
         encoder_hidden_size (`int`, *optional*, defaults to 1408):
             The hidden size of the hidden states for cross-attention.
 
-    Examples:
-
-    ```python
-    >>> from transformers import Blip2QFormerConfig, Blip2QFormerModel
-
-    >>> # Initializing a BLIP-2 Salesforce/blip2-opt-2.7b style configuration
-    >>> configuration = Blip2QFormerConfig()
-
-    >>> # Initializing a model (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
-    >>> model = Blip2QFormerModel(configuration)
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import Blip2QFormerConfig, Blip2QFormerModel
+        ...
+        >>> # Initializing a BLIP-2 Salesforce/blip2-opt-2.7b style configuration
+        >>> configuration = Blip2QFormerConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
+        >>> model = Blip2QFormerModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blip_2_qformer"
 
     def __init__(
@@ -243,7 +247,7 @@ class Blip2QFormerConfig(PretrainedConfig):
     ):
         """
         Initialize a Blip2QFormerConfig object with the specified parameters.
-        
+
         Args:
             self: The object itself.
             vocab_size (int): The size of the vocabulary.
@@ -261,10 +265,10 @@ class Blip2QFormerConfig(PretrainedConfig):
             position_embedding_type (str): The type of position embedding used (e.g., absolute).
             cross_attention_frequency (int): The frequency of cross-attention layers in the model.
             encoder_hidden_size (int): The size of the encoder hidden layers.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -289,18 +293,19 @@ class Blip2QFormerConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         This method creates a 'Blip2QFormerConfig' instance from a pretrained model.
-        
+
         Args:
             cls (type): The class type of 'Blip2QFormerConfig'.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model. It accepts a string or os.PathLike object.
-        
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+                It accepts a string or os.PathLike object.
+
         Returns:
             PretrainedConfig: Returns a 'PretrainedConfig' object representing the configuration of the pretrained model.
-        
+
         Raises:
-            - ValueError: If the 'config_dict' does not contain the required keys or values.
-            - TypeError: If the input parameters are of incorrect types.
-            - Warning: If the instantiated model type differs from the provided model type, a warning is issued.
+            ValueError: If the 'config_dict' does not contain the required keys or values.
+            TypeError: If the input parameters are of incorrect types.
+            Warning: If the instantiated model type differs from the provided model type, a warning is issued.
         """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -336,39 +341,38 @@ class Blip2Config(PretrainedConfig):
             Dictionary of configuration options used to initialize any [`PretrainedConfig`].
         num_query_tokens (`int`, *optional*, defaults to 32):
             The number of query tokens passed through the Transformer.
-
         kwargs (*optional*):
             Dictionary of keyword arguments.
 
     Example:
-
-    ```python
-    >>> from transformers import (
-    ...     Blip2VisionConfig,
-    ...     Blip2QFormerConfig,
-    ...     OPTConfig,
-    ...     Blip2Config,
-    ...     Blip2ForConditionalGeneration,
-    ... )
-
-    >>> # Initializing a Blip2Config with Salesforce/blip2-opt-2.7b style configuration
-    >>> configuration = Blip2Config()
-
-    >>> # Initializing a Blip2ForConditionalGeneration (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
-    >>> model = Blip2ForConditionalGeneration(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-
-    >>> # We can also initialize a Blip2Config from a Blip2VisionConfig, Blip2QFormerConfig and any PretrainedConfig
-
-    >>> # Initializing BLIP-2 vision, BLIP-2 Q-Former and language model configurations
-    >>> vision_config = Blip2VisionConfig()
-    >>> qformer_config = Blip2QFormerConfig()
-    >>> text_config = OPTConfig()
-
-    >>> config = Blip2Config.from_text_vision_configs(vision_config, qformer_config, text_config)
-    ```"""
+        ```python
+        >>> from transformers import (
+        ...     Blip2VisionConfig,
+        ...     Blip2QFormerConfig,
+        ...     OPTConfig,
+        ...     Blip2Config,
+        ...     Blip2ForConditionalGeneration,
+        ... )
+        ...
+        >>> # Initializing a Blip2Config with Salesforce/blip2-opt-2.7b style configuration
+        >>> configuration = Blip2Config()
+        ...
+        >>> # Initializing a Blip2ForConditionalGeneration (with random weights) from the Salesforce/blip2-opt-2.7b style configuration
+        >>> model = Blip2ForConditionalGeneration(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ...
+        >>> # We can also initialize a Blip2Config from a Blip2VisionConfig, Blip2QFormerConfig and any PretrainedConfig
+        ...
+        >>> # Initializing BLIP-2 vision, BLIP-2 Q-Former and language model configurations
+        >>> vision_config = Blip2VisionConfig()
+        >>> qformer_config = Blip2QFormerConfig()
+        >>> text_config = OPTConfig()
+        ...
+        >>> config = Blip2Config.from_text_vision_configs(vision_config, qformer_config, text_config)
+        ```
+    """
     model_type = "blip-2"
 
     def __init__(self, vision_config=None, qformer_config=None, text_config=None, num_query_tokens=32, **kwargs):
@@ -383,7 +387,7 @@ class Blip2Config(PretrainedConfig):
             num_query_tokens (int, optional): The number of query tokens. Defaults to 32.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

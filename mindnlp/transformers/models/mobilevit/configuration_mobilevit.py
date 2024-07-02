@@ -72,19 +72,19 @@ class MobileViTConfig(PretrainedConfig):
             The index that is ignored by the loss function of the semantic segmentation model.
 
     Example:
-
-    ```python
-    >>> from transformers import MobileViTConfig, MobileViTModel
-
-    >>> # Initializing a mobilevit-small style configuration
-    >>> configuration = MobileViTConfig()
-
-    >>> # Initializing a model from the mobilevit-small style configuration
-    >>> model = MobileViTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import MobileViTConfig, MobileViTModel
+        ...
+        >>> # Initializing a mobilevit-small style configuration
+        >>> configuration = MobileViTConfig()
+        ...
+        >>> # Initializing a model from the mobilevit-small style configuration
+        >>> model = MobileViTModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "mobilevit"
 

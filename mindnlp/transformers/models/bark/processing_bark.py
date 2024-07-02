@@ -65,7 +65,7 @@ class BarkProcessor(ProcessorMixin):
                 Defaults to None.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -92,7 +92,7 @@ class BarkProcessor(ProcessorMixin):
             speaker_embeddings_dict_path (`str`, *optional*, defaults to `"speaker_embeddings_path.json"`):
                 The name of the `.json` file containing the speaker_embeddings dictionnary located in
                 `pretrained_model_name_or_path`. If `None`, no speaker_embeddings is loaded.
-            **kwargs
+            **kwargs:
                 Additional keyword arguments passed along to both
                 [`~tokenization_utils_base.PreTrainedTokenizer.from_pretrained`].
         """
@@ -180,16 +180,16 @@ class BarkProcessor(ProcessorMixin):
     def _load_voice_preset(self, voice_preset: str = None, **kwargs):
         """
         This method '_load_voice_preset' is a member of the class 'BarkProcessor' and is responsible for loading voice presets.
-        
+
         Args:
             self (object): The instance of the 'BarkProcessor' class.
-            voice_preset (str): The name of the voice preset to be loaded. It is an optional parameter and defaults to None. 
+            voice_preset (str): The name of the voice preset to be loaded. It is an optional parameter and defaults to None.
                 It specifies the voice preset to be loaded from the speaker embeddings.
-        
+
         Returns:
             dict: A dictionary containing the loaded voice preset data. The dictionary keys are 'semantic_prompt', 'coarse_prompt',
             and 'fine_prompt', and the corresponding values are NumPy arrays representing the voice preset data.
-        
+
         Raises:
             ValueError: This exception is raised if the voice preset is unrecognized or if any key ('semantic_prompt', 'coarse_prompt',
             or 'fine_prompt') is missing in the speaker embeddings for the specified voice preset.
@@ -230,34 +230,40 @@ class BarkProcessor(ProcessorMixin):
     def _validate_voice_preset_dict(self, voice_preset: Optional[dict] = None):
         """
         Validates the voice preset dictionary provided as input.
-        
+
         Args:
             self (BarkProcessor): An instance of the BarkProcessor class.
-            voice_preset (Optional[dict]): A dictionary representing the voice preset. This dictionary should contain the following keys: 
+            voice_preset (Optional[dict]):
+                A dictionary representing the voice preset. This dictionary should contain the following keys:
+
                 - 'semantic_prompt' (numpy.ndarray): A 2D ndarray representing the semantic prompt.
                 - 'coarse_prompt' (numpy.ndarray): A 2D ndarray representing the coarse prompt.
                 - 'fine_prompt' (numpy.ndarray): A 2D ndarray representing the fine prompt.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If any of the following conditions are not met:
+            ValueError:
+                If any of the following conditions are not met:
+
                 - The 'semantic_prompt', 'coarse_prompt', and 'fine_prompt' keys are missing in the voice_preset dictionary.
                 - The 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' values are not of type numpy.ndarray.
                 - The shape of 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' is not equal to the expected preset shape.
-        
+
         Note:
             - The expected preset shape is determined by the preset_shape attribute of the BarkProcessor class.
-        
+
         Example:
-            bp = BarkProcessor()
-            voice_preset = {
-                'semantic_prompt': np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]),
-                'coarse_prompt': np.array([[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]]),
-                'fine_prompt': np.array([[1.3, 1.4, 1.5], [1.6, 1.7, 1.8]])
-            }
-            bp._validate_voice_preset_dict(voice_preset)
+            ```python
+            >>> bp = BarkProcessor()
+            >>> voice_preset = {
+            >>>     'semantic_prompt': np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]),
+            >>>     'coarse_prompt': np.array([[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]]),
+            >>>     'fine_prompt': np.array([[1.3, 1.4, 1.5], [1.6, 1.7, 1.8]])
+            >>> }
+            >>> bp._validate_voice_preset_dict(voice_preset)
+            ```
         """
         for key in ["semantic_prompt", "coarse_prompt", "fine_prompt"]:
             if key not in voice_preset:

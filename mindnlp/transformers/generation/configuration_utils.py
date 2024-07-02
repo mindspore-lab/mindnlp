@@ -41,66 +41,77 @@ class GenerationConfig:
         Initialize the GenerationConfig object with the provided keyword arguments.
         
         Args:
-            **kwargs (dict): Keyword arguments to initialize the GenerationConfig object.
-            
-                max_length (int): The maximum length of the generated sequences.
-                max_new_tokens (int or None, optional): The maximum number of new tokens to add to the input prompt tokens. Defaults to None.
-                min_length (int): The minimum length of the generated sequences.
-                min_new_tokens (int or None, optional): The minimum number of new tokens to add to the input prompt tokens. Defaults to None.
-                early_stopping (bool, optional): Whether to stop the generation early if all beam hypotheses are finished. Defaults to False.
-                max_time (float or None, optional): The maximum time in seconds for generation. Defaults to None.
-                do_sample (bool, optional): Whether to sample the next token. Defaults to False.
-                num_beams (int): The number of beams for beam search.
-                num_beam_groups (int): The number of groups for diverse beam search.
-                penalty_alpha (float or None, optional): The alpha for penalty to the length penalty. Defaults to None.
-                use_cache (bool, optional): Whether to use the cache when decoding. Defaults to True.
-                temperature (float): The temperature for sampling. 
-                top_k (int): The number of highest probability vocabulary tokens to keep for top-k sampling.
-                top_p (float): The cumulative probability for top-p sampling.
-                typical_p (float): The typical p value for nucleus sampling.
-                epsilon_cutoff (float): The epsilon cutoff value for nucleus sampling.
-                eta_cutoff (float): The eta cutoff value for nucleus sampling.
-                diversity_penalty (float): The penalty for diversity.
-                repetition_penalty (float): The penalty for repetition.
-                encoder_repetition_penalty (float): The penalty for repetition in the encoder sequence.
-                length_penalty (float): The penalty for the length of the generated sequences.
-                no_repeat_ngram_size (int): The size of n-gram to avoid repetition.
-                bad_words_ids (list of int or None, optional): The list of token IDs to avoid. Defaults to None.
-                force_words_ids (list of int or None, optional): The list of token IDs to force the generation to sample. Defaults to None.
-                renormalize_logits (bool, optional): Whether to renormalize the logits. Defaults to False.
-                constraints (PromptEncoderConstraints or None, optional): The constraints for the prompt encoder. Defaults to None.
-                forced_bos_token_id (int or None, optional): The token ID to force as the beginning of the generated sequence. Defaults to None.
-                forced_eos_token_id (int or None, optional): The token ID to force as the end of the generated sequence. Defaults to None.
-                remove_invalid_values (bool, optional): Whether to remove invalid values. Defaults to False.
-                exponential_decay_length_penalty (ExponentialDecayLengthPenalty or None, optional): The exponential decay length penalty. Defaults to None.
-                suppress_tokens (list of int or None, optional): The list of token IDs to suppress during generation. Defaults to None.
-                begin_suppress_tokens (list of int or None, optional): The list of token IDs to suppress at the beginning of the generated sequence. Defaults to None.
-                forced_decoder_ids (list of int or None, optional): The list of token IDs to force in the decoder sequence. Defaults to None.
-                sequence_bias (int or None, optional): The sequence bias value. Defaults to None.
-                guidance_scale (float or None, optional): The guidance scale value. Defaults to None.
-                low_memory (bool or None, optional): Whether to use low memory. Defaults to None.
-                num_return_sequences (int): The number of sequences to return.
-                output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-                output_hidden_states (bool, optional): Whether to output hidden states. Defaults to False.
-                output_scores (bool, optional): Whether to output scores. Defaults to False.
-                return_dict_in_generate (bool, optional): Whether to return a dict in generation. Defaults to False.
-                pad_token_id (int or None, optional): The token ID for padding. Defaults to None.
-                bos_token_id (int or None, optional): The token ID for the beginning of sequence. Defaults to None.
-                eos_token_id (int or None, optional): The token ID for the end of sequence. Defaults to None.
-                encoder_no_repeat_ngram_size (int): The size of n-gram to avoid repetition in the encoder.
-                decoder_start_token_id (int or None, optional): The token ID for the beginning of the decoder sequence. Defaults to None.
-                num_assistant_tokens (int): The number of assistant tokens.
-                num_assistant_tokens_schedule (str): The schedule for the number of assistant tokens.
-                cache_implementation (str or None, optional): The cache implementation. Defaults to None.
-                prompt_lookup_num_tokens (int or None, optional): The number of tokens to lookup in the prompt. Defaults to None.
-                max_matching_ngram_size (int or None, optional): The maximum matching n-gram size. Defaults to None.
-                generation_kwargs (dict): Additional generation keyword arguments.
-                _from_model_config (bool, optional): Whether the configuration is from a model config. Defaults to False.
-                _commit_hash (str or None, optional): The commit hash. Defaults to None.
-        
+            max_length (int): The maximum length of the generated sequences.
+            max_new_tokens (int or None, optional): The maximum number of new tokens to add to the input prompt tokens.
+                Defaults to None.
+            min_length (int): The minimum length of the generated sequences.
+            min_new_tokens (int or None, optional): The minimum number of new tokens to add to the input prompt tokens.
+                Defaults to None.
+            early_stopping (bool, optional): Whether to stop the generation early if all beam hypotheses are finished.
+                Defaults to False.
+            max_time (float or None, optional): The maximum time in seconds for generation. Defaults to None.
+            do_sample (bool, optional): Whether to sample the next token. Defaults to False.
+            num_beams (int): The number of beams for beam search.
+            num_beam_groups (int): The number of groups for diverse beam search.
+            penalty_alpha (float or None, optional): The alpha for penalty to the length penalty. Defaults to None.
+            use_cache (bool, optional): Whether to use the cache when decoding. Defaults to True.
+            temperature (float): The temperature for sampling.
+            top_k (int): The number of highest probability vocabulary tokens to keep for top-k sampling.
+            top_p (float): The cumulative probability for top-p sampling.
+            typical_p (float): The typical p value for nucleus sampling.
+            epsilon_cutoff (float): The epsilon cutoff value for nucleus sampling.
+            eta_cutoff (float): The eta cutoff value for nucleus sampling.
+            diversity_penalty (float): The penalty for diversity.
+            repetition_penalty (float): The penalty for repetition.
+            encoder_repetition_penalty (float): The penalty for repetition in the encoder sequence.
+            length_penalty (float): The penalty for the length of the generated sequences.
+            no_repeat_ngram_size (int): The size of n-gram to avoid repetition.
+            bad_words_ids (list of int or None, optional): The list of token IDs to avoid. Defaults to None.
+            force_words_ids (list of int or None, optional): The list of token IDs to force the generation to sample.
+                Defaults to None.
+            renormalize_logits (bool, optional): Whether to renormalize the logits. Defaults to False.
+            constraints (PromptEncoderConstraints or None, optional): The constraints for the prompt encoder.
+                Defaults to None.
+            forced_bos_token_id (int or None, optional): The token ID to force as the beginning of the generated sequence.
+                Defaults to None.
+            forced_eos_token_id (int or None, optional): The token ID to force as the end of the generated sequence.
+                Defaults to None.
+            remove_invalid_values (bool, optional): Whether to remove invalid values. Defaults to False.
+            exponential_decay_length_penalty (ExponentialDecayLengthPenalty or None, optional):
+                The exponential decay length penalty. Defaults to None.
+            suppress_tokens (list of int or None, optional): The list of token IDs to suppress during generation.
+                Defaults to None.
+            begin_suppress_tokens (list of int or None, optional):
+                The list of token IDs to suppress at the beginning of the generated sequence. Defaults to None.
+            forced_decoder_ids (list of int or None, optional): The list of token IDs to force in the decoder sequence.
+                Defaults to None.
+            sequence_bias (int or None, optional): The sequence bias value. Defaults to None.
+            guidance_scale (float or None, optional): The guidance scale value. Defaults to None.
+            low_memory (bool or None, optional): Whether to use low memory. Defaults to None.
+            num_return_sequences (int): The number of sequences to return.
+            output_attentions (bool, optional): Whether to output attentions. Defaults to False.
+            output_hidden_states (bool, optional): Whether to output hidden states. Defaults to False.
+            output_scores (bool, optional): Whether to output scores. Defaults to False.
+            return_dict_in_generate (bool, optional): Whether to return a dict in generation. Defaults to False.
+            pad_token_id (int or None, optional): The token ID for padding. Defaults to None.
+            bos_token_id (int or None, optional): The token ID for the beginning of sequence. Defaults to None.
+            eos_token_id (int or None, optional): The token ID for the end of sequence. Defaults to None.
+            encoder_no_repeat_ngram_size (int): The size of n-gram to avoid repetition in the encoder.
+            decoder_start_token_id (int or None, optional): The token ID for the beginning of the decoder sequence.
+                Defaults to None.
+            num_assistant_tokens (int): The number of assistant tokens.
+            num_assistant_tokens_schedule (str): The schedule for the number of assistant tokens.
+            cache_implementation (str or None, optional): The cache implementation. Defaults to None.
+            prompt_lookup_num_tokens (int or None, optional): The number of tokens to lookup in the prompt.
+                Defaults to None.
+            max_matching_ngram_size (int or None, optional): The maximum matching n-gram size. Defaults to None.
+            generation_kwargs (dict): Additional generation keyword arguments.
+            _from_model_config (bool, optional): Whether the configuration is from a model config. Defaults to False.
+            _commit_hash (str or None, optional): The commit hash. Defaults to None.
+
         Returns:
-            None. This method does not return a value.
-        
+            None.
+
         Raises:
             AttributeError: If an attribute cannot be set for the GenerationConfig object.
         """
@@ -439,10 +450,10 @@ class GenerationConfig:
                 This can be either:
 
                 - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
-                  hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
-                  namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
+                hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
                 - a path to a *directory* containing a configuration file saved using the
-                  [`~GenerationConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
+                [`~GenerationConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
             config_file_name (`str` or `os.PathLike`, *optional*, defaults to `"generation_config.json"`):
                 Name of the generation configuration JSON file to be loaded from `pretrained_model_name`.
             cache_dir (`str` or `os.PathLike`, *optional*):
@@ -488,33 +499,32 @@ class GenerationConfig:
         Returns:
             [`GenerationConfig`]: The configuration object instantiated from this pretrained model.
 
-        Examples:
-
-        ```python
-        >>> from transformers import GenerationConfig
-
-        >>> # Download configuration from hf-mirror.com and cache.
-        >>> generation_config = GenerationConfig.from_pretrained("gpt2")
-
-        >>> # E.g. config was saved using *save_pretrained('./test/saved_model/')*
-        >>> generation_config.save_pretrained("./test/saved_model/")
-        >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/")
-
-        >>> # You can also specify configuration names to your generation configuration file
-        >>> generation_config.save_pretrained("./test/saved_model/", config_file_name="my_configuration.json")
-        >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/", "my_configuration.json")
-
-        >>> # If you'd like to try a minor variation to an existing configuration, you can also pass generation
-        >>> # arguments to `.from_pretrained()`. Be mindful that typos and unused arguments will be ignored
-        >>> generation_config, unused_kwargs = GenerationConfig.from_pretrained(
-        ...     "gpt2", top_k=1, foo=False, do_sample=True, return_unused_kwargs=True
-        ... )
-        >>> generation_config.top_k
-        1
-
-        >>> unused_kwargs
-        {'foo': False}
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import GenerationConfig
+            ...
+            >>> # Download configuration from hf-mirror.com and cache.
+            >>> generation_config = GenerationConfig.from_pretrained("gpt2")
+            ...
+            >>> # E.g. config was saved using *save_pretrained('./test/saved_model/')*
+            >>> generation_config.save_pretrained("./test/saved_model/")
+            >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/")
+            ...
+            >>> # You can also specify configuration names to your generation configuration file
+            >>> generation_config.save_pretrained("./test/saved_model/", config_file_name="my_configuration.json")
+            >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/", "my_configuration.json")
+            ...
+            >>> # If you'd like to try a minor variation to an existing configuration, you can also pass generation
+            >>> # arguments to `.from_pretrained()`. Be mindful that typos and unused arguments will be ignored
+            >>> generation_config, unused_kwargs = GenerationConfig.from_pretrained(
+            ...     "gpt2", top_k=1, foo=False, do_sample=True, return_unused_kwargs=True
+            ... )
+            >>> generation_config.top_k
+            1
+            >>> unused_kwargs
+            {'foo': False}
+            ```
+        """
         config_file_name = config_file_name if config_file_name is not None else GENERATION_CONFIG_NAME
 
         resume_download = kwargs.pop("resume_download", False)
@@ -730,7 +740,8 @@ class GenerationConfig:
                 The JSON file should exist and be readable. The file's content must be in UTF-8 encoding.
         
         Returns:
-            None: This method returns None after successfully loading and parsing the JSON data from the file into a dictionary.
+            None: This method returns None after successfully loading and parsing the JSON data from the file
+                into a dictionary.
         
         Raises:
             FileNotFoundError: If the specified JSON file does not exist.

@@ -91,19 +91,19 @@ class BartConfig(PretrainedConfig):
             `eos_token_id`.
 
     Example:
+        ```python
+        >>> from transformers import BartConfig, BartModel
 
-    ```python
-    >>> from transformers import BartConfig, BartModel
+        >>> # Initializing a BART facebook/bart-large style configuration
+        >>> configuration = BartConfig()
 
-    >>> # Initializing a BART facebook/bart-large style configuration
-    >>> configuration = BartConfig()
+        >>> # Initializing a model (with random weights) from the facebook/bart-large style configuration
+        >>> model = BartModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the facebook/bart-large style configuration
-    >>> model = BartModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bart"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -170,7 +170,7 @@ class BartConfig(PretrainedConfig):
             forced_eos_token_id (int, optional): The id of the forced end-of-sequence token. Defaults to 2.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             Warning: If the config does not include forced_bos_token_id in future versions.

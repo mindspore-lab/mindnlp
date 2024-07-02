@@ -108,7 +108,8 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
     
     Returns:
         tuple: A tuple containing the index of the starting element of the longest common sequence in 'sequence_left',
-               the index of the starting element of the longest common sequence in 'sequence_right', and the length of the longest common sequence.
+            the index of the starting element of the longest common sequence in 'sequence_right',
+            and the length of the longest common sequence.
     
     Raises:
         None.
@@ -137,20 +138,25 @@ def _find_longest_common_sequence(sequences, tokenizer):
     Finds the longest common sequence among multiple sequences of tokens.
     
     Args:
-        sequences (List[Tuple[np.ndarray, Any]]): A list of tuples, where each tuple contains a sequence of tokens as a numpy array and any additional information associated with the sequence. The sequences
-are expected to be preprocessed and tokenized.
-        tokenizer (Any): The tokenizer object used for tokenization. It should have an attribute 'all_special_ids' which contains a list of special token IDs to be excluded from the sequences.
-    
+        sequences (List[Tuple[np.ndarray, Any]]):
+            A list of tuples, where each tuple contains a sequence of tokens as a numpy array and any additional
+            information associated with the sequence. The sequences are expected to be preprocessed and tokenized.
+        tokenizer (Any):
+            The tokenizer object used for tokenization. It should have an attribute 'all_special_ids' which contains
+            a list of special token IDs to be excluded from the sequences.
+
     Returns:
-        np.ndarray: A numpy array representing the longest common sequence found among the input sequences. The array contains the token IDs of the common sequence.
-    
+        np.ndarray: A numpy array representing the longest common sequence found among the input sequences.
+            The array contains the token IDs of the common sequence.
+
     Raises:
         None
-    
+
     Note:
-        The function uses a sliding window approach to find the longest common sequence. The sequences are compared token by token, excluding any special tokens defined by the tokenizer. The function returns
-the longest common sequence found among all input sequences.
-    
+        The function uses a sliding window approach to find the longest common sequence.
+        The sequences are compared token by token, excluding any special tokens defined by the tokenizer.
+        The function returns the longest common sequence found among all input sequences.
+
     """
     # TODO  Use a faster algorithm this can probably be done in O(n)
     # using suffix array.
@@ -184,14 +190,13 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
     to support multiple audio formats
 
     Example:
-
-    ```python
-    >>> from transformers import pipeline
-
-    >>> transcriber = pipeline(model="openai/whisper-base")
-    >>> transcriber("https://hf-mirror.com/datasets/Narsil/asr_dummy/resolve/main/1.flac")
-    {'text': ' He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered flour-fatten sauce.'}
-    ```
+        ```python
+        >>> from transformers import pipeline
+        ...
+        >>> transcriber = pipeline(model="openai/whisper-base")
+        >>> transcriber("https://hf-mirror.com/datasets/Narsil/asr_dummy/resolve/main/1.flac")
+        {'text': ' He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered flour-fatten sauce.'}
+        ```
 
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
 
@@ -254,20 +259,22 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
     ):
         """
         This method initializes an instance of AutomaticSpeechRecognitionPipeline.
-        
+
         Args:
-        - self: The instance of the class.
-        - model (PreTrainedModel): The pre-trained model used for speech recognition.
-        - feature_extractor (Union[SequenceFeatureExtractor, str]): The feature extractor used for processing input data. It can be an instance of SequenceFeatureExtractor class or a string.
-        - tokenizer (Optional[PreTrainedTokenizer]): The tokenizer used for tokenizing input data.
-        - decoder (Optional[Union[BeamSearchDecoderCTC, str]]): The decoder used for decoding the model predictions. It can be an instance of BeamSearchDecoderCTC class or a string.
-        - ms_dtype (Optional[str]): The data type used for processing input data.
-        
+            self: The instance of the class.
+            model (PreTrainedModel): The pre-trained model used for speech recognition.
+            feature_extractor (Union[SequenceFeatureExtractor, str]): The feature extractor used for processing
+                input data. It can be an instance of SequenceFeatureExtractor class or a string.
+            tokenizer (Optional[PreTrainedTokenizer]): The tokenizer used for tokenizing input data.
+            decoder (Optional[Union[BeamSearchDecoderCTC, str]]): The decoder used for decoding the model predictions.
+                It can be an instance of BeamSearchDecoderCTC class or a string.
+            ms_dtype (Optional[str]): The data type used for processing input data.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None
+            None
         """
         # set the model type so we can check we have the right pre- and post-processing parameters
         if model.config.model_type == "whisper":
@@ -297,42 +304,40 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
 
         Args:
             inputs (`np.ndarray` or `bytes` or `str` or `dict`):
-                The inputs is either :
-                    - `str` that is either the filename of a local audio file, or a public URL address to download the
-                      audio file. The file will be read at the correct sampling rate to get the waveform using
-                      *ffmpeg*. This requires *ffmpeg* to be installed on the system.
-                    - `bytes` it is supposed to be the content of an audio file and is interpreted by *ffmpeg* in the
-                      same way.
-                    - (`np.ndarray` of shape (n, ) of type `np.float32` or `np.float64`)
-                        Raw audio at the correct sampling rate (no further check will be done)
-                    - `dict` form can be used to pass raw audio sampled at arbitrary `sampling_rate` and let this
-                      pipeline do the resampling. The dict must be in the format `{"sampling_rate": int, "raw":
-                      np.array}` with optionally a `"stride": (left: int, right: int)` than can ask the pipeline to
-                      treat the first `left` samples and last `right` samples to be ignored in decoding (but used at
-                      inference to provide more context to the model). Only use `stride` with CTC models.
+                - `str` that is either the filename of a local audio file, or a public URL address to download the
+                audio file. The file will be read at the correct sampling rate to get the waveform using
+                *ffmpeg*. This requires *ffmpeg* to be installed on the system.
+                - `bytes` it is supposed to be the content of an audio file and is interpreted by *ffmpeg* in the same way.
+                - (`np.ndarray` of shape (n, ) of type `np.float32` or `np.float64`)
+                Raw audio at the correct sampling rate (no further check will be done)
+                - `dict` form can be used to pass raw audio sampled at arbitrary `sampling_rate` and let this
+                pipeline do the resampling. The dict must be in the format `{"sampling_rate": int, "raw":
+                np.array}` with optionally a `"stride": (left: int, right: int)` than can ask the pipeline to
+                treat the first `left` samples and last `right` samples to be ignored in decoding (but used at
+                inference to provide more context to the model). Only use `stride` with CTC models.
             return_timestamps (*optional*, `str` or `bool`):
-                Only available for pure CTC models (Wav2Vec2, HuBERT, etc) and the Whisper model. Not available for
+                - Only available for pure CTC models (Wav2Vec2, HuBERT, etc) and the Whisper model. Not available for
                 other sequence-to-sequence models.
+                - For CTC models, timestamps can take one of two formats:
 
-                For CTC models, timestamps can take one of two formats:
                     - `"char"`: the pipeline will return timestamps along the text for every character in the text. For
-                        instance, if you get `[{"text": "h", "timestamp": (0.5, 0.6)}, {"text": "i", "timestamp": (0.7,
-                        0.9)}]`, then it means the model predicts that the letter "h" was spoken after `0.5` and before
-                        `0.6` seconds.
+                    instance, if you get `[{"text": "h", "timestamp": (0.5, 0.6)}, {"text": "i", "timestamp": (0.7,
+                    0.9)}]`, then it means the model predicts that the letter "h" was spoken after `0.5` and before
+                    `0.6` seconds.
                     - `"word"`: the pipeline will return timestamps along the text for every word in the text. For
-                        instance, if you get `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text": "there", "timestamp":
-                        (1.0, 1.5)}]`, then it means the model predicts that the word "hi" was spoken after `0.5` and
-                        before `0.9` seconds.
+                    instance, if you get `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text": "there", "timestamp":
+                    (1.0, 1.5)}]`, then it means the model predicts that the word "hi" was spoken after `0.5` and
+                    before `0.9` seconds.
+                - For the Whisper model, timestamps can take one of two formats:
 
-                For the Whisper model, timestamps can take one of two formats:
                     - `"word"`: same as above for word-level CTC timestamps. Word-level timestamps are predicted
-                        through the *dynamic-time warping (DTW)* algorithm, an approximation to word-level timestamps
-                        by inspecting the cross-attention weights.
+                            through the *dynamic-time warping (DTW)* algorithm, an approximation to word-level timestamps
+                            by inspecting the cross-attention weights.
                     - `True`: the pipeline will return timestamps along the text for *segments* of words in the text.
-                        For instance, if you get `[{"text": " Hi there!", "timestamp": (0.5, 1.5)}]`, then it means the
-                        model predicts that the segment "Hi there!" was spoken after `0.5` and before `1.5` seconds.
-                        Note that a segment of text refers to a sequence of one or more words, rather than individual
-                        words as with word-level timestamps.
+                            For instance, if you get `[{"text": " Hi there!", "timestamp": (0.5, 1.5)}]`, then it means the
+                            model predicts that the segment "Hi there!" was spoken after `0.5` and before `1.5` seconds.
+                            Note that a segment of text refers to a sequence of one or more words, rather than individual
+                            words as with word-level timestamps.
             generate_kwargs (`dict`, *optional*):
                 The dictionary of ad-hoc parametrization of `generate_config` to be used for the generation call. For a
                 complete overview of generate, check the [following
@@ -340,14 +345,16 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             max_new_tokens (`int`, *optional*):
                 The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.
 
-        Return:
-            `Dict`: A dictionary with the following keys:
+        Returns:
+            `Dict`:
+                A dictionary with the following keys:
+
                 - **text** (`str`): The recognized text.
                 - **chunks** (*optional(, `List[Dict]`)
-                    When using `return_timestamps`, the `chunks` will become a list containing all the various text
-                    chunks identified by the model, *e.g.* `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text":
-                    "there", "timestamp": (1.0, 1.5)}]`. The original full text can roughly be recovered by doing
-                    `"".join(chunk["text"] for chunk in output["chunks"])`.
+                When using `return_timestamps`, the `chunks` will become a list containing all the various text
+                chunks identified by the model, *e.g.* `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text":
+                "there", "timestamp": (1.0, 1.5)}]`. The original full text can roughly be recovered by doing
+                `"".join(chunk["text"] for chunk in output["chunks"])`.
         """
         return super().__call__(inputs, **kwargs)
 
@@ -363,27 +370,36 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         max_new_tokens=None,
     ):
         """
-        This method '_sanitize_parameters' in the class 'AutomaticSpeechRecognitionPipeline' is responsible for sanitizing and validating input parameters for the Automatic Speech Recognition pipeline.
-        
+        This method '_sanitize_parameters' in the class 'AutomaticSpeechRecognitionPipeline' is responsible for
+        sanitizing and validating input parameters for the Automatic Speech Recognition pipeline.
+
         Args:
-        - self (object): The instance of the class.
-        - chunk_length_s (float, optional): The length of each audio chunk in seconds. If provided, it is stored in the preprocess_params dictionary. Note: Experimental with 'seq2seq' models.
-        - stride_length_s (float, optional): The stride length between consecutive audio chunks in seconds. Stored in preprocess_params.
-        - ignore_warning (bool, optional): If True, ignores experimental warning when using 'chunk_length_s' with 'seq2seq' models.
-        - decoder_kwargs (dict, optional): Additional keyword arguments for the decoder. Stored in postprocess_params.
-        - return_timestamps (str or bool, optional): Specifies the type of timestamps to return. Restrictions based on the model type.
-        - return_language (str, optional): Specifies whether to return language information. Only available for 'seq2seq_whisper' models.
-        - generate_kwargs (dict, optional): Additional keyword arguments for model generation. If 'max_new_tokens' is defined here, it should not be repeated in the argument list.
-        - max_new_tokens (int, optional): Maximum number of new tokens to generate. Stored in forward_params.
-        
+            self (object): The instance of the class.
+            chunk_length_s (float, optional): The length of each audio chunk in seconds. If provided, it is stored in
+                the preprocess_params dictionary. Note: Experimental with 'seq2seq' models.
+            stride_length_s (float, optional): The stride length between consecutive audio chunks in seconds.
+                Stored in preprocess_params.
+            ignore_warning (bool, optional): If True, ignores experimental warning when using 'chunk_length_s'
+                with 'seq2seq' models.
+            decoder_kwargs (dict, optional): Additional keyword arguments for the decoder. Stored in postprocess_params.
+            return_timestamps (str or bool, optional): Specifies the type of timestamps to return. Restrictions
+                based on the model type.
+            return_language (str, optional): Specifies whether to return language information.
+                Only available for 'seq2seq_whisper' models.
+            generate_kwargs (dict, optional): Additional keyword arguments for model generation.
+                If 'max_new_tokens' is defined here, it should not be repeated in the argument list.
+            max_new_tokens (int, optional): Maximum number of new tokens to generate. Stored in forward_params.
+
         Returns:
-        - tuple: A tuple containing three dictionaries - preprocess_params, forward_params, and postprocess_params. These dictionaries hold sanitized parameters for different stages of the ASR pipeline.
-        
+            tuple:
+                A tuple containing three dictionaries - preprocess_params, forward_params, and postprocess_params.
+                These dictionaries hold sanitized parameters for different stages of the ASR pipeline.
+
         Raises:
-        - ValueError: If 'max_new_tokens' is defined both as an argument and inside 'generate_kwargs'.
-        - ValueError: If attempting to return timestamps not supported by the model type.
-        - ValueError: If language information is requested for a model other than 'seq2seq_whisper'.
-        - Warning: Experimental warning message when using 'chunk_length_s' with 'seq2seq' models.
+            ValueError: If 'max_new_tokens' is defined both as an argument and inside 'generate_kwargs'.
+            ValueError: If attempting to return timestamps not supported by the model type.
+            ValueError: If language information is requested for a model other than 'seq2seq_whisper'.
+            Warning: Experimental warning message when using 'chunk_length_s' with 'seq2seq' models.
         """
         # No parameters on this pipeline right now
         preprocess_params = {}
@@ -441,21 +457,30 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
     def preprocess(self, inputs, chunk_length_s=0, stride_length_s=None):
         """
         This method preprocesses the input data for the AutomaticSpeechRecognitionPipeline.
-        
+
         Args:
             self (object): The instance of the AutomaticSpeechRecognitionPipeline class.
-            inputs (str, bytes, dict, or np.ndarray): The input data, which can be in the form of a file path (str), binary data (bytes), a dictionary containing audio data and its properties, or a numpy array
-representing the audio.
-            chunk_length_s (float): The length of chunks into which the audio data should be divided for processing, in seconds. Defaults to 0.
-            stride_length_s (float or list): The length of stride for chunking the audio data, in seconds. If a single value is provided, it is applied to both the left and right strides. If a list is
-provided, the first value represents the left stride and the second value represents the right stride. If not provided, it defaults to chunk_length_s / 6.
-        
+            inputs (str, bytes, dict, or np.ndarray):
+                The input data, which can be in the form of a file path (str), binary data (bytes),
+                a dictionary containing audio data and its properties, or a numpy array representing the audio.
+            chunk_length_s (float):
+                The length of chunks into which the audio data should be divided for processing, in seconds.
+                Defaults to 0.
+            stride_length_s (float or list):
+                The length of stride for chunking the audio data, in seconds.
+
+                - If a single value is provided, it is applied to both the left and right strides.
+                - If a list is provided, the first value represents the left stride and the second value represents
+                the right stride.
+                - If not provided, it defaults to chunk_length_s / 6.
+
         Returns:
-            None. This method yields processed chunks of the input audio data and does not return a single value.
-        
+            None: This method yields processed chunks of the input audio data and does not return a single value.
+
         Raises:
-            - ValueError: If the input data does not meet the expected format or requirements, such as missing keys in the dictionary input, incorrect stride length, or invalid chunk length.
-            - TypeError: If the type of the input does not match the expected type.
+            ValueError: If the input data does not meet the expected format or requirements,
+                such as missing keys in the dictionary input, incorrect stride length, or invalid chunk length.
+            TypeError: If the type of the input does not match the expected type.
         """
         if isinstance(inputs, str):
             if inputs.startswith("http://") or inputs.startswith("https://"):
@@ -557,20 +582,24 @@ provided, the first value represents the left stride and the second value repres
     def _forward(self, model_inputs, return_timestamps=False, **generate_kwargs):
         """
         Performs the forward pass for Automatic Speech Recognition (ASR) in the AutomaticSpeechRecognitionPipeline class.
-        
+
         Args:
             self (AutomaticSpeechRecognitionPipeline): The instance of the AutomaticSpeechRecognitionPipeline class.
             model_inputs (dict): A dictionary containing the model inputs.
             return_timestamps (bool, optional): Indicates whether to return token timestamps. Defaults to False.
-        
+
         Returns:
-            dict: A dictionary containing the output of the forward pass. The structure of the dictionary depends on the ASR model type.
-            
+            dict: A dictionary containing the output of the forward pass.
+                The structure of the dictionary depends on the ASR model type.
+
         Raises:
-            ValueError: If the model_inputs dictionary does not contain either 'input_features' or 'input_values' key, when using a seq2seq or seq2seq_whisper model.
-            
-            Note: Other exceptions may be raised depending on the underlying ASR model used.
-        
+            ValueError:
+                If the model_inputs dictionary does not contain either 'input_features' or 'input_values' key,
+                when using a seq2seq or seq2seq_whisper model.
+
+        Note:
+            Other exceptions may be raised depending on the underlying ASR model used.
+
         """
         attention_mask = model_inputs.pop("attention_mask", None)
         stride = model_inputs.pop("stride", None)
@@ -658,22 +687,25 @@ provided, the first value represents the left stride and the second value repres
     ):
         """
         Method postprocess in the class AutomaticSpeechRecognitionPipeline.
-        
+
         Args:
-        - self: Object instance of the class AutomaticSpeechRecognitionPipeline.
-        - model_outputs: List of dictionaries representing the outputs from the model. Each dictionary contains 'logits' or 'tokens' key with corresponding values.
-        - decoder_kwargs: Optional dictionary containing keyword arguments for the decoder. Defaults to None.
-        - return_timestamps: Optional parameter indicating whether to return timestamps. Can be None, 'word', or 'char'.
-        - return_language: Optional parameter specifying the language to return. Can be None or a specific language identifier.
-        
+            self: Object instance of the class AutomaticSpeechRecognitionPipeline.
+            model_outputs: List of dictionaries representing the outputs from the model.
+                Each dictionary contains 'logits' or 'tokens' key with corresponding values.
+            decoder_kwargs: Optional dictionary containing keyword arguments for the decoder. Defaults to None.
+            return_timestamps: Optional parameter indicating whether to return timestamps.
+                Can be None, 'word', or 'char'.
+            return_language: Optional parameter specifying the language to return.
+                Can be None or a specific language identifier.
+
         Returns:
-        None. The method modifies the model_outputs and decoder_kwargs in place.
+            None: The method modifies the model_outputs and decoder_kwargs in place.
         
         Raises:
-        - ValueError: If the provided 'model_outputs' format is incorrect.
-        - AttributeError: If the 'stride' key is missing or improperly defined in the model_outputs dictionary.
-        - KeyError: If required keys are missing in the model_outputs dictionary.
-        - TypeError: If the input parameters are of incorrect types or incompatible values.
+            ValueError: If the provided 'model_outputs' format is incorrect.
+            AttributeError: If the 'stride' key is missing or improperly defined in the model_outputs dictionary.
+            KeyError: If required keys are missing in the model_outputs dictionary.
+            TypeError: If the input parameters are of incorrect types or incompatible values.
         """
         # Optional return types
         optional = {}

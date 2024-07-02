@@ -108,11 +108,15 @@ class MatMulWrapper(nn.Cell):
 
     def construct(self, mat1, mat2):
         """
-
-        :param inputs: two torch tensors :return: matmul of these tensors
-
         Here are the typical dimensions found in BERT (the B is optional) mat1.shape: [B, <optional extra dims>, M, K]
         mat2.shape: [B, <optional extra dims>, K, N] output shape: [B, <optional extra dims>, M, N]
+
+        Args:
+            mat1: a tensor
+            mat2: a tensor
+
+        Returns:
+            matmul of these tensors
         """
         return ops.matmul(mat1, mat2)
 
@@ -209,8 +213,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_for_scores(self, x):
         """
-        - input: [N, C, W]
-        - output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -223,8 +228,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_key_for_scores(self, x):
         """
-        - input: [N, C, W]
-        - output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -238,8 +244,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_output(self, x):
         """
-        - input: [N, C1, W, C2]
-        - output: [N, C, W]
+        Input/Output:
+            - input: [N, C1, W, C2]
+            - output: [N, C, W]
         """
         x = x.permute(0, 1, 3, 2)  # [N, C1, C2, W]
         new_x_shape = (x.shape[0], self.all_head_size, x.shape[3])  # [N, C, W]
@@ -285,11 +292,15 @@ class SqueezeBertSelfAttention(nn.Cell):
 class SqueezeBertModule(nn.Cell):
     def __init__(self, config):
         """
-        - hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output chans for
-          the Cell
-        - intermediate_size = output chans for intermediate layer
-        - group = number of group for all layers in the BertModule. (eventually we could change the interface to
-          allow different group for different layers)
+        Args:
+            config:
+                containing:
+
+                - hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output
+                chans for the Cell.
+                - intermediate_size = output chans for intermediate layer
+                - group = number of group for all layers in the BertModule. (eventually we could change the interface to
+                  allow different group for different layers)
         """
         super().__init__()
 
@@ -658,10 +669,11 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -730,10 +742,11 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -819,10 +832,11 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
-            *input_ids* above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
+                *input_ids* above)
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -916,8 +930,9 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -983,14 +998,15 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict

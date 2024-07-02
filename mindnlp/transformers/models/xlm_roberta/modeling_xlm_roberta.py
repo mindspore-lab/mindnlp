@@ -58,7 +58,9 @@ class XLMRobertaEmbeddings(nn.Cell):
         
         Args:
             self: The instance of the XLMRobertaEmbeddings class.
-            config: An object containing configuration parameters for the XLMRoberta model. It includes the following attributes:
+            config: An object containing configuration parameters for the XLMRoberta model.
+                It includes the following attributes:
+
                 - vocab_size (int): The size of the vocabulary.
                 - hidden_size (int): The dimension of the hidden layers.
                 - max_position_embeddings (int): The maximum number of positional embeddings.
@@ -67,10 +69,10 @@ class XLMRobertaEmbeddings(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability.
                 - position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
                 - pad_token_id (int): The id of the padding token.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -98,27 +100,24 @@ class XLMRobertaEmbeddings(nn.Cell):
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         """
-        Class: XLMRobertaEmbeddings
-        
-        Method: construct
-        
         This method constructs the embeddings for the XLM-Roberta model.
-        
+
         Args:
-        - self: (object) The instance of the class.
-        - input_ids: (Tensor, optional) The input tensor containing the token ids. Default is None.
-        - token_type_ids: (Tensor, optional) The input tensor containing the token type ids. Default is None.
-        - position_ids: (Tensor, optional) The input tensor containing the position ids. Default is None.
-        - inputs_embeds: (Tensor, optional) The input embeddings tensor. Default is None.
-        - past_key_values_length: (int) The length of the past key values. Default is 0.
-        
+            self: (object) The instance of the class.
+            input_ids: (Tensor, optional) The input tensor containing the token ids. Default is None.
+            token_type_ids: (Tensor, optional) The input tensor containing the token type ids. Default is None.
+            position_ids: (Tensor, optional) The input tensor containing the position ids. Default is None.
+            inputs_embeds: (Tensor, optional) The input embeddings tensor. Default is None.
+            past_key_values_length: (int) The length of the past key values. Default is 0.
+
         Returns:
-        - embeddings: (Tensor) The constructed embeddings for the XLM-Roberta model.
-        
+            embeddings: (Tensor) The constructed embeddings for the XLM-Roberta model.
+
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are None, or if an unsupported position_embedding_type is provided.
-        - IndexError: If input_ids or inputs_embeds do not have the expected shape.
-        - AttributeError: If the 'token_type_ids' attribute is missing in the class.
+            ValueError: If both input_ids and inputs_embeds are None, or if an unsupported position_embedding_type
+                is provided.
+            IndexError: If input_ids or inputs_embeds do not have the expected shape.
+            AttributeError: If the 'token_type_ids' attribute is missing in the class.
         """
         if position_ids is None:
             if input_ids is not None:
@@ -179,19 +178,23 @@ class XLMRobertaSelfAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         """
         This method initializes an instance of the XLMRobertaSelfAttention class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing the configuration settings for the XLMRobertaSelfAttention. It should have attributes like hidden_size, num_attention_heads, embedding_size,
-attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, and is_decoder.
-            position_embedding_type: (optional) A string specifying the type of position embedding. Defaults to None. It should be one of 'absolute', 'relative_key', or 'relative_key_query'.
-        
+            config: An object containing the configuration settings for the XLMRobertaSelfAttention.
+                It should have attributes like hidden_size, num_attention_heads, embedding_size,
+                attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, and is_decoder.
+            position_embedding_type: (optional) A string specifying the type of position embedding. Defaults to None.
+                It should be one of 'absolute', 'relative_key', or 'relative_key_query'.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the hidden size in the config is not a multiple of the number of attention heads, and the config does not have the attribute 'embedding_size'.
-            AttributeError: If the config does not have the attribute 'embedding_size' when the hidden size is not a multiple of the number of attention heads.
+            ValueError: If the hidden size in the config is not a multiple of the number of attention heads,
+                and the config does not have the attribute 'embedding_size'.
+            AttributeError: If the config does not have the attribute 'embedding_size' when the hidden size is
+                not a multiple of the number of attention heads.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -236,28 +239,29 @@ attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, 
     ) -> Tuple[mindspore.Tensor]:
         """
         Constructs the self-attention mechanism for the XLMRoberta model.
-        
+
         Args:
             self: An instance of the XLMRobertaSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states. Shape (batch_size, seq_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. Shape (batch_size, seq_length, seq_length).
-                Defaults to None.
-            head_mask (Optional[mindspore.Tensor]): The head mask tensor. Shape (num_attention_heads, seq_length, seq_length).
-                Defaults to None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states from the encoder. Shape (batch_size, seq_length, hidden_size).
-                Defaults to None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. Shape
+                (batch_size, seq_length, seq_length). Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): The head mask tensor.
+                Shape (num_attention_heads, seq_length, seq_length). Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states from the encoder.
+                Shape (batch_size, seq_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder hidden states.
                 Shape (batch_size, seq_length, seq_length). Defaults to None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value pairs for each layer in the encoder.
-                Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                The past key-value pairs for each layer in the encoder. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attention probabilities. Defaults to False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor. Shape (batch_size, seq_length, hidden_size).
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor.
+                Shape (batch_size, seq_length, hidden_size).
             If output_attentions is True, the tuple also contains attention probabilities tensor.
                 Shape (batch_size, num_attention_heads, seq_length, seq_length).
             If the model is a decoder, the tuple also contains the past key-value pairs.
-        
+
         Raises:
             None.
         """
@@ -356,21 +360,23 @@ class XLMRobertaSelfOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes the XLMRobertaSelfOutput class.
-        
+
         Args:
             self: The object instance.
-            config (object): An object containing configuration parameters.
+            config (object):
+                An object containing configuration parameters.
+
                 - hidden_size (int): The size of the hidden layer.
                 - layer_norm_eps (float): Epsilon value for LayerNorm.
                 - hidden_dropout_prob (float): The dropout probability for hidden layers.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the hidden_size is not specified in the config.
-            - ValueError: If the layer_norm_eps is not specified in the config.
-            - ValueError: If the hidden_dropout_prob is not specified in the config.
+            ValueError: If the hidden_size is not specified in the config.
+            ValueError: If the layer_norm_eps is not specified in the config.
+            ValueError: If the hidden_dropout_prob is not specified in the config.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -380,18 +386,18 @@ class XLMRobertaSelfOutput(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the output of the XLMRoberta model's self-attention layer.
-        
+
         Args:
             self (XLMRobertaSelfOutput): The instance of the XLMRobertaSelfOutput class.
-            hidden_states (mindspore.Tensor): The hidden states tensor representing the output of the self-attention layer.
-                This tensor is processed through dense layers and normalization.
+            hidden_states (mindspore.Tensor): The hidden states tensor representing the output of the
+                self-attention layer. This tensor is processed through dense layers and normalization.
             input_tensor (mindspore.Tensor): The input tensor to be added to the processed hidden_states tensor.
                 This tensor is used for residual connection in the self-attention layer.
-        
+
         Returns:
             mindspore.Tensor: The output tensor after processing the hidden_states tensor through dense layers, dropout,
                 normalization, and adding the input_tensor for the self-attention layer.
-        
+
         Raises:
             None
         """
@@ -406,17 +412,17 @@ class XLMRobertaAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes an instance of XLMRobertaAttention.
-        
+
         Args:
             self (object): The instance of the class itself.
             config (object): An object containing configuration settings.
             position_embedding_type (str, optional): The type of position embedding to use. Default is None.
-        
+
         Returns:
-            None. This method initializes the XLMRobertaAttention instance.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.self = XLMRobertaSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -453,21 +459,27 @@ class XLMRobertaAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        This method 'construct' in the class 'XLMRobertaAttention' constructs the output of the attention mechanism based on the input parameters.
-        
+        This method 'construct' in the class 'XLMRobertaAttention' constructs the output of the attention mechanism
+        based on the input parameters.
+
         Args:
             self: The instance of the class.
             hidden_states (mindspore.Tensor): The input hidden states. Shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens. Shape (batch_size, sequence_length).
-            head_mask (Optional[mindspore.Tensor]): Mask to zero out selected heads of the attention mechanism. Shape (num_heads,).
-            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder if applicable. Shape (batch_size, sequence_length, hidden_size).
-            encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention if applicable. Shape (batch_size, sequence_length).
+            attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens.
+                Shape (batch_size, sequence_length).
+            head_mask (Optional[mindspore.Tensor]): Mask to zero out selected heads of the attention mechanism.
+                Shape (num_heads,).
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder if applicable.
+                Shape (batch_size, sequence_length, hidden_size).
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention if applicable.
+                Shape (batch_size, sequence_length).
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key and value tensors for fast decoding.
             output_attentions (Optional[bool]): Flag to indicate whether to output attentions.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the attention output tensor. Shape (batch_size, sequence_length, hidden_size).
-        
+            Tuple[mindspore.Tensor]: A tuple containing the attention output tensor.
+                Shape (batch_size, sequence_length, hidden_size).
+
         Raises:
             None
         """
@@ -490,19 +502,22 @@ class XLMRobertaIntermediate(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the XLMRobertaIntermediate class.
-        
+
         Args:
             self: The instance of the XLMRobertaIntermediate class.
-            config: Configuration object containing parameters for the intermediate layer.
-                Type: object
-                Purpose: Specifies the configuration settings for the intermediate layer.
-                
+            config:
+                Configuration object containing parameters for the intermediate layer.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the intermediate layer.
+
         Returns:
             None
-            
+
         Raises:
-            - TypeError: If the 'config' parameter is not provided.
-            - ValueError: If the 'hidden_act' attribute of the 'config' parameter is not a string or a valid activation function.
+            TypeError: If the 'config' parameter is not provided.
+            ValueError: If the 'hidden_act' attribute of the 'config' parameter is not a string or a
+                valid activation function.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -514,17 +529,18 @@ class XLMRobertaIntermediate(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the hidden states using the specified intermediate layers in the XLMRoberta model.
-        
+
         Args:
             self (XLMRobertaIntermediate): The instance of the XLMRobertaIntermediate class.
-            hidden_states (mindspore.Tensor): The tensor representing the hidden states to be processed. It should be of type mindspore.Tensor and must adhere to the input requirements of the intermediate
-layers.
-        
+            hidden_states (mindspore.Tensor): The tensor representing the hidden states to be processed.
+                It should be of type mindspore.Tensor and must adhere to the input requirements of the intermediate
+                layers.
+
         Returns:
             mindspore.Tensor: Returns the processed hidden states as a tensor of type mindspore.Tensor.
-        
+
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -536,17 +552,19 @@ class XLMRobertaOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of XLMRobertaOutput class.
-        
+
         Args:
             self (object): The instance of the XLMRobertaOutput class.
-            config (object): An object containing configuration parameters.
+            config (object):
+                An object containing configuration parameters.
+
                 - Type: Any
                 - Purpose: Specifies the configuration settings for the XLMRobertaOutput instance.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -556,20 +574,21 @@ class XLMRobertaOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-        ''' 
-        This method constructs the output of the XLMRoberta model by performing a series of operations on the hidden states and input tensor.
-        
+        '''
+        This method constructs the output of the XLMRoberta model by performing a series of operations on the
+        hidden states and input tensor.
+
         Args:
             self (XLMRobertaOutput): The instance of the XLMRobertaOutput class.
             hidden_states (mindspore.Tensor): The tensor containing the hidden states of the XLMRoberta model.
                 It is expected to be a tensor of shape [batch_size, sequence_length, hidden_size].
             input_tensor (mindspore.Tensor): The input tensor to be added to the hidden states after normalization.
                 It is expected to be a tensor of the same shape as hidden_states.
-        
+
         Returns:
             mindspore.Tensor: The tensor representing the constructed output of the XLMRoberta model.
                 It has the same shape as the input_tensor and hidden_states.
-        
+
         Raises:
             ValueError: If the shapes of hidden_states and input_tensor are not compatible for addition.
             RuntimeError: If an error occurs during the execution of the method.
@@ -585,20 +604,22 @@ class XLMRobertaLayer(nn.Cell):
     def __init__(self, config):
         """
         This method initializes an instance of the XLMRobertaLayer class.
-        
+
         Args:
             self: The instance of the XLMRobertaLayer class.
-            config: An object containing configuration parameters for the XLMRobertaLayer instance. It should include the following attributes:
+            config: An object containing configuration parameters for the XLMRobertaLayer instance.
+                It should include the following attributes:
+
                 - chunk_size_feed_forward: An integer specifying the chunk size for feed-forward processing.
                 - is_decoder: A boolean indicating whether the model is used as a decoder.
                 - add_cross_attention: A boolean indicating whether cross-attention is added to the model.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If add_cross_attention is True and the model is not configured as a decoder, a ValueError is raised indicating that XLMRobertaLayer should be used as a decoder model when cross
-attention is added.
+            ValueError: If add_cross_attention is True and the model is not configured as a decoder, a ValueError
+                is raised indicating that XLMRobertaLayer should be used as a decoder model when cross attention is added.
         """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -625,20 +646,26 @@ attention is added.
     ) -> Tuple[mindspore.Tensor]:
         """
         Method to construct the XLMRobertaLayer.
-        
+
         Args:
             self: The instance of the XLMRobertaLayer class.
             hidden_states (mindspore.Tensor): The input hidden states to be processed.
-            attention_mask (Optional[mindspore.Tensor]): Optional tensor containing attention mask values for the self-attention mechanism.
-            head_mask (Optional[mindspore.Tensor]): Optional tensor containing head mask values for the self-attention mechanism.
-            encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor containing hidden states from the encoder.
-            encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor containing attention mask values for the encoder.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors for speeding up inference.
+            attention_mask (Optional[mindspore.Tensor]): Optional tensor containing attention mask values for the
+                self-attention mechanism.
+            head_mask (Optional[mindspore.Tensor]): Optional tensor containing head mask values for the
+                self-attention mechanism.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor containing hidden states
+                from the encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor containing attention mask values
+                for the encoder.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors
+                for speeding up inference.
             output_attentions (Optional[bool]): Flag indicating whether to output attention weights.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the computed layer output tensor and any additional outputs depending on the decoder mode.
-        
+            Tuple[mindspore.Tensor]: A tuple containing the computed layer output tensor and any additional outputs
+                depending on the decoder mode.
+
         Raises:
             ValueError: Raised if `encoder_hidden_states` are provided but cross-attention layers were not instantiated.
         """
@@ -709,17 +736,17 @@ class XLMRobertaEncoder(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new XLMRobertaEncoder object.
-        
+
         Args:
             self (XLMRobertaEncoder): The XLMRobertaEncoder instance.
             config (object): The configuration object containing parameters for the encoder.
                 It is expected to have attributes such as 'num_hidden_layers' to specify the number of hidden layers.
-        
+
         Returns:
-            None. This method initializes the XLMRobertaEncoder object with the provided configuration.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.config = config
@@ -741,26 +768,33 @@ class XLMRobertaEncoder(nn.Cell):
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
         """
         This method constructs the XLMRobertaEncoder.
-        
+
         Args:
             self: The instance of the XLMRobertaEncoder class.
-            hidden_states (mindspore.Tensor): The input hidden states. 
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor to mask the attention scores. Default is None.
-            head_mask (Optional[mindspore.Tensor]): An optional tensor to mask the attention scores of each head. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing the hidden states of the encoder. Default is None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor to mask the encoder attention scores. Default is None.
-            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key values. Default is None.
+            hidden_states (mindspore.Tensor): The input hidden states.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor to mask the attention scores.
+                Default is None.
+            head_mask (Optional[mindspore.Tensor]): An optional tensor to mask the attention scores of each head.
+                Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing the hidden states of
+                the encoder. Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor to mask the encoder attention scores.
+                Default is None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key values.
+                Default is None.
             use_cache (Optional[bool]): An optional boolean to use caching. Default is None.
             output_attentions (Optional[bool]): An optional boolean to output attention. Default is False.
             output_hidden_states (Optional[bool]): An optional boolean to output hidden states. Default is False.
             return_dict (Optional[bool]): An optional boolean to return a dictionary. Default is True.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: 
-            Returns either a tuple of tensors or an instance of BaseModelOutputWithPastAndCrossAttentions based on the return_dict value.
-        
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+                Returns either a tuple of tensors or an instance of BaseModelOutputWithPastAndCrossAttentions based on
+                the return_dict value.
+
         Raises:
-            Warning: If use_cache is set to True while using gradient checkpointing, a warning is raised notifying that it is incompatible, and use_cache is set to False.
+            Warning: If use_cache is set to True while using gradient checkpointing, a warning is raised notifying that
+                it is incompatible, and use_cache is set to False.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -828,15 +862,17 @@ class XLMRobertaPooler(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the XLMRobertaPooler class.
-        
+
         Args:
             self (object): The instance of the XLMRobertaPooler class.
-            config (object): An object containing configuration parameters.
+            config (object):
+                An object containing configuration parameters.
+
                 - hidden_size (int): The size of the hidden layer.
-            
+
         Returns:
-            None. This method initializes the XLMRobertaPooler instance with the provided configuration.
-        
+            None.
+
         Raises:
             None.
         """
@@ -847,19 +883,19 @@ class XLMRobertaPooler(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
             Constructs the pooled output tensor from the given hidden states.
-        
+
             Args:
                 self: An instance of the XLMRobertaPooler class.
-                hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) 
+                hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size)
                     containing the hidden states of the XLM-Roberta model.
-        
+
             Returns:
-                mindspore.Tensor: The pooled output tensor of shape (batch_size, hidden_size) representing the 
+                mindspore.Tensor: The pooled output tensor of shape (batch_size, hidden_size) representing the
                     aggregated representation of the input sequence.
-        
+
             Raises:
                 None.
-        
+
             """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
@@ -902,17 +938,18 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
     def _set_gradient_checkpointing(self, module, value=False):
         """
         Sets the gradient checkpointing attribute of the given module.
-        
+
         Args:
-        - self: The instance of the XLMRobertaPreTrainedModel class.
-        - module: The module for which to set the gradient checkpointing attribute. Must be an instance of XLMRobertaEncoder.
-        - value: The value to set for the gradient checkpointing attribute. (Default: False)
-        
+            self: The instance of the XLMRobertaPreTrainedModel class.
+            module: The module for which to set the gradient checkpointing attribute.
+                Must be an instance of XLMRobertaEncoder.
+            value: The value to set for the gradient checkpointing attribute. (Default: False)
+
         Returns:
-        None.
-        
+            None.
+
         Raises:
-        - TypeError: If the module is not an instance of XLMRobertaEncoder.
+            TypeError: If the module is not an instance of XLMRobertaEncoder.
         """
         if isinstance(module, XLMRobertaEncoder):
             module.gradient_checkpointing = value
@@ -920,7 +957,6 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
 
 class XLMRobertaModel(XLMRobertaPreTrainedModel):
     """
-
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
     cross-attention is added between the self-attention layers, following the architecture described in *Attention is
     all you need*_ by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz
@@ -937,15 +973,15 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the XLMRobertaModel class.
-        
+
         Args:
             self (XLMRobertaModel): The instance of the class itself.
             config (XLMRobertaConfig): The configuration object that holds the model configuration settings.
             add_pooling_layer (bool): A flag indicating whether to add a pooling layer to the model. Defaults to True.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -960,45 +996,46 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
 
     def get_input_embeddings(self):
         """
-        This method 'get_input_embeddings' is defined in the class 'XLMRobertaModel' and retrieves the input embeddings from the model.
-        
+        This method 'get_input_embeddings' is defined in the class 'XLMRobertaModel' and retrieves the input
+        embeddings from the model.
+
         Args:
             self (XLMRobertaModel): The instance of the XLMRobertaModel class.
                 This parameter is required to access the embeddings within the model.
-        
+
         Returns:
-            None
-            This method returns None as it simply retrieves the input embeddings without any further processing.
-        
+            None: This method returns None as it simply retrieves the input embeddings without any further processing.
+
         Raises:
-            None
-            This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the XLMRobertaModel.
-        
+
         Args:
             self (XLMRobertaModel): The current instance of the XLMRobertaModel class.
             value: The new input embeddings to be set. This should be of type torch.Tensor.
-        
+
         Returns:
-            None. The method does not return anything.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             The 'value' parameter should have the same dimensions as the current word_embeddings of the model.
             The input embeddings are used to represent the input tokens as vectors in the XLMRobertaModel.
             By setting new input embeddings, the model can be fine-tuned or updated with custom embeddings.
-        
+
         Example:
+            ```python
             >>> model = XLMRobertaModel()
             >>> embeddings = torch.tensor([[0.1, 0.2], [0.3, 0.4]])
             >>> model.set_input_embeddings(embeddings)
+            ```
         """
         self.embeddings.word_embeddings = value
 
@@ -1027,24 +1064,25 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4
+                tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1147,16 +1185,16 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the XLMRobertaForCausalLM class.
-        
+
         Args:
             self: The instance of the class.
             config: An object representing the configuration for the XLMRobertaForCausalLM model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - None.
+            None.
         """
         super().__init__(config)
 
@@ -1172,41 +1210,45 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
     def get_output_embeddings(self):
         """
         Method to retrieve the output embeddings from XLMRobertaForCausalLM model.
-        
+
         Args:
             self (XLMRobertaForCausalLM): The instance of the XLMRobertaForCausalLM class.
                 It is used to access the decoder of the model to get the output embeddings.
-        
+
         Returns:
-            None: This method does not return any value but directly provides access to the output embeddings through the decoder.
-        
+            decoder: This method does not return any value but directly provides access to the output embeddings
+                through the decoder.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the XLMRobertaForCausalLM model.
-        
+
         Args:
             self (XLMRobertaForCausalLM): The instance of the XLMRobertaForCausalLM class.
             new_embeddings (torch.nn.Module): The new embeddings to be set as the output embeddings for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
-            The output embeddings are used in the decoder layer of the XLMRobertaForCausalLM model. By setting new embeddings, users can customize the output layer of the model according to their specific
-requirements.
-        
+            The output embeddings are used in the decoder layer of the XLMRobertaForCausalLM model.
+            By setting new embeddings, users can customize the output layer of the model according to their specific
+            requirements.
+
         Example:
+            ```python
             >>> model = XLMRobertaForCausalLM.from_pretrained('xlm-roberta-base')
             >>> new_embeddings = torch.nn.Embedding(10, 768)
             >>> model.set_output_embeddings(new_embeddings)
+            ```
         """
         self.lm_head.decoder = new_embeddings
 
@@ -1228,47 +1270,49 @@ requirements.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input.
+                This mask is used in the cross-attention if the model is configured as a decoder.
+                Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4
+                tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         Returns:
+            Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, XLMRobertaForCausalLM, AutoConfig
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-        >>> config = AutoConfig.from_pretrained("roberta-base")
-        >>> config.is_decoder = True
-        >>> model = XLMRobertaForCausalLM.from_pretrained("roberta-base", config=config)
-
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.logits
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, XLMRobertaForCausalLM, AutoConfig
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+            >>> config = AutoConfig.from_pretrained("roberta-base")
+            >>> config.is_decoder = True
+            >>> model = XLMRobertaForCausalLM.from_pretrained("roberta-base", config=config)
+            ...
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> prediction_logits = outputs.logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
@@ -1315,16 +1359,18 @@ requirements.
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (XLMRobertaForCausalLM): The instance of the XLMRobertaForCausalLM class.
-            input_ids (torch.Tensor): The input tensor containing token ids. Shape should be (batch_size, sequence_length).
+            input_ids (torch.Tensor): The input tensor containing token ids. Shape should be
+                (batch_size, sequence_length).
             past_key_values (Optional[torch.Tensor]): A tensor containing past key values. Default is None.
-            attention_mask (Optional[torch.Tensor]): A tensor containing attention mask. If None is provided, it will be initialized with ones. Default is None.
-        
+            attention_mask (Optional[torch.Tensor]): A tensor containing attention mask. If None is provided,
+                it will be initialized with ones. Default is None.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1342,15 +1388,15 @@ requirements.
     def _reorder_cache(self, past_key_values, beam_idx):
         """
         Reorders the cache of past key values based on the provided beam index.
-        
+
         Args:
             self (XLMRobertaForCausalLM): The instance of XLMRobertaForCausalLM.
             past_key_values (tuple): A tuple of past key values for each layer.
             beam_idx (torch.Tensor): A tensor containing the beam indices.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             IndexError: If the beam index is out of range for the past_key_values.
             TypeError: If the input types are incorrect or incompatible.
@@ -1370,19 +1416,19 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of XLMRobertaForMaskedLM.
-        
+
         Args:
             self: The instance of the class.
             config (object): The configuration object containing the settings for the model.
                 It should have attributes like 'is_decoder' to control the behavior of the model.
                 If 'is_decoder' is set to True, a warning message will be logged.
                 Ensure that 'is_decoder' is set to False for bi-directional self-attention.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -1400,33 +1446,34 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
 
     def get_output_embeddings(self):
         """Get the output embeddings for the XLM-Roberta model.
-        
+
         Args:
             self (XLMRobertaForMaskedLM): The instance of the XLMRobertaForMaskedLM class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
         """
         This method sets the output embeddings for the XLMRobertaForMaskedLM model.
-        
+
         Args:
             self (XLMRobertaForMaskedLM): The instance of the XLMRobertaForMaskedLM class.
-            new_embeddings (torch.nn.Module): The new embeddings to be set as the output embeddings for the model. 
+            new_embeddings (torch.nn.Module): The new embeddings to be set as the output embeddings for the model.
                 It should be an instance of torch.nn.Module representing the new embeddings.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the new_embeddings parameter is not an instance of torch.nn.Module.
-            - AttributeError: If the lm_head.decoder attribute does not exist or is not accessible within the XLMRobertaForMaskedLM instance.
+            TypeError: If the new_embeddings parameter is not an instance of torch.nn.Module.
+            AttributeError: If the lm_head.decoder attribute does not exist or is not accessible within
+                the XLMRobertaForMaskedLM instance.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -1446,12 +1493,13 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-        kwargs (`Dict[str, any]`, optional, defaults to *{}*):
-            Used to hide legacy arguments that have been deprecated.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+            kwargs (`Dict[str, any]`, optional, defaults to *{}*):
+                Used to hide legacy arguments that have been deprecated.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1494,17 +1542,18 @@ class XLMRobertaLMHead(nn.Cell):
     def __init__(self, config):
         """
         This method initializes an instance of the XLMRobertaLMHead class.
-        
+
         Args:
             self: An instance of the XLMRobertaLMHead class.
-            config: A configuration object containing parameters for initializing the XLMRobertaLMHead instance. It is of type 'config' and is used to set the hidden size, vocabulary size, and layer
-normalization epsilon for the XLMRobertaLMHead instance.
-        
+            config: A configuration object containing parameters for initializing the XLMRobertaLMHead instance.
+                It is of type 'config' and is used to set the hidden size, vocabulary size, and layer
+                normalization epsilon for the XLMRobertaLMHead instance.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1517,14 +1566,14 @@ normalization epsilon for the XLMRobertaLMHead instance.
     def construct(self, features, **kwargs):
         """
         Construct the LM head for the XLM-Roberta model.
-        
+
         Args:
             self (XLMRobertaLMHead): The instance of the XLMRobertaLMHead class.
             features (Tensor): The input features to be used for LM head construction.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1540,14 +1589,14 @@ normalization epsilon for the XLMRobertaLMHead instance.
     def _tie_weights(self):
         """
         This method ties the weights of the XLMRobertaLMHead decoder to the bias.
-        
+
         Args:
             self (XLMRobertaLMHead): The instance of the XLMRobertaLMHead class.
                 This parameter is used to access the decoder and its bias.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1560,19 +1609,21 @@ class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of XLMRobertaForSequenceClassification.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): The configuration object containing the model hyperparameters and settings.
+            config (object):
+                The configuration object containing the model hyperparameters and settings.
+
                 - Type: XLMRobertaConfig
                 - Purpose: Specifies the configuration for the XLM-Roberta model.
                 - Restrictions: Must be a valid instance of XLMRobertaConfig.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1598,10 +1649,11 @@ class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1657,16 +1709,18 @@ class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         __init__
-        
+
         Initialize the XLMRobertaForMultipleChoice model.
-        
+
         Args:
             self: The instance of the class.
-            config: An instance of the configuration class containing the model configuration. It is used to initialize the XLMRobertaModel, dropout, and classifier. It should be of type XLMRobertaConfig.
-        
+            config: An instance of the configuration class containing the model configuration.
+                It is used to initialize the XLMRobertaModel, dropout, and classifier.
+                It should be of type XLMRobertaConfig.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1693,10 +1747,11 @@ class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -1750,23 +1805,26 @@ class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes the XLMRobertaForTokenClassification model.
-        
+
         Args:
             self: The instance of the XLMRobertaForTokenClassification class.
-            config: An object containing configuration settings for the model.
+            config:
+                An object containing configuration settings for the model.
                 It must provide the following attributes:
-                    - num_labels (int): The number of labels for token classification.
-                    - classifier_dropout (float, optional): The dropout probability for the classifier layer. If not specified, 
-                      it defaults to the hidden dropout probability specified in the configuration.
-                    - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                    - hidden_size (int): The size of the hidden layers in the model.
-        
+
+                - num_labels (int): The number of labels for token classification.
+                - classifier_dropout (float, optional): The dropout probability for the classifier layer.
+                If not specified, it defaults to the hidden dropout probability specified in the configuration.
+                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                - hidden_size (int): The size of the hidden layers in the model.
+
         Returns:
-            None. This method initializes the XLMRobertaForTokenClassification model with the provided configuration settings.
-        
+            None.
+
         Raises:
-            - TypeError: If config is not provided or is not an instance of the expected configuration object.
-            - ValueError: If the required attributes (num_labels, hidden_dropout_prob, hidden_size) are missing from the config.
+            TypeError: If config is not provided or is not an instance of the expected configuration object.
+            ValueError: If the required attributes (num_labels, hidden_dropout_prob, hidden_size) are missing
+                from the config.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1795,8 +1853,9 @@ class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1839,14 +1898,14 @@ class XLMRobertaClassificationHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the XLMRobertaClassificationHead class.
-        
+
         Args:
             self: The current instance of the class.
             config: An instance of the configuration class containing the model's configuration parameters.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -1861,16 +1920,19 @@ class XLMRobertaClassificationHead(nn.Cell):
     def construct(self, features, **kwargs):
         """
         Constructs the XLMRobertaClassificationHead.
-        
-        This method constructs the classification head for the XLM-RoBERTa model. It takes in a set of features and applies several operations to generate the final output.
-        
+
+        This method constructs the classification head for the XLM-RoBERTa model. It takes in a set of features and
+        applies several operations to generate the final output.
+
         Args:
             self (XLMRobertaClassificationHead): An instance of the XLMRobertaClassificationHead class.
-            features (Tensor): The input features for the classification head. It should have the shape (batch_size, sequence_length, num_features).
-        
+            features (Tensor): The input features for the classification head. It should have the shape
+                (batch_size, sequence_length, num_features).
+
         Returns:
-            Tensor: The output tensor of the classification head. It has the shape (batch_size, sequence_length, output_size).
-        
+            Tensor: The output tensor of the classification head. It has the shape
+                (batch_size, sequence_length, output_size).
+
         Raises:
             None.
         """
@@ -1888,18 +1950,18 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes the XLMRobertaForQuestionAnswering class.
-        
+
         Args:
             self (XLMRobertaForQuestionAnswering): The instance of the XLMRobertaForQuestionAnswering class.
-            config (XLMRobertaConfig): The configuration object for the XLM-RoBERTa model. It contains various parameters 
-                for model initialization, such as num_labels, hidden_size, and more.
-        
+            config (XLMRobertaConfig): The configuration object for the XLM-RoBERTa model.
+                It contains various parameters for model initialization, such as num_labels, hidden_size, and more.
+
         Returns:
-            None. This method initializes the XLMRobertaForQuestionAnswering instance with the provided configuration.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided config is not of type XLMRobertaConfig.
-            - ValueError: If the number of labels in the config is not a positive integer.
+            TypeError: If the provided config is not of type XLMRobertaConfig.
+            ValueError: If the number of labels in the config is not a positive integer.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1925,14 +1987,15 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1992,7 +2055,8 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     Args:
         x: mindspore.Tensor x:
 
-    Returns: mindspore.Tensor
+    Returns:
+        mindspore.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()

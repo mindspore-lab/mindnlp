@@ -217,21 +217,21 @@ def get_image_processor_config(
     Returns:
         `Dict`: The configuration of the image processor.
 
-    Examples:
-
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
-    # This model does not have a image processor config so the result will be an empty dict.
-    image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
-
-    # Save a pretrained image processor locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-    image_processor.save_pretrained("image-processor-test")
-    image_processor_config = get_image_processor_config("image-processor-test")
-    ```"""
+    Example:
+        ```python
+        >>> # Download configuration from hf-mirror.com and cache.
+        >>> image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
+        >>> # This model does not have a image processor config so the result will be an empty dict.
+        >>> image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
+        ...
+        >>> # Save a pretrained image processor locally and you can reload its config
+        >>> from transformers import AutoTokenizer
+        ...
+        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+        >>> image_processor.save_pretrained("image-processor-test")
+        >>> image_processor_config = get_image_processor_config("image-processor-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -278,11 +278,12 @@ class AutoImageProcessor:
             self: The object itself.
 
         Returns:
-            None. This method does not return any value.
-
+            None.
         Raises:
-            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
-`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+            EnvironmentError:
+                Raised when attempting to directly instantiate an AutoImageProcessor object.
+                AutoImageProcessor is designed to be instantiated using the
+                `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
         """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
@@ -351,17 +352,17 @@ class AutoImageProcessor:
 
         </Tip>
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor
-
-        >>> # Download image processor from hf-mirror.com and cache.
-        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-
-        >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor
+            ...
+            >>> # Download image processor from hf-mirror.com and cache.
+            >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+            ...
+            >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

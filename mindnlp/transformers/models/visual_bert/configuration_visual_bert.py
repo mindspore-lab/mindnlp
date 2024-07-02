@@ -32,7 +32,6 @@ class VisualBertConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 30522):
             Vocabulary size of the VisualBERT model. Defines the number of different tokens that can be represented by
@@ -74,21 +73,20 @@ class VisualBertConfig(PretrainedConfig):
             the textual token type and positive type embeddings. When set to `True`, the weights of the textual token
             type and position type embeddings are copied to the respective visual embedding layers.
 
-
     Example:
-
-    ```python
-    >>> from transformers import VisualBertConfig, VisualBertModel
-
-    >>> # Initializing a VisualBERT visualbert-vqa-coco-pre style configuration
-    >>> configuration = VisualBertConfig.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
-
-    >>> # Initializing a model (with random weights) from the visualbert-vqa-coco-pre style configuration
-    >>> model = VisualBertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import VisualBertConfig, VisualBertModel
+        ...
+        >>> # Initializing a VisualBERT visualbert-vqa-coco-pre style configuration
+        >>> configuration = VisualBertConfig.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
+        ...
+        >>> # Initializing a model (with random weights) from the visualbert-vqa-coco-pre style configuration
+        >>> model = VisualBertModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "visual_bert"
 

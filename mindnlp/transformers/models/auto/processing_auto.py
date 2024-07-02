@@ -153,20 +153,21 @@ class AutoProcessor:
 
     def __init__(self):
         """
-                Class: AutoProcessor
+        Class: AutoProcessor
+        
+        __init__(self)
+            Initializes a new instance of the AutoProcessor class.
+        
+        Args:
+            self (object): The instance of the AutoProcessor class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be
+            instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`method.'
 
-                __init__(self)
-                    Initializes a new instance of the AutoProcessor class.
-
-                Args:
-                    self (object): The instance of the AutoProcessor class.
-
-                Returns:
-                    None. This method does not return a value.
-
-                Raises:
-                    EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
-        method.'
         """
         raise EnvironmentError(
             "AutoProcessor is designed to be instantiated "
@@ -188,9 +189,9 @@ class AutoProcessor:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
 
-                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+               - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a processor files saved using the `save_pretrained()` method,
+               - a path to a *directory* containing a processor files saved using the `save_pretrained()` method,
                   e.g., `./my_model_directory/`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model feature extractor should be cached if the
@@ -231,17 +232,17 @@ class AutoProcessor:
 
         </Tip>
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoProcessor
-
-        >>> # Download processor from hf-mirror.com and cache.
-        >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
-
-        >>> # If processor files are in a directory (e.g. processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # processor = AutoProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor
+            ...
+            >>> # Download processor from hf-mirror.com and cache.
+            >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+            ...
+            >>> # If processor files are in a directory (e.g. processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # processor = AutoProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

@@ -51,7 +51,7 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
             None: This method does not return any value.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__()
 

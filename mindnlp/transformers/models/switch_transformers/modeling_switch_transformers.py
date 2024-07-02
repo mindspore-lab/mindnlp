@@ -136,6 +136,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         Args:
             hidden_states (`mindspore.Tensor`):
                 (batch_size, sequence_length, hidden_dim) from which router probabilities are computed.
+
         Returns:
             router_probabilities (`mindspore.Tensor`):
                 Tensor of shape (batch_size, sequence_length, num_experts) corresponding to the probabilities for each
@@ -187,9 +188,10 @@ class SwitchTransformersTop1Router(nn.Cell):
         Args:
             hidden_states (`mindspore.Tensor`) :
                 [num_groups, tokens_per_group, hidden_dim] inputs to send to experts.
+
         Returns:
-            Tuple[`mindspore.Tensor`, `mindspore.Tensor`, `mindspore.Tensor`] Tuple containing the expert index, the router probs
-            and the router logits. The router probabilities and logits are required to compute the loss.
+            Tuple[`mindspore.Tensor`, `mindspore.Tensor`, `mindspore.Tensor`] Tuple containing the expert index,
+                the router probs and the router logits. The router probabilities and logits are required to compute the loss.
         """
         router_probs, router_logits = self._compute_router_probabilities(hidden_states)
 
@@ -277,11 +279,10 @@ class SwitchTransformersSparseMLP(nn.Cell):
         r"""
         Hold on, this will be slightly tricky to understand In the correct order, a MoE layer does the following:
 
-        1- Gets the `router_mask` from the router. The shape of the mask is `(batch_size, sequence_length, num_expert)`
+        1. Gets the `router_mask` from the router. The shape of the mask is `(batch_size, sequence_length, num_expert)`
         and corresponds to the argmax of the `router_probs`. The probabilities are needed in the computation of the
         hidden states : they are broadcasted to the hidden states values (can be interpreted as a scaling factor).
-
-        2- Dispatch the tokens to its associated experts. We do a classic for loop over the experts and assign for each
+        2. Dispatch the tokens to its associated experts. We do a classic for loop over the experts and assign for each
         expert the corresponding hidden states.
 
         """
@@ -1204,29 +1205,31 @@ class SwitchTransformersModel(SwitchTransformersPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqMoEModelOutput]:
         r"""
+
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqMoEModelOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersModel.from_pretrained("google/switch-base-8")
-
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
-
-        >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for SwitchTransformersModel.
-        >>> # This is not needed for torch's SwitchTransformersForConditionalGeneration as it does this internally using labels arg.
-        >>> decoder_input_ids = model._shift_right(decoder_input_ids)
-
-        >>> # forward pass
-        >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersModel.from_pretrained("google/switch-base-8")
+            ...
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            ...
+            >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for SwitchTransformersModel.
+            >>> # This is not needed for torch's SwitchTransformersForConditionalGeneration as it does this internally using labels arg.
+            >>> decoder_input_ids = model._shift_right(decoder_input_ids)
+            ...
+            >>> # forward pass
+            >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1379,36 +1382,38 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqMoEOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
-            labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
+                labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqMoEOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersForConditionalGeneration
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8")
-
-        >>> # training
-        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
-        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
-        >>> outputs = model(input_ids=input_ids, labels=labels)
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-
-        >>> # inference
-        >>> input_ids = tokenizer(
-        ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model.generate(input_ids)
-        >>> # . To, let’s say you have a dog. To summarize:
-        >>> # Since the model has been trained on MLM, this will output gibberish
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersForConditionalGeneration
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8")
+            ...
+            >>> # training
+            >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
+            >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
+            >>> outputs = model(input_ids=input_ids, labels=labels)
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ...
+            >>> # inference
+            >>> input_ids = tokenizer(
+            ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model.generate(input_ids)
+            >>> # . To, let’s say you have a dog. To summarize:
+            >>> # Since the model has been trained on MLM, this will output gibberish
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1668,21 +1673,23 @@ class SwitchTransformersEncoderModel(SwitchTransformersPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MoEModelOutput]:
         r"""
+
         Returns:
+            `Union[Tuple[mindspore.Tensor], MoEModelOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersEncoderModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersEncoderModel.from_pretrained("google/switch-base-8")
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model(input_ids=input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersEncoderModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersEncoderModel.from_pretrained("google/switch-base-8")
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model(input_ids=input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         encoder_outputs = self.encoder(

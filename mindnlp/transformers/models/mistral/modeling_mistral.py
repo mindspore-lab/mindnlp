@@ -49,11 +49,13 @@ def _get_unpad_data(attention_mask):
             as the input data and have values of 0 for padding tokens and 1 for non-padding tokens.
     
     Returns:
-        tuple: A tuple containing the following elements:
+        tuple:
+            A tuple containing the following elements:
+
             - indices (Tensor): A tensor containing the indices of non-padding tokens in the attention mask.
             - cu_seqlens (Tensor): A tensor representing the cumulative sum of sequence lengths in the batch.
             - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-    
+
     Raises:
         None
     """
@@ -72,25 +74,28 @@ def _get_unpad_data(attention_mask):
 class MistralRMSNorm(nn.Cell):
 
     """
-    MistralRMSNorm is a normalization layer equivalent to T5LayerNorm, designed to normalize hidden states in deep learning models. 
-    It inherits from nn.Cell and provides methods for normalizing and scaling input hidden states based on the given parameters.
-    
+    MistralRMSNorm is a normalization layer equivalent to T5LayerNorm, designed to normalize hidden states in
+    deep learning models. It inherits from nn.Cell and provides methods for normalizing and scaling input hidden states
+    based on the given parameters.
+
     Attributes:
-        - hidden_size (int): The size of the hidden states.
-        - eps (float): The epsilon value used for numerical stability in variance calculation.
-    
+        hidden_size (int): The size of the hidden states.
+        eps (float): The epsilon value used for numerical stability in variance calculation.
+
     Methods:
-        - __init__(hidden_size, eps=1e-06): Initializes the MistralRMSNorm layer with the specified hidden_size and epsilon value.
-        - construct(hidden_states): Normalizes the input hidden_states by calculating the variance and applying scaling.
-    
-    Usage example:
-        # Initialize MistralRMSNorm layer
-        norm_layer = MistralRMSNorm(hidden_size=768, eps=1e-06)
-        
-        # Normalize hidden states
-        normalized_states = norm_layer.construct(input_hidden_states)
-        
-    Note: 
+        __init__: Initializes the MistralRMSNorm layer with the specified hidden_size and epsilon value.
+        construct: Normalizes the input hidden_states by calculating the variance and applying scaling.
+
+    Example:
+        ```python
+        >>> # Initialize MistralRMSNorm layer
+        >>> norm_layer = MistralRMSNorm(hidden_size=768, eps=1e-06)
+        ...
+        >>> # Normalize hidden states
+        >>> normalized_states = norm_layer.construct(input_hidden_states)
+        ```
+
+    Note:
         - This implementation assumes the use of the MindSpore deep learning framework.
         - The class utilizes the Parameter and ops modules for efficient computation.
         - Make sure to convert input hidden states to the appropriate data type before passing to the construct method.
@@ -106,14 +111,15 @@ class MistralRMSNorm(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the RMS normalization of the hidden states.
-        
+
         Args:
             self (MistralRMSNorm): The instance of the MistralRMSNorm class.
             hidden_states (Tensor): The input tensor containing the hidden states.
-            
+
         Returns:
-            None: This method does not return any value. The normalization is applied in-place to the hidden_states tensor.
-        
+            None: This method does not return any value.
+                The normalization is applied in-place to the hidden_states tensor.
+
         Raises:
             TypeError: If the input_dtype of hidden_states is not supported.
             ValueError: If variance_epsilon is not a valid value.
@@ -129,9 +135,10 @@ class MistralRMSNorm(nn.Cell):
 class MistralRotaryEmbedding(nn.Cell):
 
     """
-    The MistralRotaryEmbedding class represents a rotary positional embedding for sequences. It inherits from the nn.Cell class and provides methods for setting up the rotary embedding and constructing the
-embeddings for input sequences.
-    
+    The MistralRotaryEmbedding class represents a rotary positional embedding for sequences.
+    It inherits from the nn.Cell class and provides methods for setting up the rotary embedding and constructing the
+    embeddings for input sequences.
+
     Attributes:
         dim (int): The dimension of the embedding.
         max_position_embeddings (int): The maximum position for which embeddings are cached.
@@ -140,24 +147,25 @@ embeddings for input sequences.
         max_seq_len_cached (int): The maximum sequence length for which embeddings are cached.
         cos_cached (Tensor): Cached cosine embeddings for positional sequences.
         sin_cached (Tensor): Cached sine embeddings for positional sequences.
-    
+
     Methods:
-        _set_cos_sin_cache(self, seq_len, dtype): Sets up the cosine and sine cache for a given sequence length and data type.
-        construct(self, x, seq_len=None): Constructs the embeddings for the input sequence, optionally updating the cache if the sequence length exceeds the cached values.
+        _set_cos_sin_cache: Sets up the cosine and sine cache for a given sequence length and data type.
+        construct: Constructs the embeddings for the input sequence, optionally updating the cache if the sequence
+            length exceeds the cached values.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         Initializes a new instance of the MistralRotaryEmbedding class.
-        
+
         Args:
             self: The object itself.
             dim (int): The dimensionality of the embedding vectors.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
             base (int, optional): The base value used for calculating inverse frequencies. Defaults to 10000.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -176,15 +184,15 @@ embeddings for input sequences.
     def _set_cos_sin_cache(self, seq_len, dtype):
         '''
         Set the cosine and sine cache for MistralRotaryEmbedding.
-        
+
         Args:
             self (MistralRotaryEmbedding): The instance of MistralRotaryEmbedding.
             seq_len (int): The length of the input sequence. Must be a positive integer.
             dtype (str): The data type for the cache. Must be a valid data type supported by the system.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If seq_len is not a positive integer.
             TypeError: If dtype is not a valid data type.
@@ -201,15 +209,15 @@ embeddings for input sequences.
     def construct(self, x, seq_len=None):
         """
         Constructs the MistralRotaryEmbedding.
-        
+
         Args:
             self (MistralRotaryEmbedding): The instance of the MistralRotaryEmbedding class.
             x: The input tensor of shape (batch_size, input_dim).
             seq_len (int, optional): The length of the sequence. If not provided, the default value is None.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached.
             TypeError: If the data type of the input tensor is not supported for cosine and sine cache.
@@ -264,9 +272,10 @@ class MistralMLP(nn.Cell):
 
     """
     MistralMLP
-    
-    This class represents a multi-layer perceptron (MLP) model for Mistral, a deep learning framework. It inherits from the nn.Cell class and is designed for processing sequential data.
-    
+
+    This class represents a multi-layer perceptron (MLP) model for Mistral, a deep learning framework.
+    It inherits from the nn.Cell class and is designed for processing sequential data.
+
     Attributes:
         config (object): The configuration object containing various parameters for the MLP.
         hidden_size (int): The size of the hidden layer in the MLP.
@@ -275,34 +284,41 @@ class MistralMLP(nn.Cell):
         up_proj (nn.Dense): The dense layer used for projecting the input data to the hidden size in the MLP.
         down_proj (nn.Dense): The dense layer used for projecting the intermediate data back to the hidden size in the MLP.
         act_fn (function): The activation function used in the MLP.
-    
+
     Methods:
         construct(x):
             Constructs the forward pass of the MistralMLP model.
+
             Args:
-                x (Tensor): The input data to be processed by the MLP.
+
+            - x (Tensor): The input data to be processed by the MLP.
+
             Returns:
-                Tensor: The output of the MLP after processing the input data.
+
+            - Tensor: The output of the MLP after processing the input data.
     """
     def __init__(self, config):
         """
         Initializes a MistralMLP object with the provided configuration.
-        
+
         Args:
             self (MistralMLP): The MistralMLP object itself.
             config (object): The configuration object containing parameters for the model.
                 It should include the following attributes:
+
                 - hidden_size (int): The size of the hidden layers.
                 - intermediate_size (int): The size of the intermediate layers.
                 - hidden_act (str): The activation function to be used in the hidden layers.
-                
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            - KeyError: If the 'hidden_act' attribute in the config object does not match any predefined activation function.
-            - AttributeError: If the config object is missing any of the required attributes (hidden_size, intermediate_size, hidden_act).
-            - ValueError: If any of the provided attributes have invalid values or types.
+            KeyError: If the 'hidden_act' attribute in the config object does not match any predefined
+                activation function.
+            AttributeError: If the config object is missing any of the required attributes
+                (hidden_size, intermediate_size, hidden_act).
+            ValueError: If any of the provided attributes have invalid values or types.
         """
         super().__init__()
         self.config = config
@@ -316,14 +332,14 @@ class MistralMLP(nn.Cell):
     def construct(self, x):
         """
         Constructs a new instance of the MistralMLP class.
-        
+
         Args:
             self (MistralMLP): The current instance of the MistralMLP class.
             x: The input data to be processed. It can be of any type.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -351,19 +367,20 @@ class MistralAttention(nn.Cell):
     def __init__(self, config: MistralConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the MistralAttention class.
-        
+
         Args:
             self: The MistralAttention instance.
             config (MistralConfig): The configuration object for the MistralAttention model.
-            layer_idx (Optional[int], default=None): The index of the layer. If not provided, it will issue a warning and may cause errors during the forward call if caching is used. It is recommended to
-always provide a `layer_idx` when creating this class.
-        
+            layer_idx (Optional[int], default=None): The index of the layer. If not provided,
+                it will issue a warning and may cause errors during the forward call if caching is used.
+                It is recommended to always provide a `layer_idx` when creating this class.
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If `hidden_size` is not divisible by `num_heads`.
-            
+
         """
         super().__init__()
         self.config = config
@@ -404,19 +421,19 @@ always provide a `layer_idx` when creating this class.
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method '_shape' in the class 'MistralAttention' reshapes the input tensor based on the provided parameters.
-        
+
         Args:
             self (MistralAttention): The instance of the MistralAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the sequence.
             bsz (int): The batch size.
-        
+
         Returns:
-            None: This method does not return a value.
-        
+            None.
+
         Raises:
-            - ValueError: If the provided sequence length or batch size is not a positive integer.
-            - TypeError: If the input tensor is not of type mindspore.Tensor.
+            ValueError: If the provided sequence length or batch size is not a positive integer.
+            TypeError: If the input tensor is not of type mindspore.Tensor.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -429,23 +446,25 @@ always provide a `layer_idx` when creating this class.
         output_attentions: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-        """Constructs the MistralAttention.
-        
+        """
+        Constructs the MistralAttention.
+
         Args:
             self (MistralAttention): An instance of the MistralAttention class.
             hidden_states (mindspore.Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask of shape (batch_size, 1, sequence_length, key_value_sequence_length).
-                If provided, it masks the attention scores.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask of shape
+                (batch_size, 1, sequence_length, key_value_sequence_length). If provided, it masks the attention scores.
             position_ids (Optional[mindspore.Tensor]): The position IDs of shape (batch_size, sequence_length).
             past_key_value (Optional): The cached key and value states for auto-regressive decoding.
                 This is used to speed up decoding by reusing the key and value states from previous time steps.
             output_attentions (bool): Whether to return attention weights. Default is False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output of shape (batch_size, sequence_length, hidden_size),
-            the attention weights of shape (batch_size, num_heads, sequence_length, key_value_sequence_length) if output_attentions is True, and
-            the updated past key and value states if past_key_value is not None.
-        
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing the attention output of shape (batch_size, sequence_length, hidden_size),
+                the attention weights of shape (batch_size, num_heads, sequence_length, key_value_sequence_length)
+                if output_attentions is True, and the updated past key and value states if past_key_value is not None.
+
         Raises:
             ValueError: If the attention weights are not of shape (batch_size, num_heads, sequence_length, key_value_sequence_length).
             ValueError: If the attention mask is not of shape (batch_size, 1, sequence_length, key_value_sequence_length).
@@ -523,56 +542,57 @@ always provide a `layer_idx` when creating this class.
 class MistralDecoderLayer(nn.Cell):
 
     """
-    MistralDecoderLayer represents a single layer of the Mistral decoder model. This class implements the logic for processing input hidden states through self-attention mechanism and multi-layer perceptron
-(MLP) in a decoder layer.
-    
+    MistralDecoderLayer represents a single layer of the Mistral decoder model. This class implements the logic for
+    processing input hidden states through self-attention mechanism and multi-layer perceptron (MLP) in a decoder layer.
+
     Inherits From:
         nn.Cell
-    
+
     Attributes:
         hidden_size (int): The size of the hidden states.
         self_attn (MistralAttention): The self-attention mechanism used in the layer.
         mlp (MistralMLP): The multi-layer perceptron used in the layer.
         input_layernorm (MistralRMSNorm): Layer normalization applied to the input hidden states.
         post_attention_layernorm (MistralRMSNorm): Layer normalization applied after the self-attention mechanism.
-    
+
     Methods:
-        __init__(config: MistralConfig, layer_idx: int)
+        __init__:
             Initializes the MistralDecoderLayer with the given configuration and layer index.
-        
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]
-            Processes the input hidden states through self-attention and MLP mechanisms in the decoder layer, optionally returning additional tensors based on the arguments provided.
-    
+
+        construct:
+            Processes the input hidden states through self-attention and MLP mechanisms in the decoder layer,
+            optionally returning additional tensors based on the arguments provided.
+
     Args:
         config (MistralConfig): Configuration object containing model hyperparameters.
         layer_idx (int): Index of the layer within the decoder model.
-    
+
     Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: Tuple containing the output hidden states and additional tensors based on the method arguments.
-    
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: Tuple containing the output
+            hidden states and additional tensors based on the method arguments.
+
     Raises:
         NotImplementedError: If any specific requirements are not met.
-    
-    Examples:
+
+    Example:
         Instantiate MistralDecoderLayer:
-        
-        config = MistralConfig(hidden_size=512)
-        layer = MistralDecoderLayer(config, layer_idx=1)
-        
+        ```python
+        >>> config = MistralConfig(hidden_size=512)
+        >>> layer = MistralDecoderLayer(config, layer_idx=1)
+        ```
     """
     def __init__(self, config: MistralConfig, layer_idx: int):
         """
         Initializes a MistralDecoderLayer object.
-        
+
         Args:
             self (MistralDecoderLayer): The instance of the MistralDecoderLayer class.
             config (MistralConfig): An object containing configuration parameters for the layer.
             layer_idx (int): The index of the layer within the decoder.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the config parameter is not of type MistralConfig.
             ValueError: If the layer_idx parameter is not an integer.
@@ -644,23 +664,31 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
 class MistralPreTrainedModel(PreTrainedModel):
 
     """
-    This class represents the Mistral pre-trained model for natural language processing tasks. It is a subclass of the PreTrainedModel class.
-    
-    The MistralPreTrainedModel class provides methods for initializing the weights of the model's cells. The _init_weights method is used to initialize the weights of the cells in the model. 
-    
+    This class represents the Mistral pre-trained model for natural language processing tasks.
+    It is a subclass of the PreTrainedModel class.
+
+    The MistralPreTrainedModel class provides methods for initializing the weights of the model's cells.
+    The _init_weights method is used to initialize the weights of the cells in the model.
+
     Parameters:
-        - cell: The cell for which the weights need to be initialized.
-    
-    The _init_weights method initializes the weights of the given cell based on its type. If the cell is of type nn.Dense, the weights are set using a normal distribution with a range specified by the
-'initializer_range' attribute in the configuration. If the cell has a bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weights are initialized using a normal distribution with a
-range specified by the 'initializer_range' attribute in the configuration. If the cell has a padding index, the weight corresponding to the padding index is set to zero.
-    
-    Note: The MistralPreTrainedModel class assumes that the cell's weight and bias attributes are accessible using the 'weight' and 'bias' properties, respectively.
-    
-    Example usage:
-        model = MistralPreTrainedModel()
-        model._init_weights(cell)
-    
+        cell: The cell for which the weights need to be initialized.
+
+    The _init_weights method initializes the weights of the given cell based on its type.
+    If the cell is of type nn.Dense, the weights are set using a normal distribution with a range specified by the
+    'initializer_range' attribute in the configuration. If the cell has a bias, it is initialized with zeros.
+    If the cell is of type nn.Embedding, the weights are initialized using a normal distribution with a range specified
+    by the 'initializer_range' attribute in the configuration. If the cell has a padding index, the weight corresponding
+    to the padding index is set to zero.
+
+    Note:
+        The MistralPreTrainedModel class assumes that the cell's weight and bias attributes are accessible using the
+        'weight' and 'bias' properties, respectively.
+
+    Example:
+        ```python
+        >>> model = MistralPreTrainedModel()
+        >>> model._init_weights(cell)
+        ```
     """
     config_class = MistralConfig
     base_model_prefix = "model"
@@ -697,23 +725,26 @@ class MistralModel(MistralPreTrainedModel):
     def __init__(self, config: MistralConfig):
         """
         __init__
-        
+
         Initialize MistralModel with the specified configuration.
-        
+
         Args:
             self: The instance of the MistralModel class.
-            config (MistralConfig): An instance of MistralConfig containing the configuration settings for the MistralModel. It includes the following attributes:
+            config (MistralConfig):
+                An instance of MistralConfig containing the configuration settings for the MistralModel.
+                It includes the following attributes:
+
                 - pad_token_id (int): The index of the padding token in the vocabulary.
                 - vocab_size (int): The size of the vocabulary.
                 - hidden_size (int): The size of the hidden layers in the model.
                 - num_hidden_layers (int): The number of hidden layers in the model.
                 - rms_norm_eps (float): The epsilon value for stability in the RMS normalization.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__(config)
         self.padding_idx = config.pad_token_id
@@ -732,36 +763,36 @@ class MistralModel(MistralPreTrainedModel):
     def get_input_embeddings(self):
         """
         Method: get_input_embeddings
-        
+
         Description:
         This method retrieves the input embeddings from the MistralModel instance.
-        
+
         Args:
-        - self: MistralModel instance
-            The self parameter refers to the current MistralModel instance.
-        
+            self: MistralModel instance
+                The self parameter refers to the current MistralModel instance.
+
         Returns:
-        None
-            This method returns None as it simply retrieves the input embeddings from the MistralModel instance.
-        
+            None:
+                This method returns None as it simply retrieves the input embeddings from the MistralModel instance.
+
         Raises:
-        This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the MistralModel.
-        
+
         Args:
             self (MistralModel): The instance of the MistralModel class.
             value (object): The input embeddings value to be set for the model. Should be of type 'object'.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embed_tokens = value
 
@@ -779,24 +810,28 @@ class MistralModel(MistralPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         This method constructs the MistralModel. It takes the following parameters:
-        
+
         Args:
-        - self: The object itself.
-        - input_ids (mindspore.Tensor, optional): The input tensor of shape (batch_size, seq_length) representing input IDs.
-        - attention_mask (mindspore.Tensor, optional): An optional tensor of shape (batch_size, seq_length) representing attention mask.
-        - position_ids (mindspore.Tensor, optional): An optional tensor representing the position IDs.
-        - past_key_values (List[mindspore.Tensor], optional): An optional list of tensors representing past key values.
-        - inputs_embeds (mindspore.Tensor, optional): An optional tensor representing input embeddings.
-        - use_cache (bool, optional): An optional boolean flag indicating whether to use cache.
-        - output_attentions (bool, optional): An optional boolean flag indicating whether to output attentions.
-        - output_hidden_states (bool, optional): An optional boolean flag indicating whether to output hidden states.
-        - return_dict (bool, optional): An optional boolean flag indicating whether to return a dictionary.
-        
+            self: The object itself.
+            input_ids (mindspore.Tensor, optional): The input tensor of shape (batch_size, seq_length) representing input IDs.
+            attention_mask (mindspore.Tensor, optional): An optional tensor of shape (batch_size, seq_length)
+                representing attention mask.
+            position_ids (mindspore.Tensor, optional): An optional tensor representing the position IDs.
+            past_key_values (List[mindspore.Tensor], optional): An optional list of tensors representing past key values.
+            inputs_embeds (mindspore.Tensor, optional): An optional tensor representing input embeddings.
+            use_cache (bool, optional): An optional boolean flag indicating whether to use cache.
+            output_attentions (bool, optional): An optional boolean flag indicating whether to output attentions.
+            output_hidden_states (bool, optional): An optional boolean flag indicating whether to output hidden states.
+            return_dict (bool, optional): An optional boolean flag indicating whether to return a dictionary.
+
         Returns:
-        Union[Tuple, BaseModelOutputWithPast]: A tuple or BaseModelOutputWithPast object containing the last hidden state, past key values, hidden states, and attentions.
-        
+            Union[Tuple, BaseModelOutputWithPast]:
+                A tuple or BaseModelOutputWithPast object containing the last hidden state, past key values,
+                hidden states, and attentions.
+
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are specified, if neither input_ids nor inputs_embeds are specified, or if an invalid argument combination is provided.
+            ValueError: If both input_ids and inputs_embeds are specified, if neither input_ids nor inputs_embeds are
+                specified, or if an invalid argument combination is provided.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -895,29 +930,34 @@ class MistralModel(MistralPreTrainedModel):
 class MistralForCausalLM(MistralPreTrainedModel):
 
     """
-    The MistralForCausalLM class represents a causal language model for Mistral. It inherits from MistralPreTrainedModel and includes methods for initializing the model, setting and getting input and output
-embeddings, setting the decoder, constructing the model, and preparing inputs for generation. The class also includes a method for reordering cache during generation. The construct method handles the model's
-forward pass, while the prepare_inputs_for_generation method prepares inputs for generation. The class provides functionality for generating text based on input prompts. 
+    The MistralForCausalLM class represents a causal language model for Mistral. It inherits from MistralPreTrainedModel
+    and includes methods for initializing the model, setting and getting input and output embeddings, setting the decoder,
+    constructing the model, and preparing inputs for generation. The class also includes a method for reordering cache
+    during generation. The construct method handles the model's forward pass, while the prepare_inputs_for_generation
+    method prepares inputs for generation. The class provides functionality for generating text based on input prompts.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes an instance of MistralForCausalLM.
-        
+
         Args:
             self: The instance of the MistralForCausalLM class.
-            config: A dictionary containing configuration parameters for the model.
-                Type: dict
-                Purpose: The configuration settings for the model, including hyperparameters, data paths, and model architecture.
-                Restrictions: Must contain required keys for model initialization.
-        
+            config:
+                A dictionary containing configuration parameters for the model.
+
+                - Type: dict
+                - Purpose: The configuration settings for the model, including hyperparameters, data paths,
+                and model architecture.
+                - Restrictions: Must contain required keys for model initialization.
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type dict.
-            - ValueError: If the config parameter does not contain the required keys for model initialization.
+            TypeError: If the config parameter is not of type dict.
+            ValueError: If the config parameter does not contain the required keys for model initialization.
         """
         super().__init__(config)
         self.model = MistralModel(config)
@@ -930,15 +970,15 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def get_input_embeddings(self):
         """
         Method to retrieve the input embeddings from the MistralForCausalLM model.
-        
+
         Args:
             self (MistralForCausalLM): An instance of the MistralForCausalLM class.
                 Represents the current MistralForCausalLM model object.
-        
+
         Returns:
             None: This method returns None as it simply retrieves and returns the input embeddings
-            from the model.
-        
+                from the model.
+
         Raises:
             None
         """
@@ -947,29 +987,30 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the MistralForCausalLM model.
-        
+
         Args:
             self (MistralForCausalLM): The object instance of MistralForCausalLM.
-            value (Tensor): The input embeddings to be set for the model. It should be a tensor of shape (vocab_size, embed_dim).
-        
+            value (Tensor): The input embeddings to be set for the model.
+                It should be a tensor of shape (vocab_size, embed_dim).
+
         Returns:
-            None. The method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
         """
         This method returns the output embeddings for the MistralForCausalLM model.
-        
+
         Args:
             self (MistralForCausalLM): The instance of MistralForCausalLM class.
-        
+
         Returns:
             None: This method returns the output embeddings (lm_head) for the MistralForCausalLM model.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -978,16 +1019,18 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the MistralForCausalLM model.
-        
+
         Args:
             self (MistralForCausalLM): The instance of the MistralForCausalLM class.
-            new_embeddings (Tensor): The new output embeddings to be set for the model. It should be a tensor of the same shape as the existing output embeddings.
-        
+            new_embeddings (Tensor): The new output embeddings to be set for the model.
+                It should be a tensor of the same shape as the existing output embeddings.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the shape of the new_embeddings tensor does not match the shape of the existing output embeddings.
+            ValueError: If the shape of the new_embeddings tensor does not match the shape of the
+                existing output embeddings.
             TypeError: If the new_embeddings parameter is not of type Tensor.
         """
         self.lm_head = new_embeddings
@@ -995,14 +1038,15 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def set_decoder(self, decoder):
         """
         Sets the decoder for the MistralForCausalLM model.
-        
+
         Args:
             self (MistralForCausalLM): The MistralForCausalLM instance.
-            decoder: The decoder that will be set for the model. It should be an object that implements the decoding logic for the MistralForCausalLM model.
-        
+            decoder: The decoder that will be set for the model.
+                It should be an object that implements the decoding logic for the MistralForCausalLM model.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1011,22 +1055,25 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def get_decoder(self):
         '''
         Method: get_decoder
-        
+
         Description:
         This method returns the decoder model for MistralForCausalLM.
-        
+
         Args:
-        - self: MistralForCausalLM
-          - Type: class instance
-          - Purpose: Represents the current instance of the MistralForCausalLM class.
-        
+            self:
+                MistralForCausalLM
+
+                - Type: class instance
+                - Purpose: Represents the current instance of the MistralForCausalLM class.
+
         Returns:
-        - None
-          - Type: None
-          - Purpose: The method returns the decoder model associated with the MistralForCausalLM instance.
-        
+            model:
+
+                - Type: None
+                - Purpose: The method returns the decoder model associated with the MistralForCausalLM instance.
+
         Raises:
-        This method does not raise any specific exceptions.
+            None.
         '''
         return self.model
 
@@ -1051,23 +1098,24 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, MistralForCausalLM
-
-        >>> model = MistralForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
-
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, MistralForCausalLM
+            ...
+            >>> model = MistralForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+            >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+            ...
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            ...
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1119,31 +1167,33 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     ):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (MistralForCausalLM): The instance of the MistralForCausalLM class.
             input_ids (torch.Tensor): The input tensor of token IDs with shape (batch_size, sequence_length).
             past_key_values (tuple, optional): The tuple of past key values for efficient generation. Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor with shape (batch_size, sequence_length). 
-                It indicates which tokens should be attended to (1 for tokens to attend, 0 for tokens to ignore). 
+            attention_mask (torch.Tensor, optional): The attention mask tensor with shape (batch_size, sequence_length).
+                It indicates which tokens should be attended to (1 for tokens to attend, 0 for tokens to ignore).
                 Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The tensor of input embeddings with shape (batch_size, sequence_length, 
+            inputs_embeds (torch.Tensor, optional): The tensor of input embeddings with shape (batch_size, sequence_length,
                 hidden_size). Defaults to None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            dict: A dictionary containing model inputs for generation. It includes the following keys:
-                - 'inputs_embeds' (torch.Tensor): The tensor of input embeddings with shape (batch_size, sequence_length, 
-                  hidden_size). It is used when 'inputs_embeds' is not None and 'past_key_values' is None.
-                - 'input_ids' (torch.Tensor): The input tensor of token IDs with shape (batch_size, sequence_length). 
-                  It is used when 'inputs_embeds' is None or 'past_key_values' is not None.
-                - 'position_ids' (torch.Tensor): The tensor of position IDs with shape (batch_size, sequence_length). 
-                  It is computed based on 'attention_mask' and used for positional embeddings.
+            dict: A dictionary containing model inputs for generation.
+                It includes the following keys:
+
+                - 'inputs_embeds' (torch.Tensor): The tensor of input embeddings with shape (batch_size, sequence_length,
+                hidden_size). It is used when 'inputs_embeds' is not None and 'past_key_values' is None.
+                - 'input_ids' (torch.Tensor): The input tensor of token IDs with shape (batch_size, sequence_length).
+                It is used when 'inputs_embeds' is None or 'past_key_values' is not None.
+                - 'position_ids' (torch.Tensor): The tensor of position IDs with shape (batch_size, sequence_length).
+                It is computed based on 'attention_mask' and used for positional embeddings.
                 - 'past_key_values' (tuple, optional): The tuple of past key values for efficient generation.
                 - 'use_cache' (bool): Whether to use cache for generation.
                 - 'attention_mask' (torch.Tensor, optional): The attention mask tensor with shape (batch_size, sequence_length).
-                  It is truncated or padded if necessary.
-        
+                It is truncated or padded if necessary.
+
         Raises:
             None.
         """
@@ -1200,14 +1250,14 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def _reorder_cache(past_key_values, beam_idx):
         """
         Reorders the cache for a causal language model.
-        
+
         Args:
             past_key_values (tuple): A tuple containing past key values for each layer of the model.
             beam_idx (Tensor): A tensor specifying the indices to reorder the past key values by.
-        
+
         Returns:
-            None. The method modifies the input past_key_values in place and does not return any value.
-        
+            None: The method modifies the input past_key_values in place and does not return any value.
+
         Raises:
             ValueError: If the input past_key_values or beam_idx are not in the expected format.
             IndexError: If the beam_idx contains out-of-bounds indices.
@@ -1225,49 +1275,54 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
 class MistralForSequenceClassification(MistralPreTrainedModel):
 
     """
-    This class represents a Mistral model for sequence classification. It inherits from MistralPreTrainedModel and provides functionality for sequence classification tasks.
-    
+    This class represents a Mistral model for sequence classification. It inherits from MistralPreTrainedModel
+    and provides functionality for sequence classification tasks.
+
     Attributes:
         num_labels (int): The number of labels in the classification task.
         model (MistralModel): The Mistral model used for the sequence classification task.
         score (nn.Dense): The dense layer for scoring the classification logits.
-    
+
     Methods:
-        __init__(config): Initializes the MistralForSequenceClassification instance with the given configuration.
-        get_input_embeddings(): Retrieves the input embeddings from the Mistral model.
-        set_input_embeddings(value): Sets the input embeddings for the Mistral model.
-        construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): 
-            Performs the sequence classification task and returns the classification output.
-    
+        __init__: Initializes the MistralForSequenceClassification instance with the given configuration.
+        get_input_embeddings: Retrieves the input embeddings from the Mistral model.
+        set_input_embeddings: Sets the input embeddings for the Mistral model.
+        construct: Performs the sequence classification task and returns the classification output.
+
             Args:
-                input_ids (mindspore.Tensor, optional): The input token IDs.
-                attention_mask (mindspore.Tensor, optional): The attention mask for the input.
-                position_ids (mindspore.Tensor, optional): The position IDs for the input.
-                past_key_values (List[mindspore.Tensor], optional): The past key values for the input.
-                inputs_embeds (mindspore.Tensor, optional): The embedded inputs.
-                labels (mindspore.Tensor, optional): The labels for computing the sequence classification/regression loss.
-                use_cache (bool, optional): Indicates whether to use cache for the computation.
-                output_attentions (bool, optional): Indicates whether to output attentions.
-                output_hidden_states (bool, optional): Indicates whether to output hidden states.
-                return_dict (bool, optional): Indicates whether to return a dictionary.
-    
+
+            - input_ids (mindspore.Tensor, optional): The input token IDs.
+            - attention_mask (mindspore.Tensor, optional): The attention mask for the input.
+            - position_ids (mindspore.Tensor, optional): The position IDs for the input.
+            - past_key_values (List[mindspore.Tensor], optional): The past key values for the input.
+            - inputs_embeds (mindspore.Tensor, optional): The embedded inputs.
+            - labels (mindspore.Tensor, optional): The labels for computing the sequence classification/regression loss.
+            - use_cache (bool, optional): Indicates whether to use cache for the computation.
+            - output_attentions (bool, optional): Indicates whether to output attentions.
+            - output_hidden_states (bool, optional): Indicates whether to output hidden states.
+            - return_dict (bool, optional): Indicates whether to return a dictionary.
+
             Returns:
-                Union[Tuple, SequenceClassifierOutputWithPast]: The classification output or a tuple with loss and output if loss is available.
+
+            - Union[Tuple, SequenceClassifierOutputWithPast]: The classification output or a tuple with loss and
+            output if loss is available.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MistralForSequenceClassification class.
-        
+
         Args:
             self: The object instance.
-            config: A configuration object that holds various parameters for the model.
+            config:
+                A configuration object that holds various parameters for the model.
+
                 - Type: Config
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be an instance of the Config class.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1282,40 +1337,44 @@ class MistralForSequenceClassification(MistralPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings from the MistralForSequenceClassification model.
-        
+
         Args:
             self: The instance of the MistralForSequenceClassification class.
-        
+
         Returns:
             None: This method returns None as it directly retrieves the input embeddings from the model.
-        
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the MistralForSequenceClassification model.
-        
+
         Args:
             self (MistralForSequenceClassification): An instance of the MistralForSequenceClassification class.
-            value: The input embeddings to be set for the model. This should be a tensor of shape (vocab_size, embedding_dim).
-        
+            value: The input embeddings to be set for the model. This should be a tensor of shape
+                (vocab_size, embedding_dim).
+
         Returns:
             None. The method modifies the 'embed_tokens' attribute of the model in-place.
-        
+
         Raises:
             None.
-        
+
         Note:
-            The 'embed_tokens' attribute of the MistralForSequenceClassification model is used to store the input embeddings.
+            The 'embed_tokens' attribute of the MistralForSequenceClassification model is used to store the
+            input embeddings.
             By setting this attribute, the user can customize the input embeddings used by the model.
-        
+
         Example:
+            ```python
             >>> model = MistralForSequenceClassification()
             >>> embeddings = torch.randn((vocab_size, embedding_dim))
             >>> model.set_input_embeddings(embeddings)
+            ```
         """
         self.model.embed_tokens = value
 
@@ -1333,10 +1392,11 @@ class MistralForSequenceClassification(MistralPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

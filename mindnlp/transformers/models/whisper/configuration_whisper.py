@@ -168,19 +168,19 @@ class WhisperConfig(PretrainedConfig):
             Should be an odd number.
 
     Example:
-
-    ```python
-    >>> from transformers import WhisperConfig, WhisperModel
-
-    >>> # Initializing a Whisper tiny style configuration
-    >>> configuration = WhisperConfig()
-
-    >>> # Initializing a model (with random weights) from the tiny style configuration
-    >>> model = WhisperModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import WhisperConfig, WhisperModel
+        ...
+        >>> # Initializing a Whisper tiny style configuration
+        >>> configuration = WhisperConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the tiny style configuration
+        >>> model = WhisperModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "whisper"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -228,53 +228,53 @@ class WhisperConfig(PretrainedConfig):
     ):
         """
         Initialize a WhisperConfig object with the provided parameters.
-        
+
         Args:
-        - self (object): The instance of the class.
-        - vocab_size (int, optional): The size of the vocabulary. Default is 51865.
-        - num_mel_bins (int, optional): The number of Mel bins. Default is 80.
-        - encoder_layers (int, optional): The number of layers in the encoder. Default is 4.
-        - encoder_attention_heads (int, optional): The number of attention heads in the encoder. Default is 6.
-        - decoder_layers (int, optional): The number of layers in the decoder. Default is 4.
-        - decoder_attention_heads (int, optional): The number of attention heads in the decoder. Default is 6.
-        - decoder_ffn_dim (int, optional): The dimension of the feed-forward network in the decoder. Default is 1536.
-        - encoder_ffn_dim (int, optional): The dimension of the feed-forward network in the encoder. Default is 1536.
-        - encoder_layerdrop (float, optional): The probability of dropping a layer in the encoder. Default is 0.0.
-        - decoder_layerdrop (float, optional): The probability of dropping a layer in the decoder. Default is 0.0.
-        - decoder_start_token_id (int, optional): The token id marking the start of decoding. Default is 50257.
-        - use_cache (bool, optional): Whether to use caching during decoding. Default is True.
-        - is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder architecture. Default is True.
-        - activation_function (str, optional): The activation function to use. Default is 'gelu'.
-        - d_model (int, optional): The model dimension. Default is 384.
-        - dropout (float, optional): The dropout probability. Default is 0.0.
-        - attention_dropout (float, optional): The dropout probability for attention layers. Default is 0.0.
-        - activation_dropout (float, optional): The dropout probability for activation layers. Default is 0.0.
-        - init_std (float, optional): The standard deviation for weight initialization. Default is 0.02.
-        - scale_embedding (bool, optional): Whether to scale embeddings. Default is False.
-        - max_source_positions (int, optional): The maximum number of source positions. Default is 1500.
-        - max_target_positions (int, optional): The maximum number of target positions. Default is 448.
-        - pad_token_id (int, optional): The token id for padding. Default is 50256.
-        - bos_token_id (int, optional): The token id for the beginning of sentence. Default is 50256.
-        - eos_token_id (int, optional): The token id for the end of sentence. Default is 50256.
-        - suppress_tokens (list, optional): Tokens to suppress during decoding. Default is None.
-        - begin_suppress_tokens (list, optional): Tokens to suppress at the beginning of decoding. Default is [220, 50256].
-        - use_weighted_layer_sum (bool, optional): Whether to use weighted layer sum. Default is False.
-        - classifier_proj_size (int, optional): The size of the classifier projection. Default is 256.
-        - apply_spec_augment (bool, optional): Whether to apply spectral augmentation. Default is False.
-        - mask_time_prob (float, optional): The probability of masking in the time domain. Default is 0.05.
-        - mask_time_length (int, optional): The length of time masks. Default is 10.
-        - mask_time_min_masks (int, optional): The minimum number of time masks. Default is 2.
-        - mask_feature_prob (float, optional): The probability of masking in the feature domain. Default is 0.0.
-        - mask_feature_length (int, optional): The length of feature masks. Default is 10.
-        - mask_feature_min_masks (int, optional): The minimum number of feature masks. Default is 0.
-        - median_filter_width (int, optional): The width of the median filter. Default is 7.
-        - **kwargs: Additional keyword arguments.
-        
+            self (object): The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Default is 51865.
+            num_mel_bins (int, optional): The number of Mel bins. Default is 80.
+            encoder_layers (int, optional): The number of layers in the encoder. Default is 4.
+            encoder_attention_heads (int, optional): The number of attention heads in the encoder. Default is 6.
+            decoder_layers (int, optional): The number of layers in the decoder. Default is 4.
+            decoder_attention_heads (int, optional): The number of attention heads in the decoder. Default is 6.
+            decoder_ffn_dim (int, optional): The dimension of the feed-forward network in the decoder. Default is 1536.
+            encoder_ffn_dim (int, optional): The dimension of the feed-forward network in the encoder. Default is 1536.
+            encoder_layerdrop (float, optional): The probability of dropping a layer in the encoder. Default is 0.0.
+            decoder_layerdrop (float, optional): The probability of dropping a layer in the decoder. Default is 0.0.
+            decoder_start_token_id (int, optional): The token id marking the start of decoding. Default is 50257.
+            use_cache (bool, optional): Whether to use caching during decoding. Default is True.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder architecture. Default is True.
+            activation_function (str, optional): The activation function to use. Default is 'gelu'.
+            d_model (int, optional): The model dimension. Default is 384.
+            dropout (float, optional): The dropout probability. Default is 0.0.
+            attention_dropout (float, optional): The dropout probability for attention layers. Default is 0.0.
+            activation_dropout (float, optional): The dropout probability for activation layers. Default is 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Default is 0.02.
+            scale_embedding (bool, optional): Whether to scale embeddings. Default is False.
+            max_source_positions (int, optional): The maximum number of source positions. Default is 1500.
+            max_target_positions (int, optional): The maximum number of target positions. Default is 448.
+            pad_token_id (int, optional): The token id for padding. Default is 50256.
+            bos_token_id (int, optional): The token id for the beginning of sentence. Default is 50256.
+            eos_token_id (int, optional): The token id for the end of sentence. Default is 50256.
+            suppress_tokens (list, optional): Tokens to suppress during decoding. Default is None.
+            begin_suppress_tokens (list, optional): Tokens to suppress at the beginning of decoding. Default is [220, 50256].
+            use_weighted_layer_sum (bool, optional): Whether to use weighted layer sum. Default is False.
+            classifier_proj_size (int, optional): The size of the classifier projection. Default is 256.
+            apply_spec_augment (bool, optional): Whether to apply spectral augmentation. Default is False.
+            mask_time_prob (float, optional): The probability of masking in the time domain. Default is 0.05.
+            mask_time_length (int, optional): The length of time masks. Default is 10.
+            mask_time_min_masks (int, optional): The minimum number of time masks. Default is 2.
+            mask_feature_prob (float, optional): The probability of masking in the feature domain. Default is 0.0.
+            mask_feature_length (int, optional): The length of feature masks. Default is 10.
+            mask_feature_min_masks (int, optional): The minimum number of feature masks. Default is 0.
+            median_filter_width (int, optional): The width of the median filter. Default is 7.
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - No specific exceptions are raised by this method.
+            None.
         """
         self.vocab_size = vocab_size
         self.num_mel_bins = num_mel_bins

@@ -118,7 +118,7 @@ class BeitDropPath(nn.Cell):
                 If not provided, the default value is None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -141,8 +141,8 @@ class BeitDropPath(nn.Cell):
                 The same shape as the input tensor (hidden_states).
         
         Raises:
-            - ValueError: If the drop probability is not within the range [0, 1].
-            - TypeError: If the input hidden_states is not a valid mindspore.Tensor object.
+            ValueError: If the drop probability is not within the range [0, 1].
+            TypeError: If the input hidden_states is not a valid mindspore.Tensor object.
         """
         return drop_path(hidden_states, self.drop_prob, self.training)
 
@@ -179,7 +179,7 @@ class BeitEmbeddings(nn.Cell):
                 This parameter is required for initializing the embeddings.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -249,16 +249,25 @@ class BeitPatchEmbeddings(nn.Cell):
         """
         Args:
             self (object): The instance of the BeitPatchEmbeddings class.
-            config (object): An object containing configuration parameters for the patch embeddings.
-                - image_size (int or tuple): The size of the input image. If int, it represents the height and width of the square image. If tuple, it represents the height and width of the rectangular image.
-                - patch_size (int or tuple): The size of the patch to be extracted from the input image. If int, it represents the height and width of the square patch. If tuple, it represents the height and
-width of the rectangular patch.
+            config (object): 
+                An object containing configuration parameters for the patch embeddings.
+                
+                - image_size (int or tuple): The size of the input image. 
+                
+                    - If int, it represents the height and width of the square image. 
+                    - If tuple, it represents the height and width of the rectangular image.
+
+                - patch_size (int or tuple): The size of the patch to be extracted from the input image.
+                
+                    - If int, it represents the height and width of the square patch. 
+                    - If tuple, it represents the height and width of the rectangular patch.
+
                 - num_channels (int): The number of input channels in the image.
                 - hidden_size (int): The desired size of the hidden dimension for the patch embeddings.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the image_size or patch_size parameters are not of type int or tuple.
             ValueError: If the image_size or patch_size parameters are not valid for calculating the number of patches.
@@ -281,18 +290,21 @@ width of the rectangular patch.
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
 
     def construct(self, pixel_values: mindspore.Tensor, position_embedding: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
-        ''' 
+        '''
         Constructs patch embeddings for the Beit model.
-        
+
         Args:
             self (BeitPatchEmbeddings): The instance of the BeitPatchEmbeddings class.
-            pixel_values (mindspore.Tensor): The input tensor representing the pixel values of the image with shape (batch_size, num_channels, height, width).
-            position_embedding (Optional[mindspore.Tensor]): An optional input tensor representing the position embeddings with shape (1, patch_height, patch_width, -1). Default is None.
-        
+            pixel_values (mindspore.Tensor): 
+                The input tensor representing the pixel values of the image with shape (batch_size, num_channels, height, width).
+            position_embedding (Optional[mindspore.Tensor]): 
+                An optional input tensor representing the position embeddings with shape (1, patch_height, patch_width, -1). 
+                Default is None.
+
         Returns:
             mindspore.Tensor: A tensor representing the constructed patch embeddings with shape (batch_size, num_patches, embedding_dim).
             tuple: A tuple containing the height and width of the patches.
-        
+
         Raises:
             ValueError: If the number of channels in the pixel_values tensor does not match the num_channels set in the configuration.
         '''
@@ -324,10 +336,12 @@ class BeitSelfAttention(nn.Cell):
 
     """
     Represents the self-attention mechanism for the Beit model.
-    
-    This class implements the self-attention mechanism for the Beit model, which is used to process input data and compute the output context layer. It includes methods for initializing the self-attention
-layer, swapping axes for attention scores, and constructing the self-attention mechanism based on the input data and optional parameters.
-    
+
+    This class implements the self-attention mechanism for the Beit model, 
+    which is used to process input data and compute the output context layer. 
+    It includes methods for initializing the self-attention layer, swapping axes for attention scores, 
+    and constructing the self-attention mechanism based on the input data and optional parameters.
+
     Attributes:
         num_attention_heads (int): Number of attention heads in the self-attention mechanism.
         attention_head_size (int): Size of each attention head.
@@ -336,32 +350,37 @@ layer, swapping axes for attention scores, and constructing the self-attention m
         key (nn.Dense): Fully connected layer for generating key vectors.
         value (nn.Dense): Fully connected layer for generating value vectors.
         dropout (nn.Dropout): Dropout layer for attention probabilities.
-        relative_position_bias (BeitRelativePositionBias): Relative position bias for incorporating positional information in attention scores.
-    
+        relative_position_bias (BeitRelativePositionBias): Relative position bias for 
+            incorporating positional information in attention scores.
+
     Methods:
         swapaxes_for_scores(x): Method for swapping axes in the input tensor to calculate attention scores.
-        construct(hidden_states, head_mask, output_attentions, relative_position_bias): Method for constructing the self-attention mechanism based on input data and optional parameters.
-    
+        construct(hidden_states, head_mask, output_attentions, relative_position_bias): Method for constructing 
+            the self-attention mechanism based on input data and optional parameters.
+
     Raises:
         ValueError: If the hidden size is not a multiple of the number of attention heads.
-    
+
     Returns:
         Tuple[mindspore.Tensor]: Tuple containing the context layer and optionally the attention probabilities.
     """
     def __init__(self, config: BeitConfig, window_size: Optional[tuple] = None) -> None:
         """
         Initializes the BeitSelfAttention instance.
-        
+
         Args:
             self: The instance of the BeitSelfAttention class.
-            config (BeitConfig): The configuration for the Beit model. It specifies the hidden size, number of attention heads, and other relevant parameters.
-            window_size (Optional[tuple]): The size of the window for relative position bias. Defaults to None if not provided.
-        
+            config (BeitConfig): The configuration for the Beit model. 
+                It specifies the hidden size, number of attention heads, and other relevant parameters.
+            window_size (Optional[tuple]): The size of the window for relative position bias. 
+                Defaults to None if not provided.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads and the 'embedding_size' attribute is not present in the config.
+            ValueError: If the hidden size is not a multiple of the number of attention heads 
+                and the 'embedding_size' attribute is not present in the config.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -387,17 +406,23 @@ layer, swapping axes for attention scores, and constructing the self-attention m
 
     def swapaxes_for_scores(self, x):
         """
-        This method 'swapaxes_for_scores' is defined in the class 'BeitSelfAttention' and is used to perform a specific operation on the input tensor 'x'.
-        
+        This method 'swapaxes_for_scores' is defined in the class 'BeitSelfAttention' and is used to perform 
+        a specific operation on the input tensor 'x'.
+
         Args:
-            self: Represents the instance of the class. It is automatically passed to the method when it is called. The 'self' parameter is used to access and modify class attributes and methods.
-            x: Represents the input tensor on which the operation will be performed. It is expected to be a multi-dimensional array. The shape of the input tensor should be compatible with the specified
-operations. No specific restrictions apply to this parameter.
-        
+            self: Represents the instance of the class. 
+                It is automatically passed to the method when it is called. 
+                The 'self' parameter is used to access and modify class attributes and methods.
+            x: Represents the input tensor on which the operation will be performed. 
+                It is expected to be a multi-dimensional array. 
+                The shape of the input tensor should be compatible with the specified operations. 
+                No specific restrictions apply to this parameter.
+
         Returns:
-            The method returns a tensor of the same shape as the input tensor 'x', but with the axes swapped according to the defined logic. The return value is of type 'None' because the operation is
-performed in place on the input tensor.
-        
+            a tensor of the same shape as the input tensor 'x':
+                but with the axes swapped according to the defined logic. 
+                The return value is of type 'None' because the operation is performed in place on the input tensor.
+
         Raises:
             No specific exceptions are documented to be raised by this method.
         """
@@ -413,17 +438,21 @@ performed in place on the input tensor.
         relative_position_bias: Optional["BeitRelativePositionBias"] = None,
     ) -> Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
         """Constructs the self-attention mechanism for the Beit model.
-        
+
         Args:
             self (BeitSelfAttention): The instance of the BeitSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states to the self-attention mechanism.
-            head_mask (Optional[mindspore.Tensor], optional): An optional mask tensor for masking certain attention heads. Defaults to None.
-            output_attentions (bool, optional): A flag indicating whether to output the attention scores. Defaults to False.
-            relative_position_bias (Optional[BeitRelativePositionBias], optional): An optional relative position bias tensor. Defaults to None.
-        
+            head_mask (Optional[mindspore.Tensor], optional): 
+                An optional mask tensor for masking certain attention heads. Defaults to None.
+            output_attentions (bool, optional): 
+                A flag indicating whether to output the attention scores. Defaults to False.
+            relative_position_bias (Optional[BeitRelativePositionBias], optional): 
+                An optional relative position bias tensor. Defaults to None.
+
         Returns:
-            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: A tuple containing the context layer tensor and optionally the attention scores tensor.
-        
+            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: 
+                tuple containing the context layer tensor and optionally the attention scores tensor.
+
         Raises:
             ValueError: If the attention scores or context layer computation encounters an invalid dimensionality mismatch.
             RuntimeError: If an error occurs during the computation of the attention mechanism or context layer.
@@ -478,16 +507,18 @@ class BeitSelfOutput(nn.Cell):
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a BeitSelfOutput object with the provided configuration.
-        
+
         Args:
             self (BeitSelfOutput): The instance of the BeitSelfOutput class.
-            config (BeitConfig): An instance of BeitConfig containing the configuration parameters for the self output layer.
+            config (BeitConfig):
+                An instance of BeitConfig containing the configuration parameters for the self output layer.
+            
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-        
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
             None.
         """
@@ -497,19 +528,20 @@ class BeitSelfOutput(nn.Cell):
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor, gamma=None) -> mindspore.Tensor:
         """
-        This method 'construct' is defined within the 'BeitSelfOutput' class and is responsible for constructing the hidden states using the provided input tensors and optional gamma parameter.
-        
+        This method 'construct' is defined within the 'BeitSelfOutput' class and is responsible for 
+        constructing the hidden states using the provided input tensors and optional gamma parameter.
+
         Args:
             self: The instance of the 'BeitSelfOutput' class.
             hidden_states (mindspore.Tensor): A tensor representing the hidden states to be processed.
             input_tensor (mindspore.Tensor): A tensor representing the input data used in the construction process.
             gamma (optional): A parameter that can be provided to the method (default: None).
-        
+
         Returns:
             mindspore.Tensor: Returns a tensor representing the constructed hidden states.
-        
+
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -520,37 +552,37 @@ class BeitSelfOutput(nn.Cell):
 class BeitAttention(nn.Cell):
 
     """
-    The `BeitAttention` class represents the attention mechanism for the Beit model, inheriting from `nn.Cell`. It includes methods for initializing the attention mechanism, pruning attention heads, and
-constructing the attention output. 
-    
+    The `BeitAttention` class represents the attention mechanism for the Beit model, inheriting from `nn.Cell`. 
+    It includes methods for initializing the attention mechanism, pruning attention heads, and constructing 
+    the attention output.
+
     Attributes:
         attention: Instance of `BeitSelfAttention` representing the self-attention mechanism.
         output: Instance of `BeitSelfOutput` representing the output of the self-attention mechanism.
         pruned_heads: Set containing the indices of pruned attention heads.
-    
+
     Methods:
-        __init__(self, config: BeitConfig, window_size: Optional[tuple] = None) -> None: 
+        __init__:
             Initializes the `BeitAttention` instance with the provided configuration and optional window size.
-    
+
         prune_heads(self, heads):
             Prunes the specified attention heads from the self-attention mechanism.
-    
-        construct(self, hidden_states: mindspore.Tensor, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False, relative_position_bias: Optional['BeitRelativePositionBias'] = None) ->
-Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
+
+        construct:
             Constructs the attention output using the provided hidden states and optional masks or biases.
     """
     def __init__(self, config: BeitConfig, window_size: Optional[tuple] = None) -> None:
         """
         Initializes a new instance of the BeitAttention class.
-        
+
         Args:
             self: The object itself.
             config (BeitConfig): The configuration object for the Beit model.
             window_size (Optional[tuple]): The size of the attention window. Defaults to None.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -562,16 +594,16 @@ Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
     def prune_heads(self, heads):
         """
         Prunes the attention heads in the BeitAttention module.
-        
+
         Args:
             self (BeitAttention): An instance of the BeitAttention module.
             heads (List[int]): A list of attention heads to be pruned.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if len(heads) == 0:
             return
@@ -597,24 +629,27 @@ Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
         output_attentions: bool = False,
         relative_position_bias: Optional["BeitRelativePositionBias"] = None,
     ) -> Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
-        """ 
+        """
         Constructs the attention mechanism for the BeitAttention class.
-        
+
         Args:
             self: The instance of the BeitAttention class.
             hidden_states (mindspore.Tensor): The input hidden states for the attention mechanism.
-            head_mask (Optional[mindspore.Tensor]): Optional tensor for masking certain heads in the attention mechanism. Defaults to None.
-            output_attentions (bool): Flag to indicate whether to output attention scores. Defaults to False.
-            relative_position_bias (Optional[BeitRelativePositionBias]): Optional relative position bias for the attention mechanism. Defaults to None.
-        
+            head_mask (Optional[mindspore.Tensor]): 
+                Optional tensor for masking certain heads in the attention mechanism. Defaults to None.
+            output_attentions (bool): 
+                Flag to indicate whether to output attention scores. Defaults to False.
+            relative_position_bias (Optional[BeitRelativePositionBias]): 
+                Optional relative position bias for the attention mechanism. Defaults to None.
+
         Returns:
-            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: 
-            The output of the attention mechanism, which is a tuple containing attention output and other optional outputs.
-        
+            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
+                The output of the attention mechanism, which is a tuple containing attention output and other optional outputs.
+
         Raises:
-            - ValueError: If the input hidden_states tensor is not valid.
-            - TypeError: If the head_mask or relative_position_bias parameters have an invalid type.
-            - RuntimeError: If there is an issue during the attention mechanism processing.
+            ValueError: If the input hidden_states tensor is not valid.
+            TypeError: If the head_mask or relative_position_bias parameters have an invalid type.
+            RuntimeError: If there is an issue during the attention mechanism processing.
         """
         self_outputs = self.attention(hidden_states, head_mask, output_attentions, relative_position_bias)
 
@@ -627,44 +662,50 @@ Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
 class BeitIntermediate(nn.Cell):
 
     """
-    This class represents an intermediate layer of the Beit model. It is a subclass of nn.Cell and is responsible for processing the hidden states of the model.
-    
+    This class represents an intermediate layer of the Beit model. 
+    It is a subclass of nn.Cell and is responsible for processing the hidden states of the model.
+
     Attributes:
         dense (nn.Dense): A fully connected layer that transforms the input hidden states.
         intermediate_act_fn (callable): The activation function applied to the transformed hidden states.
-    
+
     Methods:
-        __init__(self, config: BeitConfig) -> None:
+        __init__:
             Initializes a new instance of the BeitIntermediate class.
-            
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+
+        construct:
             Processes the input hidden states by applying the dense layer and the intermediate activation function.
-    
+
     """
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes an instance of the 'BeitIntermediate' class.
-        
+
         Args:
             self: The current instance of the class.
             config (BeitConfig): An object containing the configuration settings for the 'BeitIntermediate' class.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method is the constructor for the 'BeitIntermediate' class. It initializes an instance of the class and sets up the necessary attributes.
-        
-        The 'config' parameter is an object of the 'BeitConfig' class and contains the configuration settings for the 'BeitIntermediate' class. It is required for proper initialization.
-        
-        The 'self.dense' attribute is an instance of the 'nn.Dense' class, which is used for dense layer operations. It is initialized with the 'hidden_size' and 'intermediate_size' values from the 'config'
-object.
-        
-        The 'self.intermediate_act_fn' attribute is a callable object that represents the activation function for the intermediate layer. It is determined by the 'hidden_act' attribute of the 'config' object.
-If 'hidden_act' is a string, it is looked up in the 'ACT2FN' dictionary to obtain the corresponding activation function. Otherwise, it is directly assigned to 'self.intermediate_act_fn'.
+            This method is the constructor for the 'BeitIntermediate' class. 
+            It initializes an instance of the class and sets up the necessary attributes.
+
+            The 'config' parameter is an object of the 'BeitConfig' class and contains the configuration settings 
+            for the 'BeitIntermediate' class. 
+            It is required for proper initialization.
+
+            The 'self.dense' attribute is an instance of the 'nn.Dense' class, which is used for dense layer operations. 
+            It is initialized with the 'hidden_size' and 'intermediate_size' values from the 'config' object.
+
+            The 'self.intermediate_act_fn' attribute is a callable object that represents the activation function for 
+            the intermediate layer. It is determined by the 'hidden_act' attribute of the 'config' object. 
+            If 'hidden_act' is a string, it is looked up in the 'ACT2FN' dictionary to obtain the corresponding 
+            activation function. Otherwise, it is directly assigned to 'self.intermediate_act_fn'.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -676,19 +717,19 @@ If 'hidden_act' is a string, it is looked up in the 'ACT2FN' dictionary to obtai
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the intermediate layer of the Beit model.
-        
+
         Args:
             self (BeitIntermediate): The instance of the BeitIntermediate class.
             hidden_states (mindspore.Tensor): The input hidden states tensor.
                 It should have a shape of (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             mindspore.Tensor: The tensor representing the intermediate states of the Beit model.
                 It has the same shape as the input hidden states tensor.
-        
+
         Raises:
             None: This method does not raise any exceptions.
-        
+
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -700,37 +741,38 @@ class BeitOutput(nn.Cell):
 
     """
     This class represents the output layer of the Beit model, inheriting from the nn.Cell class.
-    
+
     The BeitOutput class applies a dense layer and a dropout layer to the input hidden states. These layers are configured based on the provided BeitConfig.
-    
+
     Attributes:
         dense (nn.Dense): The dense layer used for transforming the hidden states.
         dropout (nn.Dropout): The dropout layer used for regularization.
-    
+
     Methods:
-        construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Applies the dense and dropout layers to the input hidden states and returns the transformed hidden states.
-    
-    Example usage:
-        config = BeitConfig(...)
-        output_layer = BeitOutput(config)
-        hidden_states = mindspore.Tensor(...)
-        output = output_layer.construct(hidden_states)
-    
+
+    Example:
+        >>> config = BeitConfig(...)
+        >>> output_layer = BeitOutput(config)
+        >>> hidden_states = mindspore.Tensor(...)
+        >>> output = output_layer.construct(hidden_states)
+
     Note:
         This class assumes that BeitConfig has been properly initialized with the necessary configuration parameters.
     """
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a new instance of the BeitOutput class.
-        
+
         Args:
             self: The object instance.
-            config (BeitConfig): The configuration object for the Beit model, containing parameters such as intermediate_size and hidden_size.
-        
+            config (BeitConfig): The configuration object for the Beit model, 
+                containing parameters such as intermediate_size and hidden_size.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -741,14 +783,14 @@ class BeitOutput(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the output tensor for the Beit model.
-        
+
         Args:
             self (BeitOutput): The instance of the BeitOutput class.
             hidden_states (mindspore.Tensor): The input tensor containing the hidden states.
-        
+
         Returns:
             mindspore.Tensor: The output tensor representing the constructed hidden states.
-        
+
         Raises:
             None
         """
@@ -763,16 +805,16 @@ class BeitLayer(nn.Cell):
     def __init__(self, config: BeitConfig, window_size: Optional[tuple] = None, drop_path_rate: float = 0.0) -> None:
         """
         Initializes a BeitLayer object.
-        
+
         Args:
             self: The instance of the class.
             config (BeitConfig): The configuration object containing model parameters.
             window_size (Optional[tuple]): The window size for the attention mechanism. Default is None.
             drop_path_rate (float): The rate at which to apply drop path regularization. Default is 0.0.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the config parameter is not of type BeitConfig.
             ValueError: If the drop_path_rate is negative.
@@ -802,23 +844,25 @@ class BeitLayer(nn.Cell):
         relative_position_bias: Optional["BeitRelativePositionBias"] = None,
     ) -> Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
         """Constructs the BeitLayer.
-        
+
         Args:
             self (object): The instance of the BeitLayer class.
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
             head_mask (Optional[mindspore.Tensor]): An optional tensor representing the head mask. Defaults to None.
             output_attentions (bool): A boolean flag indicating whether to output attentions. Defaults to False.
-            relative_position_bias (Optional[BeitRelativePositionBias]): An optional relative position bias. Defaults to None.
-        
+            relative_position_bias (Optional[BeitRelativePositionBias]): 
+                An optional relative position bias. Defaults to None.
+
         Returns:
-            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: 
-            - A tuple containing the layer output tensor.
-            - If output_attentions is True, a tuple containing the layer output tensor and attention tensors.
-        
+            Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
+
+                - A tuple containing the layer output tensor.
+                - If output_attentions is True, a tuple containing the layer output tensor and attention tensors.
+
         Raises:
-            - TypeError: If the input types are incorrect.
-            - ValueError: If the head mask has an invalid shape.
-            - RuntimeError: If an error occurs during the computation.
+            TypeError: If the input types are incorrect.
+            ValueError: If the head mask has an invalid shape.
+            RuntimeError: If an error occurs during the computation.
         """
         self_attention_outputs = self.attention(
             self.layernorm_before(hidden_states),  # in BEiT, layernorm is applied before self-attention
@@ -857,29 +901,32 @@ class BeitRelativePositionBias(nn.Cell):
 
     """
     BeitRelativePositionBias
-    
+
     Represents the relative position bias table used in the Beit model for attention mechanism.
-    
-    This class inherits from nn.Cell and provides functionality to construct the relative position bias table by calculating relative positions and indexing.
-    
-    The relative position bias table is constructed based on the provided configuration and window size. It contains the relative positional biases used in the attention mechanism of the Beit model.
-    
-    The relative position bias table is constructed using the provided configuration and window size to calculate the relative position indices and biases. The construct method returns the constructed relative
-position bias table as a mindspore.Tensor.
-    
+
+    This class inherits from nn.Cell and provides functionality to construct the relative position bias table 
+    by calculating relative positions and indexing.
+
+    The relative position bias table is constructed based on the provided configuration and window size. 
+    It contains the relative positional biases used in the attention mechanism of the Beit model.
+
+    The relative position bias table is constructed using the provided configuration and window size to calculate 
+    the relative position indices and biases. 
+    The construct method returns the constructed relative position bias table as a mindspore.Tensor.
+
     """
     def __init__(self, config: BeitConfig, window_size: tuple) -> None:
         """
         Initializes an instance of the 'BeitRelativePositionBias' class.
-        
+
         Args:
             self: The object instance.
             config (BeitConfig): The configuration object for the 'BeitRelativePositionBias' class.
             window_size (tuple): A tuple representing the size of the window.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -914,14 +961,14 @@ position bias table as a mindspore.Tensor.
     def construct(self) -> mindspore.Tensor:
         """
         This method constructs relative position bias based on the given relative position index and window size.
-        
+
         Args:
             self: An instance of the BeitRelativePositionBias class.
-            
+
         Returns:
-            A mindspore.Tensor representing the relative position bias matrix. The shape of the tensor is determined by the window size 
-            and the relative position index.
-        
+            A mindspore.Tensor representing the relative position bias matrix:
+                The shape of the tensor is determined by the window size and the relative position index.
+
         Raises:
             None
         """
@@ -935,43 +982,45 @@ position bias table as a mindspore.Tensor.
 class BeitEncoder(nn.Cell):
 
     """
-    The BeitEncoder class represents an encoder for the Beit (Vision Transformer) model. It is used to process input data and generate encoded representations. The encoder contains layers and handles gradient
-checkpointing, if enabled.
-    
-    The constructor initializes the BeitEncoder with a configuration and an optional window size. It sets up the relative position bias based on the configuration and initializes the layers.
-    
-    The construct method processes the input hidden states through the layers of the encoder. It handles optional head masks, output configurations, and returns the encoded representations.
-    
+    The BeitEncoder class represents an encoder for the Beit (Vision Transformer) model. 
+    It is used to process input data and generate encoded representations. 
+    The encoder contains layers and handles gradient checkpointing, if enabled.
+
+    The constructor initializes the BeitEncoder with a configuration and an optional window size. 
+    It sets up the relative position bias based on the configuration and initializes the layers.
+
+    The construct method processes the input hidden states through the layers of the encoder. 
+    It handles optional head masks, output configurations, and returns the encoded representations.
+
     Attributes:
-        - config: BeitConfig
+        config: BeitConfig
             The configuration object for the BeitEncoder.
-        - relative_position_bias: Union[BeitRelativePositionBias, None]
+        relative_position_bias: Union[BeitRelativePositionBias, None]
             The relative position bias object used in the encoder if enabled.
-        - layer: nn.CellList
+        layer: nn.CellList
             List of BeitLayer instances representing the layers in the encoder.
-        - gradient_checkpointing: bool
+        gradient_checkpointing: bool
             Indicates whether gradient checkpointing is enabled.
-    
+
     Methods:
-        - __init__(self, config: BeitConfig, window_size: Optional[tuple] = None) -> None
+        __init__:
             Constructs a new BeitEncoder instance with the given configuration and window size.
-        - construct(self, hidden_states: mindspore.Tensor, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False, output_hidden_states: bool = False, return_dict: bool = True) ->
-Union[tuple, BaseModelOutput]
+        construct:
             Processes the input hidden states through the encoder layers and returns the encoded representations.
-    
+
     """
     def __init__(self, config: BeitConfig, window_size: Optional[tuple] = None) -> None:
         """
         Initializes the BeitEncoder class.
-        
+
         Args:
             self: The object itself.
             config (BeitConfig): An instance of BeitConfig containing the configuration settings.
             window_size (Optional[tuple]): A tuple representing the window size, defaults to None.
-        
+
         Returns:
-            None: This method does not return a value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1006,7 +1055,7 @@ Union[tuple, BaseModelOutput]
     ) -> Union[tuple, BaseModelOutput]:
         """
         Construct method in the BeitEncoder class.
-        
+
         Args:
             self: The object instance.
             hidden_states (mindspore.Tensor): The input hidden states for the encoder.
@@ -1014,10 +1063,10 @@ Union[tuple, BaseModelOutput]
             output_attentions (bool, optional): Indicates whether to output attentions. Defaults to False.
             output_hidden_states (bool, optional): Indicates whether to output hidden states. Defaults to False.
             return_dict (bool, optional): Indicates whether to return a dictionary. Defaults to True.
-        
+
         Returns:
             Union[tuple, BaseModelOutput]: The constructed output, which can be a tuple or BaseModelOutput object.
-        
+
         Raises:
             None.
         """
@@ -1087,45 +1136,47 @@ class BeitModel(BeitPreTrainedModel):
     """
     BeitModel
     =========
-    
-    Represents a BeiT (Vision Transformer) model that utilizes a combination of convolutional and transformer layers for image recognition tasks.
-    
-    This class inherits from BeitPreTrainedModel and includes methods for initializing the model, getting input embeddings, pruning heads, and constructing the model with optional arguments.
-    
+
+    Represents a BeiT (Vision Transformer) model that utilizes a combination of convolutional and transformer layers 
+    for image recognition tasks.
+
+    This class inherits from BeitPreTrainedModel and includes methods for initializing the model, 
+    getting input embeddings, pruning heads, and constructing the model with optional arguments.
+
     Attributes:
         config (BeitConfig): The configuration for the model.
         embeddings (BeitEmbeddings): The embeddings for the model.
         encoder (BeitEncoder): The encoder component of the model.
         layernorm (nn.Identity or nn.LayerNorm): The layer normalization component of the model.
         pooler (BeitPooler): The pooling layer for the model, if included.
-    
+
     Methods:
-        __init__(self, config: BeitConfig, add_pooling_layer: bool = True) -> None: Initializes the model with the given configuration and optional pooling layer.
+        __init__: Initializes the model with the given configuration and optional pooling layer.
         get_input_embeddings(self): Retrieves the input embeddings for the model.
-        _prune_heads(self, heads_to_prune): Prunes heads of the model based on the provided dictionary of layers and heads to prune.
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, bool_masked_pos: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] =
-None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[tuple, BeitModelOutputWithPooling]: Constructs the model with optional arguments for pixel values, masked
-positions, head masks, and return types.
-    
+        _prune_heads(self, heads_to_prune): 
+            Prunes heads of the model based on the provided dictionary of layers and heads to prune.
+        construct: 
+            Constructs the model with optional arguments for pixel values, masked positions, head masks, and return types.
+
         Additional details and descriptions for each method can be found in the method docstrings.
     """
     def __init__(self, config: BeitConfig, add_pooling_layer: bool = True) -> None:
         """
         Initializes a new instance of the BeitModel class.
-        
+
         Args:
             self: The object itself.
             config (BeitConfig): The configuration object for the BeitModel.
                 This object contains various hyperparameters and settings for the model.
             add_pooling_layer (bool, optional): Flag indicating whether to include a pooling layer.
                 Defaults to True.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             This method sets up the BeitModel by initializing its attributes and components.
             It creates an instance of BeitEmbeddings, BeitEncoder, and BeitPooler based on the provided config.
@@ -1149,15 +1200,15 @@ positions, head masks, and return types.
     def get_input_embeddings(self):
         """
         This method 'get_input_embeddings' is part of the 'BeitModel' class and is used to retrieve the input embeddings.
-        
+
         Args:
             self: An instance of the 'BeitModel' class.
-        
+
         Returns:
-            None: This method returns None.
-        
+            None.
+
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
         return self.embeddings.patch_embeddings
 
@@ -1179,8 +1230,9 @@ positions, head masks, and return types.
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BeitModelOutputWithPooling]:
         r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
+        Args:
+            bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
+                Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1227,47 +1279,53 @@ class BeitPooler(nn.Cell):
 
     """
     This class represents a pooler module for the Beit model. It is responsible for performing pooling operations on the hidden states of the model.
-    
+
     The BeitPooler class inherits from the nn.Cell class.
-    
+
     Attributes:
-        layernorm (nn.LayerNorm, optional): A LayerNorm module that applies layer normalization to the hidden states. If the configuration allows mean pooling, this attribute is initialized with a LayerNorm
-module. Otherwise, it is set to None.
-    
+        layernorm (nn.LayerNorm, optional): A LayerNorm module that applies layer normalization to the hidden states. 
+            If the configuration allows mean pooling, this attribute is initialized with a LayerNorm module. 
+            Otherwise, it is set to None.
+
     Methods:
-        __init__(self, config: BeitConfig) -> None:
+        __init__:
             Initializes the BeitPooler module.
-            
+
             Args:
-                config (BeitConfig): The configuration object for the Beit model.
-            
+                
+            - config (BeitConfig): The configuration object for the Beit model.
+
             Returns:
-                None
             
+            - None
+
         construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
             Constructs and applies the pooling operation on the hidden states.
-            
+
             Args:
-                hidden_states (mindspore.Tensor): The input hidden states tensor.
             
+            - hidden_states (mindspore.Tensor): The input hidden states tensor.
+
             Returns:
-                mindspore.Tensor: The pooled output tensor.
+            
+            - mindspore.Tensor: The pooled output tensor.
     """
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes an instance of the BeitPooler class.
-        
+
         Args:
             self: The object instance.
             config (BeitConfig): The configuration object that contains the settings for the pooler.
                 It is expected to have the following attributes:
+                
                 - hidden_size (int): The size of the hidden state.
                 - use_mean_pooling (bool): Whether to use mean pooling or not.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1279,19 +1337,19 @@ module. Otherwise, it is set to None.
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct the pooled output tensor from the given hidden states.
-        
+
         Args:
             self (BeitPooler): An instance of the BeitPooler class.
             hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size),
                 containing the hidden states.
-        
+
         Returns:
             mindspore.Tensor: The pooled output tensor of shape (batch_size, hidden_size), representing the pooled
                 representation of the input hidden states.
-        
+
         Raises:
             None
-        
+
         Note:
             - If the 'layernorm' attribute is not None, the 'hidden_states' tensor is sliced to exclude the first token
               (CLS token), resulting in a tensor of shape (batch_size, sequence_length - 1, hidden_size).
@@ -1302,11 +1360,13 @@ module. Otherwise, it is set to None.
             - If the 'layernorm' attribute is None, the 'hidden_states' tensor is sliced to extract only the first token
               (CLS token) of shape (batch_size, hidden_size), which is assigned to the 'pooled_output' variable.
             - The 'pooled_output' tensor is returned as the final result.
-        
+
         Example:
+            ```python
             >>> pooler = BeitPooler()
             >>> hidden_states = mindspore.Tensor(np.random.randn(2, 5, 768))
             >>> pooled_output = pooler.construct(hidden_states)
+            ```
         """
         if self.layernorm is not None:
             # Mean pool the final hidden states of the patch tokens
@@ -1322,31 +1382,39 @@ module. Otherwise, it is set to None.
 class BeitForMaskedImageModeling(BeitPreTrainedModel):
 
     """
-    BeitForMaskedImageModeling is a class that represents a model for masked image modeling using the BEiT (Vision Transformer) architecture. It is designed for processing images with masked positions and
-generating predictions for masked language modeling tasks.
-    
-    This class inherits from BeitPreTrainedModel and includes methods for initialization and constructing the model. The __init__ method initializes the model with the provided configuration, setting up
-various components such as BEiT model, layer normalization, and the LM head.
-    
-    The construct method takes input pixel values, boolean masked positions, head mask, labels, and other optional parameters to perform masked language modeling on the input image. It processes the input
-through the BEiT model, applies layer normalization, computes prediction scores, and calculates masked language modeling loss if labels are provided.
-    
-    The method returns a MaskedLMOutput object containing the masked language modeling loss, prediction scores, hidden states, and attentions. Additionally, the docstring includes examples demonstrating how to
-use the BeitForMaskedImageModeling class for masked image modeling tasks.
+    BeitForMaskedImageModeling is a class that represents a model for masked image modeling using the BEiT 
+    (Vision Transformer) architecture. 
+    It is designed for processing images with masked positions and generating predictions for masked language modeling tasks.
+
+    This class inherits from BeitPreTrainedModel and includes methods for initialization and constructing the model. 
+    The __init__ method initializes the model with the provided configuration, setting up various components such as 
+    BEiT model, layer normalization, and the LM head.
+
+    The construct method takes input pixel values, boolean masked positions, head mask, labels, 
+    and other optional parameters to perform masked language modeling on the input image. 
+    It processes the input through the BEiT model, applies layer normalization, computes prediction scores, 
+    and calculates masked language modeling loss if labels are provided.
+
+    The method returns a MaskedLMOutput object containing the masked language modeling loss, prediction scores, 
+    hidden states, and attentions. 
+    Additionally, the docstring includes examples demonstrating how to  use the BeitForMaskedImageModeling class 
+    for masked image modeling tasks.
     """
     _keys_to_ignore_on_load_unexpectedecode_headd = [r"relative_position_index", r"num_batches_tracked"]
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a new instance of the BeitForMaskedImageModeling class.
-        
+
         Args:
             self: The instance of the class.
-            config (BeitConfig): The configuration object for the Beit model. It contains various hyperparameters and settings.
+            config (BeitConfig): 
+                The configuration object for the Beit model. It contains various hyperparameters and settings.
+                
                 - num_labels (int): The number of labels for classification.
-            
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1373,40 +1441,42 @@ use the BeitForMaskedImageModeling class for masked image modeling tasks.
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, MaskedLMOutput]:
         r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
+        Args:
+            bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`):
+                Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
 
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[tuple, MaskedLMOutput]
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, BeitForMaskedImageModeling
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
-        >>> model = BeitForMaskedImageModeling.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
-
-        >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
-        >>> # create random boolean mask of shape (batch_size, num_patches)
-        >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
-
-        >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-        >>> loss, logits = outputs.loss, outputs.logits
-        >>> list(logits.shape)
-        [1, 196, 8192]
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, BeitForMaskedImageModeling
+            >>> import torch
+            >>> from PIL import Image
+            >>> import requests
+            ... 
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ... 
+            >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
+            >>> model = BeitForMaskedImageModeling.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
+            ... 
+            >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
+            >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+            >>> # create random boolean mask of shape (batch_size, num_patches)
+            >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
+            ... 
+            >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
+            >>> loss, logits = outputs.loss, outputs.logits
+            >>> list(logits.shape)
+            [1, 196, 8192]
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.beit(
@@ -1441,36 +1511,37 @@ use the BeitForMaskedImageModeling class for masked image modeling tasks.
 class BeitForImageClassification(BeitPreTrainedModel):
 
     """
-    This class is an implementation of the Beit model for image classification tasks. It is designed to be used for both single-label and multi-label classification as well as regression tasks.
-    
+    This class is an implementation of the Beit model for image classification tasks. 
+    It is designed to be used for both single-label and multi-label classification as well as regression tasks.
+
     The class inherits from the BeitPreTrainedModel, which provides the basic architecture and functionality of the Beit model.
-    
+
     Attributes:
-        - num_labels (int): The number of labels in the classification task.
-        - beit (BeitModel): The Beit model for image classification.
-        - classifier (nn.Dense or nn.Identity): The classifier layer for predicting the labels.
-        
+        num_labels (int): The number of labels in the classification task.
+        beit (BeitModel): The Beit model for image classification.
+        classifier (nn.Dense or nn.Identity): The classifier layer for predicting the labels.
+
     Methods:
-        - __init__(self, config: BeitConfig) -> None:
+        __init__:
             Initializes a new instance of the BeitForImageClassification class.
-            
-        - construct(self, pixel_values: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
-output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[tuple, ImageClassifierOutput]:
+
+        construct:
             Constructs the forward pass of the model for image classification.
-            This method takes input pixel values, head mask, labels, and other optional arguments, and returns the output of the model.
+            This method takes input pixel values, head mask, labels, and other optional arguments, 
+            and returns the output of the model.
     """
     _keys_to_ignore_on_load_unexpected = [r"relative_position_index", r"num_batches_tracked"]
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a new instance of the `BeitForImageClassification` class.
-        
+
         Args:
             self: The object instance.
             config (BeitConfig): The configuration object that holds various hyperparameters and settings for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1495,10 +1566,11 @@ output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None)
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         outputs = self.beit(
@@ -1562,12 +1634,12 @@ class BeitConvModule(nn.Cell):
     ) -> None:
         """
         Initializes an instance of the 'BeitConvModule' class.
-        
+
         Args:
             self: The object itself.
             in_channels (int): The number of input channels.
             out_channels (int): The number of output channels.
-            kernel_size (Union[int, Tuple[int, int]]): The size of the kernel for convolution. 
+            kernel_size (Union[int, Tuple[int, int]]): The size of the kernel for convolution.
                 Can be either an integer or a tuple of integers for height and width.
             padding (Union[int, Tuple[int, int], str], optional): The amount of padding to be added to the input.
                 Can be an integer, a tuple of integers for height and width, or a string.
@@ -1577,13 +1649,13 @@ class BeitConvModule(nn.Cell):
             dilation (Union[int, Tuple[int, int]], optional): The dilation rate for the convolution operation.
                 Can be either an integer or a tuple of integers for height and width.
                 Defaults to 1, indicating no dilation.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         """
         super().__init__()
         self.conv = nn.Conv2d(
@@ -1599,16 +1671,18 @@ class BeitConvModule(nn.Cell):
         self.activation = nn.ReLU()
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-        ''' 
+        '''
         The 'construct' method constructs the BeitConvModule.
-        
+
         Args:
             self: BeitConvModule object. The instance of the BeitConvModule class.
             input: mindspore.Tensor. The input tensor to be processed.
-        
+
         Returns:
-            mindspore.Tensor. The output tensor after passing through the convolutional layer, batch normalization, and activation function.
-        
+            mindspore.Tensor:
+                The output tensor after passing through the convolutional layer, batch normalization, 
+                and activation function.
+
         Raises:
             None.
         '''
@@ -1622,21 +1696,21 @@ class BeitConvModule(nn.Cell):
 class BeitPyramidPoolingBlock(nn.Cell):
 
     """
-    BeitPyramidPoolingBlock is a class that represents a block for performing pyramid pooling operations in a neural network. 
+    BeitPyramidPoolingBlock is a class that represents a block for performing pyramid pooling operations in a neural network.
     It inherits from nn.Cell and contains methods for initialization and constructing the block.
-    
+
     Attributes:
         pool_scale (int): The scale used for adaptive average pooling.
         in_channels (int): The number of input channels.
         channels (int): The number of output channels.
-    
+
     Methods:
-        __init__(self, pool_scale: int, in_channels: int, channels: int) -> None:
+        __init__:
             Initializes the BeitPyramidPoolingBlock with the specified pool_scale, in_channels, and channels.
-        
-        construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+
+        construct:
             Constructs the pyramid pooling block by applying the layers to the input tensor.
-    
+
     Usage:
         block = BeitPyramidPoolingBlock(pool_scale=2, in_channels=64, channels=128)
         output = block.construct(input_tensor)
@@ -1644,18 +1718,18 @@ class BeitPyramidPoolingBlock(nn.Cell):
     def __init__(self, pool_scale: int, in_channels: int, channels: int) -> None:
         """
         Initializes a new instance of the BeitPyramidPoolingBlock class.
-        
+
         Args:
             self: The object itself.
             pool_scale (int): The scale for adaptive average pooling.
             in_channels (int): The number of input channels.
             channels (int): The number of output channels.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.layers = [
@@ -1669,14 +1743,14 @@ class BeitPyramidPoolingBlock(nn.Cell):
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the BeitPyramidPoolingBlock by applying the specified layers to the input tensor.
-        
+
         Args:
             self (BeitPyramidPoolingBlock): The instance of the BeitPyramidPoolingBlock class.
             input (mindspore.Tensor): The input tensor to be processed by the BeitPyramidPoolingBlock.
-        
+
         Returns:
             mindspore.Tensor: A tensor representing the hidden state after applying the specified layers.
-        
+
         Raises:
             None
         """
@@ -1691,8 +1765,7 @@ class BeitPyramidPoolingModule(nn.Cell):
     Pyramid Pooling Module (PPM) used in PSPNet.
 
     Args:
-        pool_scales (tuple[int]): Pooling scales used in Pooling Pyramid
-            Module.
+        pool_scales (tuple[int]): Pooling scales used in Pooling Pyramid Module.
         in_channels (int): Input channels.
         channels (int): Channels after modules, before conv_seg.
         align_corners (bool): align_corners argument of F.interpolate.
@@ -1702,18 +1775,18 @@ class BeitPyramidPoolingModule(nn.Cell):
     def __init__(self, pool_scales: Tuple[int, ...], in_channels: int, channels: int, align_corners: bool) -> None:
         """
         Initializes an instance of the BeitPyramidPoolingModule class.
-        
+
         Args:
             pool_scales (Tuple[int, ...]): A tuple of integers representing the scales for pyramid pooling.
             in_channels (int): The number of input channels.
             channels (int): The number of output channels.
             align_corners (bool): A boolean indicating whether to align corners during pooling.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.pool_scales = pool_scales
@@ -1730,14 +1803,14 @@ class BeitPyramidPoolingModule(nn.Cell):
     def construct(self, x: mindspore.Tensor) -> List[mindspore.Tensor]:
         """
         Constructs the Beit Pyramid Pooling Module.
-        
+
         Args:
             self (BeitPyramidPoolingModule): The instance of the BeitPyramidPoolingModule class.
             x (mindspore.Tensor): The input tensor for the pyramid pooling module.
-        
+
         Returns:
             List[mindspore.Tensor]: A list of upsampled feature maps from the pyramid pooling module.
-        
+
         Raises:
             ValueError: If the input tensor x is not of type mindspore.Tensor.
             RuntimeError: If an error occurs during the pyramid pooling module construction.
@@ -1762,16 +1835,17 @@ class BeitUperHead(nn.Cell):
     def __init__(self, config: BeitConfig) -> None:
         """
         The __init__ method initializes an instance of the BeitUperHead class.
-        
+
         Args:
             self: This parameter refers to the instance of the class itself.
-            config (BeitConfig): An object of type BeitConfig containing the configuration settings for the UperHead. It is used to initialize various attributes of the UperHead.
-        
+            config (BeitConfig): An object of type BeitConfig containing the configuration settings for the UperHead. 
+                It is used to initialize various attributes of the UperHead.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__()
 
@@ -1812,17 +1886,20 @@ class BeitUperHead(nn.Cell):
 
     def psp_forward(self, inputs):
         """
-        This method 'psp_forward' is defined in the 'BeitUperHead' class and is used to perform the forward pass of the Pyramid Scene Parsing network.
-        
+        This method 'psp_forward' is defined in the 'BeitUperHead' class and is used to perform the forward pass of
+        the Pyramid Scene Parsing network.
+
         Args:
             self (object): Reference to the current instance of the class BeitUperHead.
             inputs (list): List of input tensors where the last element is used for processing.
-            
+
         Returns:
-            None: This method does not return any value directly. It processes the input data and updates the internal state of the object.
-        
+            None: This method does not return any value directly.
+                It processes the input data and updates the internal state of the object.
+
         Raises:
-            None: This method does not explicitly raise any exceptions. However, exceptions may be raised by the called functions within this method.
+            None: This method does not explicitly raise any exceptions.
+                However, exceptions may be raised by the called functions within this method.
         """
         x = inputs[-1]
         psp_outs = [x]
@@ -1835,20 +1912,20 @@ class BeitUperHead(nn.Cell):
     def construct(self, encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the Feature Pyramid Network (FPN) for the UperHead module in the Beit architecture.
-        
+
         Args:
             self (BeitUperHead): An instance of the BeitUperHead class.
             encoder_hidden_states (mindspore.Tensor): The hidden states generated by the encoder.
                 These hidden states are used as input to the FPN for feature extraction.
-        
+
         Returns:
             mindspore.Tensor: The output tensor representing the final processed features obtained from the FPN.
                 This tensor is the result of passing the encoder hidden states through the FPN layers.
-        
+
         Raises:
-            - TypeError: If the input encoder_hidden_states is not of type mindspore.Tensor.
-            - ValueError: If the input encoder_hidden_states is empty or has incorrect dimensions.
-            - RuntimeError: If there is an issue during the FPN computation process.
+            TypeError: If the input encoder_hidden_states is not of type mindspore.Tensor.
+            ValueError: If the input encoder_hidden_states is empty or has incorrect dimensions.
+            RuntimeError: If there is an issue during the FPN computation process.
         """
         # build laterals
         laterals = [lateral_conv(encoder_hidden_states[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
@@ -1885,11 +1962,12 @@ class BeitFCNHead(nn.Cell):
     [FCNNet](https://arxiv.org/abs/1411.4038>).
 
     Args:
-        config (BeitConfig): Configuration.
-        in_channels
-        kernel_size (int): The kernel size for convs in the head. Default: 3.
-        dilation (int): The dilation rate for convs in the head. Default: 1.
+        config (BeitConfig):
+            Configuration.
 
+            - in_channels
+            - kernel_size (int): The kernel size for convs in the head. Default: 3.
+            - dilation (int): The dilation rate for convs in the head. Default: 1.
 
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
@@ -1898,19 +1976,19 @@ class BeitFCNHead(nn.Cell):
     ) -> None:
         """
         Initializes a BeitFCNHead object.
-        
+
         Args:
             self: The object instance.
             config (BeitConfig): An instance of BeitConfig containing configuration parameters.
             in_index (int): Index of the input tensor.
             kernel_size (int): Size of the convolutional kernel.
             dilation (Union[int, Tuple[int, int]]): Dilation factor for the convolution operation.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.in_channels = config.hidden_size
@@ -1946,17 +2024,17 @@ class BeitFCNHead(nn.Cell):
     def construct(self, encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         '''
         This method constructs the FCN (Fully Convolutional Network) head for the Beit model.
-        
+
         Args:
             self (BeitFCNHead): The instance of the BeitFCNHead class.
             encoder_hidden_states (mindspore.Tensor): The hidden states of the encoder. It is expected to be a Tensor.
-        
+
         Returns:
             mindspore.Tensor: The output tensor of the FCN head.
-        
+
         Raises:
-            - ValueError: If the input encoder_hidden_states is not a valid mindspore.Tensor.
-            - RuntimeError: If the method encounters any runtime errors during the construction of the FCN head.
+            ValueError: If the input encoder_hidden_states is not a valid mindspore.Tensor.
+            RuntimeError: If the method encounters any runtime errors during the construction of the FCN head.
         '''
         # just take the relevant feature maps
         hidden_states = encoder_hidden_states[self.in_index]
@@ -1971,34 +2049,41 @@ class BeitForSemanticSegmentation(BeitPreTrainedModel):
 
     """
     A Python class representing the Beit model for semantic segmentation.
-    
-    This class inherits from the BeitPreTrainedModel and includes methods for initializing the model, computing loss, and constructing the model. The `BeitForSemanticSegmentation` class is designed for
-semantic segmentation tasks, where it takes input pixel values and produces semantic segmentation maps. It utilizes the BeitModel for feature extraction, applies a series of operations to the extracted
-features, and outputs logits for semantic segmentation.
-    
-    The class's `__init__` method initializes the model with the specified configuration and sets up the necessary components for semantic segmentation, such as the BeitModel, decoder head, and auxiliary head.
-The `compute_loss` method calculates the loss based on the model's predictions and ground truth labels. The `construct` method processes input pixel values, applies the model, and returns the semantic
-segmentation logits along with optional outputs like hidden states and attentions. Additionally, it provides detailed information on the expected input format for labels and examples of how to use the class
-for semantic segmentation tasks.
-    
+
+    This class inherits from the BeitPreTrainedModel and includes methods for initializing the model, computing loss,
+    and constructing the model. T
+    he `BeitForSemanticSegmentation` class is designed for semantic segmentation tasks, where it takes input pixel values
+    and produces semantic segmentation maps.
+    It utilizes the BeitModel for feature extraction, applies a series of operations to the extracted features,
+    and outputs logits for semantic segmentation.
+
+    The class's `__init__` method initializes the model with the specified configuration and sets up the necessary
+    components for semantic segmentation, such as the BeitModel, decoder head, and auxiliary head.
+    The `compute_loss` method calculates the loss based on the model's predictions and ground truth labels.
+    The `construct` method processes input pixel values, applies the model, and returns the semantic segmentation logits
+    along with optional outputs like hidden states and attentions.
+    Additionally, it provides detailed information on the expected input format for labels and examples of how to use the class
+    for semantic segmentation tasks.
+
     """
     _keys_to_ignore_on_load_unexpected = [r"relative_position_index", r"num_batches_tracked"]
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a new instance of BeitForSemanticSegmentation.
-        
+
         Args:
             self: The instance of the class.
             config (BeitConfig): The configuration object containing parameters for the model.
                 It is used to set up the model architecture and define various hyperparameters.
                 Must be an instance of BeitConfig.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: Raised if the length of config.out_indices is not 4, indicating an incorrect specification.
-                BeitForSemanticSegmentation requires config.out_indices to be a list of 4 integers, specifying which features to use from the backbone.
+                BeitForSemanticSegmentation requires config.out_indices to be a list of 4 integers,
+                specifying which features to use from the backbone.
                 Recommended values are [3, 5, 7, 11] for a base-sized architecture.
         """
         super().__init__(config)
@@ -2035,20 +2120,20 @@ for semantic segmentation tasks.
     def compute_loss(self, logits, auxiliary_logits, labels):
         '''
         This method computes the loss for semantic segmentation using the logits and auxiliary logits, and compares them with the provided labels.
-        
+
         Args:
-        - self: (object) The instance of the class BeitForSemanticSegmentation.
-        - logits: (tensor) The main logits for semantic segmentation.
-        - auxiliary_logits: (tensor or None) The auxiliary logits for semantic segmentation. It can be None if not provided.
-        - labels: (tensor) The ground truth labels for semantic segmentation.
-        
+            self: (object) The instance of the class BeitForSemanticSegmentation.
+            logits: (tensor) The main logits for semantic segmentation.
+            auxiliary_logits: (tensor or None) The auxiliary logits for semantic segmentation. It can be None if not provided.
+            labels: (tensor) The ground truth labels for semantic segmentation.
+
         Returns:
-        None. The method computes the loss and updates the internal state of the class.
-        
+            None: The method computes the loss and updates the internal state of the class.
+
         Raises:
-        - ValueError: If the size of logits or auxiliary_logits does not match the size of the labels.
-        - ValueError: If labels contain values outside the range [0, num_classes-1], where num_classes is the number of classes for semantic segmentation.
-        - RuntimeError: If the mode specified for interpolation is not supported.
+            ValueError: If the size of logits or auxiliary_logits does not match the size of the labels.
+            ValueError: If labels contain values outside the range [0, num_classes-1], where num_classes is the number of classes for semantic segmentation.
+            RuntimeError: If the mode specified for interpolation is not supported.
         '''
         # upsample logits to the images' original size
         upsampled_logits = ops.interpolate(
@@ -2077,30 +2162,32 @@ for semantic segmentation tasks.
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, SemanticSegmenterOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, height, width)`, *optional*):
-            Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, height, width)`, *optional*):
+                Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[tuple, SemanticSegmenterOutput]
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, BeitForSemanticSegmentation
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
-        >>> model = BeitForSemanticSegmentation.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> # logits are of shape (batch_size, num_labels, height, width)
-        >>> logits = outputs.logits
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, BeitForSemanticSegmentation
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
+            >>> model = BeitForSemanticSegmentation.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
+            ...
+            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> # logits are of shape (batch_size, num_labels, height, width)
+            >>> logits = outputs.logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2161,72 +2248,78 @@ for semantic segmentation tasks.
 class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
 
     """
-    Represents the backbone of a BEiT (Bottleneck Enhanced Image Transformer) model for image recognition and classification tasks. This class inherits from BeitPreTrainedModel and BackboneMixin.
-    
-    The backbone consists of an image embedding module, an encoder module, and optionally, a feature pyramid network (FPN) for multi-scale feature extraction.
-    
-    The class provides methods for initializing the backbone, getting input embeddings, and constructing the backbone from input pixel values. It also supports the option to return hidden states and attentions.
-    
+    Represents the backbone of a BEiT (Bottleneck Enhanced Image Transformer) model for image recognition and classification tasks.
+    This class inherits from BeitPreTrainedModel and BackboneMixin.
+
+    The backbone consists of an image embedding module, an encoder module, and optionally,
+    a feature pyramid network (FPN) for multi-scale feature extraction.
+
+    The class provides methods for initializing the backbone, getting input embeddings, and constructing
+    the backbone from input pixel values. It also supports the option to return hidden states and attentions.
+
     Example Usage:
-    
-    >>> from transformers import AutoImageProcessor, AutoBackbone
-    >>> import torch
-    >>> from PIL import Image
-    >>> import requests
-    
-    >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-    >>> image = Image.open(requests.get(url, stream=True).raw)
-    
-    >>> processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224")
-    >>> model = AutoBackbone.from_pretrained(
-    ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
-    ... )
-    
-    >>> inputs = processor(image, return_tensors="pt")
-    
-    >>> outputs = model(**inputs)
-    >>> feature_maps = outputs.feature_maps
-    >>> list(feature_maps[-1].shape)
-    [1, 768, 14, 14]
-    
-    
+        ```python
+        >>> from transformers import AutoImageProcessor, AutoBackbone
+        >>> import torch
+        >>> from PIL import Image
+        >>> import requests
+        ...
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        ...
+        >>> processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224")
+        >>> model = AutoBackbone.from_pretrained(
+        ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
+        ... )
+        ...
+        >>> inputs = processor(image, return_tensors="pt")
+        ...
+        >>> outputs = model(**inputs)
+        >>> feature_maps = outputs.feature_maps
+        >>> list(feature_maps[-1].shape)
+        [1, 768, 14, 14]
+        ```
+
     Attributes:
         num_features (list): List of hidden sizes for each layer in the backbone.
-    
+
     Methods:
         __init__: Initializes the backbone with the given configuration.
         get_input_embeddings: Returns the patch embeddings used as input to the backbone.
         construct: Constructs the backbone from input pixel values, optionally returning hidden states and attentions.
-    
+
     Raises:
         ValueError: If the specified output indices are invalid.
-    
+
     Returns:
         BackboneOutput: An object containing feature maps, hidden states, and attentions.
-    
+
     Note:
         The class supports the use of the FPN for multi-scale feature extraction.
     """
     def __init__(self, config):
         """
         Initializes an instance of the 'BeitBackbone' class.
-        
+
         Args:
             self: The instance of the 'BeitBackbone' class.
-            config: An object containing the configuration settings for the 'BeitBackbone'. It should provide the following attributes:
+            config: An object containing the configuration settings for the 'BeitBackbone'.
+                It should provide the following attributes:
+
                 - hidden_size (int): The size of the hidden layers.
                 - num_hidden_layers (int): The number of hidden layers.
                 - add_fpn (bool): Indicates whether to add a Feature Pyramid Network (FPN) to the backbone.
-                - out_indices (list): A list of 4 integers specifying which features to use from the backbone if FPN is added. 
-                                      For example, [3, 5, 7, 11] can be used for a base-sized architecture.
+                - out_indices (list): A list of 4 integers specifying which features to use from the backbone if FPN is added.
+                For example, [3, 5, 7, 11] can be used for a base-sized architecture.
                 - batch_norm_eps (float): The value for epsilon in Batch Normalization.
+
                 Note: Make sure 'config' provides the necessary attributes; otherwise, an exception will be raised.
-        
+
         Returns:
             None.
-        
+
         Raises:
-            ValueError: If 'config.add_fpn' is True but 'len(config.out_indices)' is not equal to 4. 
+            ValueError: If 'config.add_fpn' is True but 'len(config.out_indices)' is not equal to 4.
                         In this case, 'config.out_indices' should be a list of 4 integers specifying the features to use from the backbone.
         """
         super().__init__(config)
@@ -2261,21 +2354,23 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
     def get_input_embeddings(self):
         """
         Retrieves the input embeddings from the BeitBackbone class.
-        
+
         Args:
             self (BeitBackbone): An instance of the BeitBackbone class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method retrieves the input embeddings from the BeitBackbone class. The input embeddings are obtained through the patch_embeddings attribute of the class and are used for further processing or
-analysis.
-        
+
+        This method retrieves the input embeddings from the BeitBackbone class.
+        The input embeddings are obtained through the patch_embeddings attribute of the class
+        and are used for further processing or analysis.
+
         Note:
-            The input embeddings refer to the numerical representation of the input data, which can be used for tasks such as classification, regression, or other machine learning tasks.
+            The input embeddings refer to the numerical representation of the input data,
+            which can be used for tasks such as classification, regression, or other machine learning tasks.
         """
         return self.embeddings.patch_embeddings
 
@@ -2288,30 +2383,31 @@ analysis.
     ) -> BackboneOutput:
         """
         Returns:
+            BackboneOutput
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, AutoBackbone
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224")
-        >>> model = AutoBackbone.from_pretrained(
-        ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
-        ... )
-
-        >>> inputs = processor(image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> feature_maps = outputs.feature_maps
-        >>> list(feature_maps[-1].shape)
-        [1, 768, 14, 14]
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, AutoBackbone
+            >>> import torch
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-patch16-224")
+            >>> model = AutoBackbone.from_pretrained(
+            ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
+            ... )
+            ...
+            >>> inputs = processor(image, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> feature_maps = outputs.feature_maps
+            >>> list(feature_maps[-1].shape)
+            [1, 768, 14, 14]
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

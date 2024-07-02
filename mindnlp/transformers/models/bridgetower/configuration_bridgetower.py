@@ -54,18 +54,17 @@ class BridgeTowerVisionConfig(PretrainedConfig):
         remove_last_layer (`bool`, *optional*, defaults to `False`):
             Whether to remove the last layer from the vision encoder.
 
-
     Example:
-
-    ```python
-    >>> from transformers import BridgeTowerVisionConfig
-
-    >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration for the vision model
-    >>> configuration = BridgeTowerVisionConfig()
-
-    >>> # Accessing the configuration
-    >>> configuration
-    ```"""
+        ```python
+        >>> from transformers import BridgeTowerVisionConfig
+        ...
+        >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration for the vision model
+        >>> configuration = BridgeTowerVisionConfig()
+        ...
+        >>> # Accessing the configuration
+        >>> configuration
+        ```
+    """
     model_type = "bridgetower_vision_model"
 
     def __init__(
@@ -84,25 +83,25 @@ class BridgeTowerVisionConfig(PretrainedConfig):
     ):
         """
         Initializes a BridgeTowerVisionConfig object with the specified configuration parameters.
-        
+
         Args:
-        - hidden_size (int): The size of the hidden layers in the vision model.
-        - num_hidden_layers (int): The number of hidden layers in the vision model.
-        - num_channels (int): The number of input channels in the image data.
-        - patch_size (int): The size of the image patches used in the model.
-        - image_size (int): The size of the input images processed by the model.
-        - initializer_factor (int): A factor used for weight initialization in the model.
-        - layer_norm_eps (float): The epsilon value for layer normalization.
-        - stop_gradient (bool): Whether to stop gradients during training.
-        - share_layernorm (bool): Whether to share layer normalization parameters across layers.
-        - remove_last_layer (bool): Whether to remove the last layer of the model.
-        - **kwargs: Additional keyword arguments for customization.
-        
+            hidden_size (int): The size of the hidden layers in the vision model.
+            num_hidden_layers (int): The number of hidden layers in the vision model.
+            num_channels (int): The number of input channels in the image data.
+            patch_size (int): The size of the image patches used in the model.
+            image_size (int): The size of the input images processed by the model.
+            initializer_factor (int): A factor used for weight initialization in the model.
+            layer_norm_eps (float): The epsilon value for layer normalization.
+            stop_gradient (bool): Whether to stop gradients during training.
+            share_layernorm (bool): Whether to share layer normalization parameters across layers.
+            remove_last_layer (bool): Whether to remove the last layer of the model.
+            **kwargs: Additional keyword arguments for customization.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None
+            None
         """
         super().__init__(**kwargs)
         self.hidden_size = hidden_size
@@ -120,19 +119,19 @@ class BridgeTowerVisionConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         This method creates an instance of a 'BridgeTowerVisionConfig' class from a pretrained model or its path.
-        
+
         Args:
             cls (class): The class reference.
             pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
                 It can be a string or a path-like object representing the location of the pretrained model.
-        
+
         Returns:
             PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model.
-        
+
         Raises:
-            - TypeError: If the input parameters are of incorrect types.
-            - ValueError: If the configuration dictionary obtained from the pretrained model is incomplete or invalid.
-            - Warning: If attempting to instantiate a model of a different type than the specified 'model_type', as this may lead to errors.
+            TypeError: If the input parameters are of incorrect types.
+            ValueError: If the configuration dictionary obtained from the pretrained model is incomplete or invalid.
+            Warning: If attempting to instantiate a model of a different type than the specified 'model_type', as this may lead to errors.
         """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -200,16 +199,16 @@ class BridgeTowerTextConfig(PretrainedConfig):
             relevant if `config.is_decoder=True`.
 
     Example:
-
-    ```python
-    >>> from transformers import BridgeTowerTextConfig
-
-    >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration for the text model
-    >>> configuration = BridgeTowerTextConfig()
-
-    >>> # Accessing the configuration
-    >>> configuration
-    ```"""
+        ```python
+        >>> from transformers import BridgeTowerTextConfig
+        ...
+        >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration for the text model
+        >>> configuration = BridgeTowerTextConfig()
+        ...
+        >>> # Accessing the configuration
+        >>> configuration
+        ```
+    """
     model_type = "bridgetower_text_model"
 
     def __init__(
@@ -253,12 +252,12 @@ class BridgeTowerTextConfig(PretrainedConfig):
             eos_token_id (int, optional): The token id for the end of sequence. Defaults to 2.
             position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
             use_cache (bool, optional): Whether to use caching. Defaults to True.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(**kwargs)
 
@@ -284,14 +283,16 @@ class BridgeTowerTextConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         This method instantiates a BridgeTowerTextConfig from a pretrained model or a model configuration file.
-        
+
         Args:
             cls (class): The class object itself.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model or model configuration file. It can be a string or a valid os.PathLike object. 
-        
+            pretrained_model_name_or_path (Union[str, os.PathLike]):
+                The name or path of the pretrained model or model configuration file.
+                It can be a string or a valid os.PathLike object.
+
         Returns:
             PretrainedConfig: An instance of a PretrainedConfig object representing the configuration of the pretrained model.
-        
+
         Raises:
             This method does not raise any specific exceptions.
         """
@@ -349,19 +350,19 @@ class BridgeTowerConfig(PretrainedConfig):
             Dictionary of configuration options used to initialize [`BridgeTowerVisionConfig`].
 
     Example:
-
-    ```python
-    >>> from transformers import BridgeTowerModel, BridgeTowerConfig
-
-    >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration
-    >>> configuration = BridgeTowerConfig()
-
-    >>> # Initializing a model from the BridgeTower/bridgetower-base style configuration
-    >>> model = BridgeTowerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BridgeTowerModel, BridgeTowerConfig
+        ...
+        >>> # Initializing a BridgeTower BridgeTower/bridgetower-base style configuration
+        >>> configuration = BridgeTowerConfig()
+        ...
+        >>> # Initializing a model from the BridgeTower/bridgetower-base style configuration
+        >>> model = BridgeTowerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bridgetower"
 
     def __init__(
@@ -383,30 +384,30 @@ class BridgeTowerConfig(PretrainedConfig):
     ):
         """
         __init__
-        
+
         Initializes an instance of the BridgeTowerConfig class.
-        
+
         Args:
-        - self: The instance of the class.
-        - share_cross_modal_transformer_layers (bool): Indicates whether to share cross modal transformer layers.
-        - hidden_act (str): The activation function for the hidden layers.
-        - hidden_size (int): The size of the hidden layers.
-        - initializer_factor (int): The factor to initialize the layers.
-        - layer_norm_eps (float): The epsilon value for layer normalization.
-        - share_link_tower_layers (bool): Indicates whether to share link tower layers.
-        - link_tower_type (str): The type of link tower.
-        - num_attention_heads (int): The number of attention heads.
-        - num_hidden_layers (int): The number of hidden layers.
-        - tie_word_embeddings (bool): Indicates whether word embeddings are tied.
-        - init_layernorm_from_vision_encoder (bool): Indicates whether to initialize layernorm from the vision encoder.
-        - text_config (dict): The configuration for text.
-        - vision_config (dict): The configuration for vision.
-        
+            self: The instance of the class.
+            share_cross_modal_transformer_layers (bool): Indicates whether to share cross modal transformer layers.
+            hidden_act (str): The activation function for the hidden layers.
+            hidden_size (int): The size of the hidden layers.
+            initializer_factor (int): The factor to initialize the layers.
+            layer_norm_eps (float): The epsilon value for layer normalization.
+            share_link_tower_layers (bool): Indicates whether to share link tower layers.
+            link_tower_type (str): The type of link tower.
+            num_attention_heads (int): The number of attention heads.
+            num_hidden_layers (int): The number of hidden layers.
+            tie_word_embeddings (bool): Indicates whether word embeddings are tied.
+            init_layernorm_from_vision_encoder (bool): Indicates whether to initialize layernorm from the vision encoder.
+            text_config (dict): The configuration for text.
+            vision_config (dict): The configuration for vision.
+
         Returns:
-        None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - TypeError: If the provided input types are invalid.
+            TypeError: If the provided input types are invalid.
         """
         # TODO: remove this once the Hub files are updated.
         _ = kwargs.pop("text_config_dict", None)
@@ -441,7 +442,9 @@ class BridgeTowerConfig(PretrainedConfig):
         cls, text_config: BridgeTowerTextConfig, vision_config: BridgeTowerVisionConfig, **kwargs
     ):
         r"""
-        Instantiate a [`BridgeTowerConfig`] (or a derived class) from BridgeTower text model configuration. Returns:
+        Instantiate a [`BridgeTowerConfig`] (or a derived class) from BridgeTower text model configuration.
+
+        Returns:
             [`BridgeTowerConfig`]: An instance of a configuration object
         """
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)

@@ -84,7 +84,7 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If vocab_file is not a string.
@@ -132,7 +132,7 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
             None: This method does not return any value. It modifies the state of the instance in-place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -149,13 +149,13 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
                 This dictionary is used to update the internal state of the object.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If there is an issue with the values passed as parameters.
-            - AttributeError: If there are issues related to attribute access or assignment.
-            - RuntimeError: If there is a runtime issue during the method execution.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If there is an issue with the values passed as parameters.
+            AttributeError: If there are issues related to attribute access or assignment.
+            RuntimeError: If there is a runtime issue during the method execution.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
@@ -246,13 +246,17 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method takes in two input sequences token_ids_0 and token_ids_1 (optional) and builds input sequences with special tokens. If the add_bos_token parameter is True, the method adds the beginning of
-sequence token (bos_token) at the beginning of the sequences. If the add_eos_token parameter is True, the method adds the end of sequence token (eos_token) at the end of the sequences. The method then
-concatenates the special tokens with the input sequences and returns the result.
+        This method takes in two input sequences token_ids_0 and token_ids_1 (optional) and builds input sequences with special tokens.
+        If the add_bos_token parameter is True, the method adds the beginning of sequence token (bos_token) at the beginning of the sequences.
+        If the add_eos_token parameter is True, the method adds the end of sequence token (eos_token) at the end of the sequences.
+        The method then concatenates the special tokens with the input sequences and returns the result.
         
-        If a second input sequence (token_ids_1) is provided, the method also adds special tokens to it and concatenates it with the first input sequence.
+        If a second input sequence (token_ids_1) is provided, the method also adds special tokens to it and concatenates it
+        with the first input sequence.
         
-        Note: The bos_token_id and eos_token_id are specific token IDs for the beginning and end of sequence tokens, respectively, as defined in the BaiChuanTokenizer class.
+        Note:
+            The bos_token_id and eos_token_id are specific token IDs for the beginning and end of sequence tokens, respectively,
+            as defined in the BaiChuanTokenizer class.
         """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []

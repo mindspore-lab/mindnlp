@@ -150,19 +150,19 @@ class BatchEncoding(UserDict):
         Initializes a BatchEncoding object.
         
         Args:
-        - self: The object itself.
-        - data (Optional[Dict[str, Any]]): The input data to be processed. Default is None.
-        - encoding (Optional[Union[EncodingFast, Sequence[EncodingFast]]]): The encoding scheme(s) to be used. Default is None.
-        - tensor_type (Union[None, str, TensorType]): The type of tensor to be used. Default is None.
-        - prepend_batch_axis (bool): A flag indicating whether to prepend a batch axis to the data. Default is False.
-        - n_sequences (Optional[int]): The number of sequences in the data. Default is None.
-        
+            self: The object itself.
+            data (Optional[Dict[str, Any]]): The input data to be processed. Default is None.
+            encoding (Optional[Union[EncodingFast, Sequence[EncodingFast]]]): The encoding scheme(s) to be used. Default is None.
+            tensor_type (Union[None, str, TensorType]): The type of tensor to be used. Default is None.
+            prepend_batch_axis (bool): A flag indicating whether to prepend a batch axis to the data. Default is False.
+            n_sequences (Optional[int]): The number of sequences in the data. Default is None.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - TypeError: If the encoding is not of type EncodingFast.
-        - IndexError: If the encoding list is empty and n_sequences is not provided.
+            TypeError: If the encoding is not of type EncodingFast.
+            IndexError: If the encoding list is empty and n_sequences is not provided.
         """
         super().__init__(data)
 
@@ -219,19 +219,20 @@ class BatchEncoding(UserDict):
     def __getattr__(self, item: str):
         r"""
         __getattr__
-        
+
         Method in the BatchEncoding class that allows dynamic attribute access.
-        
+
         Args:
             self: The instance of the BatchEncoding class.
             item (str): The name of the attribute being accessed.
-        
+
         Returns:
-            None: This method does not return any value directly. 
-        
+            None.
+
         Raises:
-            AttributeError: If the specified attribute 'item' does not exist in the data dictionary, an AttributeError is raised.
-        
+            AttributeError: If the specified attribute 'item' does not exist in the data dictionary,
+                an AttributeError is raised.
+
         """
         try:
             return self.data[item]
@@ -240,40 +241,46 @@ class BatchEncoding(UserDict):
 
     def __getstate__(self):
         r"""
-        This method, '__getstate__', is defined within the 'BatchEncoding' class and is intended to handle the serialization of the class instance.
-        
+        This method, '__getstate__', is defined within the 'BatchEncoding' class and is intended to handle the
+        serialization of the class instance.
+
         Args:
-            self (BatchEncoding): The instance of the BatchEncoding class for which the state needs to be retrieved. It is automatically passed as the first parameter.
-        
+            self (BatchEncoding): The instance of the BatchEncoding class for which the state needs to be retrieved.
+                It is automatically passed as the first parameter.
+
         Returns:
             None: This method returns None, as it is intended to provide the state of the instance for serialization purposes.
-        
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return {"data": self.data, "encodings": self._encodings}
 
     def __setstate__(self, state):
         r"""
         __setstate__ method in the BatchEncoding class.
-        
+
         This method is used to restore the state of the BatchEncoding object from a previously saved state.
-        
+
         Args:
             self (BatchEncoding): The BatchEncoding object itself.
-            state (dict): A dictionary containing the state information to be restored. It should have the following keys:
+            state (dict):
+                A dictionary containing the state information to be restored. It should have the following keys:
+
                 - 'data': The data to be restored into the 'data' attribute of the BatchEncoding object.
                 - 'encodings': The encodings to be restored into the '_encodings' attribute of the BatchEncoding object.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
-            - If the 'data' key is present in the state dictionary, the method assigns the value to the 'data' attribute of the BatchEncoding object.
-            - If the 'encodings' key is present in the state dictionary, the method assigns the value to the '_encodings' attribute of the BatchEncoding object.
+            - If the 'data' key is present in the state dictionary,
+            the method assigns the value to the 'data' attribute of the BatchEncoding object.
+            - If the 'encodings' key is present in the state dictionary,
+            the method assigns the value to the '_encodings' attribute of the BatchEncoding object.
         """
         if "data" in state:
             self.data = state["data"]
@@ -284,13 +291,13 @@ class BatchEncoding(UserDict):
     def keys(self):
         r"""
         This method returns a view of all the keys present in the BatchEncoding object.
-        
+
         Args:
             self (BatchEncoding): The instance of the BatchEncoding class.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -299,32 +306,32 @@ class BatchEncoding(UserDict):
     def values(self):
         r"""
         Method 'values' in the class 'BatchEncoding'.
-        
+
         Args:
             self: BatchEncoding - The instance of the BatchEncoding class.
                 Represents the current object instance.
-        
+
         Returns:
-            None - This method returns a value of type None.
+            None: This method returns a value of type None.
                 The method returns a view of all values present in the data dictionary of the BatchEncoding object.
-        
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.data.values()
 
     def items(self):
         r"""
         Method 'items' in the class 'BatchEncoding' returns a view of the key-value pairs in the BatchEncoding object.
-        
+
         Args:
             self (BatchEncoding): The instance of the BatchEncoding class.
-            
+
         Returns:
             None: This method returns None as it simply returns a view of the key-value pairs in the BatchEncoding object.
-            
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.data.items()
 
@@ -362,10 +369,10 @@ class BatchEncoding(UserDict):
         """
         Return a list mapping the tokens to the id of their original sentences:
 
-            - `None` for special tokens added around or between sequences,
-            - `0` for tokens corresponding to words in the first sequence,
-            - `1` for tokens corresponding to words in the second sequence when a pair of sequences was jointly
-              encoded.
+        - `None` for special tokens added around or between sequences,
+        - `0` for tokens corresponding to words in the first sequence,
+        - `1` for tokens corresponding to words in the second sequence when a pair of sequences was jointly
+          encoded.
 
         Args:
             batch_index (`int`, *optional*, defaults to 0): The index to access in the batch.
@@ -533,10 +540,10 @@ class BatchEncoding(UserDict):
                 or 1) the provided word index belongs to.
 
         Returns:
-            ([`~tokenization_utils_base.TokenSpan`], *optional*): Span of tokens in the encoded sequence. Returns
-            `None` if no tokens correspond to the word. This can happen especially when the token is a special token
-            that has been used to format the tokenization. For example when we add a class token at the very beginning
-            of the tokenization.
+            ([`~tokenization_utils_base.TokenSpan`], *optional*):
+                Span of tokens in the encoded sequence. Returns `None` if no tokens correspond to the word.
+                This can happen especially when the token is a special token that has been used to format the
+                tokenization. For example when we add a class token at the very beginning of the tokenization.
         """
         if not self._encodings:
             raise ValueError("word_to_tokens() is not available when using Python based tokenizers")
@@ -576,8 +583,9 @@ class BatchEncoding(UserDict):
                 the sequence.
 
         Returns:
-            [`~tokenization_utils_base.CharSpan`]: Span of characters in the original string, or None, if the token
-            (e.g. <s>, </s>) doesn't correspond to any chars in the origin string.
+            [`~tokenization_utils_base.CharSpan`]:
+                Span of characters in the original string, or None, if the token
+                (e.g. <s>, </s>) doesn't correspond to any chars in the origin string.
         """
         if not self._encodings:
             raise ValueError("token_to_chars() is not available when using Python based tokenizers")
@@ -619,7 +627,8 @@ class BatchEncoding(UserDict):
 
 
         Returns:
-            `int`: Index of the token.
+            `int`:
+                Index of the token.
         """
         if not self._encodings:
             raise ValueError("char_to_token() is not available when using Python based tokenizers")
@@ -658,8 +667,8 @@ class BatchEncoding(UserDict):
                 or 1) the provided word index belongs to.
 
         Returns:
-            `CharSpan` or `List[CharSpan]`: Span(s) of the associated character or characters in the string. CharSpan
-            are NamedTuple with:
+            `CharSpan` or `List[CharSpan]`:
+                Span(s) of the associated character or characters in the string. CharSpan are NamedTuple with:
 
                 - start: index of the first character associated to the token in the original string
                 - end: index of the character following the last character associated to the token in the original
@@ -828,17 +837,17 @@ class SpecialTokensMixin:
 
     def __init__(self, verbose=False, **kwargs):
         r"""Initialize the SpecialTokensMixin.
-        
+
         Args:
             self: The instance of the class.
             verbose (bool, optional): Whether to enable verbose mode. Defaults to False.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the value of a special token is not of type str or AddedToken.
-            AssertionError: If the value of 'additional_special_tokens' is not a list or tuple, 
+            AssertionError: If the value of 'additional_special_tokens' is not a list or tuple,
                 or if any token in the list or tuple is not a string or an AddedToken.
         """
         self._bos_token = None
@@ -921,22 +930,22 @@ class SpecialTokensMixin:
         Returns:
             `int`: Number of tokens added to the vocabulary.
 
-        Examples:
-
-        ```python
-        # Let's see how to add a new classification token to GPT-2
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-        model = GPT2Model.from_pretrained("gpt2")
-
-        special_tokens_dict = {"cls_token": "<CLS>"}
-
-        num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
-        print("We have added", num_added_toks, "tokens")
-        # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
-        model.resize_token_embeddings(len(tokenizer))
-
-        assert tokenizer.cls_token == "<CLS>"
-        ```"""
+        Example:
+            ```python
+            >>> # Let's see how to add a new classification token to GPT-2
+            >>> tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+            >>> model = GPT2Model.from_pretrained("gpt2")
+            ...
+            >>> special_tokens_dict = {"cls_token": "<CLS>"}
+            ...
+            >>> num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+            >>> print("We have added", num_added_toks, "tokens")
+            >>> # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
+            >>> model.resize_token_embeddings(len(tokenizer))
+            ...
+            >>> assert tokenizer.cls_token == "<CLS>"
+            ```
+        """
         if not special_tokens_dict:
             return 0
 
@@ -1009,18 +1018,18 @@ class SpecialTokensMixin:
         Returns:
             `int`: Number of tokens added to the vocabulary.
 
-        Examples:
-
-        ```python
-        # Let's see how to increase the vocabulary of Bert model and tokenizer
-        tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
-        model = BertModel.from_pretrained("bert-base-uncased")
-
-        num_added_toks = tokenizer.add_tokens(["new_tok1", "my_new-tok2"])
-        print("We have added", num_added_toks, "tokens")
-        # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
-        model.resize_token_embeddings(len(tokenizer))
-        ```"""
+        Example:
+            ```python
+            >>> # Let's see how to increase the vocabulary of Bert model and tokenizer
+            >>> tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+            >>> model = BertModel.from_pretrained("bert-base-uncased")
+            ...
+            >>> num_added_toks = tokenizer.add_tokens(["new_tok1", "my_new-tok2"])
+            >>> print("We have added", num_added_toks, "tokens")
+            >>> # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
+            >>> model.resize_token_embeddings(len(tokenizer))
+            ```
+        """
         if not new_tokens:
             return 0
 
@@ -1032,15 +1041,15 @@ class SpecialTokensMixin:
     def _add_tokens(self, new_tokens: Union[List[str], List[AddedToken]], special_tokens: bool = False) -> int:
         r"""
         Adds new tokens to the special tokens list.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             new_tokens (Union[List[str], List[AddedToken]]): A list of strings or AddedToken objects representing the new tokens to be added.
             special_tokens (bool, optional): A boolean flag indicating whether the new tokens are special tokens. Defaults to False.
-        
+
         Returns:
             int: The number of tokens added to the special tokens list.
-        
+
         Raises:
             NotImplementedError: If the method is called directly without being implemented in a subclass.
         """
@@ -1142,18 +1151,18 @@ class SpecialTokensMixin:
     def bos_token(self, value):
         r"""
         Method for setting the beginning of sentence (BOS) token in the SpecialTokensMixin class.
-        
+
         Args:
             self: An instance of the SpecialTokensMixin class.
-            value: A string or an instance of AddedToken representing the BOS token to be set. 
+            value: A string or an instance of AddedToken representing the BOS token to be set.
                    If set to None, the BOS token will be cleared.
-                   
+
         Returns:
-            None. Sets the BOS token for the instance of the SpecialTokensMixin class.
-        
+            None: Sets the BOS token for the instance of the SpecialTokensMixin class.
+
         Raises:
-            ValueError: Raised if the provided value is not a string or an instance of AddedToken, 
-                        and it is not None. Indicates that a non-string value cannot be set as the BOS token.
+            ValueError: Raised if the provided value is not a string or an instance of AddedToken,
+                and it is not None. Indicates that a non-string value cannot be set as the BOS token.
         """
         if not isinstance(value, (str, AddedToken)) and value is not None:
             raise ValueError("Cannot set a non-string value as the BOS token")
@@ -1163,16 +1172,19 @@ class SpecialTokensMixin:
     def eos_token(self, value):
         r"""
         Method to set the end-of-sequence (EOS) token in the SpecialTokensMixin class.
-        
+
         Args:
             self (object): The instance of the SpecialTokensMixin class.
-            value (str or AddedToken): The value to be set as the EOS token. It can be either a string or an instance of the AddedToken class. If the value is None, it is accepted as a valid input.
-            
+            value (str or AddedToken): The value to be set as the EOS token.
+                It can be either a string or an instance of the AddedToken class.
+                If the value is None, it is accepted as a valid input.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: Raised if the value provided is not a string or an instance of AddedToken and is not None. In this case, the error message 'Cannot set a non-string value as the EOS token' is raised.
+            ValueError: Raised if the value provided is not a string or an instance of AddedToken and is not None.
+                In this case, the error message 'Cannot set a non-string value as the EOS token' is raised.
         """
         if not isinstance(value, (str, AddedToken)) and value is not None:
             raise ValueError("Cannot set a non-string value as the EOS token")
@@ -1182,14 +1194,15 @@ class SpecialTokensMixin:
     def unk_token(self, value):
         r"""
         unk_token(self, value)
-            
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
-            value (str or AddedToken or None): The value to be set as the UNK token. If the value is not a string or an instance of AddedToken and is not None, a ValueError is raised.
-        
+            value (str or AddedToken or None): The value to be set as the UNK token.
+                If the value is not a string or an instance of AddedToken and is not None, a ValueError is raised.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the value is not a string or an instance of AddedToken and is not None, a ValueError is raised.
         """
@@ -1201,17 +1214,17 @@ class SpecialTokensMixin:
     def sep_token(self, value):
         r"""
         Method 'sep_token' in the class 'SpecialTokensMixin'.
-        
+
         Args:
             self (object): The instance of the class.
-                            Represents the current instance of the SpecialTokensMixin class.
+                Represents the current instance of the SpecialTokensMixin class.
             value (str or AddedToken or None): The value to be set as the SEP token.
-                                                It can be a string, an AddedToken object, or None.
-                                                If a non-string value is provided and it is not None, a ValueError is raised.
-        
+                It can be a string, an AddedToken object, or None.
+                If a non-string value is provided and it is not None, a ValueError is raised.
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
             ValueError: Raised when the provided value is not a string or an AddedToken object and it is not None.
         """
@@ -1223,14 +1236,14 @@ class SpecialTokensMixin:
     def pad_token(self, value):
         r"""
         This method sets the value of the PAD token in the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             value (str or AddedToken or None): The value to be set as the PAD token. It should be a string or an instance of AddedToken, or None.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the provided value is not a string or an instance of AddedToken and it is not None.
         """
@@ -1242,16 +1255,18 @@ class SpecialTokensMixin:
     def cls_token(self, value):
         r"""
         This method sets the CLS token for the SpecialTokensMixin class.
-        
+
         Args:
             self: The instance of the SpecialTokensMixin class.
-            value: A string or an instance of the AddedToken class representing the new CLS token to be set. If set to None, the CLS token will be removed.
-        
+            value: A string or an instance of the AddedToken class representing the new CLS token to be set.
+                If set to None, the CLS token will be removed.
+
         Returns:
-            None. The method sets the CLS token for the SpecialTokensMixin instance.
-        
+            None: The method sets the CLS token for the SpecialTokensMixin instance.
+
         Raises:
-            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None, a ValueError is raised indicating that a non-string value cannot be set as the CLS token.
+            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None,
+                a ValueError is raised indicating that a non-string value cannot be set as the CLS token.
         """
         if not isinstance(value, (str, AddedToken)) and value is not None:
             raise ValueError("Cannot set a non-string value as the CLS token")
@@ -1261,16 +1276,18 @@ class SpecialTokensMixin:
     def mask_token(self, value):
         r"""
         This method sets the MASK token for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
-            value (str or AddedToken or None): The value to be set as the MASK token. It can be a string, an instance of the AddedToken class, or None.
-        
+            value (str or AddedToken or None): The value to be set as the MASK token.
+                It can be a string, an instance of the AddedToken class, or None.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None, a ValueError is raised.
+            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None,
+                a ValueError is raised.
         """
         if not isinstance(value, (str, AddedToken)) and value is not None:
             raise ValueError("Cannot set a non-string value as the MASK token")
@@ -1280,16 +1297,16 @@ class SpecialTokensMixin:
     def additional_special_tokens(self, value):
         r"""
         Sets the additional special tokens for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             value (Any): The additional special tokens to be set. It can be of any type.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._additional_special_tokens = value if value is not None else None
 
@@ -1381,16 +1398,16 @@ class SpecialTokensMixin:
     @bos_token_id.setter
     def bos_token_id(self, value):
         r"""Sets the beginning-of-sequence (BOS) token ID for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             value (int): The BOS token ID to be set. If None, the BOS token ID will be set to None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self._bos_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1398,16 +1415,16 @@ class SpecialTokensMixin:
     def eos_token_id(self, value):
         r"""
         Method to set the end of sequence (EOS) token ID in the SpecialTokensMixin class.
-        
+
         Args:
             self (object): The instance of the SpecialTokensMixin class.
             value (int or None): The value to set as the EOS token ID. If not None, it should be an integer representing the token ID.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the value provided is not an integer or None.
+            TypeError: If the value provided is not an integer or None.
         """
         self._eos_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1415,16 +1432,16 @@ class SpecialTokensMixin:
     def unk_token_id(self, value):
         r"""
         Method to set the unknown token ID for SpecialTokensMixin.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
                 It is used to access the attributes and methods of the SpecialTokensMixin class.
             value (int): The value representing the unknown token ID to be set.
                 It must be an integer or None. If set to None, the unknown token ID will be set to None.
-        
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1434,14 +1451,14 @@ class SpecialTokensMixin:
     def sep_token_id(self, value):
         r"""
         This method sets the sep_token_id attribute of the SpecialTokensMixin class.
-        
+
         Args:
             self (object): The instance of the SpecialTokensMixin class.
             value (int): An integer representing the token ID to be set as the sep_token_id. It can be None.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1451,16 +1468,16 @@ class SpecialTokensMixin:
     def pad_token_id(self, value):
         r"""
         Sets the pad token ID for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             value (int): The new pad token ID to be set. If value is not None, the pad token ID will be updated accordingly.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self._pad_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1468,16 +1485,16 @@ class SpecialTokensMixin:
     def cls_token_id(self, value):
         r"""
         Sets the value of the `cls_token_id` attribute in the `SpecialTokensMixin` class.
-        
+
         Args:
             self: An instance of the `SpecialTokensMixin` class.
             value (int): The token ID to be assigned to the `cls_token_id` attribute.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._cls_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1485,19 +1502,22 @@ class SpecialTokensMixin:
     def mask_token_id(self, value):
         r"""
         Sets the mask token ID value for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             value: The value to be set as the mask token ID. It can be an integer or None.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
             None.
-        
-        This method sets the mask token ID value for the SpecialTokensMixin class by assigning the provided value to the internal '_mask_token' attribute. If the 'value' parameter is not None, it converts the
-ID value to tokens using the 'convert_ids_to_tokens' method and assigns the result to the '_mask_token' attribute. If the 'value' parameter is None, the '_mask_token' attribute is set to None.
+
+        This method sets the mask token ID value for the SpecialTokensMixin class
+        by assigning the provided value to the internal '_mask_token' attribute.
+        If the 'value' parameter is not None, it converts the ID value to tokens using the 'convert_ids_to_tokens' method
+        and assigns the result to the '_mask_token' attribute.
+        If the 'value' parameter is None, the '_mask_token' attribute is set to None.
         """
         self._mask_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1505,18 +1525,18 @@ ID value to tokens using the 'convert_ids_to_tokens' method and assigns the resu
     def additional_special_tokens_ids(self, values):
         r"""
         Sets the additional special token IDs for the SpecialTokensMixin class.
-        
+
         Args:
             self (SpecialTokensMixin): The instance of the SpecialTokensMixin class.
             values (list[int]): A list of integer values representing the additional special token IDs.
                 The values should be valid token IDs that exist in the tokenizer's vocabulary.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         """
         self._additional_special_tokens = [self.convert_ids_to_tokens(value) for value in values]
 
@@ -1613,13 +1633,13 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
     def __init__(self, **kwargs):
         r"""
         Initialize the PreTrainedTokenizerBase class.
-        
+
         Args:
             self: The instance of the class.
-        
+
         Returns:
-            None. This method initializes various attributes of the PreTrainedTokenizerBase class.
-        
+            None.
+
         Raises:
             ValueError: If the provided padding_side or truncation_side is not one of ['right', 'left'].
         """
@@ -1682,17 +1702,20 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
     @max_len_single_sentence.setter
     def max_len_single_sentence(self, value) -> int:
         r"""
-        This method 'max_len_single_sentence' in the class 'PreTrainedTokenizerBase' is used to set the maximum length of a single sentence in the tokenizer.
-        
+        This method 'max_len_single_sentence' in the class 'PreTrainedTokenizerBase'
+        is used to set the maximum length of a single sentence in the tokenizer.
+
         Args:
             self (object): The instance of the PreTrainedTokenizerBase class.
-            value (int): The value representing the maximum length of a single sentence. It is used to specify the maximum number of tokens allowed in a single sentence.
-        
+            value (int): The value representing the maximum length of a single sentence.
+                It is used to specify the maximum number of tokens allowed in a single sentence.
+
         Returns:
             int: Returns an integer value representing the maximum length of a single sentence that has been set.
-        
+
         Raises:
-            ValueError: Raised when attempting to set the 'max_len_single_sentence' parameter, as this functionality is deprecated. The value is now automatically configured by the tokenizer.
+            ValueError: Raised when attempting to set the 'max_len_single_sentence' parameter, as this functionality is deprecated.
+                The value is now automatically configured by the tokenizer.
         """
         # For backward compatibility, allow to try to setup 'max_len_single_sentence'.
         if value == self.model_max_length - self.num_special_tokens_to_add(pair=False) and self.verbose:
@@ -1710,20 +1733,21 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
     def max_len_sentences_pair(self, value) -> int:
         r"""
         Sets the maximum length of a pair of sentences for tokenization and truncation.
-        
+
         Args:
             self (PreTrainedTokenizerBase): The instance of the tokenizer.
             value (int): The desired maximum length of the sentence pair.
-        
+
         Returns:
             int: The maximum length of the sentence pair.
-        
+
         Raises:
             ValueError: If the specified value does not match the automatically set up length.
-            
+
         Notes:
-            This method is now deprecated and the value is automatically set up based on the model's maximum length and the number of special tokens added. If the value is equal to the model's maximum length
-minus the number of special tokens added, a deprecation warning is issued. Otherwise, a ValueError is raised.
+            This method is now deprecated and the value is automatically set up based on the model's maximum length and
+            the number of special tokens added. If the value is equal to the model's maximum length minus the number
+            of special tokens added, a deprecation warning is issued. Otherwise, a ValueError is raised.
         """
         # For backward compatibility, allow to try to setup 'max_len_sentences_pair'.
         if value == self.model_max_length - self.num_special_tokens_to_add(pair=True) and self.verbose:
@@ -1743,15 +1767,15 @@ minus the number of special tokens added, a deprecation warning is issued. Other
     def added_tokens_decoder(self) -> Dict[int, AddedToken]:
         r"""
         Method to retrieve the decoder mapping for added tokens.
-        
+
         Args:
             self (PreTrainedTokenizerBase): The instance of the PreTrainedTokenizerBase class.
                 It represents the tokenizer object for which the added tokens decoder is being retrieved.
-        
+
         Returns:
             Dict[int, AddedToken]: A dictionary mapping integer indices to AddedToken objects.
                 The AddedToken objects correspond to additional tokens that were added to the tokenizer.
-        
+
         Raises:
             NotImplementedError: This exception is raised if the method is called and not implemented in the subclass.
         """
@@ -1760,14 +1784,17 @@ minus the number of special tokens added, a deprecation warning is issued. Other
     def __repr__(self) -> str:
         r"""
         This method generates a string representation of the PreTrainedTokenizerBase object.
-        
+
         Args:
             self: The instance of the PreTrainedTokenizerBase class.
-            
+
         Returns:
-            A string representing the object with various attributes such as name_or_path, vocab_size, model_max_length, is_fast, padding_side, truncation_side, special_tokens_map,
-clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder section includes a dictionary representation of added tokens and their respective values.
-        
+            str:
+                A string representing the object with various attributes such as
+                name_or_path, vocab_size, model_max_length, is_fast, padding_side, truncation_side, special_tokens_map,
+                clean_up_tokenization_spaces, and added_tokens_decoder.
+                The added_tokens_decoder section includes a dictionary representation of added tokens and their respective values.
+
         Raises:
             None
         """
@@ -1783,15 +1810,19 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
     def __len__(self) -> int:
         r"""
         Method '__len__' in the class 'PreTrainedTokenizerBase'.
-        
+
         Args:
-            self: A reference to the instance of the class. It is automatically passed when the method is called. No additional arguments are expected.
-        
+            self: A reference to the instance of the class.
+                It is automatically passed when the method is called. No additional arguments are expected.
+
         Returns:
-            An integer value representing the length of the object. This method is intended to be overridden by subclasses to provide custom length calculation logic.
-        
+            An integer value representing the length of the object.
+                This method is intended to be overridden by subclasses to provide custom length calculation logic.
+
         Raises:
-            NotImplementedError: This exception is raised to indicate that the method is not implemented in the current class and should be implemented in subclasses.
+            NotImplementedError:
+                This exception is raised to indicate that the method is not implemented in the current class
+                and should be implemented in subclasses.
         """
         raise NotImplementedError()
 
@@ -1847,6 +1878,7 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Has no effect if tokenize is `False`. Acceptable
                 values are:
+
                 - `'tf'`: Return TensorFlow `tf.Tensor` objects.
                 - `'pt'`: Return PyTorch `mindspore.Tensor` objects.
                 - `'np'`: Return NumPy `np.ndarray` objects.
@@ -1904,29 +1936,34 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
     def _compile_jinja_template(self, chat_template):
         r"""
         Compiles a Jinja template for chat messages.
-        
+
         Args:
             self (PreTrainedTokenizerBase): An instance of the PreTrainedTokenizerBase class.
             chat_template (str): The Jinja template for chat messages.
-        
+
         Returns:
             None
-        
+
         Raises:
             ImportError: If jinja2 is not installed.
             TemplateError: If there is an error in the Jinja template.
-        
-        This method takes a Jinja template for chat messages and compiles it into a Jinja environment. The template is then ready to be used for rendering chat messages. The method uses an LRU cache with a
-maximum size of 128 to store compiled templates, which provides a performance boost when the same template is used multiple times.
-        
-        The method first checks if jinja2 is installed by trying to import the necessary modules. If jinja2 is not installed, an ImportError is raised with a helpful error message. If jinja2 is installed, an
-ImmutableSandboxedEnvironment is created with the trim_blocks and lstrip_blocks options set to True. This environment ensures that the template is rendered safely and without any leading or trailing white
-spaces.
-        
-        The method also defines a local function named raise_exception, which is used to raise a TemplateError with a custom error message. This function is added to the Jinja environment's globals under the
-name 'raise_exception'. This allows the template to raise an error by calling the 'raise_exception' function with an error message as an argument.
-        
-        Finally, the method compiles the chat_template into a Jinja template using the from_string method of the Jinja environment. The compiled template is then returned for further use.
+
+        This method takes a Jinja template for chat messages and compiles it into a Jinja environment.
+        The template is then ready to be used for rendering chat messages.
+        The method uses an LRU cache with a maximum size of 128 to store compiled templates,
+        which provides a performance boost when the same template is used multiple times.
+
+        The method first checks if jinja2 is installed by trying to import the necessary modules.
+        If jinja2 is not installed, an ImportError is raised with a helpful error message.
+        If jinja2 is installed, an ImmutableSandboxedEnvironment is created with the trim_blocks and lstrip_blocks options set to True.
+        This environment ensures that the template is rendered safely and without any leading or trailing white spaces.
+
+        The method also defines a local function named raise_exception, which is used to raise a TemplateError with a custom error message.
+        This function is added to the Jinja environment's globals under the name 'raise_exception'.
+        This allows the template to raise an error by calling the 'raise_exception' function with an error message as an argument.
+
+        Finally, the method compiles the chat_template into a Jinja template using the from_string method of the Jinja environment.
+        The compiled template is then returned for further use.
         """
         try:
             from jinja2.exceptions import TemplateError
@@ -2028,28 +2065,28 @@ name 'raise_exception'. This allows the template to raise an error by calling th
 
         </Tip>
 
-        Examples:
-
-        ```python
-        # We can't instantiate directly the base class *PreTrainedTokenizerBase* so let's show our examples on a derived class: BertTokenizer
-        # Download vocabulary from hf-mirror.com and cache.
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-
-        # Download vocabulary from hf-mirror.com (user-uploaded) and cache.
-        tokenizer = BertTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
-
-        # If vocabulary files are in a directory (e.g. tokenizer was saved using *save_pretrained('./test/saved_model/')*)
-        tokenizer = BertTokenizer.from_pretrained("./test/saved_model/")
-
-        # If the tokenizer uses a single vocabulary file, you can point directly to this file
-        tokenizer = BertTokenizer.from_pretrained("./test/saved_model/my_vocab.txt")
-
-        # You can link tokens to special vocabulary when instantiating
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", unk_token="<unk>")
-        # You should be sure '<unk>' is in the vocabulary when doing that.
-        # Otherwise use tokenizer.add_special_tokens({'unk_token': '<unk>'}) instead)
-        assert tokenizer.unk_token == "<unk>"
-        ```"""
+        Example:
+            ```python
+            >>> # We can't instantiate directly the base class *PreTrainedTokenizerBase* so let's show our examples on a derived class: BertTokenizer
+            >>> # Download vocabulary from hf-mirror.com and cache.
+            >>> tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+            ...
+            >>> # Download vocabulary from hf-mirror.com (user-uploaded) and cache.
+            >>> tokenizer = BertTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
+            ...
+            >>> # If vocabulary files are in a directory (e.g. tokenizer was saved using *save_pretrained('./test/saved_model/')*)
+            >>> tokenizer = BertTokenizer.from_pretrained("./test/saved_model/")
+            ...
+            >>> # If the tokenizer uses a single vocabulary file, you can point directly to this file
+            >>> tokenizer = BertTokenizer.from_pretrained("./test/saved_model/my_vocab.txt")
+            ...
+            >>> # You can link tokens to special vocabulary when instantiating
+            >>> tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", unk_token="<unk>")
+            >>> # You should be sure '<unk>' is in the vocabulary when doing that.
+            >>> # Otherwise use tokenizer.add_special_tokens({'unk_token': '<unk>'}) instead)
+            >>> assert tokenizer.unk_token == "<unk>"
+            ```
+        """
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         subfolder = kwargs.pop("subfolder", None)
@@ -2191,7 +2228,7 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ):
         r"""
         This method initializes a PreTrainedTokenizerBase from a pretrained model or from a set of resolved vocabulary files.
-        
+
         Args:
             cls (class): The class of the tokenizer instance.
             resolved_vocab_files (dict): A dictionary containing the resolved vocabulary files.
@@ -2203,14 +2240,16 @@ name 'raise_exception'. This allows the template to raise an error by calling th
             local_files_only (bool, optional): If True, only use local files. Default is False.
             _is_local (bool, optional): If True, the files are local. Default is False.
             **kwargs: Additional keyword arguments for initializing the tokenizer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            OSError: If unable to load vocabulary from file. Please check that the provided vocabulary is accessible and not corrupted.
+            OSError: If unable to load vocabulary from file. Please check that the provided vocabulary is accessible
+                and not corrupted.
             ValueError: If there is a mismatch in the added tokens decoder format.
-            Warning: If special tokens have been added in the vocabulary, it advises to make sure the associated word embeddings are fine-tuned or trained.
+            Warning: If special tokens have been added in the vocabulary, it advises to make sure the associated
+                word embeddings are fine-tuned or trained.
             """
         # We instantiate fast tokenizers based on a slow tokenizer if we don't have access to the tokenizer.json
         # file or if `from_slow` is set to True.
@@ -2423,17 +2462,17 @@ name 'raise_exception'. This allows the template to raise an error by calling th
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-        r""" 
+        r"""
         This method sets the maximum model length for a pretrained T5 model.
-        
+
         Args:
             pretrained_model_name_or_path (str): The name or path of the pretrained T5 model.
             max_model_length (int): The maximum model length to be set.
             init_max_model_length (int): The initial maximum model length.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the input parameters are not of the correct type.
             ValueError: If max_model_length or init_max_model_length is less than or equal to 0.
@@ -2448,16 +2487,17 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     def convert_added_tokens(cls, obj: Union[AddedToken, Any], save=False, add_type_field=True):
         r"""
         Converts AddedToken objects to dictionaries and vice versa.
-        
+
         Args:
             cls (type): The class reference.
-            obj (Union[AddedToken, Any]): The object to convert. Can be an AddedToken object, dictionary, list, tuple, or any other type.
+            obj (Union[AddedToken, Any]):
+                The object to convert. Can be an AddedToken object, dictionary, list, tuple, or any other type.
             save (bool): Indicates whether to save the converted object. Default is False.
             add_type_field (bool): Indicates whether to add a '__type' field during conversion. Default is True.
-        
+
         Returns:
-            None. The method modifies the input object in place or returns a converted object.
-        
+            None: The method modifies the input object in place or returns a converted object.
+
         Raises:
             TypeError: If the obj parameter is of an unsupported type.
             KeyError: If the '__type' key is not found in the dictionary object.
@@ -2489,7 +2529,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ) -> Tuple[str]:
         """
         Save the full tokenizer state.
-
 
         This method make sure the full tokenizer can then be re-loaded using the
         [`~tokenization_utils_base.PreTrainedTokenizer.from_pretrained`] class method..
@@ -2742,14 +2781,14 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     def num_special_tokens_to_add(self, pair: bool = False) -> int:
         r"""
         num_special_tokens_to_add method in the PreTrainedTokenizerBase class calculates the number of special tokens to be added.
-        
+
         Args:
             self: An instance of the PreTrainedTokenizerBase class.
             pair (bool): A boolean flag indicating whether the tokens are paired. Defaults to False.
-        
+
         Returns:
             int: The number of special tokens to be added based on the input parameters.
-        
+
         Raises:
             NotImplementedError: If the method is called directly from the base class without being implemented in the derived class.
         """
@@ -3010,34 +3049,38 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ) -> BatchEncoding:
         r"""
         This method '_call_one' in the class 'PreTrainedTokenizerBase' takes 18 parameters:
-        
+
         Args:
-        - self: The instance of the class.
-        - text: Input text data to be tokenized. It can be a single example (str), a list of single examples (List[str]), or a list of pretokenized examples (List[List[str]]).
-        - text_pair: Optional input text data to be tokenized when processing pairs of text. It follows the same format as 'text'.
-        - add_special_tokens: A boolean flag indicating whether special tokens should be added during tokenization.
-        - padding: Specifies the padding strategy to use during tokenization. It can be a boolean value, a string, or a PaddingStrategy enum.
-        - truncation: Specifies the truncation strategy to use during tokenization. It can be a boolean value, a string, or a TruncationStrategy enum.
-        - max_length: The maximum length of the tokenized sequences.
-        - stride: Integer specifying the stride when overflowing tokens.
-        - is_split_into_words: A boolean flag indicating if the input text is already split into words.
-        - pad_to_multiple_of: Optional integer specifying a multiple to pad the sequence length to.
-        - return_tensors: Specifies the type of tensors to return (e.g., 'pt' for PyTorch tensors).
-        - return_token_type_ids: A boolean flag indicating whether token type IDs should be returned.
-        - return_attention_mask: A boolean flag indicating whether attention masks should be returned.
-        - return_overflowing_tokens: A boolean flag indicating whether overflowing tokens should be returned.
-        - return_special_tokens_mask: A boolean flag indicating whether special tokens masks should be returned.
-        - return_offsets_mapping: A boolean flag indicating whether offsets mapping should be returned.
-        - return_length: A boolean flag indicating whether tokenized sequence lengths should be returned.
-        - verbose: A boolean flag indicating whether to output verbose information during tokenization.
-        
+            self: The instance of the class.
+            text: Input text data to be tokenized. It can be a single example (str), a list of single examples (List[str]),
+                or a list of pretokenized examples (List[List[str]]).
+            text_pair: Optional input text data to be tokenized when processing pairs of text.
+                It follows the same format as 'text'.
+            add_special_tokens: A boolean flag indicating whether special tokens should be added during tokenization.
+            padding: Specifies the padding strategy to use during tokenization.
+                It can be a boolean value, a string, or a PaddingStrategy enum.
+            truncation: Specifies the truncation strategy to use during tokenization.
+                It can be a boolean value, a string, or a TruncationStrategy enum.
+            max_length: The maximum length of the tokenized sequences.
+            stride: Integer specifying the stride when overflowing tokens.
+            is_split_into_words: A boolean flag indicating if the input text is already split into words.
+            pad_to_multiple_of: Optional integer specifying a multiple to pad the sequence length to.
+            return_tensors: Specifies the type of tensors to return (e.g., 'pt' for PyTorch tensors).
+            return_token_type_ids: A boolean flag indicating whether token type IDs should be returned.
+            return_attention_mask: A boolean flag indicating whether attention masks should be returned.
+            return_overflowing_tokens: A boolean flag indicating whether overflowing tokens should be returned.
+            return_special_tokens_mask: A boolean flag indicating whether special tokens masks should be returned.
+            return_offsets_mapping: A boolean flag indicating whether offsets mapping should be returned.
+            return_length: A boolean flag indicating whether tokenized sequence lengths should be returned.
+            verbose: A boolean flag indicating whether to output verbose information during tokenization.
+
         Returns:
-        A BatchEncoding object containing the tokenized input data with additional information depending on the specified return flags.
-        
+            A BatchEncoding object containing the tokenized input data with additional information depending on the specified return flags.
+
         Raises:
-        - ValueError: If the input text does not conform to the expected types or structures.
-        - TypeError: If 'text_pair' is a string when tokenizing batches of text.
-        - ValueError: If the batch lengths of 'text' and 'text_pair' do not match.
+            ValueError: If the input text does not conform to the expected types or structures.
+            TypeError: If 'text_pair' is a string when tokenizing batches of text.
+            ValueError: If the batch lengths of 'text' and 'text_pair' do not match.
         """
         # Input type checking for clearer error
         def _is_valid_text_input(t):
@@ -3221,32 +3264,32 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ) -> BatchEncoding:
         r"""
         Method _encode_plus in the class PreTrainedTokenizerBase.
-        
+
         Args:
-        - self: The instance of the class.
-        - text: Input text to encode. Can be of type TextInput, PreTokenizedInput, or EncodedInput.
-        - text_pair: Optional second input text to encode. Can be of type TextInput, PreTokenizedInput, or EncodedInput.
-        - add_special_tokens: A boolean indicating whether to add special tokens. Default is True.
-        - padding_strategy: The strategy for padding tokens. Default is PaddingStrategy.DO_NOT_PAD.
-        - truncation_strategy: The strategy for truncating tokens. Default is TruncationStrategy.DO_NOT_TRUNCATE.
-        - max_length: The maximum length of the returned list of tensors.
-        - stride: An integer indicating the tokenization stride. Default is 0.
-        - is_split_into_words: A boolean indicating if the input text is already split into words.
-        - pad_to_multiple_of: The padding length will be a multiple of this value.
-        - return_tensors: Specify the type of the returned tensors. Can be a string or TensorType.
-        - return_token_type_ids: A boolean indicating whether to return token type IDs.
-        - return_attention_mask: A boolean indicating whether to return attention masks.
-        - return_overflowing_tokens: A boolean indicating whether to return overflowing tokens.
-        - return_special_tokens_mask: A boolean indicating whether to return special tokens masks.
-        - return_offsets_mapping: A boolean indicating whether to return token offset mappings.
-        - return_length: A boolean indicating whether to return the length of input sequences.
-        - verbose: A boolean indicating whether to print verbose information.
-        
+            self: The instance of the class.
+            text: Input text to encode. Can be of type TextInput, PreTokenizedInput, or EncodedInput.
+            text_pair: Optional second input text to encode. Can be of type TextInput, PreTokenizedInput, or EncodedInput.
+            add_special_tokens: A boolean indicating whether to add special tokens. Default is True.
+            padding_strategy: The strategy for padding tokens. Default is PaddingStrategy.DO_NOT_PAD.
+            truncation_strategy: The strategy for truncating tokens. Default is TruncationStrategy.DO_NOT_TRUNCATE.
+            max_length: The maximum length of the returned list of tensors.
+            stride: An integer indicating the tokenization stride. Default is 0.
+            is_split_into_words: A boolean indicating if the input text is already split into words.
+            pad_to_multiple_of: The padding length will be a multiple of this value.
+            return_tensors: Specify the type of the returned tensors. Can be a string or TensorType.
+            return_token_type_ids: A boolean indicating whether to return token type IDs.
+            return_attention_mask: A boolean indicating whether to return attention masks.
+            return_overflowing_tokens: A boolean indicating whether to return overflowing tokens.
+            return_special_tokens_mask: A boolean indicating whether to return special tokens masks.
+            return_offsets_mapping: A boolean indicating whether to return token offset mappings.
+            return_length: A boolean indicating whether to return the length of input sequences.
+            verbose: A boolean indicating whether to print verbose information.
+
         Returns:
-        - BatchEncoding: A dictionary containing the encoded inputs ready for model processing.
-        
+            BatchEncoding: A dictionary containing the encoded inputs ready for model processing.
+
         Raises:
-        - NotImplementedError: If the method is called and not implemented.
+            NotImplementedError: If the method is called and not implemented.
         """
         raise NotImplementedError
 
@@ -3352,10 +3395,10 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ) -> BatchEncoding:
         r"""
         Batch encode a batch of text or text pairs using various encoding strategies.
-        
+
         Args:
             self (PreTrainedTokenizerBase): An instance of the PreTrainedTokenizerBase class.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair], List[EncodedInput], List[EncodedInputPair]]): 
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair], List[EncodedInput], List[EncodedInputPair]]):
                 A list of text or text pairs to be encoded. The input can be in various formats, such as raw text, pre-tokenized text, or encoded input.
             add_special_tokens (bool, optional): Whether to add special tokens to the encoded sequences. Defaults to True.
             padding_strategy (PaddingStrategy, optional): The strategy to use for padding sequences. Defaults to PaddingStrategy.DO_NOT_PAD.
@@ -3373,13 +3416,13 @@ name 'raise_exception'. This allows the template to raise an error by calling th
             return_length (bool, optional): Whether to return the length of the encoded sequences. Defaults to False.
             verbose (bool, optional): Whether to print information during encoding. Defaults to True.
             **kwargs: Additional keyword arguments for specific tokenizer implementations.
-        
+
         Returns:
             BatchEncoding: An object containing the batch of encoded sequences, along with additional information such as attention masks, token type IDs, and length.
-        
+
         Raises:
             NotImplementedError: If the method is not implemented by a subclass.
-        
+
         """
         raise NotImplementedError
 
@@ -3870,8 +3913,8 @@ name 'raise_exception'. This allows the template to raise an error by calling th
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
                 The tokenizer padding sides are defined in self.padding_side:
 
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                - 'left': pads on the left of the sequences
+                - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability
                 `>= 7.5` (Volta).
@@ -4017,22 +4060,23 @@ name 'raise_exception'. This allows the template to raise an error by calling th
     ) -> str:
         r"""
         Decode the given token IDs into a string representation.
-        
+
         Args:
             self (PreTrainedTokenizerBase): The instance of the PreTrainedTokenizerBase class.
             token_ids (Union[int, List[int]]): The token IDs to be decoded into a string. It can be either an integer or a list of integers.
             skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
             clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces during decoding. Defaults to None.
             **kwargs: Additional keyword arguments for future compatibility.
-        
+
         Returns:
             str: The decoded string representation of the given token IDs.
-        
+
         Raises:
             NotImplementedError: If the method is not implemented.
-        
+
         Note:
-            The method decodes the token IDs into a string using the tokenizer's decoding logic. Special tokens and tokenization spaces can be skipped or cleaned up if specified.
+            The method decodes the token IDs into a string using the tokenizer's decoding logic. Special tokens and
+            tokenization spaces can be skipped or cleaned up if specified.
         """
         raise NotImplementedError
 
@@ -4223,7 +4267,7 @@ name 'raise_exception'. This allows the template to raise an error by calling th
             **kwargs:
                 Additional keyword arguments passed along to `self.__call__`.
 
-        Return:
+        Returns:
             [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
 
             - **input_ids** -- List of token ids to be fed to the encoder.

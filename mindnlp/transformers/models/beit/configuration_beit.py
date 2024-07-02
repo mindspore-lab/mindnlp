@@ -112,19 +112,19 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
             seq_len, hidden_size)`. Only relevant for [`BeitBackbone`].
 
     Example:
-
-    ```python
-    >>> from transformers import BeitConfig, BeitModel
-
-    >>> # Initializing a BEiT beit-base-patch16-224-pt22k style configuration
-    >>> configuration = BeitConfig()
-
-    >>> # Initializing a model (with random weights) from the beit-base-patch16-224-pt22k style configuration
-    >>> model = BeitModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BeitConfig, BeitModel
+        ...
+        >>> # Initializing a BEiT beit-base-patch16-224-pt22k style configuration
+        >>> configuration = BeitConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the beit-base-patch16-224-pt22k style configuration
+        >>> model = BeitModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "beit"
 
     def __init__(
@@ -201,10 +201,12 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
             reshape_hidden_states (bool, optional): Whether to reshape the hidden states. Defaults to True.
         
         Returns:
-            None. The method initializes an instance of the BeitConfig class.
+            None.
         
         Raises:
-            FutureWarning: If the 'segmentation_indices' argument is used, a warning is issued indicating its deprecation and advising to use 'out_indices' instead.
+            FutureWarning:
+                If the 'segmentation_indices' argument is used,
+                a warning is issued indicating its deprecation and advising to use 'out_indices' instead.
         """
         super().__init__(**kwargs)
 

@@ -393,17 +393,18 @@ class CanineAttention(nn.Cell):
     """
     Additional arguments related to local attention:
 
-        - **local** (`bool`, *optional*, defaults to `False`) -- Whether to apply local attention.
-        - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`) -- Should all blocks be able to
-          attend
-        to the `to_tensor`'s first position (e.g. a [CLS] position)? - **first_position_attends_to_all** (`bool`,
-        *optional*, defaults to `False`) -- Should the *from_tensor*'s first position be able to attend to all
-        positions within the *from_tensor*? - **attend_from_chunk_width** (`int`, *optional*, defaults to 128) -- The
-        width of each block-wise chunk in `from_tensor`. - **attend_from_chunk_stride** (`int`, *optional*, defaults to
-        128) -- The number of elements to skip when moving to the next block in `from_tensor`. -
-        **attend_to_chunk_width** (`int`, *optional*, defaults to 128) -- The width of each block-wise chunk in
-        *to_tensor*. - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128) -- The number of elements to
-        skip when moving to the next block in `to_tensor`.
+    - **local** (`bool`, *optional*, defaults to `False`): Whether to apply local attention.
+    - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`): Should all blocks be able to
+    attend to the `to_tensor`'s first position (e.g. a [CLS] position)?
+    - **first_position_attends_to_all** (`bool`, *optional*, defaults to `False`):
+    Should the *from_tensor*'s first position be able to attend to all positions within the *from_tensor*?
+    - **attend_from_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in `from_tensor`.
+    - **attend_from_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to skip when moving
+    to the next block in `from_tensor`.
+    - **attend_to_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in
+    *to_tensor*.
+    - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to
+    skip when moving to the next block in `to_tensor`.
     """
 
     def __init__(
@@ -1225,41 +1226,43 @@ class CanineForTokenClassification(CaninePreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
+            `Union[Tuple, TokenClassifierOutput]`
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, CanineForTokenClassification
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/canine-s")
+            >>> model = CanineForTokenClassification.from_pretrained("google/canine-s")
+            ...
+            >>> inputs = tokenizer(
+            ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="pt"
+            ... )
+            ...
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
+            ...
+            >>> predicted_token_class_ids = logits.argmax(-1)
+            ...
+            >>> # Note that tokens are classified rather then input words which means that
+            >>> # there might be more predicted token classes than words.
+            >>> # Multiple token classes might account for the same word
+            >>> predicted_tokens_classes = [model.config.id2label[t.item()] for t in predicted_token_class_ids[0]]
+            >>> predicted_tokens_classes  # doctest: +SKIP
+            ```
 
-        ```python
-        >>> from transformers import AutoTokenizer, CanineForTokenClassification
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/canine-s")
-        >>> model = CanineForTokenClassification.from_pretrained("google/canine-s")
-
-        >>> inputs = tokenizer(
-        ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="pt"
-        ... )
-
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
-
-        >>> predicted_token_class_ids = logits.argmax(-1)
-
-        >>> # Note that tokens are classified rather then input words which means that
-        >>> # there might be more predicted token classes than words.
-        >>> # Multiple token classes might account for the same word
-        >>> predicted_tokens_classes = [model.config.id2label[t.item()] for t in predicted_token_class_ids[0]]
-        >>> predicted_tokens_classes  # doctest: +SKIP
-        ```
-
-        ```python
-        >>> labels = predicted_token_class_ids
-        >>> loss = model(**inputs, labels=labels).loss
-        >>> round(loss.item(), 2)  # doctest: +SKIP
-        ```"""
+            ```python
+            >>> labels = predicted_token_class_ids
+            >>> loss = model(**inputs, labels=labels).loss
+            >>> round(loss.item(), 2)  # doctest: +SKIP
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.canine(

@@ -36,7 +36,6 @@ class SeamlessM4TConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 256102):
             Vocabulary size of the SeamlessM4T model. Defines the number of different tokens that can be represented by
@@ -46,9 +45,7 @@ class SeamlessM4TConfig(PretrainedConfig):
             Unit vocabulary size of the SeamlessM4T model. Defines the number of different unit tokens that can be
             represented by the `inputs_ids` passed when calling the Text-To-Units sub-model of [`~SeamlessM4TModel`],
             [`~SeamlessM4TForSpeechToSpeech`] or [`~SeamlessM4TForTextToSpeech`].
-
-        > Parameters shared across sub-models
-
+        Parameters shared across sub-models: args below are Parameters shared across sub-models
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimensionality of the "intermediate" layers in the architecture.
         initializer_range (`float`, *optional*, defaults to 0.02):
@@ -79,9 +76,7 @@ class SeamlessM4TConfig(PretrainedConfig):
             The dropout probability for all activation layers in the model.
         scale_embedding (`bool`, *optional*, defaults to `True`):
             Scale embeddings by diving by sqrt(d_model).
-
-        > Text encoder and text decoder specific parameters
-
+        Text encoder and text decoder specific parameters:  args below are text decoder specific parameters
         encoder_layers (`int`, *optional*, defaults to 24):
             Number of hidden layers in the Transformer text encoder.
         encoder_ffn_dim (`int`, *optional*, defaults to 8192):
@@ -105,9 +100,7 @@ class SeamlessM4TConfig(PretrainedConfig):
             The id of the _beginning-of-stream_ text token. Only applied to the text-decoder model.
         eos_token_id (`int`, *optional*, defaults to 3):
             The id of the _end-of-stream_ text token. Only applied to the text-decoder model.
-
-        > Speech encoder specific parameters
-
+        Speech encoder specific parameters: args below are Speech encoder specific parameters
         speech_encoder_layers (`int`, *optional*, defaults to 24):
             Number of hidden layers in the Transformer speech encoder.
         speech_encoder_attention_heads (`int`, *optional*, defaults to 16):
@@ -152,9 +145,7 @@ class SeamlessM4TConfig(PretrainedConfig):
             the speech encoder.
         conv_depthwise_kernel_size (`int`, *optional*, defaults to 31):
             Kernel size of convolutional depthwise 1D layer in Conformer blocks. Only applied to the speech encoder.
-
-        > Text-To-Unit (t2u) model specific parameters
-
+        Text-To-Unit (t2u) model specific parameters: args below are Text-To-Unit (t2u) model specific parameters
         t2u_bos_token_id (`int`, *optional*, defaults to 0):
             The id of the _beginning-of-stream_ unit token. Only applied to the text-to-unit seq2seq model.
         t2u_pad_token_id (`int`, *optional*, defaults to 1):
@@ -182,9 +173,7 @@ class SeamlessM4TConfig(PretrainedConfig):
         t2u_max_position_embeddings (`int`, *optional*, defaults to 2048):
             The maximum sequence length that this model text-to-unit component might ever be used with. Typically set
             this to something large just in case (e.g., 512 or 1024 or 2048).
-
-         > Hifi-Gan Vocoder specific parameters
-
+        Hifi-Gan Vocoder specific parameters:  args below are Hifi-Gan Vocoder specific parameters
         sampling_rate (`int`, *optional*, defaults to 16000):
             The sampling rate at which the output audio will be generated, expressed in hertz (Hz).
         upsample_initial_channel (`int`, *optional*, defaults to 512):
@@ -227,18 +216,20 @@ class SeamlessM4TConfig(PretrainedConfig):
         vocoder_offset (`int`, *optional*, defaults to 4):
             Offset the unit token ids by this number to account for symbol tokens. Applies to the vocoder only.
 
-    ```python
-    >>> from transformers import SeamlessM4TModel, SeamlessM4TConfig
-
-    >>> # Initializing a SeamlessM4T "facebook/hf-seamless-m4t-medium" style configuration
-    >>> configuration = SeamlessM4TConfig()
-
-    >>> # Initializing a model from the "facebook/hf-seamless-m4t-medium" style configuration
-    >>> model = SeamlessM4TModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import SeamlessM4TModel, SeamlessM4TConfig
+        ...
+        >>> # Initializing a SeamlessM4T "facebook/hf-seamless-m4t-medium" style configuration
+        >>> configuration = SeamlessM4TConfig()
+        ...
+        >>> # Initializing a model from the "facebook/hf-seamless-m4t-medium" style configuration
+        >>> model = SeamlessM4TModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "seamless_m4t"
 
     def __init__(
@@ -325,87 +316,87 @@ class SeamlessM4TConfig(PretrainedConfig):
     ):
         """
         Initializes a SeamlessM4TConfig object with the specified configuration parameters.
-        
+
         Args:
-        - self (object): The instance of the class.
-        - vocab_size (int): The size of the vocabulary.
-        - t2u_vocab_size (int): The size of the T2U vocabulary.
-        - hidden_size (int): The size of the hidden layers.
-        - initializer_range (float): The range for weight initialization.
-        - layer_norm_eps (float): The epsilon value for layer normalization.
-        - use_cache (bool): Flag to indicate whether to use cache.
-        - max_position_embeddings (int): The maximum position embeddings.
-        - is_encoder_decoder (bool): Flag to indicate if it's an encoder-decoder model.
-        - encoder_layerdrop (float): The layer drop rate for encoder layers.
-        - decoder_layerdrop (float): The layer drop rate for decoder layers.
-        - activation_function (str): The activation function to use.
-        - dropout (float): The dropout rate.
-        - attention_dropout (float): The dropout rate for attention layers.
-        - activation_dropout (float): The dropout rate for activation layers.
-        - scale_embedding (bool): Flag to indicate whether to scale embeddings.
-        - encoder_layers (int): The number of encoder layers.
-        - encoder_ffn_dim (int): The dimension of the encoder feed-forward network.
-        - encoder_attention_heads (int): The number of attention heads for encoder.
-        - decoder_layers (int): The number of decoder layers.
-        - decoder_ffn_dim (int): The dimension of the decoder feed-forward network.
-        - decoder_attention_heads (int): The number of attention heads for decoder.
-        - decoder_start_token_id (int): The start token ID for decoder.
-        - max_new_tokens (int): The maximum number of new tokens.
-        - pad_token_id (int): The ID of the padding token.
-        - bos_token_id (int): The ID of the beginning of sentence token.
-        - eos_token_id (int): The ID of the end of sentence token.
-        - speech_encoder_layers (int): The number of layers in the speech encoder.
-        - speech_encoder_attention_heads (int): The number of attention heads for speech encoder.
-        - speech_encoder_intermediate_size (int): The size of the intermediate layer in speech encoder.
-        - speech_encoder_hidden_act (str): The activation function for the hidden layers in speech encoder.
-        - speech_encoder_dropout (float): The dropout rate for the speech encoder.
-        - add_adapter (bool): Flag to indicate whether to add adapter layers.
-        - speech_encoder_layerdrop (float): The layer drop rate for speech encoder.
-        - feature_projection_input_dim (int): The input dimension for feature projection.
-        - num_conv_pos_embeddings (int): The number of convolutional positional embeddings.
-        - num_conv_pos_embedding_groups (int): The number of groups for convolutional positional embeddings.
-        - adaptor_kernel_size (int): The kernel size for the adaptor.
-        - adaptor_stride (int): The stride for the adaptor.
-        - adaptor_dropout (float): The dropout rate for the adaptor.
-        - num_adapter_layers (int): The number of adapter layers.
-        - position_embeddings_type (str): The type of position embeddings.
-        - rotary_embedding_base (int): The base value for rotary embeddings.
-        - max_source_positions (int): The maximum source positions.
-        - conv_depthwise_kernel_size (int): The kernel size for depthwise convolution.
-        - t2u_bos_token_id (int): The ID of the beginning of sentence token for T2U.
-        - t2u_pad_token_id (int): The ID of the padding token for T2U.
-        - t2u_eos_token_id (int): The ID of the end of sentence token for T2U.
-        - t2u_decoder_start_token_id (int): The start token ID for the T2U decoder.
-        - t2u_max_new_tokens (int): The maximum number of new tokens for T2U.
-        - t2u_encoder_layers (int): The number of layers in the T2U encoder.
-        - t2u_encoder_ffn_dim (int): The dimension of the T2U encoder feed-forward network.
-        - t2u_encoder_attention_heads (int): The number of attention heads for T2U encoder.
-        - t2u_decoder_layers (int): The number of layers in the T2U decoder.
-        - t2u_decoder_ffn_dim (int): The dimension of the T2U decoder feed-forward network.
-        - t2u_decoder_attention_heads (int): The number of attention heads for T2U decoder.
-        - t2u_max_position_embeddings (int): The maximum position embeddings for T2U.
-        - sampling_rate (int): The sampling rate for audio processing.
-        - upsample_initial_channel (int): The initial number of channels for upsampling.
-        - upsample_rates (list): The rates for upsampling.
-        - upsample_kernel_sizes (list): The kernel sizes for upsampling.
-        - resblock_kernel_sizes (list): The kernel sizes for the residual blocks.
-        - resblock_dilation_sizes (list): The dilation sizes for the residual blocks.
-        - leaky_relu_slope (float): The slope for leaky ReLU activation.
-        - unit_hifi_gan_vocab_size (int): The vocabulary size for the HiFi-GAN unit.
-        - unit_embed_dim (int): The embedding dimension for the HiFi-GAN unit.
-        - lang_embed_dim (int): The embedding dimension for language.
-        - spkr_embed_dim (int): The embedding dimension for speaker.
-        - vocoder_num_langs (int): The number of languages for the vocoder.
-        - vocoder_num_spkrs (int): The number of speakers for the vocoder.
-        - variance_predictor_kernel_size (int): The kernel size for the variance predictor.
-        - var_pred_dropout (float): The dropout rate for the variance predictor.
-        - vocoder_offset (int): The offset value for the vocoder.
-        
+            self (object): The instance of the class.
+            vocab_size (int): The size of the vocabulary.
+            t2u_vocab_size (int): The size of the T2U vocabulary.
+            hidden_size (int): The size of the hidden layers.
+            initializer_range (float): The range for weight initialization.
+            layer_norm_eps (float): The epsilon value for layer normalization.
+            use_cache (bool): Flag to indicate whether to use cache.
+            max_position_embeddings (int): The maximum position embeddings.
+            is_encoder_decoder (bool): Flag to indicate if it's an encoder-decoder model.
+            encoder_layerdrop (float): The layer drop rate for encoder layers.
+            decoder_layerdrop (float): The layer drop rate for decoder layers.
+            activation_function (str): The activation function to use.
+            dropout (float): The dropout rate.
+            attention_dropout (float): The dropout rate for attention layers.
+            activation_dropout (float): The dropout rate for activation layers.
+            scale_embedding (bool): Flag to indicate whether to scale embeddings.
+            encoder_layers (int): The number of encoder layers.
+            encoder_ffn_dim (int): The dimension of the encoder feed-forward network.
+            encoder_attention_heads (int): The number of attention heads for encoder.
+            decoder_layers (int): The number of decoder layers.
+            decoder_ffn_dim (int): The dimension of the decoder feed-forward network.
+            decoder_attention_heads (int): The number of attention heads for decoder.
+            decoder_start_token_id (int): The start token ID for decoder.
+            max_new_tokens (int): The maximum number of new tokens.
+            pad_token_id (int): The ID of the padding token.
+            bos_token_id (int): The ID of the beginning of sentence token.
+            eos_token_id (int): The ID of the end of sentence token.
+            speech_encoder_layers (int): The number of layers in the speech encoder.
+            speech_encoder_attention_heads (int): The number of attention heads for speech encoder.
+            speech_encoder_intermediate_size (int): The size of the intermediate layer in speech encoder.
+            speech_encoder_hidden_act (str): The activation function for the hidden layers in speech encoder.
+            speech_encoder_dropout (float): The dropout rate for the speech encoder.
+            add_adapter (bool): Flag to indicate whether to add adapter layers.
+            speech_encoder_layerdrop (float): The layer drop rate for speech encoder.
+            feature_projection_input_dim (int): The input dimension for feature projection.
+            num_conv_pos_embeddings (int): The number of convolutional positional embeddings.
+            num_conv_pos_embedding_groups (int): The number of groups for convolutional positional embeddings.
+            adaptor_kernel_size (int): The kernel size for the adaptor.
+            adaptor_stride (int): The stride for the adaptor.
+            adaptor_dropout (float): The dropout rate for the adaptor.
+            num_adapter_layers (int): The number of adapter layers.
+            position_embeddings_type (str): The type of position embeddings.
+            rotary_embedding_base (int): The base value for rotary embeddings.
+            max_source_positions (int): The maximum source positions.
+            conv_depthwise_kernel_size (int): The kernel size for depthwise convolution.
+            t2u_bos_token_id (int): The ID of the beginning of sentence token for T2U.
+            t2u_pad_token_id (int): The ID of the padding token for T2U.
+            t2u_eos_token_id (int): The ID of the end of sentence token for T2U.
+            t2u_decoder_start_token_id (int): The start token ID for the T2U decoder.
+            t2u_max_new_tokens (int): The maximum number of new tokens for T2U.
+            t2u_encoder_layers (int): The number of layers in the T2U encoder.
+            t2u_encoder_ffn_dim (int): The dimension of the T2U encoder feed-forward network.
+            t2u_encoder_attention_heads (int): The number of attention heads for T2U encoder.
+            t2u_decoder_layers (int): The number of layers in the T2U decoder.
+            t2u_decoder_ffn_dim (int): The dimension of the T2U decoder feed-forward network.
+            t2u_decoder_attention_heads (int): The number of attention heads for T2U decoder.
+            t2u_max_position_embeddings (int): The maximum position embeddings for T2U.
+            sampling_rate (int): The sampling rate for audio processing.
+            upsample_initial_channel (int): The initial number of channels for upsampling.
+            upsample_rates (list): The rates for upsampling.
+            upsample_kernel_sizes (list): The kernel sizes for upsampling.
+            resblock_kernel_sizes (list): The kernel sizes for the residual blocks.
+            resblock_dilation_sizes (list): The dilation sizes for the residual blocks.
+            leaky_relu_slope (float): The slope for leaky ReLU activation.
+            unit_hifi_gan_vocab_size (int): The vocabulary size for the HiFi-GAN unit.
+            unit_embed_dim (int): The embedding dimension for the HiFi-GAN unit.
+            lang_embed_dim (int): The embedding dimension for language.
+            spkr_embed_dim (int): The embedding dimension for speaker.
+            vocoder_num_langs (int): The number of languages for the vocoder.
+            vocoder_num_spkrs (int): The number of speakers for the vocoder.
+            variance_predictor_kernel_size (int): The kernel size for the variance predictor.
+            var_pred_dropout (float): The dropout rate for the variance predictor.
+            vocoder_offset (int): The offset value for the vocoder.
+
         Returns:
-        - None. This method initializes the SeamlessM4TConfig object with the specified parameters.
-        
+            None.
+
         Raises:
-        - None.
+            None.
         """
         # overall_config
         self.vocab_size = vocab_size

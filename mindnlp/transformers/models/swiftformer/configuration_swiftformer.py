@@ -35,7 +35,6 @@ class SwiftFormerConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         image_size (`int`, *optional*, defaults to 224):
             The size (resolution) of each image
@@ -70,21 +69,20 @@ class SwiftFormerConfig(PretrainedConfig):
         batch_norm_eps (`float`, *optional*, defaults to 1e-05):
             The epsilon used by the batch normalization layers.
 
-
     Example:
-
-    ```python
-    >>> from transformers import SwiftFormerConfig, SwiftFormerModel
-
-    >>> # Initializing a SwiftFormer swiftformer-base-patch16-224 style configuration
-    >>> configuration = SwiftFormerConfig()
-
-    >>> # Initializing a model (with random weights) from the swiftformer-base-patch16-224 style configuration
-    >>> model = SwiftFormerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import SwiftFormerConfig, SwiftFormerModel
+        ...
+        >>> # Initializing a SwiftFormer swiftformer-base-patch16-224 style configuration
+        >>> configuration = SwiftFormerConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the swiftformer-base-patch16-224 style configuration
+        >>> model = SwiftFormerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "swiftformer"
 

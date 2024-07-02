@@ -40,19 +40,19 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     """ChatGLM3ForConditionalGeneration"""
     def process_response(self, output, history):
         """
-            Process the response by splitting it into metadata and content, updating the history, and replacing placeholders.
-        
-            Args:
-                self (ChatGLM3ForConditionalGeneration): An instance of the ChatGLM3ForConditionalGeneration class.
-                output (str): The response string received from the model.
-                history (list): The list of previous conversation history.
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        Process the response by splitting it into metadata and content, updating the history, and replacing placeholders.
+
+        Args:
+            self (ChatGLM3ForConditionalGeneration): An instance of the ChatGLM3ForConditionalGeneration class.
+            output (str): The response string received from the model.
+            history (list): The list of previous conversation history.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         content = ""
         history = copy.deepcopy(history)
         for response in output.split("<|assistant|>"):
@@ -78,27 +78,29 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
              max_length: int = 8192, num_beams=1, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
              **kwargs):
         """
-        This method 'chat' in the class 'ChatGLM3ForConditionalGeneration' is used to generate a response based on the given query in a chat scenario.
+        This method 'chat' in the class 'ChatGLM3ForConditionalGeneration' is used to
+        generate a response based on the given query in a chat scenario.
         
         Args:
-        - self: Reference to the current instance of the class.
-        - tokenizer: The tokenizer object used to tokenize the input text.
-        - query (str): The input query for which a response needs to be generated.
-        - history (List[Dict]): A list of dictionaries representing the chat history. Defaults to an empty list.
-        - role (str): The role of the current user in the conversation. Defaults to 'user'.
-        - max_length (int): The maximum length of the generated response. Defaults to 8192.
-        - num_beams (int): The number of beams to be used for beam search. Defaults to 1.
-        - do_sample (bool): Flag indicating whether to sample outputs. Defaults to True.
-        - top_p (float): The nucleus sampling probability. Defaults to 0.8.
-        - temperature (float): The temperature for sampling. Defaults to 0.8.
-        - logits_processor: An optional logits processor to post-process the model outputs.
-        - **kwargs: Additional keyword arguments to be passed to the generation process.
-        
+            self: Reference to the current instance of the class.
+            tokenizer: The tokenizer object used to tokenize the input text.
+            query (str): The input query for which a response needs to be generated.
+            history (List[Dict]): A list of dictionaries representing the chat history. Defaults to an empty list.
+            role (str): The role of the current user in the conversation. Defaults to 'user'.
+            max_length (int): The maximum length of the generated response. Defaults to 8192.
+            num_beams (int): The number of beams to be used for beam search. Defaults to 1.
+            do_sample (bool): Flag indicating whether to sample outputs. Defaults to True.
+            top_p (float): The nucleus sampling probability. Defaults to 0.8.
+            temperature (float): The temperature for sampling. Defaults to 0.8.
+            logits_processor: An optional logits processor to post-process the model outputs.
+            **kwargs: Additional keyword arguments to be passed to the generation process.
+
         Returns:
-        - None: This method does not return any value explicitly. It generates a response and updates the conversation history.
-        
+            None: This method does not return any value explicitly.
+                It generates a response and updates the conversation history.
+
         Raises:
-        - No specific exceptions are documented to be raised by this method.
+            None.
         """
         if history is None:
             history = []
@@ -123,26 +125,27 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
                     logits_processor=None, return_past_key_values=False, **kwargs):
         """
         This method streams a chat response based on the given input query and history using the ChatGLM3 model for conditional generation.
-        
+
         Args:
-        - self: The instance of the class.
-        - tokenizer: The tokenizer object used to tokenize the input and decode the outputs.
-        - query (str): The input text query for generating the chat response.
-        - history (List[Dict], optional): A list of dictionaries representing the chat history. Defaults to None.
-        - role (str): The role of the user in the conversation. Defaults to 'user'.
-        - past_key_values: The past key values used for generating the response. Defaults to None.
-        - max_length (int): The maximum length of the generated response. Defaults to 8192.
-        - do_sample (bool): Whether to sample from the logits during generation. Defaults to True.
-        - top_p (float): The nucleus sampling parameter. Defaults to 0.8.
-        - temperature (float): The temperature parameter for sampling. Defaults to 0.8.
-        - logits_processor: The logits processor used to process the model logits. Defaults to None.
-        - return_past_key_values (bool): Whether to return the past key values along with the response. Defaults to False.
-        
+            self: The instance of the class.
+            tokenizer: The tokenizer object used to tokenize the input and decode the outputs.
+            query (str): The input text query for generating the chat response.
+            history (List[Dict], optional): A list of dictionaries representing the chat history. Defaults to None.
+            role (str): The role of the user in the conversation. Defaults to 'user'.
+            past_key_values: The past key values used for generating the response. Defaults to None.
+            max_length (int): The maximum length of the generated response. Defaults to 8192.
+            do_sample (bool): Whether to sample from the logits during generation. Defaults to True.
+            top_p (float): The nucleus sampling parameter. Defaults to 0.8.
+            temperature (float): The temperature parameter for sampling. Defaults to 0.8.
+            logits_processor: The logits processor used to process the model logits. Defaults to None.
+            return_past_key_values (bool): Whether to return the past key values along with the response. Defaults to False.
+
         Returns:
-        - None: This method does not return any value explicitly, but yields the generated chat response along with the updated history if return_past_key_values is True.
-        
+            None: This method does not return any value explicitly,
+                but yields the generated chat response along with the updated history if return_past_key_values is True.
+
         Raises:
-        - None: This method does not explicitly raise any exceptions.
+            None.
         """
         if history is None:
             history = []
@@ -192,26 +195,30 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
             **kwargs,
     ):
         """
-            Generate sequences of tokens based on the provided input_ids using the ChatGLM3 model for conditional generation.
-        
-            Args:
-                self (ChatGLM3ForConditionalGeneration): The instance of the ChatGLM3ForConditionalGeneration class.
-                input_ids (mindspore.Tensor): The input sequence of tokens.
-                generation_config (Optional[GenerationConfig]): The configuration for the generation process. Defaults to None.
-                logits_processor (Optional[LogitsProcessorList]): The list of logits processors for modifying the logits. Defaults to None.
-                stopping_criteria (Optional[StoppingCriteriaList]): The list of stopping criteria for terminating the generation. Defaults to None.
-                prefix_allowed_tokens_fn (Optional[Callable[[int, mindspore.Tensor], List[int]]]): The function to determine which tokens are allowed as prefixes during generation. Defaults to None.
-                return_past_key_values (bool): Whether to return the past key values during generation. Defaults to False.
-                **kwargs: Additional keyword arguments.
-        
-            Returns:
-                None
-        
-            Raises:
-                UserWarning: If the `max_length` parameter is used to control the generation length, a warning is raised because this behavior is deprecated.
-                UserWarning: If both `max_new_tokens` and `max_length` parameters are set, a warning is raised to indicate that `max_new_tokens` takes precedence.
-                UserWarning: If the input length exceeds the `max_length` parameter, a warning is raised to consider increasing `max_new_tokens`.
-            """
+        Generate sequences of tokens based on the provided input_ids using the ChatGLM3 model for conditional generation.
+
+        Args:
+            self (ChatGLM3ForConditionalGeneration): The instance of the ChatGLM3ForConditionalGeneration class.
+            input_ids (mindspore.Tensor): The input sequence of tokens.
+            generation_config (Optional[GenerationConfig]):
+                The configuration for the generation process. Defaults to None.
+            logits_processor (Optional[LogitsProcessorList]):
+                The list of logits processors for modifying the logits. Defaults to None.
+            stopping_criteria (Optional[StoppingCriteriaList]):
+                The list of stopping criteria for terminating the generation. Defaults to None.
+            prefix_allowed_tokens_fn (Optional[Callable[[int, mindspore.Tensor], List[int]]]):
+                The function to determine which tokens are allowed as prefixes during generation. Defaults to None.
+            return_past_key_values (bool): Whether to return the past key values during generation. Defaults to False.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None.
+
+        Raises:
+            UserWarning: If the `max_length` parameter is used to control the generation length, a warning is raised because this behavior is deprecated.
+            UserWarning: If both `max_new_tokens` and `max_length` parameters are set, a warning is raised to indicate that `max_new_tokens` takes precedence.
+            UserWarning: If the input length exceeds the `max_length` parameter, a warning is raised to consider increasing `max_new_tokens`.
+        """
         _, input_ids_seq_length = input_ids.shape[0], input_ids.shape[-1]
 
         if generation_config is None:

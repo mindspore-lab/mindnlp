@@ -83,17 +83,17 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BlenderbotTokenizer
-
-    >>> tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-3B")
-    >>> tokenizer.add_prefix_space = False
-    >>> tokenizer("Hello world")["input_ids"]
-    [47, 921, 86, 1085, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [6950, 1085, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import BlenderbotTokenizer
+        ...
+        >>> tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-3B")
+        >>> tokenizer.add_prefix_space = False
+        >>> tokenizer("Hello world")["input_ids"]
+        [47, 921, 86, 1085, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [6950, 1085, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -175,7 +175,7 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     ):
         """
         Initializes a new instance of the BlenderbotTokenizer class.
-        
+
         Args:
             self: The object instance.
             vocab_file (str): The path to the vocabulary file.
@@ -189,16 +189,16 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
             pad_token (str, optional): The padding token. Defaults to '<pad>'.
             mask_token (str, optional): The mask token. Defaults to '<mask>'.
             add_prefix_space (bool, optional): Whether to add a prefix space to the input. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             FileNotFoundError: If the vocab_file or merges_file is not found.
             UnicodeDecodeError: If there is an error decoding the vocabulary or merges file.
             ValueError: If the bos_token, eos_token, sep_token, cls_token, unk_token, pad_token, or mask_token is not a string.
             TypeError: If the bos_token, eos_token, sep_token, cls_token, unk_token, pad_token, or mask_token is not a string or AddedToken.
-        
+
         """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         pad_token = AddedToken(pad_token, lstrip=False, rstrip=False) if isinstance(pad_token, str) else pad_token
@@ -249,19 +249,20 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Blenderbot, RoBERTa->Blenderbot
     def vocab_size(self):
         """
-        Method: vocab_size
-        
+        Method:
+            vocab_size
+
         Description:
-        Returns the size of the vocabulary used by the BlenderbotTokenizer instance.
-        
+            Returns the size of the vocabulary used by the BlenderbotTokenizer instance.
+
         Args:
-        - self (BlenderbotTokenizer): The instance of BlenderbotTokenizer.
-        
+            self (BlenderbotTokenizer): The instance of BlenderbotTokenizer.
+
         Returns:
-        - int: The size of the vocabulary used by the BlenderbotTokenizer.
-        
+            int: The size of the vocabulary used by the BlenderbotTokenizer.
+
         Raises:
-        - None
+            None
         """
         return len(self.encoder)
 
@@ -269,15 +270,15 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Retrieve the vocabulary from the BlenderbotTokenizer.
-        
+
         Args:
             self: An instance of the BlenderbotTokenizer class.
-        
+
         Returns:
             A dictionary object representing the vocabulary of the tokenizer. The dictionary contains the encoder tokens
             mapping with their corresponding ids. The vocabulary includes tokens from the encoder and any additional
             tokens that have been added using the 'add_tokens' method.
-        
+
         Raises:
             None.
         """
@@ -289,14 +290,14 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     def bpe(self, token):
         """
         This method, 'bpe', is defined within the class 'BlenderbotTokenizer' and is used to perform Byte Pair Encoding (BPE) on a given token.
-        
+
         Args:
             self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
             token (str): The input token to be processed through BPE. It should be a string representing a token.
-        
+
         Returns:
             str: The BPE processed token as a string. If the input token does not contain any pairs for BPE processing, the original token is returned.
-        
+
         Raises:
             None
         """
@@ -373,28 +374,34 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary files for the BlenderbotTokenizer.
-        
+
         Args:
             self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): The prefix to be added to the vocabulary file names. Defaults to None.
-        
+            filename_prefix (Optional[str], optional):
+                The prefix to be added to the vocabulary file names. Defaults to None.
+
         Returns:
             Tuple[str]: A tuple containing the paths of the saved vocabulary files.
-        
+
         Raises:
             FileNotFoundError: If the `save_directory` does not exist or is not a directory.
-        
-        The `save_vocabulary` method saves the vocabulary files for the tokenizer. It takes the `save_directory` as input, which is the directory where the vocabulary files will be saved. The optional
-`filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
-        
-        The method saves two files: the vocabulary file and the merges file. The vocabulary file contains the encoding dictionary of the tokenizer, while the merges file contains the BPE merge indices.
-        
+
+        The `save_vocabulary` method saves the vocabulary files for the tokenizer.
+        It takes the `save_directory` as input, which is the directory where the vocabulary files will be saved. The optional
+        `filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
+
+        The method saves two files: the vocabulary file and the merges file.
+        The vocabulary file contains the encoding dictionary of the tokenizer,
+        while the merges file contains the BPE merge indices.
+
         If the `save_directory` does not exist or is not a directory, a `FileNotFoundError` is raised.
-        
-        Example usage:
-            tokenizer = BlenderbotTokenizer()
-            tokenizer.save_vocabulary('/path/to/save', filename_prefix='my-prefix')
+
+        Example:
+            ```python
+            >>> tokenizer = BlenderbotTokenizer()
+            >>> tokenizer.save_vocabulary('/path/to/save', filename_prefix='my-prefix')
+            ```
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -487,10 +494,10 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
             is_split_into_words (bool): A flag indicating whether the input text is already split into words. Default is False.
         
         Returns:
-            None. The method modifies the input text in place.
+            None: The method modifies the input text in place.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):
@@ -501,6 +508,7 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A Blenderbot sequence has the following format:
+
         - single sequence: ` X </s>`
 
         Args:

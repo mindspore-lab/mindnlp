@@ -129,11 +129,14 @@ def _get_unpad_data(attention_mask):
     This function takes in an attention_mask tensor and performs several operations to retrieve un-padded data.
     
     Args:
-        attention_mask (Tensor): The attention_mask tensor with shape (batch_size, sequence_length) that indicates the padding elements.
+        attention_mask (Tensor):
+            The attention_mask tensor with shape (batch_size, sequence_length) that indicates the padding elements.
     
     Returns:
-        indices (Tensor): The indices tensor with shape (num_nonpad_elements,) that represents the flattened indices of non-padding elements in the attention_mask.
-        cu_seqlens (Tensor): The cu_seqlens tensor with shape (batch_size + 1,) that contains the cumulative sum of sequence lengths in the batch, padded with a zero at the beginning.
+        indices (Tensor): The indices tensor with shape (num_nonpad_elements,)
+            that represents the flattened indices of non-padding elements in the attention_mask.
+        cu_seqlens (Tensor): The cu_seqlens tensor with shape (batch_size + 1,)
+            that contains the cumulative sum of sequence lengths in the batch, padded with a zero at the beginning.
         max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
@@ -154,19 +157,22 @@ def _get_unpad_data(attention_mask):
 class JambaRMSNorm(nn.Cell):
 
     """
-    The 'JambaRMSNorm' class represents a layer normalization module equivalent to T5LayerNorm. It inherits from nn.Cell and includes methods for initialization and construction. The class provides
-functionality for normalizing input hidden states using the RMS normalization technique, with the ability to specify the hidden size and epsilon value for variance stabilization.
-    
+    The 'JambaRMSNorm' class represents a layer normalization module equivalent to T5LayerNorm.
+    It inherits from nn.Cell and includes methods for initialization and construction.
+    The class provides functionality for normalizing input hidden states using the RMS normalization technique,
+    with the ability to specify the hidden size and epsilon value for variance stabilization.
+
     Attributes:
         weight (Parameter): A parameter representing the weight used for normalization.
         variance_epsilon (float): The epsilon value for stabilizing the variance during normalization.
-    
+
     Methods:
-        __init__(hidden_size, eps=1e-06): Initializes the 'JambaRMSNorm' instance with the specified hidden size and epsilon value.
-        construct(hidden_states): Applies RMS normalization to the input hidden states and returns the normalized output.
-    
+        __init__: Initializes the 'JambaRMSNorm' instance with the specified hidden size and epsilon value.
+        construct: Applies RMS normalization to the input hidden states and returns the normalized output.
+
     Note:
-        This class is designed for use in neural network models for natural language processing and other deep learning tasks.
+        This class is designed for use in neural network models for natural language processing and other
+        deep learning tasks.
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -179,14 +185,14 @@ functionality for normalizing input hidden states using the RMS normalization te
     def construct(self, hidden_states):
         """
         Constructs the JambaRMSNorm layer.
-        
+
         Args:
             self (JambaRMSNorm): The instance of the JambaRMSNorm class.
             hidden_states (Tensor): The input hidden states. It should be a tensor of any numerical data type.
-        
+
         Returns:
             Tensor: A tensor representing the output of the JambaRMSNorm layer.
-        
+
         Raises:
             ValueError: If the input hidden_states tensor is empty or invalid.
             TypeError: If the input hidden_states tensor is not of a numerical data type.
@@ -218,18 +224,19 @@ class JambaAttention(nn.Cell):
     and "Generating Long Sequences with Sparse Transformers".
     """
     def __init__(self, config: JambaConfig, layer_idx: Optional[int] = None):
-        ''' 
+        '''
         Initializes a new instance of the JambaAttention class.
-        
+
         Args:
             self: The instance of the JambaAttention class.
             config (JambaConfig): An instance of JambaConfig containing the configuration parameters for the attention layer.
-            layer_idx (Optional[int]): The index of the layer. If not provided, it may lead to errors during the forward call if caching is used. It is recommended to always provide a layer index when creating
-this class.
-        
+            layer_idx (Optional[int]): The index of the layer. If not provided, it may lead to errors during the
+                forward call if caching is used. It is recommended to always provide a layer index when creating
+                this class.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the `hidden_size` is not divisible by `num_heads`.
         '''
@@ -265,17 +272,19 @@ this class.
         """
         Args:
             self (JambaAttention): The instance of the JambaAttention class.
-            tensor (mindspore.Tensor): The input tensor to be reshaped. It should have a shape compatible with the reshaping operation.
+            tensor (mindspore.Tensor): The input tensor to be reshaped.
+                It should have a shape compatible with the reshaping operation.
             seq_len (int): The length of the sequence.
             bsz (int): The batch size.
-        
+
         Returns:
-            None: This method does not explicitly return a value. The reshaped tensor is directly manipulated within the method.
-        
+            None: This method does not explicitly return a value.
+                The reshaped tensor is directly manipulated within the method.
+
         Raises:
-            - ValueError: If the dimensions of the input tensor are not compatible with the reshaping operation.
-            - TypeError: If the input tensor is not of type mindspore.Tensor.
-            - ValueError: If seq_len or bsz are not positive integers.
+            ValueError: If the dimensions of the input tensor are not compatible with the reshaping operation.
+            TypeError: If the input tensor is not of type mindspore.Tensor.
+            ValueError: If seq_len or bsz are not positive integers.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -291,27 +300,34 @@ this class.
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """
         This method constructs the JambaAttention mechanism for processing hidden states.
-        
+
         Args:
             self: The instance of the JambaAttention class.
-            hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the attention mask with shape (batch_size, 1, sequence_length, sequence_length).
-            position_ids (Optional[mindspore.Tensor]): An optional tensor containing positional ids with shape (batch_size, sequence_length).
-            past_key_value (Optional[Cache]): An optional cache object for storing key and value states from previous steps.
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape
+                (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the attention mask with
+                shape (batch_size, 1, sequence_length, sequence_length).
+            position_ids (Optional[mindspore.Tensor]): An optional tensor containing positional ids with shape
+                (batch_size, sequence_length).
+            past_key_value (Optional[Cache]):
+                An optional cache object for storing key and value states from previous steps.
             output_attentions (bool): A flag indicating whether to output attention weights.
             use_cache (bool): A flag indicating whether to use caching for key and value states.
-            
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: 
-            A tuple containing:
-            - attn_output (mindspore.Tensor): The output tensor after applying the attention mechanism of shape (batch_size, sequence_length, hidden_size).
-            - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length).
-            - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value states from the current step.
-        
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing:
+
+                - attn_output (mindspore.Tensor): The output tensor after applying the attention mechanism of shape
+                (batch_size, sequence_length, hidden_size).
+                - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape
+                (batch_size, num_heads, sequence_length, sequence_length).
+                - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value states from the current step.
+
         Raises:
-            - ValueError: If the attention weights shape or attention mask shape does not match the expected dimensions.
-            - ValueError: If the shape of the output tensor 'attn_output' does not match the expected shape.
-            - ValueError: If the cache structure has changed and requires a layer index for auto-regressive decoding.
+            ValueError: If the attention weights shape or attention mask shape does not match the expected dimensions.
+            ValueError: If the shape of the output tensor 'attn_output' does not match the expected shape.
+            ValueError: If the cache structure has changed and requires a layer index for auto-regressive decoding.
         """
         if "padding_mask" in kwargs:
             warnings.warn(
@@ -402,22 +418,25 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
     def __init__(self) -> None:
         """
         Initializes an instance of the HybridMambaAttentionDynamicCache class.
-        
+
         Args:
             self: The instance of the class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-        This method initializes an instance of the HybridMambaAttentionDynamicCache class. It is called automatically when a new object of this class is created. The method sets the attention_layer_idx
-attribute of the instance to None.
-        
+            This method initializes an instance of the HybridMambaAttentionDynamicCache class.
+            It is called automatically when a new object of this class is created.
+            The method sets the attention_layer_idx attribute of the instance to None.
+
         Example:
-            cache = HybridMambaAttentionDynamicCache()
+            ```python
+            >>> cache = HybridMambaAttentionDynamicCache()
+            ```
         """
         super().__init__()
         self.attention_layer_idx = None  # used to know which layer has data on seqlen in the cache shape
@@ -440,7 +459,8 @@ attribute of the instance to None.
             layer_idx (`int`):
                 The index of the layer to cache the states for.
             cache_kwargs (`Dict[str, Any]`, `optional`):
-                Additional arguments for the cache subclass. No additional arguments are used in `HybridMambaAttentionDynamicCache`.
+                Additional arguments for the cache subclass.
+                No additional arguments are used in `HybridMambaAttentionDynamicCache`.
 
         Return:
             A tuple containing the updated key and value states.
@@ -489,22 +509,26 @@ attribute of the instance to None.
     @staticmethod
     def _is_attn_layer(key_states: mindspore.Tensor, value_states: mindspore.Tensor):
         """
-        This method checks if the key and value states have the same last dimension size, which is crucial for attention layers.
-        
+        This method checks if the key and value states have the same last dimension size, which is crucial for
+        attention layers.
+
         Args:
             key_states (mindspore.Tensor): A tensor representing the key states in the attention mechanism.
                 It is expected to have a specific shape for compatibility with the attention layer.
-                The last dimension size of the key_states tensor must match the last dimension size of the value_states tensor.
-                
+                The last dimension size of the key_states tensor must match the last dimension size of the
+                value_states tensor.
+
             value_states (mindspore.Tensor): A tensor representing the value states in the attention mechanism.
                 It is expected to have a specific shape for compatibility with the attention layer.
-                The last dimension size of the value_states tensor must match the last dimension size of the key_states tensor.
-        
+                The last dimension size of the value_states tensor must match the last dimension size of the
+                key_states tensor.
+
         Returns:
-            None: This method does not return any value but performs a check on the compatibility of key and value states.
-        
+            None: This method does not return any value
+                but performs a check on the compatibility of key and value states.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return key_states.shape[-1] == value_states.shape[-1]
 
@@ -514,8 +538,9 @@ class MambaCacheParams:
 
     """
     Represents a set of parameters for configuring the Mamba Cache system.
-    
-    This class provides a structure for storing and managing various parameters that are used to customize the behavior of the Mamba Cache system.
+
+    This class provides a structure for storing and managing various parameters that are used to customize the
+    behavior of the Mamba Cache system.
     """
     seqlen_offset: int = 0
     conv_states: Dict[int, mindspore.Tensor] = field(default_factory=dict)
@@ -533,15 +558,15 @@ class JambaMambaMixer(nn.Cell):
     def __init__(self, config: JambaConfig, layer_idx):
         """
         Initializes an instance of the JambaMambaMixer class.
-        
+
         Args:
             self: The instance of the class.
             config (JambaConfig): An instance of the JambaConfig class, containing the configuration settings.
             layer_idx (int): The index of the layer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -599,18 +624,18 @@ class JambaMambaMixer(nn.Cell):
     def _apply_layernorms(self, dt, B, C):
         """
         Applies layer normalization to the given inputs.
-        
+
         Args:
             self (JambaMambaMixer): The instance of JambaMambaMixer class.
             dt (type): The input value representing dt.
             B (type): The input value representing B.
             C (type): The input value representing C.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.dt_layernorm is not None:
             dt = self.dt_layernorm(dt)
@@ -625,21 +650,22 @@ class JambaMambaMixer(nn.Cell):
 
         """
         Method 'slow_forward' in the class 'JambaMambaMixer'.
-        
+
         This method performs a forward pass through the JambaMambaMixer model.
-        
+
         Args:
             self: The instance of the JambaMambaMixer class.
             input_states (torch.Tensor): The input states to be processed by the model.
                 Expected shape is (batch_size, seq_len, _).
             cache_params (MambaCacheParams, optional): Parameters used for caching intermediate states.
                 Default is None.
-        
+
         Returns:
             torch.Tensor: The contextualized states generated by the model.
-        
+
         Raises:
-            ValueError: If the input_states shape is incorrect or if cache_params are provided but not in the expected format.
+            ValueError: If the input_states shape is incorrect or if cache_params are provided but not in
+                the expected format.
             RuntimeError: If there is an issue with caching states during training or inference.
             TypeError: If the data types are not as expected during the computations.
             AssertionError: If there is a logical inconsistency detected during the execution.
@@ -721,23 +747,23 @@ class JambaMambaMixer(nn.Cell):
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor]]]:
 
         """Construct method in the JambaMambaMixer class.
-        
+
         This method constructs the model based on the hidden states and past key value.
-        
+
         Args:
             self: Instance of the JambaMambaMixer class.
             hidden_states (mindspore.Tensor): Hidden states used as input for the model construction.
-            past_key_value (Optional[HybridMambaAttentionDynamicCache]): Optional past key value used for caching. 
-                Default is None.        
-                If provided, cache_params are initialized based on past_key_value, else set to None.
-        
+            past_key_value (Optional[HybridMambaAttentionDynamicCache]): Optional past key value used for caching.
+                Default is None. If provided, cache_params are initialized based on past_key_value, else set to None.
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor]]]: 
+            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor]]]:
+
                 - The resulting tensor after processing the hidden states.
                 - Updated past key value containing the newly calculated convolution and ssm states.
-        
+
         Raises:
-            N/A
+            None.
         """
         if past_key_value is not None:
             cache_params = MambaCacheParams(
@@ -783,10 +809,11 @@ class JambaMLP(nn.Cell):
 
     """
     JambaMLP represents a multi-layer perceptron (MLP) model used in the Jamba project. It inherits from nn.Cell.
-    
-    This class implements the construction and initialization of the JambaMLP model. The model consists of three linear layers: gate_proj, down_proj, and up_proj. The activation function used in the hidden
-layer is determined by the hidden_act parameter in the JambaConfig object.
-    
+
+    This class implements the construction and initialization of the JambaMLP model.
+    The model consists of three linear layers: gate_proj, down_proj, and up_proj.
+    The activation function used in the hidden layer is determined by the hidden_act parameter in the JambaConfig object.
+
     Attributes:
         ffn_dim (int): The size of the intermediate layer in the MLP.
         hidden_dim (int): The size of the hidden layer in the MLP.
@@ -794,32 +821,35 @@ layer is determined by the hidden_act parameter in the JambaConfig object.
         down_proj (nn.Dense): The linear layer for the down projection.
         up_proj (nn.Dense): The linear layer for the up projection.
         act_fn (function): The activation function used in the hidden layer.
-    
+
     Methods:
-        __init__(self, config: JambaConfig): Initializes the JambaMLP object with the provided configuration.
-        construct(self, x): Constructs the MLP model using the provided input.
-    
-    Example usage:
-        config = JambaConfig(intermediate_size=512, hidden_size=256, hidden_act='relu')
-        model = JambaMLP(config)
-        output = model.construct(input_data)
-    
+        __init__: Initializes the JambaMLP object with the provided configuration.
+        construct: Constructs the MLP model using the provided input.
+
+    Example:
+        ```python
+        >>> config = JambaConfig(intermediate_size=512, hidden_size=256, hidden_act='relu')
+        >>> model = JambaMLP(config)
+        >>> output = model.construct(input_data)
+        ```
     """
     def __init__(self, config: JambaConfig):
 
         """
         Initializes an instance of the JambaMLP class.
-        
+
         Args:
             self: The instance of the class.
-            config (JambaConfig): The configuration object containing the parameters for the model.
+            config (JambaConfig):
+                The configuration object containing the parameters for the model.
+
                 - config.intermediate_size (int): The dimensionality of the intermediate layer.
                 - config.hidden_size (int): The dimensionality of the hidden layer.
                 - config.hidden_act (str): The activation function for the hidden layer.
-                
+
         Returns:
             None
-            
+
         Raises:
             None
         """
@@ -837,18 +867,18 @@ layer is determined by the hidden_act parameter in the JambaConfig object.
 
         """
         Constructs a new feature representation using the JambaMLP model.
-        
+
         Args:
             self (JambaMLP): An instance of the JambaMLP class.
                 This parameter represents the current instance of the JambaMLP model.
             x (Tensor): The input tensor to be processed.
                 This tensor serves as the input to the construction process.
-        
+
         Returns:
-            None. This method does not return any value explicitly but modifies the internal state of the model.
-        
+            None: This method does not return any value explicitly but modifies the internal state of the model.
+
         Raises:
-            None. This method does not raise any exceptions explicitly.
+            None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -869,16 +899,16 @@ class JambaSparseMoeBlock(nn.Cell):
 
         """
         Initializes a JambaSparseMoeBlock object.
-        
+
         Args:
             self: The object itself.
             config (JambaConfig): An instance of JambaConfig that contains the configuration parameters.
             num_experts (int): The total number of experts in the MoE (Mixture of Experts) block.
             num_experts_per_tok (int): The number of experts to assign per token.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -902,15 +932,17 @@ class JambaSparseMoeBlock(nn.Cell):
 
         '''
         Constructs a JambaSparseMoeBlock.
-        
+
         Args:
             self: An instance of the JambaSparseMoeBlock class.
-            hidden_states (mindspore.Tensor): A tensor containing the hidden states. It should have a shape of (batch_size, sequence_length, hidden_dim).
-            
+            hidden_states (mindspore.Tensor): A tensor containing the hidden states.
+                It should have a shape of (batch_size, sequence_length, hidden_dim).
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the final hidden states and the router logits. The final hidden states have a shape of (batch_size, sequence_length, hidden_dim), and
-the router logits have a shape of (batch_size * sequence_length, 1).
-            
+            Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the final hidden states and the router logits.
+                The final hidden states have a shape of (batch_size, sequence_length, hidden_dim), and
+                the router logits have a shape of (batch_size * sequence_length, 1).
+
         Raises:
             None.
         '''
@@ -967,25 +999,25 @@ the router logits have a shape of (batch_size * sequence_length, 1).
 class JambaAttentionDecoderLayer(nn.Cell):
 
     """
-    This class represents an attention decoder layer in the Jamba model for natural language processing tasks. 
-    The layer consists of self-attention mechanism and a mixture of experts block for handling complex patterns in the input data. 
-    It also includes layer normalization for input and pre-mixture-of-experts processing. 
+    This class represents an attention decoder layer in the Jamba model for natural language processing tasks.
+    The layer consists of self-attention mechanism and a mixture of experts block for handling complex patterns in
+    the input data. It also includes layer normalization for input and pre-mixture-of-experts processing.
     This class is designed to be used as part of a neural network architecture for sequence-to-sequence tasks.
     """
     def __init__(self, config: JambaConfig, num_experts: int, layer_idx: int):
 
         """
         Initializes a new instance of the JambaAttentionDecoderLayer class.
-        
+
         Args:
             self (JambaAttentionDecoderLayer): The current instance of the class.
             config (JambaConfig): The configuration object containing various settings.
             num_experts (int): The number of experts for the attention layer.
             layer_idx (int): The index of the current layer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1011,32 +1043,34 @@ class JambaAttentionDecoderLayer(nn.Cell):
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
 
         '''
-            Construct method in the JambaAttentionDecoderLayer class.
-        
-            Args:
-                self: The instance of the class.
-                hidden_states (mindspore.Tensor): Input to the layer of shape `(batch, seq_len, embed_dim)`.
-                attention_mask (mindspore.Tensor, optional): Attention mask of size `(batch, sequence_length)`.
-                    Padding elements are indicated by 0.
-                position_ids (mindspore.Tensor, optional): Tensor containing the position ids of the input.
-                past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states.
-                output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-                    See `attentions` under returned tensors for more detail.
-                output_router_logits (bool, optional): Whether or not to return the logits of all the routers.
-                    They are useful for computing the router loss and should not be returned during inference.
-                use_cache (bool, optional): If set to `True`, `past_key_values` key value states are returned
-                    and can be used to speed up decoding (see `past_key_values`).
-        
-            Returns:
-                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the following:
-                    - hidden_states (mindspore.Tensor): The output hidden states.
-                    - self_attn_weights (Optional[mindspore.Tensor]): Attention weights of the self-attention layer.
-                        Returned if `output_attentions` is set to `True`.
-                    - present_key_value (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]): Cached key and value projection states.
-                        Returned if `use_cache` is set to `True`.
-                    - router_logits (Optional[mindspore.Tensor]): Logits of all the routers.
-                        Returned if `output_router_logits` is set to `True`.
-        
+        Construct method in the JambaAttentionDecoderLayer class.
+
+        Args:
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): Input to the layer of shape `(batch, seq_len, embed_dim)`.
+            attention_mask (mindspore.Tensor, optional): Attention mask of size `(batch, sequence_length)`.
+                Padding elements are indicated by 0.
+            position_ids (mindspore.Tensor, optional): Tensor containing the position ids of the input.
+            past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states.
+            output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+                See `attentions` under returned tensors for more detail.
+            output_router_logits (bool, optional): Whether or not to return the logits of all the routers.
+                They are useful for computing the router loss and should not be returned during inference.
+            use_cache (bool, optional): If set to `True`, `past_key_values` key value states are returned
+                and can be used to speed up decoding (see `past_key_values`).
+
+        Returns:
+            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+                A tuple containing the following:
+
+                - hidden_states (mindspore.Tensor): The output hidden states.
+                - self_attn_weights (Optional[mindspore.Tensor]): Attention weights of the self-attention layer.
+                Returned if `output_attentions` is set to `True`.
+                - present_key_value (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]):
+                Cached key and value projection states. Returned if `use_cache` is set to `True`.
+                - router_logits (Optional[mindspore.Tensor]): Logits of all the routers.
+                Returned if `output_router_logits` is set to `True`.
+
             Raises:
                 None.
         '''
@@ -1100,45 +1134,48 @@ class JambaAttentionDecoderLayer(nn.Cell):
 class JambaMambaDecoderLayer(nn.Cell):
 
     """
-    This class represents a decoder layer for Jamba Mamba model, implementing the logic for processing input sequences in a transformer architecture.
-    
-    Inherits from the nn.Cell class, this decoder layer consists of components such as JambaMambaMixer, JambaSparseMoeBlock, JambaRMSNorm, and implements methods for processing hidden states, attention masks,
-and past key-value states.
-    
+    This class represents a decoder layer for Jamba Mamba model, implementing the logic for processing input sequences
+    in a transformer architecture.
+
+    Inherits from the nn.Cell class, this decoder layer consists of components such as JambaMambaMixer,
+    JambaSparseMoeBlock, JambaRMSNorm, and implements methods for processing hidden states, attention masks,
+    and past key-value states.
+
     Attributes:
-        - mamba (JambaMambaMixer): A mixer module for Jamba Mamba processing.
-        - moe (JambaSparseMoeBlock): A sparse MoE block for handling expert computations.
-        - input_layernorm (JambaRMSNorm): Layer normalization module for input data.
-        - pre_moe_layernorm (JambaRMSNorm): Layer normalization module before MoE processing.
-    
+        mamba (JambaMambaMixer): A mixer module for Jamba Mamba processing.
+        moe (JambaSparseMoeBlock): A sparse MoE block for handling expert computations.
+        input_layernorm (JambaRMSNorm): Layer normalization module for input data.
+        pre_moe_layernorm (JambaRMSNorm): Layer normalization module before MoE processing.
+
     Methods:
-        - construct(hidden_states, attention_mask=None, position_ids=None, past_key_value=None, output_attentions=False, output_router_logits=False, use_cache=False, **kwargs): 
-            Processes the input hidden states through the decoder layer, applying layer normalization, mixer, MoE block, and returns the output along with optional tensors like attentions, router logits, and
-cache values.
-    
-        - _get_past_seqlen(past_key_value, seqlen): 
+        construct:
+            Processes the input hidden states through the decoder layer, applying layer normalization, mixer, MoE block,
+            and returns the output along with optional tensors like attentions, router logits, and cache values.
+
+        _get_past_seqlen:
             Helper method to calculate the past sequence length based on past key-value states and current sequence length.
-    
+
     Note:
-        The 'construct' method supports various optional arguments for controlling output behavior such as attentions, router logits, and cache usage. 
+        The 'construct' method supports various optional arguments for controlling output behavior such as attentions,
+        router logits, and cache usage.
         The 'padding_mask' argument is deprecated and will be removed in version 4.37.
-    
+
     Please refer to the method docstrings for detailed information on parameters and return values.
     """
     def __init__(self, config: JambaConfig, num_experts: int, layer_idx: int):
 
         """
         Initializes a new instance of the JambaMambaDecoderLayer class.
-        
+
         Args:
             self: The instance of the class.
             config (JambaConfig): The configuration object containing various settings.
             num_experts (int): The number of experts to be used.
             layer_idx (int): The index of the decoder layer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1165,20 +1202,23 @@ cache values.
 
         """
         Construct the JambaMambaDecoderLayer.
-        
+
         Args:
             self: The instance of the JambaMambaDecoderLayer class.
             hidden_states (mindspore.Tensor): Input to the layer of shape `(batch, seq_len, embed_dim)`.
-            attention_mask (mindspore.Tensor, optional): Attention mask of size `(batch, sequence_length)` where padding elements are indicated by 0.
+            attention_mask (mindspore.Tensor, optional): Attention mask of size `(batch, sequence_length)`
+                where padding elements are indicated by 0.
             position_ids (mindspore.Tensor, optional): Not used in this method.
             past_key_value (HybridMambaAttentionDynamicCache, optional): Cached past key and value projection states.
             output_attentions (bool, optional): Whether to return the attentions tensors of all attention layers.
             output_router_logits (bool, optional): Whether to return the logits of all the routers.
-            use_cache (bool, optional): If set to True, past key value states are returned and can be used to speed up decoding.
-        
+            use_cache (bool, optional):
+                If set to True, past key value states are returned and can be used to speed up decoding.
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional present key value tuple.
-        
+            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+                The output tensor and optional present key value tuple.
+
         Raises:
             None
         """
@@ -1241,18 +1281,21 @@ cache values.
     def _get_past_seqlen(self, past_key_value, seqlen):
 
         """
-        This method '_get_past_seqlen' is defined in the class 'JambaMambaDecoderLayer' and is used to determine the past sequence length based on certain conditions.
-        
+        This method '_get_past_seqlen' is defined in the class 'JambaMambaDecoderLayer' and is used to determine
+        the past sequence length based on certain conditions.
+
         Args:
             self: The instance of the class.
-            past_key_value: An object representing past key value. It may be None initially. If not None, it should have a method 'get_seq_length()' and an attribute 'attention_layer_idx'.
+            past_key_value: An object representing past key value. It may be None initially.
+                If not None, it should have a method 'get_seq_length()' and an attribute 'attention_layer_idx'.
             seqlen: An integer representing the current sequence length.
-        
+
         Returns:
-            None: The method does not return any value explicitly but calculates and handles past sequence length based on the conditions specified in the code.
-        
+            None: The method does not return any value explicitly but calculates and handles past sequence length
+                based on the conditions specified in the code.
+
         Raises:
-            - None: This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         """
         if past_key_value is None:
             return seqlen
@@ -1270,25 +1313,28 @@ cache values.
 class JambaPreTrainedModel(PreTrainedModel):
 
     """
-    The 'JambaPreTrainedModel' class is a subclass of 'PreTrainedModel' and represents a model that has been pre-trained for various tasks in natural language processing. This class provides additional methods
-for converting cache formats between standard and Jamba formats.
-    
+    The 'JambaPreTrainedModel' class is a subclass of 'PreTrainedModel' and represents a model that has been pre-trained
+    for various tasks in natural language processing. This class provides additional methods for converting cache
+    formats between standard and Jamba formats.
+
     Methods:
-        - _convert_to_standard_cache(past_key_value: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]], batch_size: int) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]]:
-            Standardizes the format of the cache to match most implementations. This method ensures that the cache has the sequence length as the third dimension, even for mamba layers.
-    
-        - _convert_to_jamba_cache(past_key_value: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]]) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]]:
-            Converts the cache to the format expected by Jamba. This method adds a dummy sequence length dimension with size 1 for mamba layers.
-    
+        _convert_to_standard_cache:
+            Standardizes the format of the cache to match most implementations. This method ensures that the cache has
+            the sequence length as the third dimension, even for mamba layers.
+
+        _convert_to_jamba_cache:
+            Converts the cache to the format expected by Jamba. This method adds a dummy sequence length dimension with
+            size 1 for mamba layers.
+
     Note:
         - The 'JambaPreTrainedModel' class assumes that the 'PreTrainedModel' class has already been defined and imported.
-    
-    Example Usage:
-        
-        model = JambaPreTrainedModel()
-        standard_cache = model._convert_to_standard_cache(past_key_value, batch_size)
-        jamba_cache = model._convert_to_jamba_cache(past_key_value)
-        
+
+    Example:
+        ```python
+        >>> model = JambaPreTrainedModel()
+        >>> standard_cache = model._convert_to_standard_cache(past_key_value, batch_size)
+        >>> jamba_cache = model._convert_to_jamba_cache(past_key_value)
+        ```
     """
     config_class = JambaConfig
     base_model_prefix = "model"
@@ -1300,20 +1346,21 @@ for converting cache formats between standard and Jamba formats.
 
         """
         Initialize weights for the specified cell in the JambaPreTrainedModel.
-        
+
         Args:
             self: The instance of the JambaPreTrainedModel class.
-            cell: The cell for which weights are to be initialized. It can be an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
-        
+            cell: The cell for which weights are to be initialized.
+                It can be an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the cell parameter is not an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
-            - ValueError: If the cell has an unsupported type or configuration.
-            - AttributeError: If the cell does not have required attributes for weight initialization.
-            - IndexError: If there is an index error during padding of weights for nn.Embedding.
-            - ValueError: If there is an error in setting the data for weights or bias.
+            TypeError: If the cell parameter is not an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
+            ValueError: If the cell has an unsupported type or configuration.
+            AttributeError: If the cell does not have required attributes for weight initialization.
+            IndexError: If there is an index error during padding of weights for nn.Embedding.
+            ValueError: If there is an error in setting the data for weights or bias.
         """
         std = self.config.initializer_factor
         if isinstance(cell, (nn.Dense, nn.Conv1d)):
@@ -1380,26 +1427,27 @@ class JambaModel(JambaPreTrainedModel):
 
         """
         Initializes a JambaModel instance with the provided configuration.
-        
+
         Args:
             self (JambaModel): The instance of the JambaModel class.
             config (JambaConfig): An instance of JambaConfig containing configuration parameters for the model.
                 The configuration should include:
-                    - pad_token_id (int): The index of the padding token.
-                    - vocab_size (int): The size of the vocabulary.
-                    - hidden_size (int): The size of the hidden layer.
-                    - num_hidden_layers (int): The total number of hidden layers in the model.
-                    - attn_layer_offset (int): The offset for the attention layer.
-                    - attn_layer_period (int): The period for the attention layer.
-                    - expert_layer_offset (int): The offset for the expert layer.
-                    - expert_layer_period (int): The period for the expert layer.
-                    - num_experts (int): The number of experts in the model.
-        
+
+                - pad_token_id (int): The index of the padding token.
+                - vocab_size (int): The size of the vocabulary.
+                - hidden_size (int): The size of the hidden layer.
+                - num_hidden_layers (int): The total number of hidden layers in the model.
+                - attn_layer_offset (int): The offset for the attention layer.
+                - attn_layer_period (int): The period for the attention layer.
+                - expert_layer_offset (int): The offset for the expert layer.
+                - expert_layer_period (int): The period for the expert layer.
+                - num_experts (int): The number of experts in the model.
+
         Returns:
-            None. This method initializes the JambaModel instance with the provided configuration parameters.
-        
+            None.
+
         Raises:
-            ValueError: 
+            ValueError:
                 - If at least one layer in the decoder is not an attention layer.
                 - If at least one layer in the decoder is not a Mamba layer.
                 - If the Mamba state size is equal to the convolution size in the Mamba layer.
@@ -1450,15 +1498,15 @@ class JambaModel(JambaPreTrainedModel):
 
         """
         Method to retrieve the input embeddings from the JambaModel instance.
-        
+
         Args:
             self (JambaModel): The current instance of the JambaModel class.
                 This parameter is required to access the embed_tokens attribute.
-                
+
         Returns:
             None: This method returns the embed_tokens attribute of the JambaModel instance.
                 The embed_tokens attribute represents the input embeddings used by the model.
-                
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -1468,16 +1516,16 @@ class JambaModel(JambaPreTrainedModel):
 
         """
         Set the input embeddings for the JambaModel.
-        
+
         Args:
             self (JambaModel): The instance of the JambaModel class.
             value: The input embeddings to be set for the model.
-                   This can be a tensor, array, or any compatible data structure.
-                   It represents the embeddings to be assigned to the model for input processing.
-        
+               This can be a tensor, array, or any compatible data structure.
+               It represents the embeddings to be assigned to the model for input processing.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1499,27 +1547,32 @@ class JambaModel(JambaPreTrainedModel):
     ) -> Union[Tuple, MoeModelOutputWithPast]:
 
         """
-        This method 'construct' in the class 'JambaModel' constructs the model by processing input data through the layers of the model.
-        
+        This method 'construct' in the class 'JambaModel' constructs the model by processing input data through
+        the layers of the model.
+
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing token ids for the input sequence.
-        - attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying the attention mask to be applied.
-        - position_ids (Optional[mindspore.Tensor]): An optional tensor containing positional ids for the input sequence.
-        - past_key_values (Optional[Union[List[mindspore.Tensor], HybridMambaAttentionDynamicCache]]): Optional past key values for attention mechanism.
-        - inputs_embeds (Optional[mindspore.Tensor]): Optional tensor containing input embeddings.
-        - use_cache (Optional[bool]): Optional boolean specifying whether to use cache for the model.
-        - output_attentions (Optional[bool]): Optional boolean specifying whether to output attentions.
-        - output_hidden_states (Optional[bool]): Optional boolean specifying whether to output hidden states.
-        - output_router_logits (Optional[bool]): Optional boolean specifying whether to output router logits.
-        - return_dict (Optional[bool]): Optional boolean specifying whether to return the output as a dictionary.
-        
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing token ids for the input sequence.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying the attention mask to be applied.
+            position_ids (Optional[mindspore.Tensor]): An optional tensor containing positional ids for the input sequence.
+            past_key_values (Optional[Union[List[mindspore.Tensor], HybridMambaAttentionDynamicCache]]):
+                Optional past key values for attention mechanism.
+            inputs_embeds (Optional[mindspore.Tensor]): Optional tensor containing input embeddings.
+            use_cache (Optional[bool]): Optional boolean specifying whether to use cache for the model.
+            output_attentions (Optional[bool]): Optional boolean specifying whether to output attentions.
+            output_hidden_states (Optional[bool]): Optional boolean specifying whether to output hidden states.
+            output_router_logits (Optional[bool]): Optional boolean specifying whether to output router logits.
+            return_dict (Optional[bool]): Optional boolean specifying whether to return the output as a dictionary.
+
         Returns:
-        - Union[Tuple, MoeModelOutputWithPast]: The return value can either be a tuple containing relevant outputs or an instance of MoeModelOutputWithPast class.
-        
+            Union[Tuple, MoeModelOutputWithPast]: The return value can either be a tuple containing relevant outputs
+                or an instance of MoeModelOutputWithPast class.
+
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified at the same time, or if neither input_ids nor inputs_embeds are specified.
-        - Warning: Raised as a warning if 'use_cache=True' is incompatible with gradient checkpointing, and it automatically sets 'use_cache=False'.
+            ValueError: Raised if both input_ids and inputs_embeds are specified at the same time,
+                or if neither input_ids nor inputs_embeds are specified.
+            Warning: Raised as a warning if 'use_cache=True' is incompatible with gradient checkpointing,
+                and it automatically sets 'use_cache=False'.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
@@ -1656,31 +1709,31 @@ class JambaForCausalLM(JambaPreTrainedModel):
 
     """
     This class represents a Jamba model for causal language modeling tasks. It is a subclass of JambaPreTrainedModel.
-    
-    The JambaForCausalLM class encapsulates the architecture and functionality of the Jamba model for generating text. It includes methods for initializing the model, getting and setting input and output
-embeddings, setting the decoder, and constructing the model.
-    
+
+    The JambaForCausalLM class encapsulates the architecture and functionality of the Jamba model for generating text.
+    It includes methods for initializing the model, getting and setting input and output
+    embeddings, setting the decoder, and constructing the model.
+
     Attributes:
-        - model (JambaModel): The Jamba model used for text generation.
-        - vocab_size (int): The size of the vocabulary.
-        - lm_head (nn.Dense): The linear layer for generating the next token in the sequence.
-        - router_aux_loss_coef (float): The coefficient for the auxiliary loss used in load balancing.
-        - num_experts (int): The number of experts used in load balancing.
-        - num_experts_per_tok (int): The number of experts per token used in load balancing.
-    
+        model (JambaModel): The Jamba model used for text generation.
+        vocab_size (int): The size of the vocabulary.
+        lm_head (nn.Dense): The linear layer for generating the next token in the sequence.
+        router_aux_loss_coef (float): The coefficient for the auxiliary loss used in load balancing.
+        num_experts (int): The number of experts used in load balancing.
+        num_experts_per_tok (int): The number of experts per token used in load balancing.
+
     Methods:
-        - __init__(self, config: JambaConfig): Initializes the JambaForCausalLM instance with the given configuration.
-        - get_input_embeddings(self): Returns the input embeddings of the model.
-        - set_input_embeddings(self, value): Sets the input embeddings of the model.
-        - get_output_embeddings(self): Returns the output embeddings of the model.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
-        - set_decoder(self, decoder): Sets the decoder of the model.
-        - get_decoder(self): Returns the decoder of the model.
-        - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict,
-calc_logits_for_entire_prompt): Constructs the model for generating text and returns the outputs.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs): Prepares the inputs for text generation by reordering the cache and
-updating the position ids.
-    
+        __init__: Initializes the JambaForCausalLM instance with the given configuration.
+        get_input_embeddings: Returns the input embeddings of the model.
+        set_input_embeddings: Sets the input embeddings of the model.
+        get_output_embeddings: Returns the output embeddings of the model.
+        set_output_embeddings: Sets the output embeddings of the model.
+        set_decoder: Sets the decoder of the model.
+        get_decoder: Returns the decoder of the model.
+        construct: Constructs the model for generating text and returns the outputs.
+        prepare_inputs_for_generation: Prepares the inputs for text generation by reordering the cache and
+            updating the position ids.
+
     Please refer to the source code for more details on the implementation of each method.
     """
     _tied_weights_keys = ["lm_head.weight"]
@@ -1689,14 +1742,14 @@ updating the position ids.
 
         """
         Initializes an instance of the JambaForCausalLM class.
-        
+
         Args:
             self: The instance of the class.
             config (JambaConfig): An instance of JambaConfig containing the configuration parameters for the model.
-            
+
         Returns:
-            None. This method initializes various attributes of the JambaForCausalLM class instance.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1714,15 +1767,15 @@ updating the position ids.
 
         """
         This method retrieves the input embeddings from the JambaForCausalLM model.
-        
+
         Args:
             self: An instance of the JambaForCausalLM class.
-        
+
         Returns:
-            None. The method returns the embed_tokens attribute of the model.
-        
+            embed_tokens: The method returns the embed_tokens attribute of the model.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
@@ -1730,16 +1783,16 @@ updating the position ids.
 
         """
             Set the input embeddings for the JambaForCausalLM model.
-        
+
             Args:
                 self (JambaForCausalLM): The instance of the JambaForCausalLM class.
                 value (object): The input embeddings to be set.
-        
+
             Returns:
-                None: This method does not return any value.
-        
+                None.
+
             Raises:
-                None: This method does not raise any exceptions.
+                None.
             """
         self.model.embed_tokens = value
 
@@ -1747,13 +1800,13 @@ updating the position ids.
 
         """
         Returns the output embeddings of the JambaForCausalLM model.
-        
+
         Args:
             self: An instance of the JambaForCausalLM class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -1763,15 +1816,15 @@ updating the position ids.
 
         """
         Method to set new output embeddings for the JambaForCausalLM model.
-        
+
         Args:
             self (JambaForCausalLM): The instance of the JambaForCausalLM class.
-            new_embeddings (Any): The new embeddings to be set as the output embeddings for the model. 
-                                  This can be of any type.
-        
+            new_embeddings (Any): The new embeddings to be set as the output embeddings for the model.
+              This can be of any type.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1781,16 +1834,16 @@ updating the position ids.
 
         """
         Sets the decoder for the JambaForCausalLM model.
-        
+
         Args:
             self (JambaForCausalLM): The instance of the JambaForCausalLM class.
             decoder: The decoder object to be set for the JambaForCausalLM model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.model = decoder
 
@@ -1798,15 +1851,15 @@ updating the position ids.
 
         """
         This method returns the decoder model for the JambaForCausalLM class.
-        
+
         Args:
             self: The instance of the JambaForCausalLM class.
-        
+
         Returns:
-            None: This method returns the decoder model associated with the instance of the JambaForCausalLM class.
-        
+            The decoder model associated with the instance of the JambaForCausalLM class.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model
 
@@ -1839,6 +1892,7 @@ updating the position ids.
                 which becomes pretty significant for long sequences.
 
         Returns:
+            Union[Tuple, MoeCausalLMOutputWithPast]
         ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
@@ -1921,19 +1975,20 @@ updating the position ids.
 
         """
         Prepare inputs for generation in the JambaForCausalLM class.
-        
+
         Args:
             self (object): The instance of the JambaForCausalLM class.
             input_ids (torch.Tensor): The input token IDs for the generation process.
-            past_key_values (Union[Tuple, Cache]): The past key values from previous generations, which can be a Tuple or a Cache object.
+            past_key_values (Union[Tuple, Cache]): The past key values from previous generations,
+                which can be a Tuple or a Cache object.
             attention_mask (torch.Tensor): Optional tensor indicating the attention mask for the input.
             inputs_embeds (torch.Tensor): Optional tensor containing the embeddings for the input tokens.
             output_router_logits (bool): Flag indicating whether to calculate output router logits.
-        
+
         Returns:
-            dict: A dictionary containing the prepared model inputs for generation, including input_ids, position_ids, past_key_values, use_cache, attention_mask, output_router_logits, and
-calc_logits_for_entire_prompt.
-        
+            dict: A dictionary containing the prepared model inputs for generation, including input_ids, position_ids,
+                past_key_values, use_cache, attention_mask, output_router_logits, and calc_logits_for_entire_prompt.
+
         Raises:
             ValueError: If the shape of past_key_values is not as expected.
             AttributeError: If an attribute error occurs during the method execution.
@@ -2009,14 +2064,14 @@ calc_logits_for_entire_prompt.
 
         """
         Reorders the cache based on the provided beam index.
-        
+
         Args:
             past_key_values (tuple): A tuple of past key-value states for each layer in the model.
             beam_idx (torch.Tensor): A tensor containing indices to reorder the past key-value states.
-        
+
         Returns:
             tuple: A tuple of reordered past key-value states for each layer in the model.
-        
+
         Raises:
             None
         """
@@ -2032,26 +2087,33 @@ calc_logits_for_entire_prompt.
 class JambaForSequenceClassification(JambaPreTrainedModel):
 
     """
-    JambaForSequenceClassification is a class that represents a sequence classification model based on the Jamba architecture. 
-    This class extends JambaPreTrainedModel and includes methods for initializing the model, getting and setting input embeddings,
-    and constructing the sequence classification output. The construct method takes input_ids, attention_mask, position_ids, 
-    past_key_values, inputs_embeds, labels, and various optional arguments to generate the sequence classifier output. It calculates 
-    the loss based on the labels provided and handles different types of classification problems such as regression, single-label 
-    classification, and multi-label classification. The class provides flexibility in handling return types and outputs a 
-    SequenceClassifierOutputWithPast object if return_dict is set to True. 
+    JambaForSequenceClassification is a class that represents a sequence classification model based on the
+    Jamba architecture.
+
+    This class extends JambaPreTrainedModel and includes methods for initializing the model,
+    getting and setting input embeddings, and constructing the sequence classification output.
+
+    The construct method takes input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels,
+    and various optional arguments to generate the sequence classifier output.
+
+    It calculates the loss based on the labels provided and handles different types of classification problems
+    such as regression, single-label classification, and multi-label classification.
+
+    The class provides flexibility in handling return types and outputs a SequenceClassifierOutputWithPast object
+    if return_dict is set to True.
     """
     def __init__(self, config):
 
         """
         Initializes a new instance of the JambaForSequenceClassification class.
-        
+
         Args:
             self: The object itself.
             config: An instance of the JambaConfig class that contains the configuration settings for the Jamba model.
-            
+
         Returns:
             None.
-            
+
         Raises:
             None.
         """
@@ -2067,13 +2129,13 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
 
         """
         Method to retrieve input embeddings from the model for JambaForSequenceClassification.
-        
+
         Args:
             self: The instance of the JambaForSequenceClassification class.
-            
+
         Returns:
-            None. This method returns the input embeddings obtained from the model's embed_tokens attribute.
-        
+            The input embeddings obtained from the model's embed_tokens attribute.
+
         Raises:
             None.
         """
@@ -2083,15 +2145,15 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
 
         """
         Set the input embeddings for the JambaForSequenceClassification model.
-        
+
         Args:
             self (JambaForSequenceClassification): The instance of the JambaForSequenceClassification class.
             value (torch.Tensor): The input embeddings to be set for the model.
                 Should be a torch.Tensor representing the embeddings to be used.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -2111,10 +2173,11 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

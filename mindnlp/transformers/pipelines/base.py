@@ -54,10 +54,13 @@ def no_collate_fn(items):
     """
     This function checks if the input list 'items' has a length of 1, raising a ValueError if not. 
     It is intended to be used with a batch size of 1.
+
     Args:
         items (list): A list of items to be checked for length.
+
     Returns:
-        None: This function does not return any value.
+        None.
+
     Raises:
         ValueError: If the length of 'items' is not equal to 1.
     """
@@ -69,7 +72,8 @@ def no_collate_fn(items):
 def _pad(items, key, padding_value, padding_side):
     """
     Args:
-        items (list): A list of dictionaries representing items, where each dictionary contains the key-value pair for the specified key.
+        items (list): A list of dictionaries representing items, where each dictionary contains
+            the key-value pair for the specified key.
         key (str): The key within each dictionary representing the data to be padded.
         padding_value (int): The value used for padding the data.
         padding_side (str): The side on which padding should be applied, either 'left' or 'right'.
@@ -134,8 +138,10 @@ def pad_collate_fn(tokenizer, feature_extractor):
     This function takes in two parameters, tokenizer and feature_extractor, and returns None.
     
     Args:
-        tokenizer (object): An optional tokenizer object. If provided, it should have a pad_token_id attribute. If not provided, the function expects a feature_extractor object.
-        feature_extractor (object): An optional feature_extractor object. If provided, it can have padding_value and padding_side attributes.
+        tokenizer (object): An optional tokenizer object. If provided, it should have a pad_token_id attribute.
+            If not provided, the function expects a feature_extractor object.
+        feature_extractor (object): An optional feature_extractor object.
+            If provided, it can have padding_value and padding_side attributes.
     
     Returns:
         None
@@ -339,7 +345,6 @@ def get_default_model_and_revision(
            translation task.
 
     Returns
-
         `str` The model string representing the default model for this pipeline
     """
     framework = "ms"
@@ -370,18 +375,18 @@ class PipelineException(Exception):
     def __init__(self, task: str, model: str, reason: str):
         """
         Initializes a new instance of PipelineException.
-        
+
         Args:
             self (object): The instance of the class.
             task (str): The task for which the exception occurred.
             model (str): The model related to the exception.
             reason (str): The reason for the exception.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any specific exceptions.
+            None.
         """
         super().__init__(reason)
 
@@ -396,16 +401,19 @@ class ArgumentHandler(ABC):
     @abstractmethod
     def __call__(self, *args, **kwargs):
         """
-        This method is an abstract method that should be implemented in a subclass. It is intended to serve as a generic callable interface for argument handling.
-        
+        This method is an abstract method that should be implemented in a subclass.
+        It is intended to serve as a generic callable interface for argument handling.
+
         Args:
             self (ArgumentHandler): The instance of the ArgumentHandler class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None:
+                This method does not return any value.
+
         Raises:
-            NotImplementedError: This exception is raised when the method is not implemented in a subclass.
+            NotImplementedError:
+                This exception is raised when the method is not implemented in a subclass.
         """
         raise NotImplementedError()
 
@@ -439,7 +447,7 @@ class PipelineDataFormat:
         overwrite: bool = False,
     ):
         """Initializes an instance of the PipelineDataFormat class.
-        
+
         Args:
             output_path (Optional[str]): The path to the output file. Defaults to None.
             input_path (Optional[str]): The path to the input file. Defaults to None.
@@ -448,10 +456,11 @@ class PipelineDataFormat:
                 Each column can be specified as 'name' or 'name=value' to map input and output columns.
             overwrite (bool, optional): Determines whether to overwrite the output file if it already exists.
                 Defaults to False.
-        
+
         Returns:
-            None. This method does not return a value.
-        
+            None:
+                This method does not return a value.
+
         Raises:
             OSError: If the output_path is provided and the overwrite parameter is False,
                 and the output_path already exists on disk.
@@ -477,15 +486,19 @@ class PipelineDataFormat:
     def __iter__(self):
         """
         This method '__iter__' in the class 'PipelineDataFormat' is used to define an iterator for instances of the class.
-        
+
         Args:
             self: An instance of the 'PipelineDataFormat' class.
-        
+
         Returns:
-            None. This method does not return any value explicitly but is meant to be implemented by subclasses to return an iterator.
-        
+            None:
+                This method does not return any value explicitly
+                but is meant to be implemented by subclasses to return an iterator.
+
         Raises:
-            NotImplementedError: This exception is raised if the method is not implemented by a subclass. It serves as a reminder for the subclass to implement its own iteration logic.
+            NotImplementedError:
+                This exception is raised if the method is not implemented by a subclass.
+                It serves as a reminder for the subclass to implement its own iteration logic.
         """
         raise NotImplementedError()
 
@@ -573,21 +586,24 @@ class CsvPipelineDataFormat(PipelineDataFormat):
     ):
         """
         Initializes an instance of the CsvPipelineDataFormat class.
-        
+
         Args:
             output_path (Optional[str]): The path to the output file. If specified, the processed data will be written to this file.
             input_path (Optional[str]): The path to the input file. If specified, the data will be read from this file.
             column (Optional[str]): The name of the column to process. If specified, only the data in this column will be processed.
             overwrite (bool, optional): Indicates whether the output file should be overwritten if it already exists. Defaults to False.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None explicitly. However, this method may raise exceptions if the input or output file paths are invalid or if there are any issues during the data processing.
-        
+            None:
+                However, this method may raise exceptions if the input or output file paths are invalid or
+                if there are any issues during the data processing.
+
         Note:
-            - The 'output_path', 'input_path', and 'column' parameters are optional. They can be left empty or set to None if not required.
+            - The 'output_path', 'input_path', and 'column' parameters are optional. They can be left empty or set to
+            None if not required.
             - The 'overwrite' parameter is optional and defaults to False.
         """
         super().__init__(output_path, input_path, column, overwrite=overwrite)
@@ -595,39 +611,41 @@ class CsvPipelineDataFormat(PipelineDataFormat):
     def __iter__(self):
         """
         Iterates over the rows of a CSV file and yields the specified columns as a dictionary.
-        
+
         Args:
             self: An instance of the CsvPipelineDataFormat class.
-        
+
         Returns:
             None.
-        
+
         Raises:
-            - FileNotFoundError: If the specified input file path does not exist.
-            - csv.Error: If there are issues with reading the CSV file.
-            - IndexError: If the column index is out of range.
-            - KeyError: If the column key is not found in the row dictionary.
-            - TypeError: If the column parameter is not a valid type.
-            - ValueError: If the column parameter is not properly formatted.
-        
+            FileNotFoundError: If the specified input file path does not exist.
+            csv.Error: If there are issues with reading the CSV file.
+            IndexError: If the column index is out of range.
+            KeyError: If the column key is not found in the row dictionary.
+            TypeError: If the column parameter is not a valid type.
+            ValueError: If the column parameter is not properly formatted.
+
         Note:
             - The CSV file is read using the 'r' mode.
             - The CSV file is expected to have a header row.
-            - If self.is_multi_columns is True, the method yields a dictionary with keys from the specified column list 
-              and values from the corresponding columns in the CSV file.
+            - If self.is_multi_columns is True, the method yields a dictionary with keys from the specified column list
+            and values from the corresponding columns in the CSV file.
             - If self.is_multi_columns is False, the method yields the value from the specified column index in each row.
-        
-        Example usage:
-            data_format = CsvPipelineDataFormat()
-            data_format.input_path = 'data.csv'
-            data_format.is_multi_columns = True
-            for row in data_format:
-                print(row)
-        
-            Output:
-            {'col1': 'value1', 'col2': 'value2'}
-            {'col1': 'value3', 'col2': 'value4'}
+
+        Example:
+            ```python
+            >>> data_format = CsvPipelineDataFormat()
+            >>> data_format.input_path = 'data.csv'
+            >>> data_format.is_multi_columns = True
+            >>> for row in data_format:
+            >>>     print(row)
             ...
+            >>> Output:
+            >>> {'col1': 'value1', 'col2': 'value2'}
+            >>> {'col1': 'value3', 'col2': 'value4'}
+            ...
+            ```
         """
         with open(self.input_path, "r") as f:
             reader = csv.DictReader(f)
@@ -671,17 +689,18 @@ class JsonPipelineDataFormat(PipelineDataFormat):
     ):
         """
         Initializes a JsonPipelineDataFormat object.
-        
+
         Args:
             self: The instance of the class.
             output_path (Optional[str]): The path to the output file where the processed data will be saved.
             input_path (Optional[str]): The path to the input file containing the data to be processed.
             column (Optional[str]): The column in the input data to be processed.
-            overwrite (bool): Indicates whether to overwrite the existing output file if it already exists. Default is False.
-        
+            overwrite (bool): Indicates whether to overwrite the existing output file if it already exists.
+                Default is False.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             FileNotFoundError: If the input file specified by 'input_path' does not exist.
             json.JSONDecodeError: If the input file does not contain valid JSON data.
@@ -695,19 +714,22 @@ class JsonPipelineDataFormat(PipelineDataFormat):
     def __iter__(self):
         """
         Iterates over the entries of the JsonPipelineDataFormat object.
-        
+
         Args:
             self (JsonPipelineDataFormat): The JsonPipelineDataFormat object itself.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method iterates over the entries stored in the JsonPipelineDataFormat object and yields each entry as a dictionary. If the JsonPipelineDataFormat object is configured with multiple columns, each
-yielded entry is a dictionary where the keys correspond to the column names and the values are the values of the respective columns for that entry. If the JsonPipelineDataFormat object is not configured with
-multiple columns, each yielded entry is a single value corresponding to the first column specified in the 'column' attribute of the JsonPipelineDataFormat object.
+
+        This method iterates over the entries stored in the JsonPipelineDataFormat object and yields each entry
+        as a dictionary. If the JsonPipelineDataFormat object is configured with multiple columns, each yielded entry
+        is a dictionary where the keys correspond to the column names and the values are the values of the respective
+        columns for that entry. If the JsonPipelineDataFormat object is not configured with multiple columns,
+        each yielded entry is a single value corresponding to the first column specified in the 'column' attribute of
+        the JsonPipelineDataFormat object.
         """
         for entry in self._entries:
             if self.is_multi_columns:
@@ -742,21 +764,24 @@ class PipedPipelineDataFormat(PipelineDataFormat):
     def __iter__(self):
         '''
         Iterates over input lines from the standard input and yields formatted data.
-        
+
         Args:
             self (PipedPipelineDataFormat): An instance of the PipedPipelineDataFormat class.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-            This method is used to iterate over input lines read from the standard input. Each line is checked for the presence of a tab character ('\t'). If a tab character is found, the line is split using
-the tab character as the delimiter. If the PipedPipelineDataFormat instance has a defined column attribute, a dictionary is yielded containing key-value pairs where the keys are the column names and the values
-are extracted from the corresponding line elements. If the column attribute is not defined, a tuple containing the line elements is yielded.
-            
+            This method is used to iterate over input lines read from the standard input.
+            Each line is checked for the presence of a tab character ('\t').
+            If a tab character is found, the line is split using the tab character as the delimiter.
+            If the PipedPipelineDataFormat instance has a defined column attribute,
+            a dictionary is yielded containing key-value pairs where the keys are the column names
+            and the values are extracted from the corresponding line elements.
+            If the column attribute is not defined, a tuple containing the line elements is yielded.
             If a line does not contain a tab character, the entire line is yielded as is.
         '''
         for line in sys.stdin:
@@ -785,18 +810,20 @@ are extracted from the corresponding line elements. If the column attribute is n
     def save_binary(self, data: Union[dict, List[dict]]) -> str:
         """
         Save binary data to an output file path.
-        
+
         Args:
             self (PipedPipelineDataFormat): An instance of the PipedPipelineDataFormat class.
-            data (Union[dict, List[dict]]): The binary data to be saved. It can be either a single dictionary or a list of dictionaries.
-        
+            data (Union[dict, List[dict]]): The binary data to be saved. It can be either a single dictionary or
+                a list of dictionaries.
+
         Returns:
             str: The output file path where the binary data was saved.
-        
+
         Raises:
-            KeyError: If the `output_path` attribute of `self` is None, indicating that an output file path is required when using piped input on pipeline outputting large objects. The error message will
-prompt the user to provide the output path through the `--output` argument.
-        
+            KeyError: If the `output_path` attribute of `self` is None, indicating that an output file path is required
+                when using piped input on pipeline outputting large objects. The error message will
+                prompt the user to provide the output path through the `--output` argument.
+
         """
         if self.output_path is None:
             raise KeyError(
@@ -815,16 +842,18 @@ class _ScikitCompat(ABC):
     def transform(self, X):
         """
         This method named 'transform' in the class '_ScikitCompat' is an abstract method that must be implemented by subclasses.
-        
+
         Args:
             self: Represents the instance of the class. It is used to access and modify class attributes.
-            X: Input data to be transformed. It can be in the form of a list, array, or dataframe. No specific restrictions.
-        
+            X: Input data to be transformed. It can be in the form of a list, array, or dataframe.
+                No specific restrictions.
+
         Returns:
             None: This method does not return any value. It is meant to transform the input data in place.
-        
+
         Raises:
-            NotImplementedError: This exception is raised when the method is called directly without being implemented in a subclass.
+            NotImplementedError:
+                This exception is raised when the method is called directly without being implemented in a subclass.
         """
         raise NotImplementedError()
 
@@ -832,14 +861,16 @@ class _ScikitCompat(ABC):
     def predict(self, X):
         """
         Predicts the target values for the input data.
-        
+
         Args:
             self (_ScikitCompat): The instance of the _ScikitCompat class.
-            X (array-like): The input data to make predictions on. It should be a 2D array-like object where each row represents a sample and each column represents a feature.
-        
+            X (array-like): The input data to make predictions on.
+                It should be a 2D array-like object where each row represents a sample and each column represents a feature.
+
         Returns:
-            None. This method does not return any value explicitly but should update the internal state or perform computations for making predictions.
-        
+            None: This method does not return any value explicitly but should update the internal state or
+                perform computations for making predictions.
+
         Raises:
             NotImplementedError: If the method is not implemented in the subclass that inherits from _ScikitCompat.
         """
@@ -854,7 +885,7 @@ class Pipeline(_ScikitCompat):
     Base class implementing pipelined operations. Pipeline workflow is defined as a sequence of the following
     operations:
 
-        Input -> Tokenization -> Model Inference -> Post-Processing (task dependent) -> Output
+    `Input -> Tokenization -> Model Inference -> Post-Processing (task dependent) -> Output`
 
     Pipeline supports running on CPU or GPU through the device argument (see below).
 
@@ -878,23 +909,24 @@ class Pipeline(_ScikitCompat):
     ):
         """
         Initializes a new instance of the Pipeline class.
-        
+
         Args:
-        - model (PreTrainedModel): The pre-trained model to be used in the pipeline.
-        - tokenizer (Optional[PreTrainedTokenizer]): An optional pre-trained tokenizer for processing input data.
-        - feature_extractor (Optional[PreTrainedFeatureExtractor]): An optional feature extractor for extracting features from the input data.
-        - image_processor (Optional[BaseImageProcessor]): An optional image processor for handling image data.
-        - modelcard (Optional[ModelCard]): An optional model card containing information about the model.
-        - task (str): The task that the pipeline is designed to perform.
-        - ms_dtype (Optional[Union[str, mindspore.common.dtype.Dtype]]): An optional data type for MindSpore computations.
-        - binary_output (bool): A flag indicating whether the output should be binary.
-        - **kwargs: Additional keyword arguments for configuring the pipeline.
-        
+            model (PreTrainedModel): The pre-trained model to be used in the pipeline.
+            tokenizer (Optional[PreTrainedTokenizer]): An optional pre-trained tokenizer for processing input data.
+            feature_extractor (Optional[PreTrainedFeatureExtractor]):
+                An optional feature extractor for extracting features from the input data.
+            image_processor (Optional[BaseImageProcessor]): An optional image processor for handling image data.
+            modelcard (Optional[ModelCard]): An optional model card containing information about the model.
+            task (str): The task that the pipeline is designed to perform.
+            ms_dtype (Optional[Union[str, mindspore.common.dtype.Dtype]]): An optional data type for MindSpore computations.
+            binary_output (bool): A flag indicating whether the output should be binary.
+            **kwargs: Additional keyword arguments for configuring the pipeline.
+
         Returns:
-        None. This method initializes the Pipeline object with the specified parameters.
-        
+            None.
+
         Raises:
-        - None.
+            None.
         """
         self.task = task
         self.model = model
@@ -1040,16 +1072,18 @@ class Pipeline(_ScikitCompat):
     def forward(self, model_inputs, **forward_params):
         """
         This method performs the forward pass of the pipeline model.
-        
+
         Args:
             self (Pipeline): The instance of the Pipeline class.
-            model_inputs: The inputs to the model for the forward pass. Type can vary depending on the model architecture and input requirements.
-        
+            model_inputs: The inputs to the model for the forward pass.
+                Type can vary depending on the model architecture and input requirements.
+
         Returns:
             None: This method returns None as it directly returns the model outputs.
-        
+
         Raises:
-            This method does not explicitly raise any exceptions. However, the _forward method it calls may raise exceptions based on the model's implementation.
+            None:
+                However, the _forward method it calls may raise exceptions based on the model's implementation.
         """
         model_outputs = self._forward(model_inputs, **forward_params)
         return model_outputs
@@ -1057,16 +1091,18 @@ class Pipeline(_ScikitCompat):
     def __call__(self, inputs, *args, num_workers=None, batch_size=None, **kwargs):
         """
         Performs the main processing logic for the Pipeline class.
-        
+
         Args:
             self (Pipeline): The instance of the Pipeline class.
             inputs: The input data for processing. It can be a Dataset, GeneratorType, or list.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
-            UserWarning: If the method is called more than 10 times, a warning is raised to prompt the user to use a dataset for efficiency.
+            UserWarning:
+                If the method is called more than 10 times,
+                a warning is raised to prompt the user to use a dataset for efficiency.
         """
         if args:
             logger.warning(f"Ignoring args : {args}")
@@ -1112,38 +1148,40 @@ class Pipeline(_ScikitCompat):
     def run_multi(self, inputs, preprocess_params, forward_params, postprocess_params):
         """
         Method that runs a series of input items through the pipeline.
-        
+
         Args:
             self (Pipeline): The instance of the Pipeline class.
             inputs (list): A list of input items to be processed by the pipeline.
             preprocess_params (dict): Parameters for preprocessing the input items.
             forward_params (dict): Parameters for the forward pass through the pipeline.
             postprocess_params (dict): Parameters for postprocessing the output items.
-            
+
         Returns:
-            None. This method does not return any value but processes the input items through the pipeline.
-            
+            None: This method does not return any value but processes the input items through the pipeline.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return [self.run_single(item, preprocess_params, forward_params, postprocess_params) for item in inputs]
 
     def run_single(self, inputs, preprocess_params, forward_params, postprocess_params):
         """
         This method 'run_single' is a member of the 'Pipeline' class and is responsible for executing a single run of the pipeline.
-        
+
         Args:
             self (object): The instance of the Pipeline class.
             inputs (object): The input data to be processed by the pipeline.
             preprocess_params (dict): Parameters for the preprocessing step, used to configure the preprocessing behavior.
             forward_params (dict): Parameters for the forward step, used to configure the forward pass behavior.
             postprocess_params (dict): Parameters for the postprocessing step, used to configure the postprocessing behavior.
-        
+
         Returns:
-            None: This method does not return any specific value.
-        
+            None.
+
         Raises:
-            Any exceptions raised by the 'preprocess', 'forward', or 'postprocess' methods called within this method will be propagated to the caller.
+            Any exceptions that is:
+                raised by the 'preprocess', 'forward', or 'postprocess' methods called within this method
+                will be propagated to the caller.
         """
         model_inputs = self.preprocess(inputs, **preprocess_params)
         model_outputs = self.forward(model_inputs, **forward_params)
@@ -1153,20 +1191,22 @@ class Pipeline(_ScikitCompat):
     def iterate(self, inputs, preprocess_params, forward_params, postprocess_params):
         """
         Iterates through the input data and yields the result of running each input through the pipeline.
-        
+
         Args:
             self (Pipeline): The instance of the Pipeline class.
-            inputs (Union[Dataset, List[Any]]): The input data to iterate over. If inputs is a Dataset object, it will be iterated over by creating a dictionary iterator. If inputs is a list of inputs, each
-input will be iterated over individually.
+            inputs (Union[Dataset, List[Any]]): The input data to iterate over.
+
+                - If inputs is a Dataset object, it will be iterated over by creating a dictionary iterator.
+                - If inputs is a list of inputs, each input will be iterated over individually.
             preprocess_params (Any): The parameters used for preprocessing the input data.
             forward_params (Any): The parameters used for the forward pass of the pipeline.
             postprocess_params (Any): The parameters used for postprocessing the output data.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # This function should become `get_iterator` again, this is a temporary
         # easy solution.
@@ -1182,50 +1222,60 @@ class ChunkPipeline(Pipeline):
 
     """
     ChunkPipeline is a class that represents a pipeline for chunk processing. It inherits from the Pipeline class.
-    
-    The ChunkPipeline class provides a method called run_single, which takes inputs, preprocess_params, forward_params, and postprocess_params as arguments. It performs chunk processing on the inputs using the
-specified parameters.
-    
-    The run_single method internally calls the preprocess, forward, and postprocess methods to process the inputs. It preprocesses the inputs using the preprocess_params, performs forward processing using the
-forward_params, and finally postprocesses the outputs using the postprocess_params.
-    
-    The preprocess method takes the inputs and preprocess_params as arguments and returns a generator that yields model_inputs. It splits the inputs into chunks and applies preprocessing operations based on
-the preprocess_params.
-    
-    The forward method takes model_inputs and forward_params as arguments and returns the model_outputs. It applies forward processing operations on the model_inputs based on the forward_params.
-    
-    The postprocess method takes all_outputs and postprocess_params as arguments and returns the outputs. It applies postprocessing operations on the all_outputs based on the postprocess_params.
-    
+
+    The ChunkPipeline class provides a method called run_single, which takes inputs, preprocess_params, forward_params,
+    and postprocess_params as arguments. It performs chunk processing on the inputs using the specified parameters.
+
+    The run_single method internally calls the preprocess, forward, and postprocess methods to process the inputs.
+    It preprocesses the inputs using the preprocess_params, performs forward processing using the forward_params,
+    and finally postprocesses the outputs using the postprocess_params.
+
+    The preprocess method takes the inputs and preprocess_params as arguments and returns a generator that yields model_inputs.
+    It splits the inputs into chunks and applies preprocessing operations based on the preprocess_params.
+
+    The forward method takes model_inputs and forward_params as arguments and returns the model_outputs.
+    It applies forward processing operations on the model_inputs based on the forward_params.
+
+    The postprocess method takes all_outputs and postprocess_params as arguments and returns the outputs.
+    It applies postprocessing operations on the all_outputs based on the postprocess_params.
+
     The run_single method collects all the model_outputs generated during the chunk processing and returns the final outputs.
-    
-    Examples:
-        chunk_pipeline = ChunkPipeline()
-        inputs = [input_1, input_2, input_3]
-        preprocess_params = {'param1': value1, 'param2': value2}
-        forward_params = {'param3': value3, 'param4': value4}
-        postprocess_params = {'param5': value5, 'param6': value6}
-        outputs = chunk_pipeline.run_single(inputs, preprocess_params, forward_params, postprocess_params)
-    
+
+    Example:
+        ```python
+        >>> chunk_pipeline = ChunkPipeline()
+        >>> inputs = [input_1, input_2, input_3]
+        >>> preprocess_params = {'param1': value1, 'param2': value2}
+        >>> forward_params = {'param3': value3, 'param4': value4}
+        >>> postprocess_params = {'param5': value5, 'param6': value6}
+        >>> outputs = chunk_pipeline.run_single(inputs, preprocess_params, forward_params, postprocess_params)
+        ```
+
     Note:
-        - The ChunkPipeline class should be instantiated and the run_single method should be called to perform chunk processing.
-        - The preprocess_params, forward_params, and postprocess_params should be provided as dictionaries with the required parameters for each step of chunk processing.
+        - The ChunkPipeline class should be instantiated and the run_single method should be called to perform chunk
+        processing.
+        - The preprocess_params, forward_params, and postprocess_params should be provided as dictionaries with the
+        required parameters for each step of chunk processing.
     """
     def run_single(self, inputs, preprocess_params, forward_params, postprocess_params):
         """
-        This method 'run_single' is part of the 'ChunkPipeline' class and is used to process inputs through a pipeline of preprocessing, forward pass, and postprocessing.
-        
+        This method 'run_single' is part of the 'ChunkPipeline' class and is used to process inputs through a pipeline
+        of preprocessing, forward pass, and postprocessing.
+
         Args:
             self (object): The instance of the ChunkPipeline class.
             inputs (object): The input data to be processed through the pipeline.
             preprocess_params (dict): A dictionary containing parameters for the preprocessing step.
             forward_params (dict): A dictionary containing parameters for the forward pass step.
             postprocess_params (dict): A dictionary containing parameters for the postprocessing step.
-        
+
         Returns:
-            None: This method does not return a value explicitly, but it processes the inputs through the pipeline and updates the internal state of the ChunkPipeline instance.
-        
+            None: This method does not return a value explicitly, but it processes the inputs through the pipeline
+                and updates the internal state of the ChunkPipeline instance.
+
         Raises:
-            No specific exceptions are documented to be raised by this method. However, exceptions may be raised within the preprocess, forward, or postprocess steps, which are not explicitly documented here.
+            None: However, exceptions may be raised within
+                the preprocess, forward, or postprocess steps, which are not explicitly documented here.
         """
         all_outputs = []
         for model_inputs in self.preprocess(inputs, **preprocess_params):
@@ -1238,48 +1288,55 @@ the preprocess_params.
 class PipelineRegistry:
 
     """
-    The PipelineRegistry class represents a registry for managing supported tasks and their corresponding pipelines. It provides methods for registering pipelines, checking tasks, and converting the registry
-to a dictionary. The class maintains a dictionary of supported tasks and their respective aliases, and also allows for the registration of pipelines for specific tasks.
-    
+    The PipelineRegistry class represents a registry for managing supported tasks and their corresponding pipelines.
+    It provides methods for registering pipelines, checking tasks, and converting the registry to a dictionary.
+    The class maintains a dictionary of supported tasks and their respective aliases, and also allows for the
+    registration of pipelines for specific tasks.
+
     Attributes:
-        supported_tasks (Dict[str, Any]): A dictionary containing the supported tasks and their associated pipeline implementations and models.
+        supported_tasks (Dict[str, Any]): A dictionary containing the supported tasks and their associated pipeline
+            implementations and models.
         task_aliases (Dict[str, str]): A dictionary containing task aliases for supported tasks.
-    
+
     Methods:
-        __init__(supported_tasks: Dict[str, Any], task_aliases: Dict[str, str]) -> None:
+        __init__:
             Initializes the PipelineRegistry instance with the provided supported tasks and task aliases.
-    
-        get_supported_tasks() -> List[str]:
+
+        get_supported_tasks:
             Retrieves a sorted list of supported tasks, including aliases.
-    
-        check_task(task: str) -> Tuple[str, Dict, Any]:
-            Checks if a given task is supported and returns the task name, its targeted task, and additional parameters if applicable.
-    
-        register_pipeline(task: str, pipeline_class: type, model: Optional[Union[type, Tuple[type]]] = None, default: Optional[Dict] = None, type: Optional[str] = None) -> None:
-            Registers a pipeline for a specific task, and optionally specifies the pipeline class, model, default parameters, and type.
-    
-        to_dict() -> Dict:
+
+        check_task:
+            Checks if a given task is supported and returns the task name, its targeted task, and additional
+            parameters if applicable.
+
+        register_pipeline:
+            Registers a pipeline for a specific task, and optionally specifies the pipeline class, model, d
+            efault parameters, and type.
+
+        to_dict:
             Converts the PipelineRegistry instance to a dictionary representation.
-    
+
     Note:
         - Task aliases are also considered for supported tasks.
-        - If a task is already registered, registering a new pipeline for the same task will overwrite the existing pipeline.
+        - If a task is already registered, registering a new pipeline for the same task will overwrite the
+        existing pipeline.
         - The 'translation_XX_to_YY' format is expected for certain translation tasks.
     """
     def __init__(self, supported_tasks: Dict[str, Any], task_aliases: Dict[str, str]) -> None:
         """
         Initializes an instance of the PipelineRegistry class.
-        
+
         Args:
             self: The instance of the class.
-            supported_tasks (Dict[str, Any]): A dictionary containing the supported tasks as keys and their corresponding values.
+            supported_tasks (Dict[str, Any]): A dictionary containing the supported tasks as keys and their
+                corresponding values.
             task_aliases (Dict[str, str]): A dictionary mapping task aliases to their actual task names.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.supported_tasks = supported_tasks
         self.task_aliases = task_aliases
@@ -1287,17 +1344,17 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
     def get_supported_tasks(self) -> List[str]:
         """
         Retrieve a list of supported tasks from the PipelineRegistry.
-        
+
         Args:
             self (PipelineRegistry): The instance of PipelineRegistry class.
                 This parameter is required to access the supported tasks and task aliases.
-                
+
         Returns:
             List[str]: A sorted list of supported tasks available in the PipelineRegistry.
-            
+
         Raises:
-            None.
-            This method does not raise any specific exceptions.
+            None:
+                This method does not raise any specific exceptions.
         """
         supported_task = list(self.supported_tasks.keys()) + list(self.task_aliases.keys())
         supported_task.sort()
@@ -1306,21 +1363,23 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
     def check_task(self, task: str) -> Tuple[str, Dict, Any]:
         """
         Checks if a given task is supported by the PipelineRegistry.
-        
+
         Args:
             self (PipelineRegistry): The instance of the PipelineRegistry class.
             task (str): The task to be checked.
-        
+
         Returns:
-            Tuple[str, Dict, Any]: A tuple containing the following:
+            Tuple[str, Dict, Any]:
+                A tuple containing the following:
+
                 - task (str): The modified task name after resolving aliases (if any).
                 - targeted_task (Dict): The dictionary representing the targeted task.
                 - translation_params (Any): Additional parameters for translation tasks (if applicable).
-        
+
         Raises:
             KeyError: If the provided task is not found in the supported tasks or aliases.
             KeyError: If the provided translation task is not in the correct format 'translation_XX_to_YY'.
-        
+
         Note:
             - If the task is found in the task_aliases dictionary, it will be replaced with the corresponding value.
             - If the task is found in the supported_tasks dictionary, targeted_task will be set to the corresponding value.
@@ -1357,25 +1416,25 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
     ) -> None:
         """
         Register a pipeline in the PipelineRegistry.
-        
+
         Args:
             self: The instance of the PipelineRegistry class.
             task (str): The task for which the pipeline is being registered.
             pipeline_class (type): The class implementing the pipeline.
-            model (Optional[Union[type, Tuple[type]]]): The model or models associated with the pipeline. 
-                Defaults to None. If a single model is passed, it should be of type 'type'. 
+            model (Optional[Union[type, Tuple[type]]]): The model or models associated with the pipeline.
+                Defaults to None. If a single model is passed, it should be of type 'type'.
                 If multiple models are passed, they should be provided as a tuple of 'type'.
-            default (Optional[Dict]): The default configuration for the pipeline. 
-                Defaults to None. If provided, it should be a dictionary with 'model' or 'ms' as keys. 
+            default (Optional[Dict]): The default configuration for the pipeline.
+                Defaults to None. If provided, it should be a dictionary with 'model' or 'ms' as keys.
                 If 'model' is not present but 'ms' is, it will be wrapped in a dictionary with 'model' as key.
             type (Optional[str]): The type of the pipeline. Defaults to None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             - If the 'task' is already registered, the existing pipeline for that task will be overwritten.
             - If no 'model' is provided, it will default to an empty tuple.
@@ -1383,8 +1442,10 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
             - The 'default' parameter, if provided, should be a dictionary with 'model' or 'ms' as keys.
               If 'model' is not present but 'ms' is, it will be wrapped in a dictionary with 'model' as key.
             - The 'type' parameter is optional and can be used to specify the type of the pipeline.
-            - The 'supported_tasks' attribute of the PipelineRegistry instance will be updated with the registered pipeline.
-            - The '_registered_impl' attribute of the pipeline_class will be updated with the registered task and its implementation.
+            - The 'supported_tasks' attribute of the PipelineRegistry instance will be updated with the registered
+            pipeline.
+            - The '_registered_impl' attribute of the pipeline_class will be updated with the registered task and
+            its implementation.
         """
         if task in self.supported_tasks:
             logger.warning(f"{task} is already registered. Overwriting pipeline for task {task}...")
@@ -1415,9 +1476,9 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
             self (PipelineRegistry): The current instance of the PipelineRegistry class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.supported_tasks

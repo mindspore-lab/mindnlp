@@ -97,16 +97,16 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import LongformerTokenizerFast
-
-    >>> tokenizer = LongformerTokenizerFast.from_pretrained("allenai/longformer-base-4096")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import LongformerTokenizerFast
+        ...
+        >>> tokenizer = LongformerTokenizerFast.from_pretrained("allenai/longformer-base-4096")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -194,31 +194,31 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         This method initializes an instance of the LongformerTokenizerFast class.
-        
+
         Args:
-        - self: The instance of the class.
-        - vocab_file (str, optional): Path to the vocabulary file. Default is None.
-        - merges_file (str, optional): Path to the merges file. Default is None.
-        - tokenizer_file (str, optional): Path to the tokenizer file. Default is None.
-        - errors (str, optional): Specifies how to handle errors in decoding. Default is 'replace'.
-        - bos_token (str, optional): Beginning of sequence token. Default is '<s>'.
-        - eos_token (str, optional): End of sequence token. Default is '</s>'.
-        - sep_token (str, optional): Separator token. Default is '</s>'.
-        - cls_token (str, optional): Classification token. Default is '<s>'.
-        - unk_token (str, optional): Token for unknown words. Default is '<unk>'.
-        - pad_token (str, optional): Token for padding. Default is '<pad>'.
-        - mask_token (str, optional): Mask token. Default is '<mask>'.
-        - add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
-        - trim_offsets (bool, optional): Whether to trim offsets. Default is True.
-        
+            self: The instance of the class.
+            vocab_file (str, optional): Path to the vocabulary file. Default is None.
+            merges_file (str, optional): Path to the merges file. Default is None.
+            tokenizer_file (str, optional): Path to the tokenizer file. Default is None.
+            errors (str, optional): Specifies how to handle errors in decoding. Default is 'replace'.
+            bos_token (str, optional): Beginning of sequence token. Default is '<s>'.
+            eos_token (str, optional): End of sequence token. Default is '</s>'.
+            sep_token (str, optional): Separator token. Default is '</s>'.
+            cls_token (str, optional): Classification token. Default is '<s>'.
+            unk_token (str, optional): Token for unknown words. Default is '<unk>'.
+            pad_token (str, optional): Token for padding. Default is '<pad>'.
+            mask_token (str, optional): Mask token. Default is '<mask>'.
+            add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
+            trim_offsets (bool, optional): Whether to trim offsets. Default is True.
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - TypeError: If the provided parameters are of incorrect types.
-        - ValueError: If the values of parameters are invalid.
-        - KeyError: If a required key is missing in the input data.
-        - Exception: For any other unexpected errors.
+            TypeError: If the provided parameters are of incorrect types.
+            ValueError: If the values of parameters are invalid.
+            KeyError: If a required key is missing in the input data.
+            Exception: For any other unexpected errors.
         """
         mask_token = (
             AddedToken(mask_token, lstrip=True, rstrip=False, normalized=False)
@@ -305,17 +305,19 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
-        This method is a private function within the class LongformerTokenizerFast that batch encodes input sequences and returns the encoded representations.
-        
+        This method is a private function within the class LongformerTokenizerFast that batch encodes input sequences
+        and returns the encoded representations.
+
         Args:
             self: An instance of the LongformerTokenizerFast class.
-            
+
         Returns:
             A BatchEncoding object containing the batch encoded representations of the input sequences.
-            
+
         Raises:
-            AssertionError: Raised if the 'add_prefix_space' attribute is False and the 'is_split_into_words' argument is True. In this case, the method requires the LongformerTokenizerFast instance to be
-instantiated with 'add_prefix_space=True'.
+            AssertionError: Raised if the 'add_prefix_space' attribute is False and the 'is_split_into_words' argument
+            is True. In this case, the method requires the LongformerTokenizerFast instance to be instantiated with
+            'add_prefix_space=True'.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -327,22 +329,29 @@ instantiated with 'add_prefix_space=True'.
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
-        This method encodes input sequences into a BatchEncoding object. It is intended for use within the LongformerTokenizerFast class.
-        
+        This method encodes input sequences into a BatchEncoding object.
+        It is intended for use within the LongformerTokenizerFast class.
+
         Args:
-            self: An instance of the LongformerTokenizerFast class. It is used to access the properties and methods of the class.
-            
+            self: An instance of the LongformerTokenizerFast class. It is used to access the properties and methods
+                of the class.
+
             *args: Variable positional arguments that may be passed to the method.
-            
-            **kwargs: Variable keyword arguments that may be passed to the method. The following kwargs are supported:
-                - is_split_into_words (bool, optional): Specifies whether the input is already split into words. Default is False.
-        
+
+            **kwargs: Variable keyword arguments that may be passed to the method.
+                The following kwargs are supported:
+
+                - is_split_into_words (bool, optional): Specifies whether the input is already split into words.
+                Default is False.
+
         Returns:
-            BatchEncoding: A BatchEncoding object containing the encoded input sequences. The encoding includes tokenization and optional additional processing based on input arguments.
-        
+            BatchEncoding: A BatchEncoding object containing the encoded input sequences.
+                The encoding includes tokenization and optional additional processing based on input arguments.
+
         Raises:
-            AssertionError: Raised when the 'add_prefix_space' property is False and 'is_split_into_words' is True. In this case, it is required to instantiate the LongformerTokenizerFast class with
-add_prefix_space=True to use pretokenized inputs.
+            AssertionError: Raised when the 'add_prefix_space' property is False and 'is_split_into_words' is True.
+                In this case, it is required to instantiate the LongformerTokenizerFast class with
+                add_prefix_space=True to use pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -356,20 +365,22 @@ add_prefix_space=True to use pretokenized inputs.
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary.
-        
+
         Args:
             self (LongformerTokenizerFast): An instance of the LongformerTokenizerFast class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): The prefix to use for the filename of the saved vocabulary files. Defaults to None.
-        
+            filename_prefix (Optional[str], optional): The prefix to use for the filename of the saved vocabulary files.
+                Defaults to None.
+
         Returns:
             Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
-        
+
         Raises:
             None.
-        
-        This method saves the vocabulary of the tokenizer to the specified directory. The vocabulary files are saved with the given filename prefix, if provided. The saved vocabulary files can later be loaded
-using the 'load_vocabulary' method.
+
+        This method saves the vocabulary of the tokenizer to the specified directory. The vocabulary files are saved
+        with the given filename prefix, if provided. The saved vocabulary files can later be loaded using the
+        'load_vocabulary' method.
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
@@ -385,9 +396,11 @@ using the 'load_vocabulary' method.
                 Defaults to None.
         
         Returns:
-            list[int] or None: The list of token IDs with special tokens. If token_ids_1 is None, 
-                the output list will be [bos_token_id] + token_ids_0 + [eos_token_id]. 
-                If token_ids_1 is provided, the output list will be [bos_token_id] + token_ids_0 + [eos_token_id]
+            list[int] or None:
+                The list of token IDs with special tokens.
+
+                - If token_ids_1 is None, the output list will be [bos_token_id] + token_ids_0 + [eos_token_id].
+                - If token_ids_1 is provided, the output list will be [bos_token_id] + token_ids_0 + [eos_token_id]
                 + [eos_token_id] + token_ids_1 + [eos_token_id].
         
         Raises:

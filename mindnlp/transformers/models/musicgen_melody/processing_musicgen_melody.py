@@ -25,8 +25,8 @@ from ....utils import to_numpy
 
 class MusicgenMelodyProcessor(ProcessorMixin):
     r"""
-    Constructs a MusicGen Melody processor which wraps a Wav2Vec2 feature extractor - for raw audio waveform processing - and a T5 tokenizer into a single processor
-    class.
+    Constructs a MusicGen Melody processor which wraps a Wav2Vec2 feature extractor - for raw audio waveform
+    processing - and a T5 tokenizer into a single processor class.
 
     [`MusicgenProcessor`] offers all the functionalities of [`MusicgenMelodyFeatureExtractor`] and [`T5Tokenizer`]. See
     [`~MusicgenProcessor.__call__`] and [`~MusicgenProcessor.decode`] for more information.
@@ -50,7 +50,7 @@ class MusicgenMelodyProcessor(ProcessorMixin):
             tokenizer: An object that tokenizes melodies.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -72,21 +72,23 @@ class MusicgenMelodyProcessor(ProcessorMixin):
             None: This method does not return a value but processes the input parameters to retrieve decoder prompt IDs.
         
         Raises:
-            None specified.
+            None.
         """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
 
     def __call__(self, audio=None, text=None, **kwargs):
         """
         Main method to prepare for the model one or several sequences(s) and audio(s). This method forwards the `audio`
-        and `kwargs` arguments to MusicgenMelodyFeatureExtractor's [`~MusicgenMelodyFeatureExtractor.__call__`] if `audio` is not
-        `None` to pre-process the audio. It also forwards the `text` and `kwargs` arguments to
-        PreTrainedTokenizer's [`~PreTrainedTokenizer.__call__`] if `text` is not `None`. Please refer to the doctsring of the above two methods for more information.
+        and `kwargs` arguments to MusicgenMelodyFeatureExtractor's [`~MusicgenMelodyFeatureExtractor.__call__`] if `audio`
+        is not `None` to pre-process the audio. It also forwards the `text` and `kwargs` arguments to
+        PreTrainedTokenizer's [`~PreTrainedTokenizer.__call__`] if `text` is not `None`. Please refer to the doctsring
+        of the above two methods for more information.
 
         Args:
             audio (`np.ndarray`, `torch.Tensor`, `List[np.ndarray]`, `List[torch.Tensor]`):
                 The audio or batch of audios to be prepared. Each audio can be NumPy array or PyTorch tensor. In case
-                of a NumPy array/PyTorch tensor, each audio should be a mono-stereo signal of shape (T), where T is the sample length of the audio.
+                of a NumPy array/PyTorch tensor, each audio should be a mono-stereo signal of shape (T), where T is the
+                sample length of the audio.
             text (`str`, `List[str]`, `List[List[str]]`):
                 The sequence or batch of sequences to be encoded. Each sequence can be a string or a list of strings
                 (pretokenized string). If the sequences are provided as list of strings (pretokenized), you must set
@@ -94,12 +96,17 @@ class MusicgenMelodyProcessor(ProcessorMixin):
             kwargs (*optional*):
                 Remaining dictionary of keyword arguments that will be passed to the feature extractor and/or the
                 tokenizer.
+
         Returns:
-            [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **input_features** -- Audio input features to be fed to a model. Returned when `audio` is not `None`.
-            - **attention_mask** -- List of token indices specifying which tokens should be attended to by the model when `text` is not `None`.
-            When only `audio` is specified, returns the timestamps attention mask.
+            [`BatchEncoding`]:
+                A [`BatchEncoding`] with the following fields:
+
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **input_features** -- Audio input features to be fed to a model. Returned when `audio` is not `None`.
+                - **attention_mask** -- List of token indices specifying which tokens should be attended to by the model
+                when `text` is not `None`.
+
+                When only `audio` is specified, returns the timestamps attention mask.
         """
         sampling_rate = kwargs.pop("sampling_rate", None)
 
@@ -184,17 +191,18 @@ class MusicgenMelodyProcessor(ProcessorMixin):
                 Number of audio samples to unconditionally generate.
 
         Example:
-        ```python
-        >>> from transformers import MusicgenMelodyForConditionalGeneration, MusicgenMelodyProcessor
-
-        >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("facebook/musicgen-melody")
-
-        >>> # get the unconditional (or 'null') inputs for the model
-        >>> processor = MusicgenMelodyProcessor.from_pretrained("facebook/musicgen-melody")
-        >>> unconditional_inputs = processor.get_unconditional_inputs(num_samples=1)
-
-        >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
-        ```"""
+            ```python
+            >>> from transformers import MusicgenMelodyForConditionalGeneration, MusicgenMelodyProcessor
+            ...
+            >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("facebook/musicgen-melody")
+            ...
+            >>> # get the unconditional (or 'null') inputs for the model
+            >>> processor = MusicgenMelodyProcessor.from_pretrained("facebook/musicgen-melody")
+            >>> unconditional_inputs = processor.get_unconditional_inputs(num_samples=1)
+            ...
+            >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
+            ```
+        """
         inputs = self.tokenizer([""] * num_samples, return_tensors=return_tensors, return_attention_mask=True)
         inputs["attention_mask"][:] = 0
 

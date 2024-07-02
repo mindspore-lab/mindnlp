@@ -169,6 +169,7 @@ def chroma_filter_bank(
             the second element being the Gaussian half-width.
         start_at_c_chroma (`float`, *optional*, defaults to `True`):
             If True, the filter bank will start at the 'C' pitch class. Otherwise, it will start at 'A'.
+
     Returns:
         `np.ndarray` of shape `(num_frequency_bins, num_chroma)`
     """
@@ -326,10 +327,10 @@ def window_function(
 
     The following window types are supported:
 
-        - `"boxcar"`: a rectangular window
-        - `"hamming"`: the Hamming window
-        - `"hann"`: the Hann window
-        - `"povey"`: the Povey window
+    - `"boxcar"`: a rectangular window
+    - `"hamming"`: the Hamming window
+    - `"hann"`: the Hann window
+    - `"povey"`: the Povey window
 
     Args:
         window_length (`int`):
@@ -403,26 +404,26 @@ def spectrogram(
 
     This function can create the following kinds of spectrograms:
 
-      - amplitude spectrogram (`power = 1.0`)
-      - power spectrogram (`power = 2.0`)
-      - complex-valued spectrogram (`power = None`)
-      - log spectrogram (use `log_mel` argument)
-      - mel spectrogram (provide `mel_filters`)
-      - log-mel spectrogram (provide `mel_filters` and `log_mel`)
+    - amplitude spectrogram (`power = 1.0`)
+    - power spectrogram (`power = 2.0`)
+    - complex-valued spectrogram (`power = None`)
+    - log spectrogram (use `log_mel` argument)
+    - mel spectrogram (provide `mel_filters`)
+    - log-mel spectrogram (provide `mel_filters` and `log_mel`)
 
     How this works:
 
-      1. The input waveform is split into frames of size `frame_length` that are partially overlapping by `frame_length
-         - hop_length` samples.
-      2. Each frame is multiplied by the window and placed into a buffer of size `fft_length`.
-      3. The DFT is taken of each windowed frame.
-      4. The results are stacked into a spectrogram.
+    1. The input waveform is split into frames of size `frame_length` that are partially overlapping by `frame_length
+     - hop_length` samples.
+    2. Each frame is multiplied by the window and placed into a buffer of size `fft_length`.
+    3. The DFT is taken of each windowed frame.
+    4. The results are stacked into a spectrogram.
 
     We make a distinction between the following "blocks" of sample data, each of which may have a different lengths:
 
-      - The analysis frame. This is the size of the time slices that the input waveform is split into.
-      - The window. Each analysis frame is multiplied by the window to avoid spectral leakage.
-      - The FFT input buffer. The length of this determines how many frequency bins are in the spectrogram.
+    - The analysis frame. This is the size of the time slices that the input waveform is split into.
+    - The window. Each analysis frame is multiplied by the window to avoid spectral leakage.
+    - The FFT input buffer. The length of this determines how many frequency bins are in the spectrogram.
 
     In this implementation, the window is assumed to be zero-padded to have the same size as the analysis frame. A
     padded window can be obtained from `window_function()`. The FFT input buffer may be larger than the analysis frame,
@@ -693,17 +694,16 @@ def stft(frames: np.array, windowing_function: np.array, fft_window_size: int = 
             `(1+fft_window_size)//2`. An increase of the fft_window_size slows the calculus time proportionnally.
 
     Example:
-
-    ```python
-    >>> from transformers.audio_utils import stft, fram_wave
-    >>> import numpy as np
-
-    >>> audio = np.random.rand(50)
-    >>> fft_window_size = 10
-    >>> hop_length = 2
-    >>> framed_audio = fram_wave(audio, hop_length, fft_window_size)
-    >>> spectrogram = stft(framed_audio, np.hanning(fft_window_size + 1))
-    ```
+        ```python
+        >>> from transformers.audio_utils import stft, fram_wave
+        >>> import numpy as np
+        ...
+        >>> audio = np.random.rand(50)
+        >>> fft_window_size = 10
+        >>> hop_length = 2
+        >>> framed_audio = fram_wave(audio, hop_length, fft_window_size)
+        >>> spectrogram = stft(framed_audio, np.hanning(fft_window_size + 1))
+        ```
 
     Returns:
         spectrogram (`np.ndarray`):

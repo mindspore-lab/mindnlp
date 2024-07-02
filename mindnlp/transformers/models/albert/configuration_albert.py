@@ -91,27 +91,27 @@ class AlbertConfig(PretrainedConfig):
         eos_token_id (`int`, *optional*, defaults to 3):
             End of stream token id.
 
-    Examples:
-
-    ```python
-    >>> from transformers import AlbertConfig, AlbertModel
-
-    >>> # Initializing an ALBERT-xxlarge style configuration
-    >>> albert_xxlarge_configuration = AlbertConfig()
-
-    >>> # Initializing an ALBERT-base style configuration
-    >>> albert_base_configuration = AlbertConfig(
-    ...     hidden_size=768,
-    ...     num_attention_heads=12,
-    ...     intermediate_size=3072,
-    ... )
-
-    >>> # Initializing a model (with random weights) from the ALBERT-base style configuration
-    >>> model = AlbertModel(albert_xxlarge_configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import AlbertConfig, AlbertModel
+        ...
+        >>> # Initializing an ALBERT-xxlarge style configuration
+        >>> albert_xxlarge_configuration = AlbertConfig()
+        ...
+        >>> # Initializing an ALBERT-base style configuration
+        >>> albert_base_configuration = AlbertConfig(
+        ...     hidden_size=768,
+        ...     num_attention_heads=12,
+        ...     intermediate_size=3072,
+        ... )
+        ...
+        >>> # Initializing a model (with random weights) from the ALBERT-base style configuration
+        >>> model = AlbertModel(albert_xxlarge_configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "albert"
 
     def __init__(
@@ -167,7 +167,7 @@ class AlbertConfig(PretrainedConfig):
             eos_token_id (int, optional): The ID for end of sequence token. Defaults to 3.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

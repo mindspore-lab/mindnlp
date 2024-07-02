@@ -126,7 +126,7 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the normalizer state does not match the specified parameters.

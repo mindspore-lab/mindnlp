@@ -238,9 +238,8 @@ class CellUtilMixin:
                 Whether or not the attentions scores are computed by chunks or not.
 
         Returns:
-            `mindspore.Tensor` with shape `[num_hidden_layers x batch x
-            num_heads x seq_length x seq_length]` or list with
-            `[None]` for each layer.
+            `mindspore.Tensor` with shape `[num_hidden_layers x batch x num_heads x seq_length x seq_length]`
+                or list with `[None]` for each layer.
         """
         if head_mask is not None:
             head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
@@ -291,7 +290,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
     def __init__(self, config):
         """
-        __init__
         
         Initializes a new instance of the PreTrainedModel class.
         
@@ -300,12 +298,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             config: A dictionary containing the configuration parameters for the model.
         
         Returns:
-            None. This method initializes the instance and does not return any value.
+            None.
         
         Raises:
-            - ValueError: If the config parameter is invalid or missing required fields.
-            - TypeError: If the config parameter is not of the expected type.
-            - RuntimeError: If an error occurs during the initialization process.
+            ValueError: If the config parameter is invalid or missing required fields.
+            TypeError: If the config parameter is not of the expected type.
+            RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__(config)
         self._check_and_unset_acl()
@@ -316,16 +314,18 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
     def _check_and_unset_acl(self):
         """
-        This method '_check_and_unset_acl' is defined within the class 'PreTrainedModel' and is used to verify and remove the ACL (Access Control List) settings if certain conditions are met.
+        This method '_check_and_unset_acl' is defined within the class 'PreTrainedModel'
+        and is used to verify and remove the ACL (Access Control List) settings if certain conditions are met.
         
         Args:
-            self: An instance of the class 'PreTrainedModel'. This parameter is used to access the attributes and methods of the class instance.
+            self: An instance of the class 'PreTrainedModel'.
+                This parameter is used to access the attributes and methods of the class instance.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
         if "MS" in str(self.__class__.__name__) and \
             'MS_DEV_FORCE_ACL' in os.environ:
@@ -616,7 +616,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 vectors at the end. Reducing the size will remove vectors from the end. If not provided or `None`, just
                 returns a pointer to the input tokens `torch.nn.Embedding` module of the model without doing anything.
 
-        Return:
+        Returns:
             `torch.nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
         """
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
@@ -641,7 +641,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 Defaults to None.
         
         Returns:
-            None. The method modifies the input and output embeddings of the model in-place.
+            None: The method modifies the input and output embeddings of the model in-place.
         
         Raises:
             None.
@@ -680,9 +680,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         new_num_tokens: Optional[int] = None,
         pad_to_multiple_of: Optional[int] = None,
     ) -> nn.Embedding:
-        """ Build a resized Embedding Module from a provided token Embedding Module.
-            Increasing the size will add newly initialized vectors at the end
-            Reducing the size will remove vectors from the end
+        """
+        Build a resized Embedding Module from a provided token Embedding Module.
+        Increasing the size will add newly initialized vectors at the end
+        Reducing the size will remove vectors from the end
 
         Args:
             new_num_tokens: (`optional`) int
@@ -690,7 +691,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 Increasing the size will add newly initialized vectors at the end
                 Reducing the size will remove vectors from the end
                 If not provided or None: return the provided token Embedding Module.
-        Return: ``mindspore.nn.Embeddings``
+
+        Returns: ``mindspore.nn.Embeddings``
             Pointer to the resized Embedding Module or the old Embedding Module if new_num_tokens is None
         """
         if pad_to_multiple_of is not None:
@@ -747,9 +749,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 to `False`): Whether `old_lm_head` is transposed or not. If True `old_lm_head.size()` is `lm_head_dim,
                 vocab_size` else `vocab_size, lm_head_dim`.
 
-        Return:
+        Returns:
             `nn.Dense`: Pointer to the resized Linear Module or the old Linear Module if `new_num_tokens` is
-            `None`
+                `None`
         """
         if new_num_tokens is None:
             return old_lm_head
@@ -807,7 +809,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             has_new_lm_head_bias (bool): Whether the new language model head has a bias tensor.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -1330,11 +1332,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         return model
 
     def save(self, save_dir):
-        """ Save a model and its configuration file to a directory, so that
-            it can be re-loaded using the `:func:`PreTrainedModel.from_pretrained`` class method.
+        """
+        Save a model and its configuration file to a directory, so that
+        it can be re-loaded using the `:func:`PreTrainedModel.from_pretrained`` class method.
 
-            Arguments:
-                save_dir: directory to which to save.
+        Arguments:
+            save_dir: directory to which to save.
         """
         if os.path.isfile(save_dir):
             logger.error(f"Provided path ({save_dir}) should be a directory, not a file")
@@ -1597,10 +1600,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             self: The instance of the PreTrainedModel class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
@@ -1723,11 +1726,10 @@ def dtype_byte_size(dtype):
     Returns the size (in bytes) occupied by one parameter of type `dtype`.
 
     Example:
-
-    ```py
-    >>> dtype_byte_size(torch.float32)
-    4
-    ```
+        ```python
+        >>> dtype_byte_size(torch.float32)
+        4
+        ```
     """
     if dtype == mindspore.bool_:
         return 1 / 8
@@ -1749,18 +1751,18 @@ class PoolerStartLogits(nn.Cell):
     def __init__(self, config: PretrainedConfig):
         """
         Initializes an instance of the PoolerStartLogits class.
-        
+
         Args:
             self: The instance of the class.
             config (PretrainedConfig): An object of type PretrainedConfig containing configuration parameters.
                 This parameter is required for initializing the PoolerStartLogits instance.
                 It specifies the pretrained configuration to be used for setting up the pooler's start logits.
-                
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the config parameter is not provided or is of an incorrect type.
+            ValueError: If the config parameter is not provided or is of an incorrect type.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
@@ -1802,18 +1804,19 @@ class PoolerEndLogits(nn.Cell):
     def __init__(self, config: PretrainedConfig):
         """
         Initializes the PoolerEndLogits class.
-        
+
         Args:
             self: The instance of the class.
-            config (PretrainedConfig): An instance of the PretrainedConfig class containing the configuration settings for the model.
-        
+            config (PretrainedConfig): An instance of the PretrainedConfig class containing the configuration settings
+                for the model.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If the configuration settings are invalid or incompatible.
-            - RuntimeError: If there is an issue with initializing the dense layers or normalization.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If the configuration settings are invalid or incompatible.
+            RuntimeError: If there is an issue with initializing the dense layers or normalization.
         """
         super().__init__()
         self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
@@ -1884,17 +1887,17 @@ class PoolerAnswerClass(nn.Cell):
     def __init__(self, config):
         """
         Initializes the PoolerAnswerClass.
-        
+
         Args:
             self: The instance of the PoolerAnswerClass.
             config: An object containing configuration parameters for the initialization.
                 Type: object
                 Purpose: It is used to configure the initialization of the PoolerAnswerClass.
                 Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1994,14 +1997,14 @@ class SQuADHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the SQuADHead class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the configuration class containing the SQuADHead configuration.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -2042,6 +2045,7 @@ class SQuADHead(nn.Cell):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            `Union[SquadHeadOutput, Tuple[mindspore.Tensor]]`
         """
         start_logits = self.start_logits(hidden_states, p_mask=p_mask)
 
@@ -2113,23 +2117,27 @@ class SequenceSummary(nn.Cell):
     def __init__(self, config):
         """
         Initialize the SequenceSummary class.
-        
+
         Args:
             self: An instance of the SequenceSummary class.
             config: The configuration object containing various parameters for sequence summarization.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             NotImplementedError: If the 'summary_type' attribute in the config is set to 'attn'.
-        
-        This method initializes the SequenceSummary instance with the provided configuration. It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified.
-If 'summary_type' is 'attn', it raises a NotImplementedError.
-        The method then initializes the 'summary' attribute as an nn.Identity() object and checks if 'summary_use_proj' is specified in the config and is set to True. If so, it creates a Dense layer for
-summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config. The activation function for the summarization is determined based on the 'summary_activation' attribute in the
-config, defaulting to nn.Identity() if not specified.
-        The first and last dropout layers are initialized based on the 'summary_first_dropout' and 'summary_last_dropout' attributes in the config, respectively, using nn.Identity() if not specified.
+
+        This method initializes the SequenceSummary instance with the provided configuration.
+        It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified.
+        If 'summary_type' is 'attn', it raises a NotImplementedError.
+        The method then initializes the 'summary' attribute as an nn.Identity() object and checks
+        if 'summary_use_proj' is specified in the config and is set to True.
+        If so, it creates a Dense layer for summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config.
+        The activation function for the summarization is determined based on the 'summary_activation' attribute in the config,
+        defaulting to nn.Identity() if not specified.
+        The first and last dropout layers are initialized based on the 'summary_first_dropout' and 'summary_last_dropout' attributes
+        in the config, respectively, using nn.Identity() if not specified.
         """
         super().__init__()
 
@@ -2159,21 +2167,22 @@ config, defaulting to nn.Identity() if not specified.
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         """
         Constructs a summary of hidden states based on the specified summary type.
-        
+
         Args:
             self (SequenceSummary): The instance of the SequenceSummary class.
             hidden_states (Tensor): The tensor of hidden states to be summarized.
-            cls_index (Optional[Tensor]): The tensor containing the indices of the CLS tokens. 
+            cls_index (Optional[Tensor]): The tensor containing the indices of the CLS tokens.
                 Defaults to None.
-        
+
         Returns:
             Tensor: The summarized tensor based on the specified summary type.
-        
+
         Raises:
             ValueError: If the summary type is not one of the available options.
             TypeError: If the input arguments are of incorrect types.
-        
+
         The method performs the following steps to construct the summary:
+
         1. If the summary type is 'last', it selects the last hidden state from each input sequence.
         2. If the summary type is 'first', it selects the first hidden state from each input sequence.
         3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
@@ -2182,18 +2191,20 @@ config, defaulting to nn.Identity() if not specified.
         5. If the summary type is not one of the available options, it returns the original hidden states.
         6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
         7. Finally, the output tensor is returned.
-        
+
         Note:
-        - The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.
-        - The cls_index parameter is only used when the summary type is 'cls_index'.
-        - The hidden_states tensor should have shape (batch_size, sequence_length, hidden_size).
-        - The cls_index tensor should have shape (batch_size, 1).
-        
+            - The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.
+            - The cls_index parameter is only used when the summary type is 'cls_index'.
+            - The hidden_states tensor should have shape (batch_size, sequence_length, hidden_size).
+            - The cls_index tensor should have shape (batch_size, 1).
+
         Example:
+            ```python
             >>> summary = SequenceSummary()
             >>> hidden_states = torch.randn(2, 5, 10)
             >>> cls_index = torch.tensor([[0], [1]])
             >>> output = summary.construct(hidden_states, cls_index)
+            ```
         """
         if self.summary_type == "last":
             output = hidden_states[:, -1, :]

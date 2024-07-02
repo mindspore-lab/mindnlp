@@ -46,7 +46,8 @@ def load_vocab_file(vocab_file):
         vocab_file (str): The path of the vocabulary file to be loaded.
     
     Returns:
-        list: A list of strings representing each line in the vocabulary file, with leading and trailing whitespaces removed.
+        list: A list of strings representing each line in the vocabulary file,
+            with leading and trailing whitespaces removed.
     
     Raises:
         FileNotFoundError: If the specified vocabulary file does not exist.
@@ -90,7 +91,7 @@ class EsmTokenizer(PreTrainedTokenizer):
             eos_token (str, optional): The token to represent the end of a sequence. Defaults to '<eos>'.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -160,10 +161,10 @@ class EsmTokenizer(PreTrainedTokenizer):
             text (str): The input text to be tokenized.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return text.split()
 
@@ -172,12 +173,16 @@ class EsmTokenizer(PreTrainedTokenizer):
         Method to retrieve the vocabulary from the EsmTokenizer instance.
         
         Args:
-            self (EsmTokenizer): The EsmTokenizer instance itself.
+            self (EsmTokenizer):
+                The EsmTokenizer instance itself.
+
                 - Type: EsmTokenizer object
                 - Purpose: Represents the current instance of the EsmTokenizer class.
-        
+
         Returns:
-            dict: A dictionary containing the combined vocabulary.
+            dict:
+                A dictionary containing the combined vocabulary.
+
                 - Type: dict
                 - Purpose: Represents the vocabulary with the base vocabulary and any added tokens.
         
@@ -197,8 +202,9 @@ class EsmTokenizer(PreTrainedTokenizer):
             token (str): The input token for which the corresponding ID needs to be retrieved. It should be a string.
         
         Returns:
-            int: Returns the ID corresponding to the input token from the EsmTokenizer instance. If the token is not found in the internal token-to-ID mapping, 
-            the method returns the ID associated with the unknown token (unk_token) if defined.
+            int: Returns the ID corresponding to the input token from the EsmTokenizer instance.
+                If the token is not found in the internal token-to-ID mapping,
+                the method returns the ID associated with the unknown token (unk_token) if defined.
         
         Raises:
             None
@@ -238,7 +244,8 @@ class EsmTokenizer(PreTrainedTokenizer):
             List[int]: A list of token IDs representing the input sequences with special tokens added.
         
         Raises:
-            ValueError: Raised if token_ids_1 is not None and self.eos_token_id is None, indicating that multiple sequences cannot be tokenized when the EOS token is not set.
+            ValueError: Raised if token_ids_1 is not None and self.eos_token_id is None,
+                indicating that multiple sequences cannot be tokenized when the EOS token is not set.
         """
         cls = [self.cls_token_id]
         sep = [self.eos_token_id]  # No sep token in ESM vocabulary
@@ -291,7 +298,7 @@ class EsmTokenizer(PreTrainedTokenizer):
             filename_prefix (str): A prefix to be added to the vocabulary file name. If None, no prefix is added.
         
         Returns:
-            None. The method does not return any value.
+            None.
         
         Raises:
             FileNotFoundError: If the specified save_directory does not exist.
@@ -306,14 +313,16 @@ class EsmTokenizer(PreTrainedTokenizer):
     @property
     def vocab_size(self) -> int:
         """
-        This method, vocab_size, in the class EsmTokenizer calculates the size of the vocabulary based on the number of unique tokens present.
+        This method, vocab_size, in the class EsmTokenizer calculates the size of the vocabulary based on the
+        number of unique tokens present.
         
         Args:
             self (EsmTokenizer): The instance of the EsmTokenizer class.
                 This parameter represents the current instance of the EsmTokenizer class.
         
         Returns:
-            int: The method returns an integer value representing the size of the vocabulary, which is determined by the number of unique tokens present in the instance.
+            int: The method returns an integer value representing the size of the vocabulary, which is determined
+                by the number of unique tokens present in the instance.
         
         Raises:
             No specific exceptions are raised by this method.

@@ -101,29 +101,33 @@ class EfficientNetImageProcessor(BaseImageProcessor):
         **kwargs,
     ) -> None:
         """
-            Initializes an instance of the EfficientNetImageProcessor class.
-        
-            Args:
-                do_resize (bool, optional): Whether to resize the image. Defaults to True.
-                size (Dict[str, int], optional): The target size for resizing the image. Defaults to None.
-                resample (PILImageResampling, optional): The resampling filter to use when resizing the image. Defaults to PIL.Image.NEAREST.
-                do_center_crop (bool, optional): Whether to perform a center crop on the image. Defaults to False.
-                crop_size (Dict[str, int], optional): The size of the center crop. Defaults to None.
-                rescale_factor (Union[int, float], optional): The factor by which to rescale the image pixel values. Defaults to 1 / 255.
-                rescale_offset (bool, optional): Whether to offset the rescaled image pixel values. Defaults to False.
-                do_rescale (bool, optional): Whether to rescale the image pixel values. Defaults to True.
-                do_normalize (bool, optional): Whether to normalize the image pixel values. Defaults to True.
-                image_mean (Optional[Union[float, List[float]]], optional): The mean pixel values used for normalization. Defaults to None.
-                image_std (Optional[Union[float, List[float]]], optional): The standard deviation of pixel values used for normalization. Defaults to None.
-                include_top (bool, optional): Whether to include the top layers of the EfficientNet model. Defaults to True.
-                **kwargs: Additional keyword arguments.
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        Initializes an instance of the EfficientNetImageProcessor class.
+
+        Args:
+            do_resize (bool, optional): Whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): The target size for resizing the image. Defaults to None.
+            resample (PILImageResampling, optional): The resampling filter to use when resizing the image.
+                Defaults to PIL.Image.NEAREST.
+            do_center_crop (bool, optional): Whether to perform a center crop on the image. Defaults to False.
+            crop_size (Dict[str, int], optional): The size of the center crop. Defaults to None.
+            rescale_factor (Union[int, float], optional): The factor by which to rescale the image pixel values.
+                Defaults to 1 / 255.
+            rescale_offset (bool, optional): Whether to offset the rescaled image pixel values. Defaults to False.
+            do_rescale (bool, optional): Whether to rescale the image pixel values. Defaults to True.
+            do_normalize (bool, optional): Whether to normalize the image pixel values. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean pixel values used for normalization.
+                Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional):
+                The standard deviation of pixel values used for normalization. Defaults to None.
+            include_top (bool, optional): Whether to include the top layers of the EfficientNet model. Defaults to True.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"height": 346, "width": 346}
         size = get_size_dict(size)
@@ -184,12 +188,14 @@ class EfficientNetImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -305,18 +311,21 @@ class EfficientNetImageProcessor(BaseImageProcessor):
                 Rescales the image again for image classification if set to True.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - `None`: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - `None`: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
-                    - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                    - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.

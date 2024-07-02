@@ -67,34 +67,39 @@ class WordpieceTokenizer:
         tokenize(token):
             Tokenizes the input token into subword tokens using the WordPiece algorithm and the specified vocabulary.
     
-    Example usage:
-        vocab = {'hello': 'he', 'world': 'wo', 'hello,': 'hello'}
-        tokenizer = WordpieceTokenizer(vocab, '<unk>', 200)
-        tokenized_text = tokenizer.tokenize('helloworld')
+    Example:
+        ```python
+        >>> vocab = {'hello': 'he', 'world': 'wo', 'hello,': 'hello'}
+        >>> tokenizer = WordpieceTokenizer(vocab, '<unk>', 200)
+        >>> tokenized_text = tokenizer.tokenize('helloworld')
+        ```
     """
     def __init__(self, vocab, unk_token="<unk>", max_input_chars_per_word=200):
         """
         Initializes a new instance of the WordpieceTokenizer class.
-        
+
         Args:
             self (WordpieceTokenizer): The current instance of the WordpieceTokenizer class.
             vocab (list): A list of strings representing the vocabulary for the tokenizer.
             unk_token (str, optional): The token to use for unknown words. Defaults to '<unk>'.
             max_input_chars_per_word (int, optional): The maximum number of characters allowed per word. Defaults to 200.
-        
+
         Returns:
             None
-        
+
         Raises:
             None.
-        
+
         This method initializes the WordpieceTokenizer object with the provided vocabulary, unknown token, and maximum input characters per word.
         The vocabulary is a list of strings that represents the set of tokens used by the tokenizer.
         The unk_token parameter allows customization of the token used to represent unknown words. If not provided, it defaults to '<unk>'.
-        The max_input_chars_per_word parameter limits the number of characters allowed per word. If a word exceeds this limit, it will be split into subwords.
-        
+        The max_input_chars_per_word parameter limits the number of characters allowed per word.
+        If a word exceeds this limit, it will be split into subwords.
+
         Example:
-            tokenizer = WordpieceTokenizer(vocab=['hello', 'world'], unk_token='<unk>', max_input_chars_per_word=200)
+            ```python
+            >>> tokenizer = WordpieceTokenizer(vocab=['hello', 'world'], unk_token='<unk>', max_input_chars_per_word=200)
+            ```
         """
         self.vocab = vocab
         self.unk_token = unk_token
@@ -103,19 +108,20 @@ class WordpieceTokenizer:
     def tokenize(self, token):
         """
         This method tokenizes a given input token into sub-tokens based on the vocabulary of the WordpieceTokenizer class.
-        
+
         Args:
             self (WordpieceTokenizer): The instance of the WordpieceTokenizer class.
                 It is used to access the vocabulary and maximum input characters per word.
             token (str): The input token to be tokenized.
                 It represents the word to be broken down into sub-tokens.
                 Must be a string.
-        
+
         Returns:
             list: A list of sub-tokens generated from the input token based on the vocabulary.
-                If the length of the input token exceeds the maximum allowed characters per word, it returns a list containing the unknown token (unk_token).
+                If the length of the input token exceeds the maximum allowed characters per word,
+                it returns a list containing the unknown token (unk_token).
                 Otherwise, it returns a list of sub-tokens that are part of the vocabulary or the unknown token.
-        
+
         Raises:
             None
         """
@@ -190,27 +196,27 @@ class CpmAntTokenizer(PreTrainedTokenizer):
     ):
         """
         Initialize a CpmAntTokenizer object with the provided parameters.
-        
+
         Args:
-        - vocab_file (str): The path to the vocabulary file to load.
-        - bod_token (str, optional): Beginning of document token (default is '<d>').
-        - eod_token (str, optional): End of document token (default is '</d>').
-        - bos_token (str, optional): Beginning of sentence token (default is '<s>').
-        - eos_token (str, optional): End of sentence token (default is '</s>').
-        - pad_token (str, optional): Padding token (default is '<pad>').
-        - unk_token (str, optional): Token for unknown words (default is '<unk>').
-        - line_token (str, optional): Line break token (default is '</n>').
-        - space_token (str, optional): Space token (default is '</_>').
-        - padding_side (str, optional): Side for padding (default is 'left').
-        
+            vocab_file (str): The path to the vocabulary file to load.
+            bod_token (str, optional): Beginning of document token (default is '<d>').
+            eod_token (str, optional): End of document token (default is '</d>').
+            bos_token (str, optional): Beginning of sentence token (default is '<s>').
+            eos_token (str, optional): End of sentence token (default is '</s>').
+            pad_token (str, optional): Padding token (default is '<pad>').
+            unk_token (str, optional): Token for unknown words (default is '<unk>').
+            line_token (str, optional): Line break token (default is '</n>').
+            space_token (str, optional): Space token (default is '</_>').
+            padding_side (str, optional): Side for padding (default is 'left').
+
         Returns:
-        None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - MissingBackendError: If required backend 'jieba' is not available.
-        - FileNotFoundError: If the specified 'vocab_file' does not exist.
-        - KeyError: If 'space_token' or 'line_token' are missing in the loaded vocabulary.
-        - Exception: Any other unforeseen error that may occur during initialization.
+            MissingBackendError: If required backend 'jieba' is not available.
+            FileNotFoundError: If the specified 'vocab_file' does not exist.
+            KeyError: If 'space_token' or 'line_token' are missing in the loaded vocabulary.
+            Exception: Any other unforeseen error that may occur during initialization.
         """
         requires_backends(self, ["jieba"])
         self.bod_token = bod_token
@@ -243,16 +249,17 @@ class CpmAntTokenizer(PreTrainedTokenizer):
     @property
     def bod_token_id(self):
         """
-        This method, 'bod_token_id', is a property method defined in the 'CpmAntTokenizer' class. It takes no external parameters and returns the token ID associated with the 'bod_token'.
-        
+        This method, 'bod_token_id', is a property method defined in the 'CpmAntTokenizer' class.
+        It takes no external parameters and returns the token ID associated with the 'bod_token'.
+
         Args:
             self (CpmAntTokenizer): The instance of the CpmAntTokenizer class.
-        
+
         Returns:
-            None: This method does not have a specific return value as it is a property method.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.encoder[self.bod_token]
 
@@ -260,31 +267,33 @@ class CpmAntTokenizer(PreTrainedTokenizer):
     def eod_token_id(self):
         """
         This method 'eod_token_id' in the class 'CpmAntTokenizer' retrieves the token ID of the end-of-document token.
-        
+
         Args:
-            self: An instance of the class CpmAntTokenizer. It is required as this method is part of the class and needs access to its attributes and methods.
-        
+            self: An instance of the class CpmAntTokenizer.
+                It is required as this method is part of the class and needs access to its attributes and methods.
+
         Returns:
-            None: This method returns a value of type None. It retrieves the token ID of the end-of-document token from the encoder attribute of the class instance.
-        
+            None: This method returns a value of type None.
+                It retrieves the token ID of the end-of-document token from the encoder attribute of the class instance.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.encoder[self.eod_token]
 
     @property
     def newline_id(self):
-        """
+        r"""
         This method, newline_id, in the class CpmAntTokenizer, returns the value associated with the newline character in the encoder.
-        
+
         Args:
             self (CpmAntTokenizer): The instance of the CpmAntTokenizer class.
-            
+
         Returns:
-            None: This method does not return any specific value.
-        
+            None.
+
         Raises:
-            - KeyError: If the newline character '\n' is not found in the encoder dictionary, a KeyError is raised.
+            KeyError: If the newline character `'\n'` is not found in the encoder dictionary, a KeyError is raised.
         """
         return self.encoder["\n"]
 
@@ -292,13 +301,13 @@ class CpmAntTokenizer(PreTrainedTokenizer):
     def vocab_size(self) -> int:
         """
         Returns the size of the vocabulary used by the CpmAntTokenizer instance.
-        
+
         Args:
             self: The CpmAntTokenizer instance itself.
-        
+
         Returns:
             int: The number of unique tokens in the vocabulary.
-        
+
         Raises:
             None.
         """
@@ -306,22 +315,24 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     def get_vocab(self):
         """
-            Retrieves the vocabulary of the CpmAntTokenizer instance.
-        
-            Args:
-                self (CpmAntTokenizer): The instance of CpmAntTokenizer.
-        
-            Returns:
-                dict: The vocabulary of the tokenizer, which is a dictionary mapping tokens to their corresponding IDs.
-        
-            Raises:
-                None.
-        
-            Example:
-                >>> tokenizer = CpmAntTokenizer()
-                >>> vocab = tokenizer.get_vocab()
-                >>> vocab
-                {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, ...}
+        Retrieves the vocabulary of the CpmAntTokenizer instance.
+
+        Args:
+            self (CpmAntTokenizer): The instance of CpmAntTokenizer.
+
+        Returns:
+            dict: The vocabulary of the tokenizer, which is a dictionary mapping tokens to their corresponding IDs.
+
+        Raises:
+            None.
+
+        Example:
+            ```python
+            >>> tokenizer = CpmAntTokenizer()
+            >>> vocab = tokenizer.get_vocab()
+            >>> vocab
+            {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, ...}
+            ```
         """
         return dict(self.encoder, **self.added_tokens_encoder)
 
@@ -341,43 +352,46 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         return super()._decode(token_ids, **kwargs)
 
     def check(self, token):
-        """Check if a token is present in the encoder of the CpmAntTokenizer.
-        
+        """
+        Check if a token is present in the encoder of the CpmAntTokenizer.
+
         Args:
             self (CpmAntTokenizer): An instance of the CpmAntTokenizer class.
             token (Any): The token to be checked.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return token in self.encoder
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
         """
         Converts a list of tokens into a string representation.
-        
+
         Args:
             self (CpmAntTokenizer): An instance of the CpmAntTokenizer class.
             tokens (List[str]): A list of tokens to be converted into a string representation.
-        
+
         Returns:
             str: A string representation of the tokens.
-        
+
         Raises:
             None.
-        
+
         Note:
             - The tokens should be provided as a list of strings.
             - The method will join the tokens together using an empty string as a separator.
-        
+
         Example:
+            ```python
             >>> tokenizer = CpmAntTokenizer()
             >>> tokens = ['Hello', 'world', '!']
             >>> tokenizer.convert_tokens_to_string(tokens)
             'Hello world!'
+            ```
         """
         return "".join(tokens)
 
@@ -392,17 +406,17 @@ class CpmAntTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary to a file with the specified directory and filename prefix.
-        
+
         Args:
             self: Instance of the CpmAntTokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved.
             filename_prefix (Optional[str]): A string to be prefixed to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
-            N/A
+            None.
         """
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(

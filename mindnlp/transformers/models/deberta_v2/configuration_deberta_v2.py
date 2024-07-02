@@ -77,19 +77,19 @@ class DebertaV2Config(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     Example:
-
-    ```python
-    >>> from transformers import DebertaV2Config, DebertaV2Model
-
-    >>> # Initializing a DeBERTa-v2 microsoft/deberta-v2-xlarge style configuration
-    >>> configuration = DebertaV2Config()
-
-    >>> # Initializing a model (with random weights) from the microsoft/deberta-v2-xlarge style configuration
-    >>> model = DebertaV2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import DebertaV2Config, DebertaV2Model
+        ...
+        >>> # Initializing a DeBERTa-v2 microsoft/deberta-v2-xlarge style configuration
+        >>> configuration = DebertaV2Config()
+        ...
+        >>> # Initializing a model (with random weights) from the microsoft/deberta-v2-xlarge style configuration
+        >>> model = DebertaV2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "deberta-v2"
 

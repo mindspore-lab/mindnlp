@@ -57,13 +57,14 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     This uses notably ByteFallback and no normalization.
 
-    ```python
-    >>> from transformers import LlamaTokenizerFast
-
-    >>> tokenizer = LlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
-    >>> tokenizer.encode("Hello this is a test")
-    [1, 15043, 445, 338, 263, 1243]
-    ```
+    Example:
+        ```python
+        >>> from transformers import LlamaTokenizerFast
+        ...
+        >>> tokenizer = LlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
+        >>> tokenizer.encode("Hello this is a test")
+        [1, 15043, 445, 338, 263, 1243]
+        ```
 
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
@@ -134,7 +135,7 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -208,10 +209,10 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the LlamaTokenizerFast class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self._add_eos_token
 
@@ -225,10 +226,10 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
                 This parameter is mandatory as the method is an instance method.
                 
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method under normal circumstances.
+            None.
         """
         return self._add_bos_token
 
@@ -242,10 +243,10 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
             value: The new value for the 'add_eos_token' attribute.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self._add_eos_token = value
         self.update_post_processor()
@@ -260,10 +261,10 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
             value: The value to set for the add_bos_token attribute.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self._add_bos_token = value
         self.update_post_processor()

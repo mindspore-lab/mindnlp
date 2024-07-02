@@ -56,8 +56,8 @@ class NezhaRelativePositionsEncoding(nn.Cell):
             max_relative_position (int, optional): The maximum allowed relative position. Defaults to 127.
         
         Returns:
-            None. This method initializes the positions_encoding attribute of the NezhaRelativePositionsEncoding object.
-        
+            None.
+
         Raises:
             ValueError: If length or depth is not an integer.
             ValueError: If max_relative_position is not an integer.
@@ -92,15 +92,15 @@ class NezhaRelativePositionsEncoding(nn.Cell):
     def construct(self, length):
         """
         Constructs a relative positions encoding matrix of specified length.
-        
+
         Args:
             self (NezhaRelativePositionsEncoding): The instance of the NezhaRelativePositionsEncoding class.
             length (int): The length of the positions encoding matrix to be constructed.
                 Must be a non-negative integer.
-        
+
         Returns:
-            None. The method modifies the internal state of the NezhaRelativePositionsEncoding instance.
-        
+            None: The method modifies the internal state of the NezhaRelativePositionsEncoding instance.
+
         Raises:
             IndexError: If the length provided is greater than the dimensions of the positions_encoding matrix.
             ValueError: If the length provided is a negative integer.
@@ -113,10 +113,12 @@ class NezhaEmbeddings(nn.Cell):
     def __init__(self, config):
         """
         Initialize the NezhaEmbeddings class.
-        
+
         Args:
             self: Instance of the NezhaEmbeddings class.
-            config (object): Configuration object containing parameters for initializing embeddings.
+            config (object):
+                Configuration object containing parameters for initializing embeddings.
+
                 - vocab_size (int): Size of the vocabulary.
                 - hidden_size (int): Size of the hidden layer.
                 - pad_token_id (int): Index of the padding token in the vocabulary.
@@ -124,10 +126,10 @@ class NezhaEmbeddings(nn.Cell):
                 - layer_norm_eps (float): Epsilon value for layer normalization.
                 - hidden_dropout_prob (float): Probability of dropout.
                 - max_position_embeddings (int): Maximum number of position embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If any of the configuration parameters are invalid.
             AttributeError: If there are issues with attribute assignments.
@@ -144,16 +146,19 @@ class NezhaEmbeddings(nn.Cell):
     def construct(self, input_ids = None, token_type_ids = None, inputs_embeds = None):
         """
         This method constructs Nezha embeddings based on the input_ids, token_type_ids, and inputs_embeds.
-        
+
         Args:
             self: The instance of the class.
-            input_ids (Tensor, optional): The input tensor representing the tokenized input sequence. Default is None.
-            token_type_ids (Tensor, optional): The input tensor representing the type of each token in the input sequence. Default is None.
-            inputs_embeds (Tensor, optional): The input tensor containing precomputed embeddings for the input sequence. Default is None.
-        
+            input_ids (Tensor, optional): The input tensor representing the tokenized input sequence.
+                Default is None.
+            token_type_ids (Tensor, optional): The input tensor representing the type of each token in the input sequence.
+                Default is None.
+            inputs_embeds (Tensor, optional): The input tensor containing precomputed embeddings for the input sequence.
+                Default is None.
+
         Returns:
-            None: This method returns None.
-        
+            None.
+
         Raises:
             ValueError: If input_ids and inputs_embeds have incompatible shapes.
             ValueError: If token_type_ids and input_shape have incompatible shapes.
@@ -199,20 +204,22 @@ class NezhaSelfAttention(nn.Cell):
     def __init__(self, config):
         '''
         This method initializes the NezhaSelfAttention class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the self-attention mechanism. It should include the following attributes:
+            config: An object containing the configuration parameters for the self-attention mechanism.
+                It should include the following attributes:
+
                 - hidden_size (int): The size of the hidden layers.
                 - num_attention_heads (int): The number of attention heads.
                 - attention_probs_dropout_prob (float): The dropout probability for the attention probabilities.
                 - max_position_embeddings (int): The maximum number of positions for positional encodings.
                 - max_relative_position (int): The maximum relative position for the relative positions encoding.
                 - is_decoder (bool): Indicates whether the self-attention mechanism is used as part of a decoder.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the hidden_size is not a multiple of the number of attention heads.
         '''
@@ -249,26 +256,35 @@ class NezhaSelfAttention(nn.Cell):
                   encoder_hidden_states = None, encoder_attention_mask = None,
                   past_key_value = None, output_attentions = False):
         """
-        This method 'construct' is defined within the class 'NezhaSelfAttention' and is responsible for performing self-attention computations. It takes the following parameters:
-        
+        This method 'construct' is defined within the class 'NezhaSelfAttention' and is responsible for performing
+        self-attention computations. It takes the following parameters:
+
         Args:
-        - self: The instance of the class.
-        - hidden_states: Tensor, required. The input tensor containing the hidden states for the self-attention mechanism.
-        - attention_mask: Tensor, optional. A 2D tensor providing the attention mask to be applied during self-attention computation. Default is None.
-        - head_mask: Tensor, optional. A 2D tensor representing the head mask for controlling which heads are active during self-attention. Default is None.
-        - encoder_hidden_states: Tensor, optional. The hidden states from the encoder if this is a cross-attention operation. Default is None.
-        - encoder_attention_mask: Tensor, optional. A 2D tensor providing the attention mask for encoder_hidden_states. Default is None.
-        - past_key_value: Tuple of Tensors, optional. The previous key and value tensors from the past self-attention computation. Default is None.
-        - output_attentions: Bool, optional. Flag indicating whether to output attention scores. Default is False.
-        
+            self: The instance of the class.
+            hidden_states: Tensor, required. The input tensor containing the hidden states for the
+                self-attention mechanism.
+            attention_mask: Tensor, optional. A 2D tensor providing the attention mask to be applied during
+                self-attention computation. Default is None.
+            head_mask: Tensor, optional. A 2D tensor representing the head mask for controlling which heads are
+                active during self-attention. Default is None.
+            encoder_hidden_states: Tensor, optional. The hidden states from the encoder if this is a cross-attention
+                operation. Default is None.
+            encoder_attention_mask: Tensor, optional. A 2D tensor providing the attention mask for encoder_hidden_states.
+                Default is None.
+            past_key_value: Tuple of Tensors, optional. The previous key and value tensors from the past self-attention
+                computation. Default is None.
+            output_attentions: Bool, optional. Flag indicating whether to output attention scores. Default is False.
+
         Returns:
-        - Tuple of Tensors or Tuple of (Tensor, Tensor, Tuple of Tensors): The output of the self-attention mechanism. If output_attentions is True, returns a tuple containing the context_layer and
-attention_probs. If self.is_decoder is True, the output also includes the past_key_value.
-        
+            Tuple of Tensors or Tuple of (Tensor, Tensor, Tuple of Tensors):
+                The output of the self-attention mechanism. If output_attentions is True, returns a tuple containing
+                the context_layer and attention_probs. If self.is_decoder is True, the output also includes the
+                past_key_value.
+
         Raises:
-        - ValueError: If the dimensions or types of the input tensors are incompatible.
-        - RuntimeError: If any runtime error occurs during the self-attention computation.
-        - AssertionError: If the conditions for past_key_value are not met.
+            ValueError: If the dimensions or types of the input tensors are incompatible.
+            RuntimeError: If any runtime error occurs during the self-attention computation.
+            AssertionError: If the conditions for past_key_value are not met.
         """
         mixed_query_layer = self.query(hidden_states)
 
@@ -357,17 +373,19 @@ class NezhaSelfOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaSelfOutput class.
-        
+
         Args:
             self (NezhaSelfOutput): The object instance.
-            config: A configuration object that contains the settings for the NezhaSelfOutput class.
+            config:
+                A configuration object that contains the settings for the NezhaSelfOutput class.
+
                 - hidden_size (int): The size of the hidden state.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
                 - hidden_dropout_prob (float): The dropout probability for the hidden state.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -379,23 +397,29 @@ class NezhaSelfOutput(nn.Cell):
     def construct(self, hidden_states, input_tensor):
         """
         Constructs the self-attention output of the Nezha model.
-        
+
         Args:
             self (NezhaSelfOutput): An instance of the NezhaSelfOutput class.
-            hidden_states (torch.Tensor): A tensor representing the hidden states.
-                Shape: (batch_size, sequence_length, hidden_size).
-                Purpose: The hidden states of the previous layer in the Nezha model.
-                Restrictions: None.
-            input_tensor (torch.Tensor): A tensor representing the input.
-                Shape: (batch_size, sequence_length, hidden_size).
-                Purpose: The input tensor to be added to the hidden states.
-                Restrictions: None.
-        
+            hidden_states (torch.Tensor):
+                A tensor representing the hidden states.
+
+                - Shape: (batch_size, sequence_length, hidden_size).
+                - Purpose: The hidden states of the previous layer in the Nezha model.
+                - Restrictions: None.
+            input_tensor (torch.Tensor):
+                A tensor representing the input.
+
+                - Shape: (batch_size, sequence_length, hidden_size).
+                - Purpose: The input tensor to be added to the hidden states.
+                - Restrictions: None.
+
         Returns:
-            torch.Tensor: A tensor representing the constructed self-attention output.
-                Shape: (batch_size, sequence_length, hidden_size).
-                Purpose: The self-attention output of the Nezha model.
-        
+            torch.Tensor:
+                A tensor representing the constructed self-attention output.
+
+                - Shape: (batch_size, sequence_length, hidden_size).
+                - Purpose: The self-attention output of the Nezha model.
+
         Raises:
             None.
         """
@@ -410,16 +434,16 @@ class NezhaAttention(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the NezhaAttention class.
-        
+
         Args:
             self (object): The instance of the class itself.
             config (object): The configuration object that contains parameters for attention mechanism setup.
-        
+
         Returns:
-            None. This method initializes the NezhaSelfAttention and NezhaSelfOutput objects within the instance and sets pruned_heads to an empty set.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.self = NezhaSelfAttention(config)
@@ -451,30 +475,39 @@ class NezhaAttention(nn.Cell):
                   output_attentions = False):
         """
         Constructs the attention mechanism for the Nezha model.
-        
+
         Args:
             self (NezhaAttention): The instance of NezhaAttention class.
-            hidden_states (torch.Tensor): The input hidden states of the model. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (torch.Tensor, optional): The attention mask tensor. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token that should be attended
-to and 0 indicates a token that should not be attended to. Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor. If provided, it should be a 1D tensor of shape (num_heads,), where 1 indicates a head that should be masked and 0 indicates a head that
-should not be masked. Defaults to None.
-            encoder_hidden_states (torch.Tensor, optional): The hidden states of the encoder. Shape: (batch_size, sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask (torch.Tensor, optional): The attention mask tensor for the encoder. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token
-that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
+            hidden_states (torch.Tensor): The input hidden states of the model.
+                Shape: (batch_size, sequence_length, hidden_size).
+            attention_mask (torch.Tensor, optional): The attention mask tensor.
+                If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token
+                that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
+            head_mask (torch.Tensor, optional): The head mask tensor.
+                If provided, it should be a 1D tensor of shape (num_heads,), where 1 indicates a head that should be
+                masked and 0 indicates a head that should not be masked. Defaults to None.
+            encoder_hidden_states (torch.Tensor, optional): The hidden states of the encoder.
+                Shape: (batch_size, sequence_length, hidden_size). Defaults to None.
+            encoder_attention_mask (torch.Tensor, optional): The attention mask tensor for the encoder.
+                If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token
+                that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
             past_key_value (tuple, optional): The cached key-value pairs of the previous time steps. Defaults to None.
             output_attentions (bool, optional): Whether to return attention weights. Defaults to False.
-        
+
         Returns:
-            tuple: A tuple containing:
-                - attention_output (torch.Tensor): The output of the attention mechanism. Shape: (batch_size, sequence_length, hidden_size).
+            tuple:
+                A tuple containing:
+
+                - attention_output (torch.Tensor): The output of the attention mechanism.
+                Shape: (batch_size, sequence_length, hidden_size).
                 - self_outputs (tuple): A tuple containing the outputs of the self-attention mechanism.
-                - output_attentions (torch.Tensor, optional): The attention weights tensor. Shape: (num_attention_heads, batch_size, sequence_length, sequence_length). Only returned if `output_attentions` is
-set to True.
-        
+                - output_attentions (torch.Tensor, optional): The attention weights tensor.
+                Shape: (num_attention_heads, batch_size, sequence_length, sequence_length).
+                Only returned if `output_attentions` is set to True.
+
         Raises:
             None
-        
+
         """
         self_outputs = self.self(
             hidden_states,
@@ -495,21 +528,23 @@ class NezhaIntermediate(nn.Cell):
     def __init__(self, config):
         """
         Initializes a NezhaIntermediate object with the provided configuration.
-        
+
         Args:
             self: The object instance.
-            config: An object containing configuration settings.
-                Type: Any valid object.
-                Purpose: The configuration settings for the NezhaIntermediate object.
-                Restrictions: None.
-        
+            config:
+                An object containing configuration settings.
+
+                - Type: Any valid object.
+                - Purpose: The configuration settings for the NezhaIntermediate object.
+                - Restrictions: None.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the 'config' parameter is not provided.
-            - ValueError: If the 'config.hidden_size' or 'config.intermediate_size' are invalid.
-            - KeyError: If the 'config.hidden_act' value is not found in the ACT2FN dictionary.
+            TypeError: If the 'config' parameter is not provided.
+            ValueError: If the 'config.hidden_size' or 'config.intermediate_size' are invalid.
+            KeyError: If the 'config.hidden_act' value is not found in the ACT2FN dictionary.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -521,14 +556,14 @@ class NezhaIntermediate(nn.Cell):
     def construct(self, hidden_states):
         """
         This method constructs the intermediate hidden states for the NezhaIntermediate class.
-        
+
         Args:
             self (NezhaIntermediate): The instance of the NezhaIntermediate class.
             hidden_states (tensor): The input hidden states to be processed.
-        
+
         Returns:
             tensor: The processed intermediate hidden states.
-        
+
         Raises:
             None.
         """
@@ -542,17 +577,19 @@ class NezhaOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaOutput class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the configuration class containing the model's configuration parameters.
+            config:
+                An instance of the configuration class containing the model's configuration parameters.
+
                 - Type: Any
                 - Purpose: Specifies the configuration settings for the NezhaOutput instance.
                 - Restrictions: None
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -564,17 +601,19 @@ class NezhaOutput(nn.Cell):
     def construct(self, hidden_states, input_tensor):
         """
         Constructs the output of the Nezha model by applying a series of operations on the hidden states and input tensor.
-        
+
         Args:
             self (NezhaOutput): An instance of the NezhaOutput class.
-            hidden_states (Tensor): The hidden states of the model. It should have dimensions (batch_size, sequence_length, hidden_size).
-            input_tensor (Tensor): The input tensor to be added to the hidden states. It should have the same dimensions as hidden_states.
-        
+            hidden_states (Tensor): The hidden states of the model.
+                It should have dimensions (batch_size, sequence_length, hidden_size).
+            input_tensor (Tensor): The input tensor to be added to the hidden states.
+                It should have the same dimensions as hidden_states.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -587,17 +626,19 @@ class NezhaLayer(nn.Cell):
     def __init__(self, config):
         """
         Initializes a NezhaLayer object with the provided configuration.
-        
+
         Args:
             self: The instance of the NezhaLayer class.
-            config: An object containing configuration parameters for the NezhaLayer.
+            config:
+                An object containing configuration parameters for the NezhaLayer.
+
                 - Type: Config object
                 - Purpose: Specifies the configuration settings for the NezhaLayer.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None. This method initializes the NezhaLayer object.
-        
+            None.
+
         Raises:
             ValueError: Raised if the cross attention is added but the model is not used as a decoder model.
         """
@@ -620,25 +661,27 @@ class NezhaLayer(nn.Cell):
                   output_attentions = False):
         """
         Method: construct
-        
+
         Description:
-        Constructs the NezhaLayer by performing self-attention and potentially cross-attention operations based on the provided parameters.
-        
+            Constructs the NezhaLayer by performing self-attention and potentially cross-attention operations based on
+            the provided parameters.
+
         Args:
-        - self: The object instance.
-        - hidden_states (Tensor): The input hidden states for the layer.
-        - attention_mask (Tensor, optional): Mask to prevent attention to certain positions.
-        - head_mask (Tensor, optional): Mask to prevent attention to certain heads.
-        - encoder_hidden_states (Tensor, optional): Hidden states of the encoder if cross-attention is needed.
-        - encoder_attention_mask (Tensor, optional): Mask for encoder attention.
-        - past_key_value (Tuple, optional): Tuple containing past key and value tensors for optimization.
-        - output_attentions (bool): Flag to indicate whether to output attentions.
-        
+            self: The object instance.
+            hidden_states (Tensor): The input hidden states for the layer.
+            attention_mask (Tensor, optional): Mask to prevent attention to certain positions.
+            head_mask (Tensor, optional): Mask to prevent attention to certain heads.
+            encoder_hidden_states (Tensor, optional): Hidden states of the encoder if cross-attention is needed.
+            encoder_attention_mask (Tensor, optional): Mask for encoder attention.
+            past_key_value (Tuple, optional): Tuple containing past key and value tensors for optimization.
+            output_attentions (bool): Flag to indicate whether to output attentions.
+
         Returns:
-        - None: This method does not return a value.
-        
+            None.
+
         Raises:
-        - ValueError: If `encoder_hidden_states` are provided but cross-attention layers are not instantiated in the model. 
+            ValueError: If `encoder_hidden_states` are provided but cross-attention layers are not instantiated
+                in the model.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -707,16 +750,17 @@ class NezhaEncoder(nn.Cell):
     def __init__(self, config):
         """
         Initializes a NezhaEncoder instance with the provided configuration.
-        
+
         Args:
             self (NezhaEncoder): The NezhaEncoder instance itself.
             config (dict): A dictionary containing the configuration parameters for the NezhaEncoder.
                 This dictionary should include the following keys:
-                    - num_hidden_layers (int): The number of hidden layers in the NezhaEncoder configuration.
-        
+
+                - num_hidden_layers (int): The number of hidden layers in the NezhaEncoder configuration.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the input parameters are not of the expected types.
             ValueError: If the configuration dictionary is missing required keys or if the values are invalid.
@@ -733,27 +777,32 @@ class NezhaEncoder(nn.Cell):
                   output_hidden_states = False):
         """
         Constructs the NezhaEncoder.
-        
+
         Args:
             self: The NezhaEncoder object.
-            hidden_states (Tensor): The input hidden states of the encoder. 
+            hidden_states (Tensor): The input hidden states of the encoder.
             attention_mask (Tensor, optional): An attention mask tensor. Defaults to None.
             head_mask (List[Tensor], optional): A list of attention mask tensors for each layer. Defaults to None.
             encoder_hidden_states (Tensor, optional): The hidden states of the encoder. Defaults to None.
             encoder_attention_mask (Tensor, optional): An attention mask tensor for the encoder. Defaults to None.
-            past_key_values (Tuple[Tensor], optional): A tuple of key-value tensors from previous decoder outputs. Defaults to None.
+            past_key_values (Tuple[Tensor], optional): A tuple of key-value tensors from previous decoder outputs.
+                Defaults to None.
             use_cache (bool, optional): Whether to use cache. Defaults to None.
             output_attentions (bool, optional): Whether to output attention tensors. Defaults to False.
             output_hidden_states (bool, optional): Whether to output hidden states of each layer. Defaults to False.
-        
+
         Returns:
             Tuple[Tensor, Tuple[Tensor], Optional[Tuple[Tensor]], Optional[Tuple[Tensor]], Optional[Tuple[Tensor]]]:
+
                 - hidden_states (Tensor): The output hidden states of the encoder.
                 - next_decoder_cache (Tuple[Tensor]): The cache for the next decoder.
-                - all_hidden_states (Optional[Tuple[Tensor]]): The hidden states of each layer. None if `output_hidden_states` is False.
-                - all_self_attentions (Optional[Tuple[Tensor]]): The attention tensors of each layer. None if `output_attentions` is False.
-                - all_cross_attentions (Optional[Tuple[Tensor]]): The cross-attention tensors of each layer. None if `output_attentions` is False or `self.config.add_cross_attention` is False.
-        
+                - all_hidden_states (Optional[Tuple[Tensor]]): The hidden states of each layer.
+                None if `output_hidden_states` is False.
+                - all_self_attentions (Optional[Tuple[Tensor]]): The attention tensors of each layer.
+                None if `output_attentions` is False.
+                - all_cross_attentions (Optional[Tuple[Tensor]]): The cross-attention tensors of each layer.
+                None if `output_attentions` is False or `self.config.add_cross_attention` is False.
+
         Raises:
             None.
         """
@@ -832,18 +881,18 @@ class NezhaPooler(nn.Cell):
     def __init__(self, config):
         """
         Initializes the NezhaPooler class.
-        
+
         Args:
             self (NezhaPooler): The instance of the NezhaPooler class.
             config (object): An object containing configuration parameters for the NezhaPooler.
                 This parameter is used to configure the dense layer and activation function.
                 It should have a property 'hidden_size' to specify the size of the hidden layer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -852,16 +901,16 @@ class NezhaPooler(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the pooled output from the given hidden states.
-        
+
         Args:
             self (NezhaPooler): An instance of the NezhaPooler class.
             hidden_states (Tensor): A tensor containing the hidden states.
                 Shape: (batch_size, sequence_length, hidden_size)
-        
+
         Returns:
             Tensor: A tensor representing the pooled output.
                 Shape: (batch_size, hidden_size)
-        
+
         Raises:
             None.
         """
@@ -878,17 +927,19 @@ class NezhaPredictionHeadTransform(nn.Cell):
     def __init__(self, config):
         """
         Initializes the NezhaPredictionHeadTransform class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the configuration class that contains the parameters for the head transformation.
+            config:
+                An instance of the configuration class that contains the parameters for the head transformation.
+
                 - Type: Any
                 - Purpose: Specifies the configuration for the head transformation.
                 - Restrictions: None
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -903,18 +954,14 @@ class NezhaPredictionHeadTransform(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the NezhaPredictionHeadTransform.
-        
-        This method takes in the following parameters:
-        - self: The instance of the NezhaPredictionHeadTransform class.
-        - hidden_states: A tensor representing the hidden states.
-        
+
         Args:
-            - self: An instance of the NezhaPredictionHeadTransform class.
-            - hidden_states (tensor): The hidden states to be transformed.
-            
+            self: An instance of the NezhaPredictionHeadTransform class.
+            hidden_states (tensor): The hidden states to be transformed.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -927,18 +974,21 @@ class NezhaPredictionHeadTransform(nn.Cell):
 class NezhaLMPredictionHead(nn.Cell):
     """Nezha LMLMPredictionHead"""
     def __init__(self, config):
-        """Initializes the NezhaLMPredictionHead class.
-        
+        """
+        Initializes the NezhaLMPredictionHead class.
+
         Args:
             self: The object instance.
-            config: A configuration object that holds various parameters for the model.
+            config:
+                A configuration object that holds various parameters for the model.
+
                 - Type: Any valid configuration object.
                 - Purpose: Specifies the configuration settings for the NezhaLMPredictionHead.
                 - Restrictions: None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -957,14 +1007,14 @@ class NezhaLMPredictionHead(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the prediction head for Nezha Language Model.
-        
+
         Args:
             self (NezhaLMPredictionHead): The instance of NezhaLMPredictionHead class.
             hidden_states (Tensor): The hidden states to be processed for prediction.
-        
+
         Returns:
-            None. The constructed prediction head for Nezha Language Model.
-        
+            hidden_states: The constructed prediction head for Nezha Language Model.
+
         Raises:
             None.
         """
@@ -977,14 +1027,14 @@ class NezhaOnlyMLMHead(nn.Cell):
     """Nezha OnlyMLMHead"""
     def __init__(self, config):
         """Initializes a new instance of the NezhaOnlyMLMHead class.
-        
+
         Args:
             self: The instance of the class.
             config: An object of type 'config' containing the configuration parameters.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -994,15 +1044,15 @@ class NezhaOnlyMLMHead(nn.Cell):
     def construct(self, sequence_output):
         """
         Constructs the Masked Language Model (MLM) head for the Nezha model.
-        
+
         Args:
             self (NezhaOnlyMLMHead): An instance of the NezhaOnlyMLMHead class.
             sequence_output (torch.Tensor): The output tensor of the Nezha model's encoder.
                 Shape: (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
-            None. This method modifies the internal state of the NezhaOnlyMLMHead instance.
-        
+            None: This method modifies the internal state of the NezhaOnlyMLMHead instance.
+
         Raises:
             None.
         """
@@ -1015,19 +1065,19 @@ class NezhaOnlyNSPHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaOnlyNSPHead class.
-        
+
         Args:
             self: The instance of the NezhaOnlyNSPHead class.
             config: An instance of configuration class containing the hidden size parameter.
-                    It specifies the configuration settings for the NezhaOnlyNSPHead class. 
-                    It is expected to have a hidden_size attribute, which represents the size of the hidden layer.
-        
+                It specifies the configuration settings for the NezhaOnlyNSPHead class.
+                It is expected to have a hidden_size attribute, which represents the size of the hidden layer.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config parameter does not contain the required hidden_size attribute.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config parameter does not contain the required hidden_size attribute.
         """
         super().__init__()
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
@@ -1035,22 +1085,22 @@ class NezhaOnlyNSPHead(nn.Cell):
     def construct(self, pooled_output):
         """
         Constructs the NSP (Next Sentence Prediction) head for the Nezha model.
-        
+
         Args:
             self (NezhaOnlyNSPHead): An instance of the NezhaOnlyNSPHead class.
-            pooled_output (torch.Tensor): The pooled output tensor of shape (batch_size, hidden_size). 
-                The pooled output is typically obtained by applying pooling operations (e.g., mean pooling, max pooling) 
+            pooled_output (torch.Tensor): The pooled output tensor of shape (batch_size, hidden_size).
+                The pooled output is typically obtained by applying pooling operations (e.g., mean pooling, max pooling)
                 over the sequence-level representations of the input tokens. It serves as the input to the NSP head.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
-        
+            None.
+
         Note:
-            The NSP head is responsible for predicting whether two input sentences are consecutive or not. 
-            It takes the pooled output tensor from the Nezha model and computes the sequence relationship score. 
+            The NSP head is responsible for predicting whether two input sentences are consecutive or not.
+            It takes the pooled output tensor from the Nezha model and computes the sequence relationship score.
             The sequence relationship score is used to determine if the two input sentences are consecutive or not.
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
@@ -1062,17 +1112,17 @@ class NezhaPreTrainingHeads(nn.Cell):
     def __init__(self, config):
         """
         Initializes the NezhaPreTrainingHeads class.
-        
+
         Args:
             self (NezhaPreTrainingHeads): The instance of the NezhaPreTrainingHeads class.
             config: Configuration object containing settings for the NezhaPreTrainingHeads.
                 It is expected to be a dictionary-like object.
-                
+
         Returns:
-            None. This method initializes the NezhaPreTrainingHeads instance with the provided configuration.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.predictions = NezhaLMPredictionHead(config)
@@ -1081,17 +1131,19 @@ class NezhaPreTrainingHeads(nn.Cell):
     def construct(self, sequence_output, pooled_output):
         """
         This method constructs Nezha pre-training heads.
-        
+
         Args:
             self (object): The instance of the NezhaPreTrainingHeads class.
             sequence_output (object): The output of the sequence.
             pooled_output (object): The pooled output.
-        
+
         Returns:
-            tuple: A tuple containing 'prediction_scores' and 'seq_relationship_score'.
+            tuple:
+                A tuple containing 'prediction_scores' and 'seq_relationship_score'.
+
                 - prediction_scores (object): The prediction scores based on the sequence_output.
                 - seq_relationship_score (object): The sequence relationship score based on the pooled_output.
-        
+
         Raises:
             None
         """
@@ -1133,84 +1185,88 @@ class NezhaPreTrainedModel(PreTrainedModel):
     def get_input_embeddings(self):
         """
         Method to get the input embeddings for NezhaPreTrainedModel.
-        
+
         Args:
             self: NezhaPreTrainedModel object. The instance of the NezhaPreTrainedModel class.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
 
     # TODO
     def get_position_embeddings(self):
         """
         This method retrieves the position embeddings for NezhaPreTrainedModel.
-        
+
         Args:
             self: The instance of the NezhaPreTrainedModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
 
     # TODO
     def resize_position_embeddings(self):
         """
         Method to resize the position embeddings of the NezhaPreTrainedModel.
-        
+
         Args:
-            self: NezhaPreTrainedModel - The instance of the NezhaPreTrainedModel class.
+            self: NezhaPreTrainedModel, The instance of the NezhaPreTrainedModel class.
                 This parameter is used to access and modify the position embeddings of the model.
-        
+
         Returns:
             None: This method does not return any value. It modifies the position embeddings in place.
-        
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
 
     # TODO
     def set_input_embeddings(self):
         """
         This method sets the input embeddings for the NezhaPreTrainedModel.
-        
+
         Args:
-            self: The instance of the NezhaPreTrainedModel class.
-                Type: NezhaPreTrainedModel
-                Purpose: To access and modify the attributes and methods of the NezhaPreTrainedModel instance.
-        
+            self:
+                The instance of the NezhaPreTrainedModel class.
+
+                - Type: NezhaPreTrainedModel
+                - Purpose: To access and modify the attributes and methods of the NezhaPreTrainedModel instance.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
 
     # TODO
     def post_init(self):
         """
-        This method is part of the NezhaPreTrainedModel class and is called 'post_init'. 
-        
+        This method is part of the NezhaPreTrainedModel class and is called 'post_init'.
+
         Args:
             self: An instance of the NezhaPreTrainedModel class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-        This method is a placeholder and does not perform any specific operations. It is called automatically after the initialization of an instance of the NezhaPreTrainedModel class. It can be overridden in
-child classes to add custom initialization logic or perform additional setup steps.
-        
-        Note that the 'self' parameter is automatically passed to the method and does not need to be provided explicitly when calling the method.
+            This method is a placeholder and does not perform any specific operations.
+            It is called automatically after the initialization of an instance of the NezhaPreTrainedModel class.
+            It can be overridden in child classes to add custom initialization logic or perform additional setup steps.
+
+        Note that the 'self' parameter is automatically passed to the method and does not need to be provided explicitly
+        when calling the method.
         """
 
 
@@ -1219,17 +1275,18 @@ class NezhaModel(NezhaPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a new instance of the NezhaModel class.
-        
+
         Args:
             self: The instance of the NezhaModel class.
             config: An instance of the configuration for the NezhaModel. It is used to configure the model's behavior.
-            add_pooling_layer (bool): A boolean flag indicating whether to add a pooling layer to the model. Default is True.
-        
+            add_pooling_layer (bool): A boolean flag indicating whether to add a pooling layer to the model.
+                Default is True.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.config = config
@@ -1240,31 +1297,31 @@ class NezhaModel(NezhaPreTrainedModel):
     def get_input_embeddings(self):
         """
         Retrieve the input embeddings from the NezhaModel.
-        
+
         Args:
             self (NezhaModel): The instance of NezhaModel.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the NezhaModel.
-        
+
         Args:
             self (NezhaModel): The instance of the NezhaModel class.
             value: The input embeddings to be set. It should be of type 'torch.Tensor' or any tensor-like object.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -1284,27 +1341,27 @@ class NezhaModel(NezhaPreTrainedModel):
                   output_hidden_states = None):
         """
         This method constructs the NezhaModel by processing input data through the model's encoder and embeddings.
-        
+
         Args:
-        - self: The instance of the NezhaModel class.
-        - input_ids (Tensor, optional): The input token IDs. Default is None.
-        - attention_mask (Tensor, optional): The attention mask for the input. Default is None.
-        - token_type_ids (Tensor, optional): The token type IDs for the input. Default is None.
-        - head_mask (Tensor, optional): The head mask for the model's multi-head attention layers. Default is None.
-        - inputs_embeds (Tensor, optional): The embedded input tokens. Default is None.
-        - encoder_hidden_states (Tensor, optional): The hidden states from the encoder. Default is None.
-        - encoder_attention_mask (Tensor, optional): The attention mask for the encoder. Default is None.
-        - past_key_values (Tuple, optional): Cached key-value states from previous iterations. Default is None.
-        - use_cache (bool, optional): Flag indicating whether to use caching. Default is None.
-        - output_attentions (bool, optional): Flag indicating whether to output attentions. Default is None.
-        - output_hidden_states (bool, optional): Flag indicating whether to output hidden states. Default is None.
-        
+            self: The instance of the NezhaModel class.
+            input_ids (Tensor, optional): The input token IDs. Default is None.
+            attention_mask (Tensor, optional): The attention mask for the input. Default is None.
+            token_type_ids (Tensor, optional): The token type IDs for the input. Default is None.
+            head_mask (Tensor, optional): The head mask for the model's multi-head attention layers. Default is None.
+            inputs_embeds (Tensor, optional): The embedded input tokens. Default is None.
+            encoder_hidden_states (Tensor, optional): The hidden states from the encoder. Default is None.
+            encoder_attention_mask (Tensor, optional): The attention mask for the encoder. Default is None.
+            past_key_values (Tuple, optional): Cached key-value states from previous iterations. Default is None.
+            use_cache (bool, optional): Flag indicating whether to use caching. Default is None.
+            output_attentions (bool, optional): Flag indicating whether to output attentions. Default is None.
+            output_hidden_states (bool, optional): Flag indicating whether to output hidden states. Default is None.
+
         Returns:
-        - Tuple: A tuple containing the sequence output, pooled output, and any additional encoder outputs.
-        
+            Tuple: A tuple containing the sequence output, pooled output, and any additional encoder outputs.
+
         Raises:
-        - ValueError: Raised when both input_ids and inputs_embeds are provided simultaneously.
-        - ValueError: Raised when neither input_ids nor inputs_embeds are specified.
+            ValueError: Raised when both input_ids and inputs_embeds are provided simultaneously.
+            ValueError: Raised when neither input_ids nor inputs_embeds are specified.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1388,17 +1445,19 @@ class NezhaForPreTraining(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the 'NezhaForPreTraining' class.
-        
+
         Args:
             self: The instance of the class.
-            config: A configuration object containing various settings for the model.
+            config:
+                A configuration object containing various settings for the model.
+
                 - Type: Config object
                 - Purpose: Specifies the model configuration.
                 - Restrictions: None
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1424,7 +1483,7 @@ class NezhaForPreTraining(NezhaPreTrainedModel):
                   output_attentions = None, output_hidden_states = None):
         """
         Constructs the Nezha model for pre-training.
-        
+
         Args:
             self (NezhaForPreTraining): The instance of the NezhaForPreTraining class.
             input_ids (torch.Tensor, optional): The input sequence tensor. Default: None.
@@ -1436,10 +1495,10 @@ class NezhaForPreTraining(NezhaPreTrainedModel):
             next_sentence_label (torch.Tensor, optional): The next sentence label tensor. Default: None.
             output_attentions (bool, optional): Whether to output attentions. Default: None.
             output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
-        
+
         Returns:
             tuple or torch.Tensor: A tuple of output tensors or a single tensor representing the total loss.
-        
+
         Raises:
             None
         """
@@ -1475,20 +1534,20 @@ class NezhaForMaskedLM(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new NezhaForMaskedLM instance.
-        
+
         Args:
             self (object): The NezhaForMaskedLM instance itself.
-            config (object): An instance of the configuration class containing the model configuration settings. 
+            config (object): An instance of the configuration class containing the model configuration settings.
                 It is used to customize the behavior of the NezhaForMaskedLM model.
                 Must have the property 'is_decoder' to determine if the model is a decoder.
-                If 'is_decoder' is True, a warning will be logged regarding the bidirectional self-attention configuration.
-        
+                If 'is_decoder' is True, a warning will be logged regarding the bidirectional
+                self-attention configuration.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-            No specific exceptions are raised by this method.
         """
         super().__init__(config)
 
@@ -1515,26 +1574,33 @@ class NezhaForMaskedLM(NezhaPreTrainedModel):
                   labels = None, output_attentions = None, output_hidden_states = None):
         """
         Constructs the Nezha model for masked language modeling (MLM).
-        
+
         Args:
             self (NezhaForMaskedLM): The instance of the NezhaForMaskedLM class.
-            input_ids (torch.Tensor, optional): The input tensor containing the tokenized input sequence IDs. Default: None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor to indicate which tokens should be attended to. Default: None.
-            token_type_ids (torch.Tensor, optional): The token type IDs tensor to distinguish different parts of the input. Default: None.
+            input_ids (torch.Tensor, optional): The input tensor containing the tokenized input sequence IDs.
+                Default: None.
+            attention_mask (torch.Tensor, optional): The attention mask tensor to indicate which tokens
+                should be attended to. Default: None.
+            token_type_ids (torch.Tensor, optional): The token type IDs tensor to distinguish different parts
+                of the input. Default: None.
             head_mask (torch.Tensor, optional): The head mask tensor to mask specific attention heads. Default: None.
             inputs_embeds (torch.Tensor, optional): The embedded inputs tensor. Default: None.
             encoder_hidden_states (torch.Tensor, optional): The hidden states of the encoder. Default: None.
             encoder_attention_mask (torch.Tensor, optional): The attention mask for the encoder. Default: None.
-            labels (torch.Tensor, optional): The tensor containing the labels for the masked language modeling task. Default: None.
+            labels (torch.Tensor, optional): The tensor containing the labels for the masked language modeling task.
+                Default: None.
             output_attentions (bool, optional): Whether to output attentions. Default: None.
             output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
-        
+
         Returns:
-            tuple: A tuple containing the masked language modeling loss (if labels are provided) and the output of the model.
+            tuple:
+                A tuple containing the masked language modeling loss (if labels are provided)
+                and the output of the model.
+
                 - masked_lm_loss (torch.Tensor): The masked language modeling loss.
                 - prediction_scores (torch.Tensor): The predicted scores for each token.
                 - outputs[2:] (tuple): Additional outputs from the model. (output_attentions, output_hidden_states, ...)
-        
+
         Raises:
             None.
         """
@@ -1584,14 +1650,14 @@ class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the NezhaForNextSentencePrediction class.
-        
+
         Args:
             self: The instance of the class.
             config: An instance of the configuration class containing the model configuration settings.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1605,29 +1671,42 @@ class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
         labels = None, output_attentions = None, output_hidden_states = None, **kwargs):
         """
         Constructs the Nezha model for next sentence prediction.
-        
+
         Args:
             self (NezhaForNextSentencePrediction): The instance of the NezhaForNextSentencePrediction class.
-            input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length) containing the input sequence indices. Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) containing the attention mask values. Defaults to None.
-            token_type_ids (torch.Tensor, optional): The token type tensor of shape (batch_size, sequence_length) containing the token type indices. Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (batch_size, num_heads, sequence_length, sequence_length) containing the head mask values. Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The embedded inputs tensor of shape (batch_size, sequence_length, embedding_size) containing the embedded input sequence. Defaults to None.
-            labels (torch.Tensor, optional): The labels tensor of shape (batch_size) containing the next sentence labels. Defaults to None.
+            input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length) containing
+                the input sequence indices. Defaults to None.
+            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length)
+                containing the attention mask values. Defaults to None.
+            token_type_ids (torch.Tensor, optional): The token type tensor of shape (batch_size, sequence_length)
+                containing the token type indices. Defaults to None.
+            head_mask (torch.Tensor, optional): The head mask tensor of shape
+                (batch_size, num_heads, sequence_length, sequence_length) containing the head mask values.
+                Defaults to None.
+            inputs_embeds (torch.Tensor, optional): The embedded inputs tensor of shape
+                (batch_size, sequence_length, embedding_size) containing the embedded input sequence. Defaults to None.
+            labels (torch.Tensor, optional): The labels tensor of shape (batch_size) containing the next sentence labels.
+                Defaults to None.
             output_attentions (bool, optional): Whether to output attention weights. Defaults to None.
             output_hidden_states (bool, optional): Whether to output hidden states. Defaults to None.
-        
+
         Returns:
-            tuple: A tuple containing the next sentence loss (if labels are provided) and the outputs of the Nezha model.
-                - next_sentence_loss (torch.Tensor, optional): The loss tensor of shape (batch_size) representing the next sentence prediction loss. Defaults to None.
-                - seq_relationship_scores (torch.Tensor): The tensor of shape (batch_size, 2) containing the next sentence prediction scores.
-                - hidden_states (tuple, optional): A tuple of hidden states (torch.Tensor) of shape (batch_size, sequence_length, hidden_size) from all layers. Defaults to None.
-                - attentions (tuple, optional): A tuple of attention weights (torch.Tensor) of shape (batch_size, num_heads, sequence_length, sequence_length) from all layers. Defaults to None.
-        
+            tuple:
+                A tuple containing the next sentence loss (if labels are provided) and the outputs of the Nezha model.
+
+                - next_sentence_loss (torch.Tensor, optional): The loss tensor of shape (batch_size) representing
+                the next sentence prediction loss. Defaults to None.
+                - seq_relationship_scores (torch.Tensor): The tensor of shape (batch_size, 2) containing the next
+                sentence prediction scores.
+                - hidden_states (tuple, optional): A tuple of hidden states (torch.Tensor) of shape
+                (batch_size, sequence_length, hidden_size) from all layers. Defaults to None.
+                - attentions (tuple, optional): A tuple of attention weights (torch.Tensor) of shape
+                (batch_size, num_heads, sequence_length, sequence_length) from all layers. Defaults to None.
+
         Raises:
             TypeError: If any of the input arguments are not of the expected type.
             ValueError: If the input tensors do not have the correct shape.
-        
+
         """
         if "next_sentence_label" in kwargs:
             #warnings.warn(
@@ -1665,14 +1744,14 @@ class NezhaForSequenceClassification(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaForSequenceClassification class.
-        
+
         Args:
             self (NezhaForSequenceClassification): An instance of the NezhaForSequenceClassification class.
             config (NezhaConfig): The configuration class instance specifying the model's hyperparameters.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1690,23 +1769,28 @@ class NezhaForSequenceClassification(NezhaPreTrainedModel):
     def construct(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
-        ''' 
+        '''
         This method constructs a Nezha model for sequence classification.
-        
+
         Args:
             self (object): The instance of the NezhaForSequenceClassification class.
             input_ids (list, optional): A list of tokenized input sequence IDs. Defaults to None.
-            attention_mask (list, optional): A list of attention masks indicating which tokens should be attended to. Defaults to None.
-            token_type_ids (list, optional): A list of token type IDs to indicate which parts of the input belong to the first sequence and which belong to the second sequence. Defaults to None.
+            attention_mask (list, optional): A list of attention masks indicating which tokens should be attended to.
+                Defaults to None.
+            token_type_ids (list, optional): A list of token type IDs to indicate which parts of the input belong to
+                the first sequence and which belong to the second sequence. Defaults to None.
             head_mask (list, optional): A list of masks for attention heads. Defaults to None.
             inputs_embeds (list, optional): A list of input embeddings. Defaults to None.
             labels (list, optional): A list of target labels for the input sequence. Defaults to None.
-            output_attentions (bool, optional): A boolean flag indicating whether to return the attentions tensor. Defaults to None.
-            output_hidden_states (bool, optional): A boolean flag indicating whether to return the hidden states tensor. Defaults to None.
-        
+            output_attentions (bool, optional): A boolean flag indicating whether to return the attentions tensor.
+                Defaults to None.
+            output_hidden_states (bool, optional): A boolean flag indicating whether to return the hidden states tensor.
+                Defaults to None.
+
         Returns:
-            tuple: A tuple containing the loss value and the output logits. If no loss is calculated, only the logits are returned.
-        
+            tuple: A tuple containing the loss value and the output logits.
+                If no loss is calculated, only the logits are returned.
+
         Raises:
             ValueError: If the problem type is not recognized.
             RuntimeError: If the number of labels is not compatible with the specified problem type.
@@ -1760,16 +1844,16 @@ class NezhaForMultipleChoice(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initialize the NezhaForMultipleChoice model with the given configuration.
-        
+
         Args:
             self (NezhaForMultipleChoice): The NezhaForMultipleChoice instance.
             config (NezhaConfig): The configuration object containing various hyperparameters for the model.
-        
+
         Returns:
-            None. This method initializes the NezhaForMultipleChoice model with the provided configuration.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -1784,10 +1868,11 @@ class NezhaForMultipleChoice(NezhaPreTrainedModel):
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
         r"""
-        labels (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
         input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
@@ -1830,17 +1915,19 @@ class NezhaForTokenClassification(NezhaPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaForTokenClassification class.
-        
+
         Args:
             self: The object itself.
-            config: An instance of the NezhaConfig class containing the model configuration settings.
+            config:
+                An instance of the NezhaConfig class containing the model configuration settings.
+
                 - Type: NezhaConfig
                 - Purpose: Specifies the configuration for the Nezha model.
                 - Restrictions: None
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1858,8 +1945,9 @@ class NezhaForTokenClassification(NezhaPreTrainedModel):
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
         r"""
-        labels (`mindspore.Tensor[int64]` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor[int64]` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         outputs = self.nezha(
             input_ids,
@@ -1891,21 +1979,19 @@ class NezhaForQuestionAnswering(NezhaPreTrainedModel):
 
     def __init__(self, config):
         """
-        __init__
-        
         This method initializes an instance of the NezhaForQuestionAnswering class.
-        
+
         Args:
             self (NezhaForQuestionAnswering): The instance of the NezhaForQuestionAnswering class.
             config: An instance of the NezhaConfig class containing the model configuration.
-        
+
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
-            - TypeError: If the config parameter is not of type NezhaConfig.
-            - ValueError: If the config.num_labels is not defined or is not a positive integer.
-            - RuntimeError: If an error occurs during the initialization process.
+            TypeError: If the config parameter is not of type NezhaConfig.
+            ValueError: If the config.num_labels is not defined or is not a positive integer.
+            RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1918,14 +2004,15 @@ class NezhaForQuestionAnswering(NezhaPreTrainedModel):
                   start_positions = None, end_positions = None, output_attentions = None,
                   output_hidden_states = None):
         r"""
-        start_positions (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor[int64]` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         outputs = self.nezha(
             input_ids,

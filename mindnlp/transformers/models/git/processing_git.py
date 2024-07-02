@@ -68,13 +68,14 @@ class GitProcessor(ProcessorMixin):
                 - `'jax'`: Return JAX `jnp.ndarray` objects.
 
         Returns:
-            [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
+            [`BatchEncoding`]:
+                A [`BatchEncoding`] with the following fields:
 
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-              `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-              `None`).
-            - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                `None`).
+                - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         tokenizer_kwargs, image_processor_kwargs = {}, {}
         if kwargs:

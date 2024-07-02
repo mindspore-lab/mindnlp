@@ -31,7 +31,6 @@ class SqueezeBertConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 30522):
             Vocabulary size of the SqueezeBERT model. Defines the number of different tokens that can be represented by
@@ -59,12 +58,10 @@ class SqueezeBertConfig(PretrainedConfig):
         initializer_range (`float`, *optional*, defaults to 0.02):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
         layer_norm_eps (`float`, *optional*, defaults to 1e-12):
-
         pad_token_id (`int`, *optional*, defaults to 0):
             The ID of the token in the word embedding to use as padding.
         embedding_size (`int`, *optional*, defaults to 768):
             The dimension of the word embedding vectors.
-
         q_groups (`int`, *optional*, defaults to 4):
             The number of groups in Q layer.
         k_groups (`int`, *optional*, defaults to 4):
@@ -78,20 +75,19 @@ class SqueezeBertConfig(PretrainedConfig):
         output_groups (`int`, *optional*, defaults to 4):
             The number of groups in the third feed forward network layer.
 
-    Examples:
-
-    ```python
-    >>> from mindnlp.transformers import SqueezeBertConfig, SqueezeBertModel
-
-    >>> # Initializing a SqueezeBERT configuration
-    >>> configuration = SqueezeBertConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration above
-    >>> model = SqueezeBertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+    Example:
+        ```python
+        >>> from mindnlp.transformers import SqueezeBertConfig, SqueezeBertModel
+        ...
+        >>> # Initializing a SqueezeBERT configuration
+        >>> configuration = SqueezeBertConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration above
+        >>> model = SqueezeBertModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
 
     model_type = "squeezebert"

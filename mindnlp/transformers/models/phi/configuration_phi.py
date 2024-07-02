@@ -52,7 +52,7 @@ class PhiConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -97,19 +97,19 @@ class PhiConfig(PretrainedConfig):
             Denotes end of sequences token id.
 
     Example:
-
-    ```python
-    >>> from transformers import PhiModel, PhiConfig
-
-    >>> # Initializing a Phi-1 style configuration
-    >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
-
-    >>> # Initializing a model from the configuration
-    >>> model = PhiModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import PhiModel, PhiConfig
+        ...
+        >>> # Initializing a Phi-1 style configuration
+        >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
+        ...
+        >>> # Initializing a model from the configuration
+        >>> model = PhiModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "phi"
     keys_to_ignore_at_inference = ["past_key_values"]
 

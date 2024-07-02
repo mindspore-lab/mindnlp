@@ -42,13 +42,13 @@ class GPTNeoSelfAttention(nn.Cell):
         Args:
             self: The object instance itself.
             config: A configuration object containing various settings for the attention mechanism.
-                    It must have a 'max_position_embeddings', 'window_size', 'attention_dropout', 'resid_dropout',
-                    'hidden_size', and 'num_heads' attribute.
+                It must have a 'max_position_embeddings', 'window_size', 'attention_dropout', 'resid_dropout',
+                'hidden_size', and 'num_heads' attribute.
             attention_type: A string specifying the type of attention mechanism to use. 
-                           Must be either 'local' or 'global'.
+                Must be either 'local' or 'global'.
         
         Returns:
-            None. This method initializes various parameters and attributes of the GPTNeoSelfAttention class.
+            None.
         
         Raises:
             ValueError: If the embed_dim is not divisible by num_heads.
@@ -110,11 +110,17 @@ class GPTNeoSelfAttention(nn.Cell):
         
         Args:
             self (GPTNeoSelfAttention): The instance of the GPTNeoSelfAttention class.
-            query (Tensor): The input tensor representing the query. It should be of shape (batch_size, sequence_length, hidden_size).
-            key (Tensor): The input tensor representing the key. It should be of shape (batch_size, sequence_length, hidden_size).
-            value (Tensor): The input tensor representing the value. It should be of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Tensor, optional): An optional tensor representing the attention mask. It should be of shape (batch_size, 1, sequence_length, sequence_length) and defaults to None.
-            head_mask (Tensor, optional): An optional tensor representing the head mask. It should be of shape (num_heads, sequence_length, sequence_length) and defaults to None.
+            query (Tensor): The input tensor representing the query. 
+                It should be of shape (batch_size, sequence_length, hidden_size).
+            key (Tensor): The input tensor representing the key. 
+                It should be of shape (batch_size, sequence_length, hidden_size).
+            value (Tensor): The input tensor representing the value. 
+                It should be of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Tensor, optional): 
+                An optional tensor representing the attention mask. 
+                It should be of shape (batch_size, 1, sequence_length, sequence_length) and defaults to None.
+            head_mask (Tensor, optional): An optional tensor representing the head mask. 
+                It should be of shape (num_heads, sequence_length, sequence_length) and defaults to None.
         
         Returns:
             Tuple[Tensor, Tensor]: A tuple containing the attention output tensor and the attention weights tensor.
@@ -179,10 +185,11 @@ class GPTNeoSelfAttention(nn.Cell):
         
         Returns:
             tuple: A tuple containing the attention output tensor and the present state tuple. 
-            The present state tuple is of type 'tuple' and contains the current key and value tensors if use_cache is True, otherwise it is None.
+                The present state tuple is of type 'tuple' and contains the current key and value tensors
+                if use_cache is True, otherwise it is None.
         
         Raises:
-            N/A
+            None.
         """
         query = self.q_proj(hidden_states)
         key = self.k_proj(hidden_states)
@@ -232,7 +239,7 @@ class GPTNeoAttention(nn.Cell):
             layer_id (int, optional): The ID of the attention layer. Defaults to 0.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             NotImplementedError: If the attention type specified in the config is not 'global' or 'local'.
@@ -266,16 +273,21 @@ class GPTNeoAttention(nn.Cell):
         Args:
             self: The instance of the GPTNeoAttention class.
             hidden_states (tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-            layer_past (tuple, optional): The past states of shape (batch_size, num_heads, past_sequence_length, head_size) to be used for attention computation. Defaults to None.
-            attention_mask (tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) to mask attention scores. Defaults
-to None.
-            head_mask (tensor, optional): The head mask tensor of shape (num_heads,) or (batch_size, num_heads) to mask attention heads. Defaults to None.
+            layer_past (tuple, optional):
+                The past states of shape (batch_size, num_heads, past_sequence_length, head_size) to be used for
+                attention computation. Defaults to None.
+            attention_mask (tensor, optional):
+                The attention mask tensor of shape (batch_size, sequence_length) or
+                (batch_size, num_heads, sequence_length, sequence_length) to mask attention scores. Defaults to None.
+            head_mask (tensor, optional):
+                The head mask tensor of shape (num_heads,) or (batch_size, num_heads) to mask attention heads.
+                Defaults to None.
             use_cache (bool, optional): Whether to use cached states for attention computation. Defaults to False.
             output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -297,15 +309,15 @@ class GPTNeoMLP(nn.Cell):
     def __init__(self, intermediate_size, config):
         """
         Initializes the GPTNeoMLP class.
-        
+
         Args:
             self: The instance of the class.
             intermediate_size (int): The size of the intermediate layer.
             config (object): The configuration object containing parameters for the method.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -319,14 +331,14 @@ class GPTNeoMLP(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the multi-layer perceptron (MLP) component of the GPT-Neo model.
-        
+
         Args:
             self (GPTNeoMLP): An instance of the GPTNeoMLP class.
             hidden_states (tensor): The input hidden states to be processed by the MLP.
-        
+
         Returns:
-            None. The processed hidden states after passing through the MLP layers.
-        
+            hidden_states: The processed hidden states after passing through the MLP layers.
+
         Raises:
             None.
         """
@@ -342,16 +354,17 @@ class GPTNeoBlock(nn.Cell):
     GPTNeo Block.
     """
     def __init__(self, config, layer_id):
-        """Initializes a GPTNeoBlock instance.
-        
+        """
+        Initializes a GPTNeoBlock instance.
+
         Args:
             self: The object itself.
             config (Config): The configuration object containing various settings.
             layer_id (int): The ID of the layer.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -376,21 +389,21 @@ class GPTNeoBlock(nn.Cell):
     ):
         """
         Method 'construct' in the class 'GPTNeoBlock' constructs the output of a GPTNeo block.
-        
+
         Args:
-        - self: (class object) The instance of the class.
-        - hidden_states: (tensor) The input hidden states to the block.
-        - layer_past: (tensor, optional) The past hidden states from previous layers. Default is None.
-        - attention_mask: (tensor, optional) Mask to prevent attention to certain positions. Default is None.
-        - head_mask: (tensor, optional) Mask to prevent attention to certain heads. Default is None.
-        - use_cache: (bool) If True, cache the outputs for faster decoding. Default is False.
-        - output_attentions: (bool) If True, outputs attention weights. Default is False.
-        
+            self (class object): The instance of the class.
+            hidden_states (tensor): The input hidden states to the block.
+            layer_past (tensor, optional): The past hidden states from previous layers. Default is None.
+            attention_mask (tensor, optional): Mask to prevent attention to certain positions. Default is None.
+            head_mask (tensor, optional): Mask to prevent attention to certain heads. Default is None.
+            use_cache (bool): If True, cache the outputs for faster decoding. Default is False.
+            output_attentions (bool): If True, outputs attention weights. Default is False.
+
         Returns:
-        - outputs: (tuple) A tuple containing the updated hidden states and additional outputs from the block.
-        
+            outputs: (tuple) A tuple containing the updated hidden states and additional outputs from the block.
+
         Raises:
-        - None
+            None
         """
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -486,17 +499,17 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
     def _set_gradient_checkpointing(self, module, value=False):
         """
         Sets the gradient checkpointing flag for the specified module in a GPTNeoPreTrainedModel.
-        
+
         Args:
             self (GPTNeoPreTrainedModel): The instance of the GPTNeoPreTrainedModel.
             module (object): The module for which gradient checkpointing will be set.
             value (bool): The boolean value indicating whether to enable gradient checkpointing for the module.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided module is not an instance of GPTNeoModel.
+            TypeError: If the provided module is not an instance of GPTNeoModel.
         """
         if isinstance(module, GPTNeoModel):
             module.gradient_checkpointing = value
@@ -535,20 +548,22 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoModel class.
-        
+
         Args:
             self: The GPTNeoModel instance.
-            config: An object containing the configuration settings for the model. It should have the following attributes:
+            config:
+                An object containing the configuration settings for the model. It should have the following attributes:
+
                 - hidden_size (int): The dimensionality of the hidden states and embeddings.
                 - vocab_size (int): The size of the vocabulary.
                 - max_position_embeddings (int): The maximum number of positional embeddings.
                 - embed_dropout (float): The dropout probability for the embeddings.
                 - num_layers (int): The number of layers in the model.
                 - layer_norm_epsilon (float): The epsilon value used in layer normalization.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -594,7 +609,7 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
     ) -> Tuple[Tensor]:
         '''
         Constructs the GPTNeoModel.
-        
+
         Args:
             self: The GPTNeoModel instance.
             input_ids (Optional[Tensor]): The input token IDs. Default: None.
@@ -607,10 +622,12 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
             use_cache (Optional[bool]): Whether to use cache for faster decoding. Default: None.
             output_attentions (Optional[bool]): Whether to output attentions. Default: None.
             output_hidden_states (Optional[bool]): Whether to output hidden states. Default: None.
-        
+
         Returns:
-            Tuple[Tensor]: A tuple containing the hidden states, cached key-value states, all hidden states (if enabled), and all self-attentions (if enabled).
-        
+            Tuple[Tensor]:
+                A tuple containing the hidden states, cached key-value states, all hidden states (if enabled),
+                and all self-attentions (if enabled).
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
             ValueError: If neither input_ids nor inputs_embeds are specified.
@@ -766,14 +783,14 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the GPTNeoForCausalLM class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the configuration class that holds the model configuration settings.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -842,10 +859,11 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         transformer_outputs = self.transformer(
             input_ids,
@@ -909,17 +927,17 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoForSequenceClassification class.
-        
+
         Args:
             self: The instance of the GPTNeoForSequenceClassification class.
-            config: An instance of the configuration class containing the model configuration parameters. 
+            config: An instance of the configuration class containing the model configuration parameters.
                 It must have the attribute 'num_labels' representing the number of labels for sequence classification.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -945,10 +963,11 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         transformer_outputs = self.transformer(
             input_ids,

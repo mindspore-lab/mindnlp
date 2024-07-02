@@ -26,26 +26,27 @@ class Constraint(ABC):
 
     All classes that inherit Constraint must follow the requirement that
 
-    ```py
-    completed = False
-    while not completed:
-        _, completed = constraint.update(constraint.advance())
-    ```
+    Example:
+        ```python
+        >>> completed = False
+        >>> while not completed:
+        >>>     _, completed = constraint.update(constraint.advance())
+        ```
 
     will always terminate (halt).
     """
     def __init__(self):
         """
         Initializes an instance of the Constraint class.
-        
+
         Args:
             self: Constraint instance being initialized.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         # test for the above condition
         self.test()
@@ -79,7 +80,7 @@ class Constraint(ABC):
         """
         When called, returns the token that would take this constraint one step closer to being fulfilled.
 
-        Return:
+        Returns:
             token_ids(`torch.tensor`): Must be a tensor of a list of indexable tokens, not some integer.
         """
         raise NotImplementedError(
@@ -108,7 +109,7 @@ class Constraint(ABC):
         Args:
             token_id(`int`):
                 The id of a newly generated token in the beam search.
-        Return:
+        Returns:
             stepped(`bool`):
                 Whether this constraint has become one step closer to being fulfuilled.
             completed(`bool`):
@@ -147,7 +148,7 @@ class Constraint(ABC):
         Args:
             stateful(`bool`): Whether to not only copy the constraint for new instance, but also its state.
 
-        Return:
+        Returns:
             constraint(`Constraint`): The same constraint as the one being called from.
         """
         raise NotImplementedError(
@@ -166,17 +167,17 @@ class PhrasalConstraint(Constraint):
     def __init__(self, token_ids: List[int]):
         """
         __init__
-        
+
         Initializes a new instance of the PhrasalConstraint class.
-        
+
         Args:
             self: The instance of the PhrasalConstraint class.
             token_ids (List[int]): A list of token IDs representing the constraints.
                 This parameter is required and should be a non-empty list of positive integers.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If token_ids is not a non-empty list or if it contains non-positive integers.
         """
@@ -195,14 +196,14 @@ class PhrasalConstraint(Constraint):
 
     def advance(self):
         """Advance to the next token in the PhrasalConstraint.
-        
+
         Args:
             self (PhrasalConstraint): The PhrasalConstraint instance.
-            
+
         Returns:
             None: If the PhrasalConstraint is completed, returns None.
             int: The next token ID if the PhrasalConstraint is not completed.
-        
+
         Raises:
             None.
         """
@@ -213,14 +214,14 @@ class PhrasalConstraint(Constraint):
     def does_advance(self, token_id: int):
         """
         Checks if the given `token_id` can be advanced in the context of the PhrasalConstraint class.
-        
+
         Args:
             self (PhrasalConstraint): An instance of the PhrasalConstraint class.
             token_id (int): The ID of the token to be advanced.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the `token_id` parameter is not of type int.
         """
@@ -235,22 +236,25 @@ class PhrasalConstraint(Constraint):
     def update(self, token_id: int):
         """
         Updates the state of the PhrasalConstraint object based on the given token ID.
-        
+
         Args:
             self (PhrasalConstraint): The PhrasalConstraint object.
             token_id (int): The ID of the token to update the state with.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the `token_id` is not an integer.
-        
-        This method updates the state of the PhrasalConstraint object by either advancing the fulfillment index, marking the constraint as completed, or resetting the state. The method returns None.
-        
+
+        This method updates the state of the PhrasalConstraint object by either advancing the fulfillment index,
+        marking the constraint as completed, or resetting the state. The method returns None.
+
         If the `token_id` is not an integer, a ValueError is raised with a descriptive error message.
-        
-        Note: The method modifies the state of the PhrasalConstraint object by updating the fulfillment index, completion status, and potentially resetting the state.
+
+        Note:
+            The method modifies the state of the PhrasalConstraint object by updating the fulfillment index,
+            completion status, and potentially resetting the state.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` has to be an `int`, but is {token_id} of type {type(token_id)}")
@@ -274,16 +278,19 @@ class PhrasalConstraint(Constraint):
     def reset(self):
         """
         Resets the state of the PhrasalConstraint object.
-        
+
         Args:
-            self: PhrasalConstraint - The instance of the PhrasalConstraint class.
+            self:
+                PhrasalConstraint
+
+                - The instance of the PhrasalConstraint class.
                 Represents the current PhrasalConstraint object to be reset.
-        
+
         Returns:
-            None. The method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.completed = False
         self.fulfilled_idx = 0
@@ -291,13 +298,13 @@ class PhrasalConstraint(Constraint):
     def remaining(self):
         """
         This method calculates the remaining length of the sequence that needs to be fulfilled for the phrasal constraint.
-        
+
         Args:
             self (PhrasalConstraint): The instance of the PhrasalConstraint class.
-            
+
         Returns:
             int: The remaining length of the sequence to be fulfilled for the phrasal constraint.
-            
+
         Raises:
             None
         """
@@ -306,16 +313,17 @@ class PhrasalConstraint(Constraint):
     def copy(self, stateful=False):
         """
         Copy a PhrasalConstraint.
-        
+
         Args:
             self (PhrasalConstraint): The instance of the PhrasalConstraint class.
             stateful (bool): If True, the copy will include the stateful attributes of the constraint.
                 Defaults to False.
-        
+
         Returns:
             PhrasalConstraint: A new instance of the PhrasalConstraint class with a copy of the token_ids.
-            If stateful is True, the new instance will also have the same seq_len, fulfilled_idx, and completed attributes as the original instance.
-        
+                If stateful is True, the new instance will also have the same seq_len, fulfilled_idx,
+                and completed attributes as the original instance.
+
         Raises:
             None.
         """
@@ -369,18 +377,20 @@ class DisjunctiveTrie:
 
     def reached_leaf(self, current_seq):
         """
-        This method is part of the DisjunctiveTrie class and is used to determine if the current sequence has reached a leaf node within the trie structure.
-        
+        This method is part of the DisjunctiveTrie class and is used to determine if the current sequence has reached
+        a leaf node within the trie structure.
+
         Args:
             self: The instance of the DisjunctiveTrie class.
-            current_seq: A sequence representing the current state within the trie. It is of type str and is used to navigate through the trie structure. There are no specific restrictions on the content of
-the sequence.
-        
+            current_seq: A sequence representing the current state within the trie. It is of type str and is used to
+                navigate through the trie structure. There are no specific restrictions on the content of the sequence.
+
         Returns:
-            None: This method returns a value of type None, indicating that there are no more tokens to traverse in the trie, and the current sequence has reached a leaf node.
-        
+            None: This method returns a value of type None, indicating that there are no more tokens to traverse in the
+                trie, and the current sequence has reached a leaf node.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         next_tokens = self.next_tokens(current_seq)
 
@@ -389,16 +399,16 @@ the sequence.
     def count_leaves(self, root):
         """
         Counts the number of leaves in a Disjunctive Trie starting from a given root node.
-        
+
         Args:
             self (DisjunctiveTrie): The instance of the DisjunctiveTrie class.
             root (dict): The root node of the Disjunctive Trie from which the leaf count should be calculated.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         next_nodes = list(root.values())
         if len(next_nodes) == 0:
@@ -425,21 +435,21 @@ class DisjunctiveConstraint(Constraint):
     def __init__(self, nested_token_ids: List[List[int]]):
         """
         Initialize a DisjunctiveConstraint object with the provided nested_token_ids.
-        
+
         Args:
             self: The instance of the DisjunctiveConstraint class.
-            nested_token_ids (List[List[int]]): A list of lists containing positive integers representing token IDs. 
-                This parameter is required and must be a non-empty list of lists. Each inner list represents a sequence of token IDs.
-                Each token ID should be a positive integer (greater than or equal to 0).
-        
+            nested_token_ids (List[List[int]]): A list of lists containing positive integers representing token IDs.
+                This parameter is required and must be a non-empty list of lists. Each inner list represents a
+                sequence of token IDs. Each token ID should be a positive integer (greater than or equal to 0).
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If nested_token_ids is not a list or is an empty list.
             ValueError: If nested_token_ids is not a list of lists.
             ValueError: If any inner list in nested_token_ids contains non-integer values or negative integers.
-        
+
         """
         super(Constraint, self).__init__()
 
@@ -465,16 +475,16 @@ class DisjunctiveConstraint(Constraint):
     def advance(self):
         """
         Advance the current sequence in the DisjunctiveConstraint object and return the next available token.
-        
+
         Args:
             self (DisjunctiveConstraint): The current instance of the DisjunctiveConstraint class.
-        
+
         Returns:
             None: If there are no more tokens available in the current sequence.
-        
+
         Raises:
             None.
-        
+
         """
         token_list = self.trie.next_tokens(self.current_seq)
 
@@ -485,20 +495,22 @@ class DisjunctiveConstraint(Constraint):
     def does_advance(self, token_id: int):
         """
         Checks if a given token ID can be advanced in the DisjunctiveConstraint.
-        
+
         Args:
             self (DisjunctiveConstraint): The instance of the DisjunctiveConstraint class.
             token_id (int): The ID of the token to be checked for advancement.
-        
+
         Returns:
             None: This method does not return any value. It only performs a check.
-        
+
         Raises:
             ValueError: If the provided `token_id` is not of type int.
-        
+
         Note:
-            The `does_advance` method checks if the given `token_id` can be advanced in the DisjunctiveConstraint. It first validates that the `token_id` is of type int. Then, it retrieves the next possible
-tokens from the trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next tokens or not.
+            The `does_advance` method checks if the given `token_id` can be advanced in the DisjunctiveConstraint.
+            It first validates that the `token_id` is of type int. Then, it retrieves the next possible tokens from the
+            trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next
+            tokens or not.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` is supposed to be type `int`, but is {token_id} of type {type(token_id)}")
@@ -510,14 +522,14 @@ tokens from the trie associated with the current sequence. Finally, it returns w
     def update(self, token_id: int):
         """
         This method updates the state of the DisjunctiveConstraint object based on the provided token_id.
-        
+
         Args:
             self (DisjunctiveConstraint): The instance of the DisjunctiveConstraint class.
             token_id (int): The identifier of the token to be processed. It must be of type 'int'.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the token_id provided is not of type 'int'.
         """
@@ -543,15 +555,15 @@ tokens from the trie associated with the current sequence. Finally, it returns w
     def reset(self):
         """
         Resets the state of the DisjunctiveConstraint.
-        
+
         Args:
             self: The instance of the DisjunctiveConstraint class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         self.completed = False
         self.current_seq = []
@@ -559,15 +571,15 @@ tokens from the trie associated with the current sequence. Finally, it returns w
     def remaining(self):
         """
         Returns the remaining length of the current sequence in a DisjunctiveConstraint object.
-        
+
         Args:
             self (DisjunctiveConstraint): The instance of the DisjunctiveConstraint class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.completed:
             # since this can be completed without reaching max height
@@ -576,39 +588,45 @@ tokens from the trie associated with the current sequence. Finally, it returns w
 
     def copy(self, stateful=False):
         """
-        Copy method creates a new instance of DisjunctiveConstraint and returns it. This method can be used to create a copy of an existing DisjunctiveConstraint object.
-        
+        Copy method creates a new instance of DisjunctiveConstraint and returns it. This method can be used to create
+        a copy of an existing DisjunctiveConstraint object.
+
         Args:
             self (DisjunctiveConstraint): The current instance of the DisjunctiveConstraint object.
-            stateful (bool): A flag indicating whether to create a stateful copy or not. If set to True, the state of the current instance will be copied to the new instance. Default is False.
-        
+            stateful (bool): A flag indicating whether to create a stateful copy or not. If set to True,
+                the state of the current instance will be copied to the new instance. Default is False.
+
         Returns:
             DisjunctiveConstraint: A new instance of the DisjunctiveConstraint object.
-        
+
         Raises:
             None.
-        
+
         Note:
-            - If stateful is set to True, the new instance will have the same values for seq_len, current_seq, and completed as the current instance.
-            - If stateful is set to False, the new instance will have default values for seq_len, current_seq, and completed.
-        
+            - If stateful is set to True, the new instance will have the same values for seq_len, current_seq,
+            and completed as the current instance.
+            - If stateful is set to False, the new instance will have default values for seq_len, current_seq,
+            and completed.
+
         Example:
-            constraint = DisjunctiveConstraint(['A', 'B', 'C'])
-            constraint.seq_len = 10
-            constraint.current_seq = ['A', 'B']
-            constraint.completed = False
-        
-            # Create a stateful copy
-            new_constraint = constraint.copy(stateful=True)
-            # new_constraint.seq_len = 10
-            # new_constraint.current_seq = ['A', 'B']
-            # new_constraint.completed = False
-        
-            # Create a non-stateful copy
-            new_constraint = constraint.copy(stateful=False)
-            # new_constraint.seq_len = default value
-            # new_constraint.current_seq = default value
-            # new_constraint.completed = default value
+            ```python
+            >>> constraint = DisjunctiveConstraint(['A', 'B', 'C'])
+            >>> constraint.seq_len = 10
+            >>> constraint.current_seq = ['A', 'B']
+            >>> constraint.completed = False
+            ...
+            >>> # Create a stateful copy
+            >>> new_constraint = constraint.copy(stateful=True)
+            >>> # new_constraint.seq_len = 10
+            >>> # new_constraint.current_seq = ['A', 'B']
+            >>> # new_constraint.completed = False
+            ...
+            >>> # Create a non-stateful copy
+            >>> new_constraint = constraint.copy(stateful=False)
+            >>> # new_constraint.seq_len = default value
+            >>> # new_constraint.current_seq = default value
+            >>> # new_constraint.completed = default value
+            ```
         """
         new_constraint = DisjunctiveConstraint(self.token_ids)
 
@@ -630,16 +648,16 @@ class ConstraintListState:
     """
     def __init__(self, constraints: List[Constraint]):
         """Initialize a ConstraintListState object.
-        
+
         Args:
             self (ConstraintListState): The instance of the ConstraintListState class.
             constraints (List[Constraint]): A list of Constraint objects representing the constraints.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.constraints = constraints
 
@@ -653,13 +671,13 @@ class ConstraintListState:
     def init_state(self):
         """
         This method initializes the state of the ConstraintListState object.
-        
+
         Args:
             self: ConstraintListState - The instance of the ConstraintListState class.
-        
+
         Returns:
-            None: This method does not explicitly return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -669,20 +687,23 @@ class ConstraintListState:
 
     def get_bank(self):
         """
-        This method 'get_bank' is defined within the 'ConstraintListState' class and retrieves the bank value based on certain constraints.
-        
+        This method 'get_bank' is defined within the 'ConstraintListState' class and retrieves the bank value based on
+        certain constraints.
+
         Args:
-            self: An instance of the 'ConstraintListState' class.
-                Type: object
-                Purpose: Represents the current instance of the class.
-                Restrictions: None
-        
+            self:
+                An instance of the 'ConstraintListState' class.
+
+                - Type: object
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: None
+
         Returns:
-            The method returns a value of type None.
-            Purpose: The method calculates and returns the bank value based on the complete and in-progress constraints as well as the maximum sequence length.
-        
+            bank value: The method calculates and returns the bank value based on the complete and in-progress
+                constraints as well as the maximum sequence length.
+
         Raises:
-            No explicit exceptions are raised within this method.
+            None.
         """
         add = 0
         if self.inprogress_constraint:
@@ -692,7 +713,8 @@ class ConstraintListState:
         return (len(self.complete_constraints) * self.max_seqlen) + add
 
     def advance(self):
-        """The list of tokens to generate such that we can make progress.
+        """
+        The list of tokens to generate such that we can make progress.
         By "list" we don't mean the list of token that will fully fulfill a constraint.
 
         Given constraints `c_i = {t_ij | j == # of tokens}`, If we're not in the middle of progressing through a
@@ -742,30 +764,40 @@ class ConstraintListState:
 
     def add(self, token_id: int):
         """
-        This method 'add' belongs to the class 'ConstraintListState' and is used to update the state based on the provided token_id.
-        
+        This method 'add' belongs to the class 'ConstraintListState' and is used to update the state based on the
+        provided token_id.
+
         Args:
-            self: Represents the instance of the 'ConstraintListState' class.
-                Type: ConstraintListState
-                Purpose: Allows access to the attributes and methods of the class instance.
-                Restrictions: None
-        
-            token_id: Represents the token identifier that needs to be processed.
-                Type: int
-                Purpose: Specifies the token identifier to be processed within the constraints.
-                Restrictions: Must be of integer type.
-        
+            self:
+                Represents the instance of the 'ConstraintListState' class.
+
+                - Type: ConstraintListState
+                - Purpose: Allows access to the attributes and methods of the class instance.
+                - Restrictions: None
+
+            token_id:
+                Represents the token identifier that needs to be processed.
+
+                - Type: int
+                - Purpose: Specifies the token identifier to be processed within the constraints.
+                - Restrictions: Must be of integer type.
+
         Returns:
-            The method returns a tuple containing two boolean values, 'complete' and 'stepped'.
-                Type: Tuple (bool, bool)
-                Purpose: 
+            tuple:
+                The method returns a tuple containing two boolean values, 'complete' and 'stepped'.
+
+                - Type: Tuple (bool, bool)
+                - Purpose:
+
                     - 'complete': Indicates whether the state update operation is complete.
                     - 'stepped': Indicates whether any incremental progress was made during the update.
-                Restrictions: None
+
+                - Restrictions: None
         
         Raises:
-            - ValueError: Raised when the 'token_id' parameter is not of integer type.
-            - RuntimeError: Raised when the update operation does not yield incremental progress despite the advancement condition being met.
+            ValueError: Raised when the 'token_id' parameter is not of integer type.
+            RuntimeError: Raised when the update operation does not yield incremental progress
+                despite the advancement condition being met.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` should be an `int`, but is `{token_id}`.")
@@ -848,13 +880,16 @@ class ConstraintListState:
         
         Args:
             self (ConstraintListState): The current instance of the ConstraintListState class.
-            stateful (bool): A flag indicating whether to include stateful constraints in the copy. Defaults to True. If set to True, the copy will include complete_constraints and inprogress_constraint.
+            stateful (bool): A flag indicating whether to include stateful constraints in the copy. Defaults to True.
+                If set to True, the copy will include complete_constraints and inprogress_constraint.
         
         Returns:
-            ConstraintListState: A new instance of the ConstraintListState class with copied constraints based on the specified stateful parameter.
+            ConstraintListState:
+                A new instance of the ConstraintListState class with copied constraints based on the specified
+                stateful parameter.
         
         Raises:
-            None
+            None.
         """
         new_state = ConstraintListState(self.constraints)  # we actually never though self.constraints objects
         # throughout this process. So it's at initialization state.
