@@ -103,14 +103,12 @@ class CohereRotaryEmbedding(nn.Cell):
         sin = emb.sin()
         return cos, sin
 
-
 def rotate_half(x):
     # Split and rotate
     x1 = x[..., ::2]
     x2 = x[..., 1::2]
     rot_x = ops.stack([-x2, x1], axis=-1).flatten(start_dim=-2)
     return rot_x
-
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     """
@@ -576,6 +574,7 @@ class CohereModel(CoherePreTrainedModel):
             if sequence_length != 1:
                 causal_mask = ops.triu(causal_mask, diagonal=1)
             causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+
             causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
             if attention_mask is not None:
                 causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit

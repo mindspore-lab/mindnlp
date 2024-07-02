@@ -57,11 +57,11 @@ def shift_tokens_right(input_ids: Tensor, pad_token_id: int):
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    prev_output_tokens.masked_fill_(prev_output_tokens == -100, pad_token_id)
+    prev_output_tokens.masked_fill(prev_output_tokens == -100, pad_token_id)
 
-    index_of_eos = (prev_output_tokens.ne(pad_token_id).sum(dim=1) - 1).unsqueeze(-1)
+    index_of_eos = (prev_output_tokens.ne(pad_token_id).sum(axis=1) - 1).unsqueeze(-1)
     decoder_start_tokens = prev_output_tokens.gather_elements(1, index_of_eos).squeeze()
-    prev_output_tokens[:, 1:] = prev_output_tokens[:, :-1].clone()
+    prev_output_tokens[:, 1:] = prev_output_tokens[:, :-1].copy()
     prev_output_tokens[:, 0] = decoder_start_tokens
 
     return prev_output_tokens

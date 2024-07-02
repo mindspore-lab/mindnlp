@@ -72,7 +72,7 @@ def router_z_loss_func(router_logits: mindspore.Tensor) -> float:
 
 def load_balancing_loss_func(router_probs: mindspore.Tensor, expert_indices: mindspore.Tensor) -> float:
     r"""
-    Computes auxiliary load balancing loss as in Switch Transformer - implemented in Pytorch.
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in MindSpore.
 
     See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
     function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between

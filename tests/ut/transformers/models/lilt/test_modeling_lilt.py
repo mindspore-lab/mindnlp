@@ -32,7 +32,6 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.transformers import (
         LiltForQuestionAnswering,
         LiltForSequenceClassification,
