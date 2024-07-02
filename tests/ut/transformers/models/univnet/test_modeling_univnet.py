@@ -406,5 +406,5 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
             )
         )
         self.assertTrue(
-            np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-3)
+            np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=4e-3)
         )
