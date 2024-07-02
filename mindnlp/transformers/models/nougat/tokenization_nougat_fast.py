@@ -22,15 +22,17 @@ from multiprocessing import Pool
 from typing import List, Union
 
 import numpy as np
-from Levenshtein import ratio
-import nltk
 
 from mindnlp.transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-from mindnlp.utils import (
-    logging,
-    requires_backends,
-)
+from ....utils import is_levenshtein_available, is_nltk_available, logging, requires_backends
+
+
+if is_levenshtein_available():
+    from Levenshtein import ratio
+
+if is_nltk_available():
+    import nltk
 
 logger = logging.get_logger(__name__)
 

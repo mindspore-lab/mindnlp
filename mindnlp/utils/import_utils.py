@@ -105,6 +105,16 @@ try:
 except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
+_levenshtein_available = _is_package_available("Levenshtein")
+_nltk_available = _is_package_available("nltk")
+
+def is_levenshtein_available():
+    return _levenshtein_available
+
+def is_nltk_available():
+    return _nltk_available
+
+
 def is_sudachi_available():
     """
     Checks if SudachiPy is available for use.

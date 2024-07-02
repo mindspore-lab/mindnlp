@@ -135,6 +135,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("resnet", "ResNetConfig"),
         ("roberta", "RobertaConfig"),
         ("roc_bert", "RoCBertConfig"),
+        ("rwkv", "RwkvConfig"),
         ("sam", "SamConfig"),
         ("segformer", "SegformerConfig"),
         ("speech-encoder-decoder", "SpeechEncoderDecoderConfig"),
