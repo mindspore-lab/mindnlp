@@ -890,7 +890,7 @@ class LxmertModelIntegrationTest(unittest.TestCase):
         visual_feats = as_tensor(visual_feats, dtype=ms.float32)
         visual_pos = as_tensor(visual_pos, dtype=ms.float32)
         output = model(input_ids, visual_feats=visual_feats, visual_pos=visual_pos)[0]
-        expected_shape = [1, 11, 768]
+        expected_shape = (1, 11, 768)
         self.assertEqual(expected_shape, output.shape)
         expected_slice = ms.tensor(
             [

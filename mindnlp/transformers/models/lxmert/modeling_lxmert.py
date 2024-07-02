@@ -15,7 +15,6 @@
 """PyTorch LXMERT model."""
 
 import math
-import os
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
