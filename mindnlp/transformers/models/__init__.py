@@ -51,6 +51,7 @@ from . import (
     canine,
     clap,
     clip,
+    clipseg,
     codegen,
     cohere,
     cogvlm,
@@ -99,6 +100,7 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    instructblip,
     ibert,
     jetmoe,
     layoutlm,
@@ -174,6 +176,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    umt5,
     univnet,
     videomae,
     vipllava,
@@ -231,6 +234,7 @@ from .camembert import *
 from .canine import *
 from .clap import *
 from .clip import *
+from .clipseg import *
 from .codegen import *
 from .cohere import *
 from .cogvlm import *
@@ -280,6 +284,7 @@ from .groupvit import *
 from .ibert import *
 from .hubert import *
 from .imagegpt import *
+from .instructblip import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
@@ -375,6 +380,7 @@ from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
 from .xlnet import *
+from .umt5 import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -410,6 +416,7 @@ __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
+__all__.extend(clipseg.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
@@ -457,6 +464,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
@@ -554,3 +562,4 @@ __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
+__all__.extend(umt5.__all__)

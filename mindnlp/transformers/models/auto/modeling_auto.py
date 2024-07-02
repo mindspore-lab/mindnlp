@@ -49,6 +49,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("blenderbot-small", "BlenderbotSmallModel"),
         ("blip", "BlipModel"),
         ("blip-2", "Blip2Model"),
+        ("instructblip","InstructBlipVisionModel"),
         ("bloom", "BloomModel"),
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
@@ -63,6 +64,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMModel"),
         ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
+        ("clipseg", ("CLIPSegModel","CLIPSegVisionModel")),
+        ("clipseg_vision_model","CLIPSegVisionModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("convbert", "ConvBertModel"),
         ("convnext", "ConvNextModel"),
@@ -162,6 +165,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
+        ("umt5","UMT5Model")
     ]
 )
 
@@ -636,6 +640,7 @@ MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipForQuestionAnswering"),
         ("blip-2", "Blip2ForConditionalGeneration"),
         ("vilt", "ViltForQuestionAnswering"),
+        ("instructblip", "InstructBlipForConditionalGeneration")
     ]
 )
 
@@ -855,6 +860,7 @@ MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("chinese_clip", "ChineseCLIPModel"),
         ("clip", "CLIPModel"),
         ("clipseg", "CLIPSegModel"),
+        ("instructblip","InstructBlipVisionModel"),
     ]
 )
 
