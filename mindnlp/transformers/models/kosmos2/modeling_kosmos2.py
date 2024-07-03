@@ -1828,8 +1828,8 @@ class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel):
                 (
                     image_embeds_position_mask,
                     ops.zeros(
-                        size=(batch_size, seq_len - mask_len),
-                        dtype=ms.bool_,
+                        (batch_size, seq_len - mask_len),
+                        dtype=ms.int64,
                     ),
                 ),
                 axis=1,
