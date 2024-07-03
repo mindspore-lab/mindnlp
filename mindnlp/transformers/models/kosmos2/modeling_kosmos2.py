@@ -814,7 +814,7 @@ class Kosmos2TextSinusoidalPositionalEmbedding(nn.Cell):
         if hasattr(self, "weights"):
             # in forward put the weights on the correct dtype and device of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype)  # pylint: disable=access-member-before-definition
-        self.weights = emb_weights 
+        self.weights = emb_weights
 
     @staticmethod
     # Copied from transformers.models.m2m_100.modeling_m2m_100.M2M100SinusoidalPositionalEmbedding.get_embedding
