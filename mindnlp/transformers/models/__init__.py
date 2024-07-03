@@ -104,6 +104,7 @@ from . import (
     instructblip,
     ibert,
     jetmoe,
+    kosmos2,
     layoutlm,
     layoutlmv2,
     led,
@@ -290,6 +291,7 @@ from .hubert import *
 from .imagegpt import *
 from .instructblip import *
 from .jetmoe import *
+from .kosmos2 import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .led import *
@@ -475,6 +477,7 @@ __all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
+__all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(led.__all__)
