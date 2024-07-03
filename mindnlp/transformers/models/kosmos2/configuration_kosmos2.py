@@ -282,7 +282,7 @@ class Kosmos2Config(PretrainedConfig):
     >>> configuration = model.config
     ```"""
 
-    model_type = "kosmos-2"
+    model_type = "kosmos2"
     is_composition = True
 
     def __init__(
