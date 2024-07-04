@@ -47,7 +47,7 @@ if is_mindspore_available():
         FNetModel,
         FNetTokenizerFast,
     )
-    from transformers.models.fnet.modeling_fnet import (
+    from mindnlp.transformers.models.fnet.modeling_fnet import (
         FNetBasicFourierTransform,
         is_scipy_available,
     )

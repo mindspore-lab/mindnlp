@@ -23,11 +23,6 @@ import mindspore as ms
 from mindspore import ops, nn
 from mindspore.common.initializer import initializer, Normal
 from ....utils import is_scipy_available
-
-
-if is_scipy_available():
-    from scipy import linalg
-
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -47,6 +42,8 @@ from ....utils import (
 )
 from .configuration_fnet import FNetConfig
 
+if is_scipy_available():
+    from scipy import linalg
 
 logger = logging.get_logger(__name__)
 
