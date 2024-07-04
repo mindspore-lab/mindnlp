@@ -67,6 +67,7 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    deta,
     detr,
     deit,
     distilbert,
@@ -188,6 +189,7 @@ from . import (
     visual_bert,
     vit,
     vit_hybrid,
+    vit_mae,
     vit_msn,
     vitdet,
     wav2vec2,
@@ -254,6 +256,7 @@ from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
 from .detr import *
+from .deta import *
 from .deit import *
 from .distilbert import *
 from .donut import *
@@ -373,6 +376,7 @@ from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
 from .vit_hybrid import *
+from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
 from .whisper import *
@@ -441,6 +445,7 @@ __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
+__all__.extend(deta.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
@@ -558,6 +563,7 @@ __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(vit_hybrid.__all__)
+__all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)

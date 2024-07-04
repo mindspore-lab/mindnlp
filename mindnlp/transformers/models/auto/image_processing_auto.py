@@ -56,7 +56,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("deformable_detr", "DeformableDetrImageProcessor"),
         ("deit", "DeiTImageProcessor"),
         # ("depth_anything", "DPTImageProcessor"),
-        # ("deta", "DetaImageProcessor"),
+        ("deta", "DetaImageProcessor"),
         ("detr", "DetrImageProcessor"),
         # ("dinat", "ViTImageProcessor"),
         # ("dinov2", "BitImageProcessor"),
