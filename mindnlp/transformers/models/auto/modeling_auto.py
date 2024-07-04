@@ -106,6 +106,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mask2former", "Mask2FormerModel"),
         ("mbart", "MBartModel"),
         ("mctct","MCTCTModel"),
+        ("mgp-str", "MgpstrForSceneTextRecognition"),
         ("minicpm", "MiniCPMModel"),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
