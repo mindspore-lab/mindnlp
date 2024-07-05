@@ -343,8 +343,8 @@ class Dinov2SwiGLUFFN(nn.Cell):
 
     def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.weights_in(hidden_state)
-        x = hidden_state.chunk(x,2, axis=-1)
-        hidden = ops.silu(x[1]) * x[2]
+        x1, x2 = hidden_state.chunk(2, axis=-1)
+        hidden = ops.silu(x1) * x2
         return self.weights_out(hidden)
 
 
