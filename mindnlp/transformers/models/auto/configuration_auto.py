@@ -174,6 +174,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),
+        ("xmod", "XmodConfig"),
     ]
 )
 

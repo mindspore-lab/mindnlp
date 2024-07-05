@@ -202,6 +202,7 @@ from . import (
     xlm_roberta,
     xlm_roberta_xl,
     xlnet,
+    xmod
 )
 
 from .owlv2 import *
@@ -389,6 +390,8 @@ from .xlm_roberta import *
 from .xlm_roberta_xl import *
 from .xlnet import *
 from .umt5 import *
+from .xmod import *
+
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -575,3 +578,5 @@ __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
+__all__.extend(xmod.__all__)
+
