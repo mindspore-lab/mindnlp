@@ -329,9 +329,10 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
             BeitImageProcessor.from_pretrained("facebook/data2vec-vision-base-ft1k") if is_vision_available() else None
         )
 
-    @slow
+  #  @slow
     def test_inference_image_classification_head_imagenet_1k(self):
         model = Data2VecVisionForImageClassification.from_pretrained("facebook/data2vec-vision-base-ft1k")
+
 
         image_processor = self.default_image_processor
         image = prepare_img()
@@ -352,7 +353,7 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
         expected_top2 = [model.config.label2id[i] for i in ["remote control, remote", "tabby, tabby cat"]]
         self.assertEqual(logits[0].topk(2).indices.cpu().tolist(), expected_top2)
 
-    @slow
+  #  @slow
     def test_inference_interpolate_pos_encoding(self):
         model_name = "facebook/data2vec-vision-base-ft1k"
         model = Data2VecVisionModel.from_pretrained(model_name, **{"use_absolute_position_embeddings": True})

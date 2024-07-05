@@ -335,10 +335,6 @@ class Data2VecVisionSelfAttention(nn.Cell):
                 interpolate_pos_encoding, attention_scores.shape[2]
             ).unsqueeze(0)
 
-        # Add relative position bias if present.
-        if self.relative_position_bias is not None:
-            attention_scores = attention_scores + self.relative_position_bias().unsqueeze(0)
-
         # Add shared relative position bias if provided.
         if relative_position_bias is not None:
             attention_scores = attention_scores + relative_position_bias
@@ -736,8 +732,7 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
         self.encoder = Data2VecVisionEncoder(config, window_size=self.embeddings.patch_embeddings.patch_shape)
 
         self.layernorm = (
-            nn.Identity() if config.use_mean_pooling else nn.LayerNorm(config.hidden_size,
-                                                                       epsilon=config.layer_norm_eps)
+            nn.Identity() if config.use_mean_pooling else nn.LayerNorm(config.hidden_size,epsilon=config.layer_norm_eps)
         )
         self.pooler = Data2VecVisionPooler(config) if add_pooling_layer else None
 
@@ -1084,7 +1079,7 @@ class Data2VecVisionUperHead(nn.Cell):
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
-            laterals[i - 1] = laterals[i - 1] + F.interpolate(
+            laterals[i - 1] = laterals[i - 1] + ops.interpolate(
                 laterals[i], size=prev_shape, mode="bilinear", align_corners=self.align_corners
             )
 
