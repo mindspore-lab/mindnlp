@@ -1040,7 +1040,7 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
         self.classifier = nn.SequentialCell(
             nn.Dense(config.hidden_size, config.hidden_size * 2),
             nn.LayerNorm(config.hidden_size * 2, epsilon= 1e-5),
-            nn.GELU(),
+            nn.GELU(False),
             nn.Dense(config.hidden_size * 2, config.num_labels),
         )
 
@@ -1236,8 +1236,8 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
         num_images = config.num_images
         self.classifier = nn.SequentialCell(
             nn.Dense(config.hidden_size * num_images, config.hidden_size * num_images),
-            nn.LayerNorm(config.hidden_size * num_images),
-            nn.GELU(),
+            nn.LayerNorm(config.hidden_size * num_images, epsilon= 1e-5),
+            nn.GELU(False),
             nn.Dense(config.hidden_size * num_images, config.num_labels),
         )
 
