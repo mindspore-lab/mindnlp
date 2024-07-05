@@ -22,6 +22,8 @@ import mindspore
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.utils import logging
+
 from ...activations import ACT2FN, gelu
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -35,8 +37,8 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import logging
 from .configuration_xmod import XmodConfig
+
 
 
 logger = logging.get_logger(__name__)
@@ -155,7 +157,7 @@ class XmodSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -217,7 +219,7 @@ class XmodSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
                 position_ids_l = Tensor(key_length - 1, dtype=mindspore.int64).view(
@@ -1217,7 +1219,7 @@ class XmodForSequenceClassification(XmodPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

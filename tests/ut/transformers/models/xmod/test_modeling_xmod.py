@@ -524,7 +524,7 @@ class XmodModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     def test_freeze_embeddings_and_language_adapters(self):
         config = self.model_tester.prepare_config_and_inputs()[0]
         model = XmodForMaskedLM(config=config)
-        num_trainable_params_before = sum(p.numel() for p in model.get_parameters() if p.requires_grad) #parameters -> get_parameters test?
+        num_trainable_params_before = sum(p.numel() for p in model.get_parameters() if p.requires_grad)
         model.freeze_embeddings_and_language_adapters()
         num_trainable_params_after = sum(p.numel() for p in model.get_parameters() if p.requires_grad)
         self.assertLess(num_trainable_params_after, num_trainable_params_before)

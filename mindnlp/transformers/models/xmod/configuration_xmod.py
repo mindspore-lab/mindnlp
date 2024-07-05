@@ -15,9 +15,6 @@
 # limitations under the License.
 """X-MOD configuration"""
 
-from collections import OrderedDict
-from typing import Mapping
-
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
