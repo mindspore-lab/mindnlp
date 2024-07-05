@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2022 Google AI, Ross Wightman, The HuggingFace Inc. team. All rights reserved.
+# Copyright 2023 Meta AI and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,57 +12,51 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Mindspore ViT Hybrid model."""
+"""PyTorch DINOv2 model."""
 
 import collections.abc
 import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-import mindspore as ms
-from mindspore import nn, ops, Parameter
+import mindspore
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
-from mindnlp._legacy import functional as F
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
-from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, ImageClassifierOutput
+from ...modeling_outputs import (
+    BackboneOutput,
+    BaseModelOutput,
+    BaseModelOutputWithPooling,
+    ImageClassifierOutput,
+)
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from ....utils import logging
-from ...backbone_utils import load_backbone
-from .configuration_vit_hybrid import ViTHybridConfig
+from ...backbone_utils import BackboneMixin
+from .configuration_dinov2 import Dinov2Config
 
 
 logger = logging.get_logger(__name__)
 
-# General docstring
-_CONFIG_FOR_DOC = "ViTHybridConfig"
-
-# Base docstring
-_CHECKPOINT_FOR_DOC = "google/vit-hybrid-base-bit-384"
-_EXPECTED_OUTPUT_SHAPE = [1, 197, 768]
-
-# Image classification docstring
-_IMAGE_CLASS_CHECKPOINT = "google/vit-hybrid-base-bit-384"
-_IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 
-class ViTHybridEmbeddings(nn.Cell):
+class Dinov2Embeddings(nn.Cell):
     """
-    Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
+    Construct the CLS token, mask token, position and patch embeddings.
     """
 
-    def __init__(self, config: ViTHybridConfig, use_mask_token: bool = False) -> None:
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.randn(1, 1, config.hidden_size), 'cls_token')
-        self.mask_token = Parameter(ops.zeros(1, 1, config.hidden_size), 'mask_token') if use_mask_token else None
-        self.patch_embeddings = ViTHybridPatchEmbeddings(config)
+        self.cls_token = mindspore.Parameter(ops.randn(1, 1, config.hidden_size), 'cls_token')
+        self.mask_token = mindspore.Parameter(ops.zeros(1, config.hidden_size), 'mask_token')
+        self.patch_embeddings = Dinov2PatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.randn(1, num_patches + 1, config.hidden_size), 'position_embeddings')
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        self.position_embeddings = mindspore.Parameter(ops.randn(1, num_patches + 1, config.hidden_size), 'position_embeddings')
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.config = config
 
-    def interpolate_pos_encoding(self, embeddings: ms.Tensor, height: int, width: int) -> ms.Tensor:
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         """
         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher
         resolution images.
@@ -85,108 +79,77 @@ class ViTHybridEmbeddings(nn.Cell):
         height, width = height + 0.1, width + 0.1
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
+        target_dtype = patch_pos_embed.dtype
         patch_pos_embed = ops.interpolate(
-            patch_pos_embed,
-            scale_factor=(height / math.sqrt(num_positions), width / math.sqrt(num_positions)),
+            patch_pos_embed.to(dtype=mindspore.float32),
+            scale_factor=(float(height / math.sqrt(num_positions)), float(width / math.sqrt(num_positions))),
             mode="bicubic",
             align_corners=False,
             recompute_scale_factor=True
-        )
+        ).to(dtype=target_dtype)
         if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
-            raise ValueError(f"Invalid height or width: {height}, {width}")
+            raise ValueError("Width or height does not match with the interpolated position embeddings")
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
 
-    def construct(
-        self,
-        pixel_values: ms.Tensor,
-        bool_masked_pos: Optional[ms.Tensor] = None,
-        interpolate_pos_encoding: bool = False,
-    ) -> ms.Tensor:
-        batch_size, num_channels, height, width = pixel_values.shape
-        embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
+    def construct(self, pixel_values: mindspore.Tensor, bool_masked_pos: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
+        batch_size, _, height, width = pixel_values.shape
+        target_dtype = self.patch_embeddings.projection.weight.dtype
+        embeddings = self.patch_embeddings(pixel_values.to(dtype=target_dtype))
 
         if bool_masked_pos is not None:
-            seq_length = embeddings.shape[1]
-            mask_tokens = self.mask_token.broadcast_to((batch_size, seq_length, -1))
-            # replace the masked visual tokens by mask_tokens
-            mask = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
-            embeddings = embeddings * (1.0 - mask) + mask_tokens * mask
+            embeddings = ops.where(
+                bool_masked_pos.unsqueeze(-1), self.mask_token.to(embeddings.dtype).unsqueeze(0), embeddings
+            )
 
         # add the [CLS] token to the embedded patch tokens
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
         embeddings = ops.cat((cls_tokens, embeddings), axis=1)
 
         # add positional encoding to each token
-        if interpolate_pos_encoding:
-            embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
-        else:
-            embeddings = embeddings + self.position_embeddings
+        embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
 
         embeddings = self.dropout(embeddings)
 
         return embeddings
 
 
-class ViTHybridPatchEmbeddings(nn.Cell):
+class Dinov2PatchEmbeddings(nn.Cell):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
     Transformer.
     """
 
-    def __init__(self, config, feature_size=None):
+    def __init__(self, config):
         super().__init__()
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
 
         image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
         patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-
-        self.backbone = load_backbone(config)
-        if self.backbone.config.model_type != "bit":
-            raise ValueError(f"Backbone model type {self.backbone.model_type} is not supported.")
-        feature_dim = self.backbone.channels[-1]
-
-        if feature_size is None:
-            feature_map = config.backbone_featmap_shape
-
-            feature_size = feature_map[-2:]
-            feature_dim = feature_map[1]
-        else:
-            feature_size = (
-                feature_size if isinstance(feature_size, collections.abc.Iterable) else (feature_size, feature_size)
-            )
-            feature_dim = self.backbone.channels[-1]
-
-        self.grid_size = (feature_size[0] // patch_size[0], feature_size[1] // patch_size[1])
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
+        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_channels = num_channels
+        self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
 
-    def construct(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
-        _, num_channels, height, width = pixel_values.shape
+    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+        num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
                 "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
+                f" Expected {self.num_channels} but got {num_channels}."
             )
-        if not interpolate_pos_encoding:
-            if height != self.image_size[0] or width != self.image_size[1]:
-                raise ValueError(
-                    f"Input image size ({height}*{width}) doesn't match model"
-                    f" ({self.image_size[0]}*{self.image_size[1]})."
-                )
-        features = self.backbone(pixel_values).feature_maps[-1]
-        embeddings = self.projection(features).flatten(start_dim=2).swapaxes(1, 2)
-
+        embeddings = self.projection(pixel_values).flatten(start_dim=2).swapaxes(1, 2)
         return embeddings
 
 
-class ViTHybridSelfAttention(nn.Cell):
-    def __init__(self, config: ViTHybridConfig) -> None:
+# Copied from transformers.models.vit.modeling_vit.ViTSelfAttention with ViT->Dinov2
+class Dinov2SelfAttention(nn.Cell):
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
             raise ValueError(
@@ -202,16 +165,16 @@ class ViTHybridSelfAttention(nn.Cell):
         self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
         self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
-    def transpose_for_scores(self, x: ms.Tensor) -> ms.Tensor:
+    def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def construct(
-        self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+        self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -245,60 +208,31 @@ class ViTHybridSelfAttention(nn.Cell):
         return outputs
 
 
-class ViTHybridSdpaSelfAttention(ViTHybridSelfAttention):
-    def __init__(self, config: ViTHybridConfig) -> None:
-        super().__init__(config)
-        self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
-
-    def forward(
-        self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
-        mixed_query_layer = self.query(hidden_states)
-
-        key_layer = self.transpose_for_scores(self.key(hidden_states))
-        value_layer = self.transpose_for_scores(self.value(hidden_states))
-        query_layer = self.transpose_for_scores(mixed_query_layer)
-
-        context_layer = F._scaled_dot_product_attention(
-            query_layer,
-            key_layer,
-            value_layer,
-            head_mask,
-            self.attention_probs_dropout_prob if self.training else 0.0,
-            is_causal=False,
-            is_training=self.training
-        )
-
-        context_layer = context_layer.permute(0, 2, 1, 3)
-        new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
-        context_layer = context_layer.view(new_context_layer_shape)
-
-        return context_layer, None
-
-
-class ViTHybridSelfOutput(nn.Cell):
+# Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->Dinov2
+class Dinov2SelfOutput(nn.Cell):
     """
-    The residual connection is defined in ViTHybridLayer instead of here (as is the case with other models), due to the
+    The residual connection is defined in Dinov2Layer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
     """
 
-    def __init__(self, config: ViTHybridConfig) -> None:
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
         return hidden_states
 
 
-class ViTHybridAttention(nn.Cell):
-    def __init__(self, config: ViTHybridConfig) -> None:
+# Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->Dinov2
+class Dinov2Attention(nn.Cell):
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
-        self.attention = ViTHybridSelfAttention(config)
-        self.output = ViTHybridSelfOutput(config)
+        self.attention = Dinov2SelfAttention(config)
+        self.output = Dinov2SelfOutput(config)
         self.pruned_heads = set()
 
     def prune_heads(self, heads: Set[int]) -> None:
@@ -321,10 +255,10 @@ class ViTHybridAttention(nn.Cell):
 
     def construct(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         self_outputs = self.attention(hidden_states, head_mask, output_attentions)
 
         attention_output = self.output(self_outputs[0], hidden_states)
@@ -333,102 +267,150 @@ class ViTHybridAttention(nn.Cell):
         return outputs
 
 
-class ViTHybridSdpaAttention(ViTHybridAttention):
-    def __init__(self, config: ViTHybridConfig) -> None:
-        super().__init__(config)
-        self.attention = ViTHybridSdpaSelfAttention(config)
-
-
-class ViTHybridIntermediate(nn.Cell):
-    def __init__(self, config: ViTHybridConfig) -> None:
+class Dinov2LayerScale(nn.Cell):
+    def __init__(self, config) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.lambda1 = mindspore.Parameter(config.layerscale_value * ops.ones(config.hidden_size), 'lambda1')
+
+    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+        return hidden_state * self.lambda1
+
+
+# Copied from transformers.models.beit.modeling_beit.drop_path
+def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
+    """
+    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+
+    Comment by Ross Wightman: This is the same as the DropConnect impl I created for EfficientNet, etc networks,
+    however, the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
+    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for changing the
+    layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use 'survival rate' as the
+    argument.
+    """
+    if drop_prob == 0.0 or not training:
+        return input
+    keep_prob = 1 - drop_prob
+    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
+    random_tensor.floor_()  # binarize
+    output = input.div(keep_prob) * random_tensor
+    return output
+
+
+# Copied from transformers.models.beit.modeling_beit.BeitDropPath
+class Dinov2DropPath(nn.Cell):
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
+
+    def __init__(self, drop_prob: Optional[float] = None) -> None:
+        super().__init__()
+        self.drop_prob = drop_prob
+
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        return drop_path(hidden_states, self.drop_prob, self.training)
+
+    def extra_repr(self) -> str:
+        return "p={}".format(self.drop_prob)
+
+
+class Dinov2MLP(nn.Cell):
+    def __init__(self, config) -> None:
+        super().__init__()
+        in_features = out_features = config.hidden_size
+        hidden_features = int(config.hidden_size * config.mlp_ratio)
+        self.fc1 = nn.Dense(in_features, hidden_features, has_bias=True)
         if isinstance(config.hidden_act, str):
-            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+            self.activation = ACT2FN[config.hidden_act]
         else:
-            self.intermediate_act_fn = config.hidden_act
+            self.activation = config.hidden_act
+        self.fc2 = nn.Dense(hidden_features, out_features, has_bias=True)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.intermediate_act_fn(hidden_states)
+    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_state = self.fc1(hidden_state)
+        hidden_state = self.activation(hidden_state)
+        hidden_state = self.fc2(hidden_state)
+        return hidden_state
 
-        return hidden_states
 
-
-class ViTHybridOutput(nn.Cell):
-    def __init__(self, config: ViTHybridConfig) -> None:
+class Dinov2SwiGLUFFN(nn.Cell):
+    def __init__(self, config) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        in_features = out_features = config.hidden_size
+        hidden_features = int(config.hidden_size * config.mlp_ratio)
+        hidden_features = (int(hidden_features * 2 / 3) + 7) // 8 * 8
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.dropout(hidden_states)
+        self.weights_in = nn.Dense(in_features, 2 * hidden_features, has_bias=True)
+        self.weights_out = nn.Dense(hidden_features, out_features, has_bias=True)
 
-        hidden_states = hidden_states + input_tensor
-
-        return hidden_states
-
-
-VIT_HYBRID_ATTENTION_CLASSES = {
-    "eager": ViTHybridAttention,
-    "sdpa": ViTHybridSdpaAttention,
-}
+    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_state = self.weights_in(hidden_state)
+        x = hidden_state.chunk(x,2, axis=-1)
+        hidden = ops.silu(x[1]) * x[2]
+        return self.weights_out(hidden)
 
 
-class ViTHybridLayer(nn.Cell):
-    """This corresponds to the Block class in the timm implementation."""
+class Dinov2Layer(nn.Cell):
+    """This corresponds to the Block class in the original implementation."""
 
-    def __init__(self, config: ViTHybridConfig) -> None:
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
-        self.chunk_size_feed_forward = config.chunk_size_feed_forward
-        self.seq_len_dim = 1
-        self.attention = VIT_HYBRID_ATTENTION_CLASSES[config._attn_implementation](config)
-        self.intermediate = ViTHybridIntermediate(config)
-        self.output = ViTHybridOutput(config)
-        self.layernorm_before = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+
+        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.attention = Dinov2Attention(config)
+        self.layer_scale1 = Dinov2LayerScale(config)
+        self.drop_path = Dinov2DropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
+
+        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+
+        if config.use_swiglu_ffn:
+            self.mlp = Dinov2SwiGLUFFN(config)
+        else:
+            self.mlp = Dinov2MLP(config)
+        self.layer_scale2 = Dinov2LayerScale(config)
 
     def construct(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         self_attention_outputs = self.attention(
-            self.layernorm_before(hidden_states),  # in ViTHybrid, layernorm is applied before self-attention
+            self.norm1(hidden_states),  # in Dinov2, layernorm is applied before self-attention
             head_mask,
             output_attentions=output_attentions,
         )
         attention_output = self_attention_outputs[0]
+
+        attention_output = self.layer_scale1(attention_output)
         outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
 
         # first residual connection
-        hidden_states = attention_output + hidden_states
+        hidden_states = self.drop_path(attention_output) + hidden_states
 
-        # in ViTHybrid, layernorm is also applied after self-attention
-        layer_output = self.layernorm_after(hidden_states)
-        layer_output = self.intermediate(layer_output)
+        # in Dinov2, layernorm is also applied after self-attention
+        layer_output = self.norm2(hidden_states)
+        layer_output = self.mlp(layer_output)
+        layer_output = self.layer_scale2(layer_output)
 
-        # second residual connection is done here
-        layer_output = self.output(layer_output, hidden_states)
+        # second residual connection
+        layer_output = self.drop_path(layer_output) + hidden_states
 
         outputs = (layer_output,) + outputs
 
         return outputs
 
 
-class ViTHybridEncoder(nn.Cell):
-    def __init__(self, config: ViTHybridConfig) -> None:
+# Copied from transformers.models.vit.modeling_vit.ViTEncoder with ViT->Dinov2
+class Dinov2Encoder(nn.Cell):
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViTHybridLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList([Dinov2Layer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
     def construct(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
         return_dict: bool = True,
@@ -469,18 +451,17 @@ class ViTHybridEncoder(nn.Cell):
         )
 
 
-class ViTHybridPreTrainedModel(PreTrainedModel):
+class Dinov2PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
 
-    config_class = ViTHybridConfig
-    base_model_prefix = "vit"
+    config_class = Dinov2Config
+    base_model_prefix = "dinov2"
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
-    _no_split_modules = ["ViTHybridEmbeddings", "ViTHybridLayer"]
-    _supports_sdpa = True
+    _no_split_modules = ["Dinov2SwiGLUFFN"]
 
     def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
@@ -496,7 +477,7 @@ class ViTHybridPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-        elif isinstance(cell, ViTHybridEmbeddings):
+        elif isinstance(cell, Dinov2Embeddings):
             cell.position_embeddings.set_data(initializer(TruncatedNormal(self.config.initializer_range),
                                              cell.position_embeddings.shape, cell.position_embeddings.dtype))
 
@@ -504,56 +485,20 @@ class ViTHybridPreTrainedModel(PreTrainedModel):
                                              cell.cls_token.shape, cell.cls_token.dtype))
 
 
-VIT_START_DOCSTRING = r"""
-    This model is a Mindspore [ms.nn.Module] subclass. Use it
-    as a regular mindspore Module and refer to the mindspore documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`ViTHybridConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-VIT_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
-            [`ViTHybridImageProcessor.__call__`] for details.
-
-        head_mask (`ms.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-
-
-class ViTHybridModel(ViTHybridPreTrainedModel):
-    def __init__(self, config: ViTHybridConfig, add_pooling_layer: bool = True, use_mask_token: bool = False):
+class Dinov2Model(Dinov2PreTrainedModel):
+    def __init__(self, config: Dinov2Config):
         super().__init__(config)
         self.config = config
 
-        self.embeddings = ViTHybridEmbeddings(config, use_mask_token=use_mask_token)
-        self.encoder = ViTHybridEncoder(config)
+        self.embeddings = Dinov2Embeddings(config)
+        self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.pooler = ViTHybridPooler(config) if add_pooling_layer else None
+        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> ViTHybridPatchEmbeddings:
+    def get_input_embeddings(self) -> Dinov2PatchEmbeddings:
         return self.embeddings.patch_embeddings
 
     def _prune_heads(self, heads_to_prune: Dict[int, List[int]]) -> None:
@@ -567,18 +512,13 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
 
     def construct(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        bool_masked_pos: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
-        r"""
-        bool_masked_pos (`ms.BoolTensor` of shape `(batch_size, num_patches)`, *optional*):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
-        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -595,28 +535,21 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
-        # TODO: maybe have a cleaner way to cast the input (from `ImageProcessor` side?)
-        expected_dtype = self.embeddings.patch_embeddings.projection.weight.dtype
-        if pixel_values.dtype != expected_dtype:
-            pixel_values = pixel_values.to(expected_dtype)
-
-        embedding_output = self.embeddings(
-            pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
-        )
+        embedding_output = self.embeddings(pixel_values, bool_masked_pos=bool_masked_pos)
 
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict
+            return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = sequence_output[:, 0, :]
 
         if not return_dict:
-            head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
+            head_outputs = (sequence_output, pooled_output)
             return head_outputs + encoder_outputs[1:]
 
         return BaseModelOutputWithPooling(
@@ -627,79 +560,63 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         )
 
 
-class ViTHybridPooler(nn.Cell):
-    def __init__(self, config: ViTHybridConfig):
-        super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
-        # We "pool" the model by simply taking the hidden state corresponding
-        # to the first token.
-        first_token_tensor = hidden_states[:, 0]
-        pooled_output = self.dense(first_token_tensor)
-        pooled_output = self.activation(pooled_output)
-        return pooled_output
-
-
-
-"""
-ViT Hybrid Model transformer with an image classification head on top (a linear layer on top of the final hidden
-state of the [CLS] token) e.g. for ImageNet.
-"""
-class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
-    def __init__(self, config: ViTHybridConfig) -> None:
+class Dinov2ForImageClassification(Dinov2PreTrainedModel):
+    def __init__(self, config: Dinov2Config) -> None:
         super().__init__(config)
 
         self.num_labels = config.num_labels
-        self.vit = ViTHybridModel(config, add_pooling_layer=False)
+        self.dinov2 = Dinov2Model(config)
 
         # Classifier head
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = (
+            nn.Dense(config.hidden_size * 2, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutput]:
         r"""
-        labels (`ms.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.vit(
+        outputs = self.dinov2(
             pixel_values,
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
 
-        sequence_output = outputs[0]
+        sequence_output = outputs[0]  # batch_size, sequence_length, hidden_size
 
-        logits = self.classifier(sequence_output[:, 0, :])
+        cls_token = sequence_output[:, 0]
+        patch_tokens = sequence_output[:, 1:]
+
+        linear_input = ops.cat([cls_token, patch_tokens.mean(axis=1)], axis=1)
+
+        logits = self.classifier(linear_input)
 
         loss = None
         if labels is not None:
-            #TODO
-            # 
+            # move labels to correct device to enable model parallelism
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -715,7 +632,7 @@ class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
-            output = (logits,) + outputs[1:]
+            output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
         return ImageClassifierOutput(
@@ -725,6 +642,103 @@ class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-__all__  = ['ViTHybridPreTrainedModel',
-            'ViTHybridModel',
-            'ViTHybridForImageClassification']
+
+
+class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
+    def __init__(self, config):
+        super().__init__(config)
+        super()._init_backbone(config)
+
+        self.num_features = [config.hidden_size for _ in range(config.num_hidden_layers + 1)]
+        self.embeddings = Dinov2Embeddings(config)
+        self.encoder = Dinov2Encoder(config)
+
+        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self) -> Dinov2PatchEmbeddings:
+        return self.embeddings.patch_embeddings
+
+    def construct(
+        self,
+        pixel_values: mindspore.Tensor,
+        output_hidden_states: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> BackboneOutput:
+        """
+        Returns:
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoImageProcessor, AutoBackbone
+        >>> import torch
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
+        >>> model = AutoBackbone.from_pretrained(
+        ...     "facebook/dinov2-base", out_features=["stage2", "stage5", "stage8", "stage11"]
+        ... )
+
+        >>> inputs = processor(image, return_tensors="ms")
+
+        >>> outputs = model(**inputs)
+        >>> feature_maps = outputs.feature_maps
+        >>> list(feature_maps[-1].shape)
+        [1, 768, 16, 16]
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+
+        embedding_output = self.embeddings(pixel_values)
+
+        outputs = self.encoder(
+            embedding_output, output_hidden_states=True, output_attentions=output_attentions, return_dict=return_dict
+        )
+
+        hidden_states = outputs.hidden_states if return_dict else outputs[1]
+
+        feature_maps = ()
+        for stage, hidden_state in zip(self.stage_names, hidden_states):
+            if stage in self.out_features:
+                if self.config.apply_layernorm:
+                    hidden_state = self.layernorm(hidden_state)
+                if self.config.reshape_hidden_states:
+                    hidden_state = hidden_state[:, 1:]
+                    # this was actually a bug in the original implementation that we copied here,
+                    # cause normally the order is height, width
+                    batch_size, _, height, width = pixel_values.shape
+                    patch_size = self.config.patch_size
+                    hidden_state = hidden_state.reshape(batch_size, height // patch_size, width // patch_size, -1)
+                    hidden_state = hidden_state.permute(0, 3, 1, 2)
+                feature_maps += (hidden_state,)
+
+        if not return_dict:
+            if output_hidden_states:
+                output = (feature_maps,) + outputs[1:]
+            else:
+                output = (feature_maps,) + outputs[2:]
+            return output
+
+        return BackboneOutput(
+            feature_maps=feature_maps,
+            hidden_states=outputs.hidden_states if output_hidden_states else None,
+            attentions=outputs.attentions if output_attentions else None,
+        )
+
+__all__ = [
+        "Dinov2ForImageClassification",
+        "Dinov2Model",
+        "Dinov2PreTrainedModel",
+        "Dinov2Backbone",
+    ]

@@ -69,6 +69,7 @@ from . import (
     decision_transformer,
     detr,
     deit,
+    dinov2,
     distilbert,
     donut,
     dpr,
@@ -256,6 +257,7 @@ from .deberta_v2 import *
 from .decision_transformer import *
 from .detr import *
 from .deit import *
+from .dinov2 import *
 from .distilbert import *
 from .donut import *
 from .dpr import *
@@ -441,6 +443,7 @@ __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
+__all__.extend(dinov2.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
