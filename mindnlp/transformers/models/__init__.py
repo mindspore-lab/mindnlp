@@ -579,4 +579,3 @@ __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
-
