@@ -559,8 +559,10 @@ class Kosmos2ModelIntegrationTest(unittest.TestCase):
         image.save("new_image.jpg")
         image = Image.open("new_image.jpg")
 
-        model = AutoModelForVision2Seq.from_pretrained("microsoft/kosmos-2-patch14-224")
-        processor = AutoProcessor.from_pretrained("microsoft/kosmos-2-patch14-224")
+        model = AutoModelForVision2Seq.from_pretrained("microsoft/kosmos-2-patch14-224", from_pt=True)
+        processor = AutoProcessor.from_pretrained(
+            "microsoft/kosmos-2-patch14-224", from_pt=True
+        )
 
         prompt = "<grounding>An image of"
         (
@@ -713,13 +715,15 @@ class Kosmos2ModelIntegrationTest(unittest.TestCase):
         image.save("new_image.jpg")
         image = Image.open("new_image.jpg")
 
-        model = AutoModelForVision2Seq.from_pretrained("microsoft/kosmos-2-patch14-224")
+        model = AutoModelForVision2Seq.from_pretrained(
+            "microsoft/kosmos-2-patch14-224", from_pt=True
+        )
 
         prompt = ["<grounding>Describe this image in detail:", "<grounding>An image of"]
 
         # left padding
         processor = AutoProcessor.from_pretrained(
-            "microsoft/kosmos-2-patch14-224", padding_side="left"
+            "microsoft/kosmos-2-patch14-224", padding_side="left", from_pt=True
         )
 
         (
@@ -776,7 +780,9 @@ class Kosmos2ModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(all_entities, [EXPECTED_ENTITIES_0, EXPECTED_ENTITIES_1])
 
         # right padding
-        processor = AutoProcessor.from_pretrained("microsoft/kosmos-2-patch14-224")
+        processor = AutoProcessor.from_pretrained(
+            "microsoft/kosmos-2-patch14-224", from_pt=True
+        )
 
         (
             scores,

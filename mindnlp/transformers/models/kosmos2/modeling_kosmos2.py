@@ -46,11 +46,14 @@ def _expand_mask(mask: ms.Tensor, dtype: ms.dtype, tgt_len: Optional[int] = None
     bsz, src_len = mask.shape
     tgt_len = tgt_len if tgt_len is not None else src_len
 
-    expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
+    expanded_mask = (
+        mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).astype(dtype)
+    )
 
     inverted_mask = 1.0 - expanded_mask
     return inverted_mask.masked_fill(
-        inverted_mask.to(ms.bool_), ms.Tensor(np.finfo(ms.dtype_to_nptype(dtype)).min)
+        inverted_mask.astype(ms.bool_),
+        ms.Tensor(np.finfo(ms.dtype_to_nptype(dtype)).min),
     )
 
 
@@ -68,7 +71,7 @@ def _make_causal_mask(
     )
     mask_cond = ops.arange(mask.shape[-1])
     mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
-    mask = mask.to(dtype)
+    mask = mask.astype(dtype)
 
     if past_key_values_length > 0:
         mask = ops.cat(
@@ -101,7 +104,7 @@ def create_position_ids_from_input_ids(
     incremental_indices = (
         ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length
     ) * mask
-    return incremental_indices.long() + padding_idx
+    return incremental_indices.astype(ms.int64) + padding_idx
 
 
 KOSMOS2_START_DOCSTRING = r"""
@@ -418,13 +421,13 @@ class Kosmos2VisionEmbeddings(nn.Cell):
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
     def construct(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size = pixel_values.shape[0]
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(
-            pixel_values.to(dtype=target_dtype)
+            pixel_values.astype(target_dtype)
         )  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
@@ -829,8 +832,8 @@ class Kosmos2TextSinusoidalPositionalEmbedding(nn.Cell):
         """
         half_dim = embedding_dim // 2
         emb = math.log(10000) / (half_dim - 1)
-        emb = ops.exp(ops.arange(half_dim, dtype=ms.int64).float() * -emb)
-        emb = ops.arange(num_embeddings, dtype=ms.int64).float().unsqueeze(
+        emb = ops.exp(ops.arange(half_dim, dtype=ms.int64).astype(ms.float32) * -emb)
+        emb = ops.arange(num_embeddings, dtype=ms.int64).astype(ms.float32).unsqueeze(
             1
         ) * emb.unsqueeze(0)
         emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
@@ -840,7 +843,7 @@ class Kosmos2TextSinusoidalPositionalEmbedding(nn.Cell):
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
-        return emb.to(get_default_dtype())
+        return emb.astype(get_default_dtype())
 
     def construct(
         self,
@@ -894,7 +897,9 @@ class Kosmos2TextSinusoidalPositionalEmbedding(nn.Cell):
             sequence_length + self.padding_idx + 1,
             dtype=ms.int64,
         )
-        return position_ids.unsqueeze(0).expand(input_shape) + past_key_values_length
+        return (
+            position_ids.unsqueeze(0).broadcast_to(input_shape) + past_key_values_length
+        )
 
 
 class KosmosTextAttention(nn.Cell):
@@ -1260,7 +1265,7 @@ class Kosmos2TextTransformer(nn.Cell):
             inputs_embeds = self.embed_tokens(input_ids)
 
         if image_embeds is not None:
-            inputs_embeds[img_input_mask.to(dtype=ms.bool_)] = image_embeds.view(
+            inputs_embeds[img_input_mask.astype(ms.bool_)] = image_embeds.view(
                 -1, image_embeds.shape[-1]
             )
 
