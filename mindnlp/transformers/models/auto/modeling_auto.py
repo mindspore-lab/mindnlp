@@ -169,6 +169,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
         ("umt5", "UMT5Model"),
+        ("xmod", "XmodModel"),
     ]
 )
 
@@ -204,6 +205,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasPreTrainedModel"),
+        ("xmod", "XmodForMaskedLM"),
     ]
 )
 
@@ -248,6 +250,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasForMaskedLM"),
+        ("xmod", "XmodForMaskedLM"),
     ]
 )
 
@@ -311,6 +314,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasForMaskedLM"),
+        ("xmod", "XmodForCausalLM"),
     ]
 )
 
@@ -446,6 +450,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("tapas", "TapasForMaskedLM"),
+        ("xmod", "XmodForMaskedLM"),
     ]
 )
 
@@ -564,6 +569,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLForSequenceClassification"),
         ("xlnet", "XLNetForSequenceClassification"),
         ("tapas", "TapasForSequenceClassification"),
+        ("xmod", "XmodForSequenceClassification"),
     ]
 )
 
