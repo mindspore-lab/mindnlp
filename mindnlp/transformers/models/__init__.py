@@ -179,6 +179,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    upernet,
     umt5,
     univnet,
     videomae,
@@ -367,6 +368,7 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .upernet import *
 from .univnet import *
 from .videomae import *
 from .vilt import *
@@ -554,6 +556,7 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(upernet.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vilt.__all__)
