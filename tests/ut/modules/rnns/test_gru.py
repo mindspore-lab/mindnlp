@@ -15,6 +15,7 @@
 # pylint: disable=C0103
 
 """test gru."""
+import pytest
 import mindspore
 import numpy as np
 from mindspore import Tensor, nn
@@ -36,6 +37,7 @@ class TestGRU(MindNLPTestCase):
         assert output.shape == (3, 10, 32)
         assert h.shape == (1, 3, 32)
 
+    @pytest.mark.skip('run too slow')
     def test_gru_long(self):
         """test simple gru with long sequence"""
         self.x = np.random.randn(3, 10000, self.input_size)

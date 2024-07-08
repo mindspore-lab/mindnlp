@@ -59,7 +59,7 @@ class CNNEncoder(EncoderBase):
         (8, 16)
 
     """
-    def __init__(self, embedding, convs, conv_layer_activation, output_dim=None):
+    def __init__(self, embedding, convs, conv_layer_activation=None, output_dim=None):
         r"""
         This method initializes an instance of the CNNEncoder class.
         
@@ -78,7 +78,7 @@ class CNNEncoder(EncoderBase):
         """
         super().__init__(embedding)
         self.emb_axis = self.embedding.embedding_size
-        self.act = conv_layer_activation
+        self.act = conv_layer_activation if conv_layer_activation is not None else nn.Identity()
         self.output_axis = output_dim
         self.num_filter = convs[0].out_channels
         self.ngram_filter_sizes = len(convs)
