@@ -19,11 +19,7 @@ import mindspore
 from mindspore import nn, ops, Tensor
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
-from mindnlp.utils import less_min_pynative_first
-if less_min_pynative_first:
-    from mindnlp._legacy.functional import full, arange, where
-else:
-    from mindspore.ops import full, arange, where
+from mindnlp._legacy.functional import full, arange, where
 
 def sequence_mask(seq_length, max_length, batch_first=False):
     """generate mask matrix by seq_length"""
@@ -113,23 +109,6 @@ class CRF(nn.Cell):
         return f'{self.__class__.__name__}(num_tags={self.num_tags})'
 
     def construct(self, emissions, tags=None, seq_length=None):
-        r"""
-        This method constructs the conditional random field (CRF) by decoding the emissions or constructing the CRF with given emissions, tags, and sequence length.
-        
-        Args:
-            self (CRF): The CRF instance.
-            emissions (array-like): The emissions for the CRF model. It represents the observed data and should be in the shape (batch_size, max_seq_length, num_classes).
-            tags (array-like, optional): The tags for the CRF model. It represents the target labels for the emissions. If not provided, the method will decode the emissions. It should be in the shape
-(batch_size, max_seq_length).
-            seq_length (array-like, optional): The sequence length for each batch. It specifies the actual length of each sequence in the batch. If not provided, it is assumed that all sequences have the same
-length as the maximum sequence length in the batch.
-        
-        Returns:
-            None: This method does not return any value directly. The constructed CRF model or the decoding result can be accessed through the CRF instance.
-        
-        Raises:
-            N/A
-        """
         if tags is None:
             return self._decode(emissions, seq_length)
         return self._construct(emissions, tags, seq_length)

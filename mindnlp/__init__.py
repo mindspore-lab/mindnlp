@@ -26,5 +26,6 @@ from mindnlp import injection
 from mindnlp import transformers
 from mindnlp import dataset
 from mindnlp import evaluate
+from mindnlp import core
 
 __all__ = ['ms_jit', 'transformers']
