@@ -794,7 +794,7 @@ class Data2VecAudioModel(Data2VecAudioPreTrainedModel):
 
         # model only needs masking vector if mask prob is > 0.0
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed= mindspore.Parameter(initializer(Uniform(), (config.hidden_size), mindspore.float32),name ='masked_spec_embed')
+            self.masked_spec_embed= mindspore.Parameter(initializer(Uniform(), (config.hidden_size,), mindspore.float32),name ='masked_spec_embed')
         self.encoder = Data2VecAudioEncoder(config)
         self.adapter = Data2VecAudioAdapter(config) if config.add_adapter else None
         # Initialize weights and apply final processing
