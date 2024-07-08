@@ -86,6 +86,7 @@ from . import (
     chatglm3,
     flava,
     focalnet,
+    fnet,
     funnel,
     gemma,
     git,
@@ -277,6 +278,7 @@ from .chatglm3 import *
 from .falcon import *
 from .flava import *
 from .focalnet import *
+from .fnet import *
 from .funnel import *
 from .fastspeech2_conformer import *
 from .gemma import *
@@ -466,6 +468,7 @@ __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
