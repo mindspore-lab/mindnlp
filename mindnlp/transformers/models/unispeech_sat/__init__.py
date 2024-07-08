@@ -14,12 +14,12 @@
 # limitations under the License.
 """TrOCR Model init."""
 
-from . import configuration_trocr, modeling_trocr, processing_trocr
+from . import configuration_unispeech_sat, modeling_trocr, processing_trocr
 from .configuration_trocr import *
 from .modeling_trocr import *
 from .processing_trocr import *
 
 __all__ = []
-__all__.extend(configuration_trocr.__all__)
+__all__.extend(configuration_unispeech_sat.__all__)
 __all__.extend(modeling_trocr.__all__)
 __all__.extend(processing_trocr.__all__)

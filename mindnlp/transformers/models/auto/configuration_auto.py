@@ -158,6 +158,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("trocr", "TrOCRConfig"),
         ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
+        ("unispeech-sat", "UniSpeechSatConfig"),
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
