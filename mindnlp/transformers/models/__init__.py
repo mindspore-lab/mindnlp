@@ -113,6 +113,7 @@ from . import (
     llava_next,
     longformer,
     luke,
+    lxmert,
     mamba,
     marian,
     mask2former,
@@ -180,6 +181,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    upernet,
     umt5,
     univnet,
     videomae,
@@ -203,6 +205,7 @@ from . import (
     xlm_roberta,
     xlm_roberta_xl,
     xlnet,
+    vilt,
 )
 
 from .owlv2 import *
@@ -301,6 +304,7 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
+from .lxmert import *
 from .mamba import *
 from .marian import *
 from .mask2former import *
@@ -368,8 +372,10 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .upernet import *
 from .univnet import *
 from .videomae import *
+from .vilt import *
 from .vipllava import *
 from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
@@ -488,6 +494,7 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(lxmert.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(mask2former.__all__)
@@ -555,8 +562,10 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(upernet.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
+__all__.extend(vilt.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)

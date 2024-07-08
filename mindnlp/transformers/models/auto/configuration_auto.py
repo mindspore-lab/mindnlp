@@ -58,7 +58,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
         ("clipseg", "CLIPSegConfig"),
-        ("clipseg_vision_model","CLIPSegVisionConfig"),
+        ("clipseg_vision_model", "CLIPSegVisionConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("cohere", "CohereConfig"),
@@ -81,7 +81,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
-        ("focalnet","FocalNetConfig"),
+        ("focalnet", "FocalNetConfig"),
         ("funnel", "FunnelConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
         ("gemma", "GemmaConfig"),
@@ -100,6 +100,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("lxmert", "LxmertConfig"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
@@ -109,8 +110,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
-        ("mobilenet_v1","MobileNetV1Config"),
-        ("mobilenet_v2","MobileNetV2Config"),
+        ("mobilenet_v1", "MobileNetV1Config"),
+        ("mobilenet_v2", "MobileNetV2Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
@@ -153,10 +154,12 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("tapas", "TapasConfig"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vilt", "VilTConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
@@ -431,7 +434,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("clipseg", "CLIPSeg"),
-        ("clipseg_vision_model","CLIPSegVisionModel"),
+        ("clipseg_vision_model", "CLIPSegVisionModel"),
         ("code_llama", "CodeLlama"),
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
@@ -691,7 +694,7 @@ SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(
         ("kosmos-2", "kosmos2"),
         ("maskformer-swin", "maskformer"),
         ("clip_vision_model", "clip"),
-        ("clipseg_vision_model","clipseg"),
+        ("clipseg_vision_model", "clipseg"),
         ("xclip", "x_clip"),
     ]
 )
@@ -765,8 +768,8 @@ class _LazyConfigMapping(OrderedDict):
 
         Raises:
             KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-            AttributeError: 
-                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, 
+            AttributeError:
+                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module,
                 an AttributeError is raised.
             ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """
