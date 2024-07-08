@@ -157,6 +157,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vilt", "VilTConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
