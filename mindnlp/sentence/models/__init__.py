@@ -14,10 +14,10 @@
 # ============================================================================
 """Sentence transformer models init"""
 
-from .Transformer import Transformer
-from .Pooling import Pooling
+from .transformer import Transformer
+from .pooling import Pooling
 
 __all__ = [
-    "Transformer",
-    "Pooling",
+    "transformer",
+    "pooling",
 ]
