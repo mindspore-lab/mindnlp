@@ -51,7 +51,7 @@ class Qwen2Config(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 32):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `32`.
@@ -75,22 +75,25 @@ class Qwen2Config(PretrainedConfig):
         sliding_window (`int`, *optional*, defaults to 4096):
             Sliding window attention (SWA) window size. If not specified, will default to `4096`.
         max_window_layers (`int`, *optional*, defaults to 28):
-            The number of layers that use SWA (Sliding Window Attention). The bottom layers use SWA while the top use full attention.
+            The number of layers that use SWA (Sliding Window Attention). The bottom layers use SWA while the top
+            use full attention.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import Qwen2Model, Qwen2Config
-
-    >>> # Initializing a Qwen2 style configuration
-    >>> configuration = Qwen2Config()
-
-    >>> # Initializing a model from the Qwen2-7B style configuration
-    >>> model = Qwen2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import Qwen2Model, Qwen2Config
+        ...
+        >>> # Initializing a Qwen2 style configuration
+        >>> configuration = Qwen2Config()
+        ...
+        >>> # Initializing a model from the Qwen2-7B style configuration
+        >>> model = Qwen2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "qwen2"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -141,7 +144,7 @@ class Qwen2Config(PretrainedConfig):
             attention_dropout (float): The dropout rate for attention. Default is 0.0.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

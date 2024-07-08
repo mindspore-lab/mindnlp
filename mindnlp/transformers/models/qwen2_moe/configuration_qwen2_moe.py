@@ -51,7 +51,7 @@ class Qwen2MoeConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 16):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `32`.
@@ -96,18 +96,20 @@ class Qwen2MoeConfig(PretrainedConfig):
         router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
             The aux loss factor for the total loss.
 
-    ```python
-    >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
-
-    >>> # Initializing a Qwen2MoE style configuration
-    >>> configuration = Qwen2MoeConfig()
-
-    >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
-    >>> model = Qwen2MoeModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
+        ...
+        >>> # Initializing a Qwen2MoE style configuration
+        >>> configuration = Qwen2MoeConfig()
+        ...
+        >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
+        >>> model = Qwen2MoeModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "qwen2_moe"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -171,7 +173,7 @@ class Qwen2MoeConfig(PretrainedConfig):
             router_aux_loss_coef (float): The coefficient for router auxiliary loss.
         
         Returns:
-            None. This method initializes the Qwen2MoeConfig object.
+            None.
         
         Raises:
             None.

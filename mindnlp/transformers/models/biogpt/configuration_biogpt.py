@@ -81,19 +81,19 @@ class BioGptConfig(PretrainedConfig):
             End of stream token id.
 
     Example:
-
-    ```python
-    >>> from transformers import BioGptModel, BioGptConfig
-
-    >>> # Initializing a BioGPT microsoft/biogpt style configuration
-    >>> configuration = BioGptConfig()
-
-    >>> # Initializing a model from the microsoft/biogpt style configuration
-    >>> model = BioGptModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BioGptModel, BioGptConfig
+        ...
+        >>> # Initializing a BioGPT microsoft/biogpt style configuration
+        >>> configuration = BioGptConfig()
+        ...
+        >>> # Initializing a model from the microsoft/biogpt style configuration
+        >>> model = BioGptModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "biogpt"
 
     def __init__(
@@ -143,7 +143,7 @@ class BioGptConfig(PretrainedConfig):
             eos_token_id (int): The id of the end-of-sentence token. Defaults to 2.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

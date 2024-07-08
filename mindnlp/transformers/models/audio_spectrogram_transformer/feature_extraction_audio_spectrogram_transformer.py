@@ -94,7 +94,7 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
             return_attention_mask (bool, optional): Whether to return attention mask. Defaults to False.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

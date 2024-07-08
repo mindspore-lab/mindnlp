@@ -1,0 +1,2 @@
+:::mindnlp.transformers.models.decision_transformer.configuration_decision_transformer
+:::mindnlp.transformers.models.decision_transformer.modeling_decision_transformer

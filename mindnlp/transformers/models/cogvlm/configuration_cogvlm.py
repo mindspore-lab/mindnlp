@@ -12,41 +12,42 @@ from ...configuration_utils import PretrainedConfig
 class CogVLMConfig(PretrainedConfig):
 
     """
-    The `CogVLMConfig` class represents the configuration for a CogVLM (Cognitive Vision Language Model) model. It inherits from the `PretrainedConfig` class and provides a set of parameters to customize the
-behavior of the CogVLM model.
-    
+    The `CogVLMConfig` class represents the configuration for a CogVLM (Cognitive Vision Language Model) model.
+    It inherits from the `PretrainedConfig` class and provides a set of parameters to customize the
+    behavior of the CogVLM model.
+
     Parameters:
-        - `vocab_size` (int, optional): The size of the vocabulary. Defaults to 32000.
-        - `hidden_size` (int, optional): The size of the hidden layers. Defaults to 4096.
-        - `intermediate_size` (int, optional): The size of the intermediate layers. Defaults to 11008.
-        - `num_hidden_layers` (int, optional): The number of hidden layers. Defaults to 32.
-        - `num_attention_heads` (int, optional): The number of attention heads. Defaults to 32.
-        - `hidden_act` (str, optional): The activation function for the hidden layers. Defaults to 'silu'.
-        - `max_position_embeddings` (int, optional): The maximum number of position embeddings. Defaults to 2048.
-        - `initializer_range` (float, optional): The range for the weight initialization. Defaults to 0.02.
-        - `rms_norm_eps` (float, optional): The epsilon value for the RMS normalization. Defaults to 1e-06.
-        - `template_version` (Literal['base', 'chat'], optional): The template version to use. Defaults to 'chat'.
-        - `pad_token_id` (int, optional): The token ID for padding. Defaults to 0.
-        - `bos_token_id` (int, optional): The token ID for the beginning of sentence. Defaults to 1.
-        - `eos_token_id` (int, optional): The token ID for the end of sentence. Defaults to 2.
-        - `tie_word_embeddings` (bool, optional): Whether to tie the word embeddings. Defaults to False.
-        - `use_cache` (bool, optional): Whether to use cache during model inference. Defaults to True.
-    
+        `vocab_size` (int, optional): The size of the vocabulary. Defaults to 32000.
+        `hidden_size` (int, optional): The size of the hidden layers. Defaults to 4096.
+        `intermediate_size` (int, optional): The size of the intermediate layers. Defaults to 11008.
+        `num_hidden_layers` (int, optional): The number of hidden layers. Defaults to 32.
+        `num_attention_heads` (int, optional): The number of attention heads. Defaults to 32.
+        `hidden_act` (str, optional): The activation function for the hidden layers. Defaults to 'silu'.
+        `max_position_embeddings` (int, optional): The maximum number of position embeddings. Defaults to 2048.
+        `initializer_range` (float, optional): The range for the weight initialization. Defaults to 0.02.
+        `rms_norm_eps` (float, optional): The epsilon value for the RMS normalization. Defaults to 1e-06.
+        `template_version` (Literal['base', 'chat'], optional): The template version to use. Defaults to 'chat'.
+        `pad_token_id` (int, optional): The token ID for padding. Defaults to 0.
+        `bos_token_id` (int, optional): The token ID for the beginning of sentence. Defaults to 1.
+        `eos_token_id` (int, optional): The token ID for the end of sentence. Defaults to 2.
+        `tie_word_embeddings` (bool, optional): Whether to tie the word embeddings. Defaults to False.
+        `use_cache` (bool, optional): Whether to use cache during model inference. Defaults to True.
+
     Attributes:
-        - `hidden_size` (int): The size of the hidden layers.
-        - `intermediate_size` (int): The size of the intermediate layers.
-        - `num_attention_heads` (int): The number of attention heads.
-        - `max_position_embeddings` (int): The maximum number of position embeddings.
-        - `rms_norm_eps` (float): The epsilon value for the RMS normalization.
-        - `initializer_range` (float): The range for the weight initialization.
-        - `vocab_size` (int): The size of the vocabulary.
-        - `num_hidden_layers` (int): The number of hidden layers.
-        - `hidden_act` (str): The activation function for the hidden layers.
-        - `template_version` (Literal['base', 'chat']): The template version to use.
-        - `use_cache` (bool): Whether to use cache during model inference.
-        - `vision_config` (dict): The configuration for the vision module.
-    
-        The `vision_config` dictionary contains the following keys:
+        `hidden_size` (int): The size of the hidden layers.
+        `intermediate_size` (int): The size of the intermediate layers.
+        `num_attention_heads` (int): The number of attention heads.
+        `max_position_embeddings` (int): The maximum number of position embeddings.
+        `rms_norm_eps` (float): The epsilon value for the RMS normalization.
+        `initializer_range` (float): The range for the weight initialization.
+        `vocab_size` (int): The size of the vocabulary.
+        `num_hidden_layers` (int): The number of hidden layers.
+        `hidden_act` (str): The activation function for the hidden layers.
+        `template_version` (Literal['base', 'chat']): The template version to use.
+        `use_cache` (bool): Whether to use cache during model inference.
+        `vision_config` (dict): The configuration for the vision module.
+            The `vision_config` dictionary contains the following keys.
+
             - `dropout_prob` (float): The dropout probability for the vision module.
             - `hidden_act` (str): The activation function for the vision module.
             - `hidden_size` (int): The size of the hidden layers in the vision module.
@@ -83,7 +84,8 @@ behavior of the CogVLM model.
             use_cache=True,
             **kwargs,
     ):
-        """Initialize CogVLMConfig.
+        """
+        Initialize CogVLMConfig.
         
         Args:
             self: The instance of the class.
@@ -104,10 +106,11 @@ behavior of the CogVLM model.
             use_cache (bool, optional): Whether to use caching. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            TypeError: If vocab_size, hidden_size, intermediate_size, num_hidden_layers, num_attention_heads, max_position_embeddings, pad_token_id, bos_token_id, eos_token_id are not integers.
+            TypeError: If vocab_size, hidden_size, intermediate_size, num_hidden_layers, num_attention_heads,
+                max_position_embeddings, pad_token_id, bos_token_id, eos_token_id are not integers.
             ValueError: If initializer_range, rms_norm_eps are not floats, or if template_version is not 'base' or 'chat'.
             AssertionError: If hidden_act is not a string.
             NotImplementedError: If tie_word_embeddings is not a boolean or if use_cache is not a boolean.

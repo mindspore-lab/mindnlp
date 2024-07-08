@@ -27,7 +27,8 @@ class Starcoder2Config(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`Starcoder2Model`]. It is used to instantiate a
     Starcoder2 model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the [bigcode/starcoder2-7b_16k](https://hf-mirror.com/bigcode/starcoder2-7b_16k) model.
+    with the defaults will yield a similar configuration to that of the [bigcode/starcoder2-7b_16k]
+    (https://hf-mirror.com/bigcode/starcoder2-7b_16k) model.
 
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
@@ -49,7 +50,7 @@ class Starcoder2Config(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 2):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `8`.
@@ -82,19 +83,20 @@ class Starcoder2Config(PretrainedConfig):
         use_bias (`bool`, *optional*, defaults to `True`):
             Whether to use bias term on linear layers of the model.
 
-
-    ```python
-    >>> from transformers import Starcoder2Model, Starcoder2Config
-
-    >>> # Initializing a Starcoder2 7B style configuration
-    >>> configuration = Starcoder2Config()
-
-    >>> # Initializing a model from the Starcoder2 7B style configuration
-    >>> model = Starcoder2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import Starcoder2Model, Starcoder2Config
+        ...
+        >>> # Initializing a Starcoder2 7B style configuration
+        >>> configuration = Starcoder2Config()
+        ...
+        >>> # Initializing a model from the Starcoder2 7B style configuration
+        >>> model = Starcoder2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "starcoder2"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -147,7 +149,7 @@ class Starcoder2Config(PretrainedConfig):
             use_bias (bool, optional): Specifies whether to use bias in the transformer encoder. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

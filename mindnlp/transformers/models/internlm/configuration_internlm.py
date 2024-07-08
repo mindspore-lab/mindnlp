@@ -32,6 +32,7 @@ class InternLMConfig(PretrainedConfig):
     configuration with the defaults will yield a similar configuration to that of the InternLM-7B.
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
     Args:
         vocab_size (`int`, *optional*, defaults to 32000):
             Vocabulary size of the InternLM model. Defines the number of different tokens that can be represented by the
@@ -87,29 +88,29 @@ class InternLMConfig(PretrainedConfig):
         This method initializes an instance of the InternLMConfig class with the provided configuration parameters.
         
         Args:
-        - vocab_size (int): The size of the vocabulary used in the language model.
-        - hidden_size (int): The size of the hidden layers in the model.
-        - intermediate_size (int): The size of the intermediate layers in the model.
-        - num_hidden_layers (int): The number of hidden layers in the model.
-        - num_attention_heads (int): The number of attention heads in the model.
-        - hidden_act (str): The activation function used in the hidden layers.
-        - max_position_embeddings (int): The maximum position index that can be used in the model.
-        - initializer_range (float): The range for weight initialization.
-        - rms_norm_eps (float): The epsilon value for RMS norm.
-        - use_cache (bool): Whether to use cache during model computation.
-        - pad_token_id (int): The token ID used for padding sequences.
-        - bos_token_id (int): The token ID used for the beginning of a sequence.
-        - eos_token_id (int): The token ID used for the end of a sequence.
-        - tie_word_embeddings (bool): Whether to tie the word embeddings.
-        - bias (bool): Whether to include bias in the model.
-        - rotary (dict): Dictionary with keys 'base' (int) and 'type' (str) defining rotary settings.
-        - attn_implementation (str): The implementation method for attention. If None, defaults to 'eager'.
-        
+            vocab_size (int): The size of the vocabulary used in the language model.
+            hidden_size (int): The size of the hidden layers in the model.
+            intermediate_size (int): The size of the intermediate layers in the model.
+            num_hidden_layers (int): The number of hidden layers in the model.
+            num_attention_heads (int): The number of attention heads in the model.
+            hidden_act (str): The activation function used in the hidden layers.
+            max_position_embeddings (int): The maximum position index that can be used in the model.
+            initializer_range (float): The range for weight initialization.
+            rms_norm_eps (float): The epsilon value for RMS norm.
+            use_cache (bool): Whether to use cache during model computation.
+            pad_token_id (int): The token ID used for padding sequences.
+            bos_token_id (int): The token ID used for the beginning of a sequence.
+            eos_token_id (int): The token ID used for the end of a sequence.
+            tie_word_embeddings (bool): Whether to tie the word embeddings.
+            bias (bool): Whether to include bias in the model.
+            rotary (dict): Dictionary with keys 'base' (int) and 'type' (str) defining rotary settings.
+            attn_implementation (str): The implementation method for attention. If None, defaults to 'eager'.
+
         Returns:
-        None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None
+            None
         """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

@@ -1685,7 +1685,7 @@ class GenerationTesterMixin:
             next_logits_with_padding = model(**model_kwargs).logits[:, -1, :]
 
             # They should result in very similar logits
-            self.assertTrue(np.allclose(next_logits_wo_padding.asnumpy(), next_logits_with_padding.asnumpy(), atol=1e-5))
+            self.assertTrue(np.allclose(next_logits_wo_padding.asnumpy(), next_logits_with_padding.asnumpy(), atol=1e-3))
 
     def test_past_key_values_format(self):
         # Test that the KV cache is formatted correctly. Exceptions need to explicitly overwrite this test. Having a

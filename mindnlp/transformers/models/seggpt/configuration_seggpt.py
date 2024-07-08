@@ -70,19 +70,19 @@ class SegGptConfig(PretrainedConfig):
             Regularization factor for SegGptLoss (smooth-l1 loss).
 
     Example:
-
-    ```python
-    >>> from transformers import SegGptConfig, SegGptModel
-
-    >>> # Initializing a SegGPT seggpt-vit-large style configuration
-    >>> configuration = SegGptConfig()
-
-    >>> # Initializing a model (with random weights) from the seggpt-vit-large style configuration
-    >>> model = SegGptModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import SegGptConfig, SegGptModel
+        ...
+        >>> # Initializing a SegGPT seggpt-vit-large style configuration
+        >>> configuration = SegGptConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the seggpt-vit-large style configuration
+        >>> model = SegGptModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "seggpt"
 

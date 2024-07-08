@@ -128,11 +128,13 @@ def _get_unpad_data(attention_mask):
         attention_mask (Tensor): A tensor representing the attention mask for the input data.
     
     Returns:
-        tuple: A tuple containing the following:
+        tuple:
+            A tuple containing the following:
+
             - indices (Tensor): A tensor containing the indices of the flattened attention mask.
             - cu_seqlens (Tensor): A tensor representing the cumulative sequence lengths based on the attention mask.
             - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-    
+
     Raises:
         None
     '''
@@ -151,21 +153,22 @@ def _get_unpad_data(attention_mask):
 class MixtralRMSNorm(nn.Cell):
 
     """
-    The MixtralRMSNorm class is a custom implementation of the T5LayerNorm, which is used for normalization in neural networks. 
-    
-    This class inherits from the nn.Cell class and provides methods to perform RMS normalization on hidden states. 
-    
+    The MixtralRMSNorm class is a custom implementation of the T5LayerNorm, which is used for normalization in
+    neural networks.
+
+    This class inherits from the nn.Cell class and provides methods to perform RMS normalization on hidden states.
+
     Attributes:
-        - weight (Parameter): A learnable parameter that scales the normalized hidden states.
-        - variance_epsilon (float): A small epsilon value added to the variance to avoid division by zero.
-    
+        weight (Parameter): A learnable parameter that scales the normalized hidden states.
+        variance_epsilon (float): A small epsilon value added to the variance to avoid division by zero.
+
     Methods:
-        - __init__(self, hidden_size, eps=1e-06): Initializes the MixtralRMSNorm instance with the given hidden size and epsilon value.
-        - construct(self, hidden_states): Applies the RMS normalization on the input hidden states and returns the normalized result.
-    
+        __init__: Initializes the MixtralRMSNorm instance with the given hidden size and epsilon value.
+        construct: Applies the RMS normalization on the input hidden states and returns the normalized result.
+
     Note:
         - MixtralRMSNorm is equivalent to T5LayerNorm.
-    
+
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -177,15 +180,18 @@ class MixtralRMSNorm(nn.Cell):
 
     def construct(self, hidden_states):
         """
-        This method 'construct' is defined within the 'MixtralRMSNorm' class and is used to perform a specific computation on the input hidden states.
-        
+        This method 'construct' is defined within the 'MixtralRMSNorm' class and is used to perform a specific
+        computation on the input hidden states.
+
         Args:
-            self: Represents the instance of the class. It is automatically passed when the method is called. No specific restrictions apply.
-            hidden_states: Represents the input hidden states tensor. It should be of type torch.Tensor or compatible. No specific restrictions apply.
-        
+            self: Represents the instance of the class. It is automatically passed when the method is called.
+                No specific restrictions apply.
+            hidden_states: Represents the input hidden states tensor. It should be of type torch.Tensor or compatible.
+                No specific restrictions apply.
+
         Returns:
             None: This method does not return any value. It performs in-place operations on the input hidden_states.
-        
+
         Raises:
             NotImplementedError: If the method or a specific operation within the method is not implemented.
             ValueError: If the input hidden_states is not of the expected data type or format.
@@ -202,11 +208,12 @@ class MixtralRMSNorm(nn.Cell):
 class MixtralRotaryEmbedding(nn.Cell):
 
     """
-    A class representing MixtralRotaryEmbedding, a neural network module used for Rotary Positional Embedding in Mixtral models.
-    
-    This class inherits from nn.Cell and provides methods to initialize the embedding, set the cosine and sine cache, 
+    A class representing MixtralRotaryEmbedding, a neural network module used for Rotary Positional Embedding in
+    Mixtral models.
+
+    This class inherits from nn.Cell and provides methods to initialize the embedding, set the cosine and sine cache,
     and construct the embedding for a given input sequence.
-    
+
     Attributes:
         dim (int): The dimension of the embedding.
         max_position_embeddings (int): The maximum number of position embeddings.
@@ -215,37 +222,41 @@ class MixtralRotaryEmbedding(nn.Cell):
         max_seq_len_cached (int): The maximum sequence length up to which the cosine and sine cache is calculated.
         cos_cached (Tensor): The cosine cache tensor.
         sin_cached (Tensor): The sine cache tensor.
-    
+
     Methods:
-        __init__(self, dim, max_position_embeddings=2048, base=10000):
-            Initializes a MixtralRotaryEmbedding instance with the specified dimension, maximum position embeddings, and base value.
-        
-        _set_cos_sin_cache(self, seq_len, dtype):
+        __init__:
+            Initializes a MixtralRotaryEmbedding instance with the specified dimension, maximum position embeddings,
+            and base value.
+
+        _set_cos_sin_cache:
             Sets the cosine and sine cache for the specified sequence length and data type.
-        
-        construct(self, x, seq_len=None):
+
+        construct:
             Constructs the rotary positional embedding for the given input sequence.
-    
-    Note: This class is designed for use in Mixtral models and is intended to be used as a part of a larger neural network architecture.
+
+    Note:
+        This class is designed for use in Mixtral models and is intended to be used as a part of a
+        larger neural network architecture.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         __init__(self, dim, max_position_embeddings=2048, base=10000)
-        
+
         Initialize the MixtralRotaryEmbedding instance with the specified parameters.
-        
+
         Args:
             self: The instance of the MixtralRotaryEmbedding class.
             dim (int): The dimension of the embedding.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
             base (int, optional): The base value for computing the inverse frequency. Defaults to 10000.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided 'dim', 'max_position_embeddings', or 'base' is not of type int.
-            - ValueError: If 'dim' is not a positive integer or 'max_position_embeddings' or 'base' is not a non-negative integer.
+            TypeError: If the provided 'dim', 'max_position_embeddings', or 'base' is not of type int.
+            ValueError: If 'dim' is not a positive integer or 'max_position_embeddings' or 'base' is not a
+                non-negative integer.
         """
         super().__init__()
 
@@ -261,19 +272,20 @@ class MixtralRotaryEmbedding(nn.Cell):
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         """Set cosine and sine cache for MixtralRotaryEmbedding.
-        
-        This method calculates and stores the cosine and sine values for the MixtralRotaryEmbedding class. These values are used in the embedding calculations for the given sequence length and data type.
-        
+
+        This method calculates and stores the cosine and sine values for the MixtralRotaryEmbedding class.
+        These values are used in the embedding calculations for the given sequence length and data type.
+
         Args:
             self (MixtralRotaryEmbedding): The instance of the MixtralRotaryEmbedding class.
             seq_len (int): The length of the sequence for which the cosine and sine values are calculated.
             dtype (type): The data type of the cosine and sine values.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=mindspore.int64).astype(self.inv_freq.dtype)
@@ -287,15 +299,15 @@ class MixtralRotaryEmbedding(nn.Cell):
     def construct(self, x, seq_len=None):
         """
         This method constructs a Mixtral Rotary Embedding based on the input parameters.
-        
+
         Args:
             self: The instance of the MixtralRotaryEmbedding class.
             x: The input tensor for which the embedding is constructed.
             seq_len: An integer representing the sequence length of the embedding. Default is None.
-        
+
         Returns:
-            None. The method does not return any value directly.
-        
+            None.
+
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached in the object.
         """
@@ -369,16 +381,18 @@ class MixtralAttention(nn.Cell):
     def __init__(self, config: MixtralConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the MixtralAttention class.
-        
+
         Args:
             self: The object instance.
-            config (MixtralConfig): An instance of the MixtralConfig class containing the configuration parameters for the attention layer.
-            layer_idx (Optional[int]): The index of the layer. Defaults to None. If layer_idx is not provided, a warning will be logged, as not passing a `layer_idx` is not recommended and may cause errors
-during the forward call if caching is used.
-        
+            config (MixtralConfig): An instance of the MixtralConfig class containing the configuration parameters
+                for the attention layer.
+            layer_idx (Optional[int]): The index of the layer. Defaults to None. If layer_idx is not provided,
+                a warning will be logged, as not passing a `layer_idx` is not recommended and may cause errors
+                during the forward call if caching is used.
+
         Returns:
-            None
-        
+            None.
+
         Raises:
             ValueError: If the `hidden_size` is not divisible by `num_heads`.
         """
@@ -421,21 +435,22 @@ during the forward call if caching is used.
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method reshapes the input tensor for the MixtralAttention layer.
-        
+
         Args:
             self (MixtralAttention): An instance of the MixtralAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the sequence in the tensor.
             bsz (int): The batch size of the tensor.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method reshapes the input tensor by rearranging its dimensions. The tensor is reshaped into a new shape of (bsz, seq_len, num_heads, head_dim) by using the view and swapaxes operations. The
-returned tensor has its dimensions rearranged to facilitate further processing in the MixtralAttention layer.
+
+        This method reshapes the input tensor by rearranging its dimensions. The tensor is reshaped into a new shape of
+        (bsz, seq_len, num_heads, head_dim) by using the view and swapaxes operations. The returned tensor has its
+        dimensions rearranged to facilitate further processing in the MixtralAttention layer.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -448,23 +463,27 @@ returned tensor has its dimensions rearranged to facilitate further processing i
         output_attentions: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-        ''' 
+        '''
         Construct method in the MixtralAttention class.
-        
+
         Args:
             self: The instance of the class.
             hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, 1, sequence_length, sequence_length) containing the attention mask.
-            position_ids (Optional[mindspore.Tensor]): An optional tensor containing the position indices of shape (batch_size, sequence_length).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape
+                (batch_size, 1, sequence_length, sequence_length) containing the attention mask.
+            position_ids (Optional[mindspore.Tensor]): An optional tensor containing the position indices of shape
+                (batch_size, sequence_length).
             past_key_value (Optional[Cache]): An optional caching mechanism for previous key and value tensors.
             output_attentions (bool): A boolean flag indicating whether to return the attention weights.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), 
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing
+                the attention output tensor of shape (batch_size, sequence_length, hidden_size),
             optional attention weights tensor, and optional new key-value cache tuple.
-        
+
         Raises:
-            ValueError: If the cache structure has changed, attention weights or attention mask have invalid shapes, or if the attention output has an unexpected shape.
+            ValueError: If the cache structure has changed, attention weights or attention mask have invalid shapes,
+                or if the attention output has an unexpected shape.
         '''
         bsz, q_len, _ = hidden_states.shape
 
@@ -540,9 +559,10 @@ MIXTRAL_ATTENTION_CLASSES = {
 class MixtralBlockSparseTop2MLP(nn.Cell):
 
     """
-    The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for
-initialization and construction of the MLP layers.
-    
+    The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer
+    perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for initialization
+    and construction of the MLP layers.
+
     Attributes:
         ffn_dim (int): The dimension of the feed-forward network.
         hidden_dim (int): The dimension of the hidden layer in the network.
@@ -550,26 +570,30 @@ initialization and construction of the MLP layers.
         w2 (nn.Dense): The second dense layer in the MLP with ffn_dim input and hidden_dim output.
         w3 (nn.Dense): The third dense layer in the MLP with hidden_dim input and ffn_dim output.
         act_fn (function): The activation function to be applied on the hidden states.
-    
+
     Methods:
-        __init__(self, config: MixtralConfig): Initializes the MixtralBlockSparseTop2MLP instance with the provided configuration.
-        construct(self, hidden_states): Constructs the sparse top-2 MLP using the provided hidden states and returns the processed hidden states.
-    
-    Note: The code provided in the class is an example and may not fully represent the functionality of the MixtralBlockSparseTop2MLP class.
+        __init__: Initializes the MixtralBlockSparseTop2MLP instance with the provided configuration.
+        construct: Constructs the sparse top-2 MLP using the provided hidden states and returns the processed
+            hidden states.
+
+    Note:
+        The code provided in the class is an example and may not fully represent the functionality of the
+        MixtralBlockSparseTop2MLP class.
     """
     def __init__(self, config: MixtralConfig):
-        ''' 
+        '''
         Initializes a MixtralBlockSparseTop2MLP instance.
-        
+
         Args:
             self: The instance itself.
-            config (MixtralConfig): An instance of MixtralConfig containing the configuration settings for the MixtralBlockSparseTop2MLP.
-            
+            config (MixtralConfig): An instance of MixtralConfig containing the configuration settings
+                for the MixtralBlockSparseTop2MLP.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         '''
         super().__init__()
         self.ffn_dim = config.intermediate_size
@@ -584,14 +608,14 @@ initialization and construction of the MLP layers.
     def construct(self, hidden_states):
         """
         Constructs the current hidden states using the provided hidden states.
-        
+
         Args:
             self (MixtralBlockSparseTop2MLP): The instance of the MixtralBlockSparseTop2MLP class.
             hidden_states (tensor): The input hidden states to be used for constructing the current hidden states.
-        
+
         Returns:
             tensor: The current hidden states constructed based on the input hidden states.
-        
+
         Raises:
             ValueError: If the input hidden_states is not in the expected format.
             RuntimeError: If there is an issue with the execution of the method.
@@ -603,34 +627,34 @@ initialization and construction of the MLP layers.
 
 class MixtralSparseMoeBlock(nn.Cell):
     """
-    This implementation is
-    strictly equivalent to standard MoE with full capacity (no
-    dropped tokens). It's faster since it formulates MoE operations
-    in terms of block-sparse operations to accomodate imbalanced
-    assignments of tokens to experts, whereas standard MoE either
-    (1) drop tokens at the cost of reduced performance or (2) set
-    capacity factor to number of experts and thus waste computation
-    and memory on padding.
+    This implementation is strictly equivalent to standard MoE with full capacity (no dropped tokens).
+    It's faster since it formulates MoE operations in terms of block-sparse operations to accomodate imbalanced
+    assignments of tokens to experts, whereas standard MoE either (1) drop tokens at the cost of reduced performance
+    or (2) set capacity factor to number of experts and thus waste computation and memory on padding.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MixtralSparseMoeBlock class.
-        
+
         Args:
             self: An instance of the MixtralSparseMoeBlock class.
-            config: A configuration object containing the following attributes:
+            config:
+                A configuration object containing the following attributes:
+
                 - hidden_size (int): The dimension of the hidden layer.
                 - intermediate_size (int): The dimension of the feed-forward network.
                 - num_local_experts (int): The number of local experts.
                 - num_experts_per_tok (int): The number of experts per token.
-        
+
         Returns:
-            None. This method initializes the instance attributes and does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided config parameter is not of the expected type.
-            - ValueError: If the hidden_size, intermediate_size, num_local_experts, or num_experts_per_tok attributes are missing in the config object.
-            - ValueError: If the hidden_size, intermediate_size, num_local_experts, or num_experts_per_tok attributes are not integers.
+            TypeError: If the provided config parameter is not of the expected type.
+            ValueError: If the hidden_size, intermediate_size, num_local_experts,
+                or num_experts_per_tok attributes are missing in the config object.
+            ValueError: If the hidden_size, intermediate_size, num_local_experts,
+                or num_experts_per_tok attributes are not integers.
         """
         super().__init__()
         self.hidden_dim = config.hidden_size
@@ -646,18 +670,21 @@ class MixtralSparseMoeBlock(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the MixtralSparseMoeBlock.
-        
+
         Args:
             self (MixtralSparseMoeBlock): The instance of the MixtralSparseMoeBlock class.
-            hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_dim).
-        
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape
+                (batch_size, sequence_length, hidden_dim).
+
         Returns:
-            mindspore.Tensor: The final hidden states tensor after applying the MixtralSparseMoeBlock, of shape (batch_size, sequence_length, hidden_dim).
-        
+            mindspore.Tensor: The final hidden states tensor after applying the MixtralSparseMoeBlock,
+                of shape (batch_size, sequence_length, hidden_dim).
+
         Raises:
             None.
-        
+
         This method constructs the MixtralSparseMoeBlock by applying the following steps:
+
         1. Reshapes the hidden_states tensor to (-1, hidden_dim).
         2. Computes the router logits by passing the reshaped hidden_states through the gate module.
         3. Computes the routing weights by applying softmax to the router logits along axis 1.
@@ -667,12 +694,14 @@ class MixtralSparseMoeBlock(nn.Cell):
         7. Initializes the final_hidden_states tensor with zeros of shape (batch_size * sequence_length, hidden_dim).
         8. Generates the expert_mask tensor using one_hot encoding and permutation.
         9. Iterates over each expert and performs the following steps:
-            a. Retrieves the non-zero indices from the expert_mask for the current expert.
-            b. Splits the non-zero indices tensor into index and top_x tensors.
-            c. If top_x tensor is empty, continue to the next iteration.
-            d. Retrieves the current hidden states by indexing the hidden_states tensor with top_x.
-            e. Computes the current hidden states using the expert_layer and routing_weights.
-            f. Updates the final_hidden_states tensor by adding the computed current_hidden_states using index_add.
+
+            - Retrieves the non-zero indices from the expert_mask for the current expert.
+            - Splits the non-zero indices tensor into index and top_x tensors.
+            - If top_x tensor is empty, continue to the next iteration.
+            - Retrieves the current hidden states by indexing the hidden_states tensor with top_x.
+            - Computes the current hidden states using the expert_layer and routing_weights.
+            - Updates the final_hidden_states tensor by adding the computed current_hidden_states using index_add.
+
         10. Reshapes the final_hidden_states tensor to its original shape (batch_size, sequence_length, hidden_dim).
         11. Returns the final_hidden_states tensor and the router_logits tensor.
         """
@@ -719,32 +748,35 @@ class MixtralSparseMoeBlock(nn.Cell):
 class MixtralDecoderLayer(nn.Cell):
 
     """
-    This class represents a decoder layer for the Mixtral model, used for processing input sequences in neural network models. 
-    It includes functionality for self-attention, block sparse mixture of experts, layer normalization, and other operations specific to the Mixtral architecture.
-    
-    The MixtralDecoderLayer class inherits from nn.Cell and contains methods for initialization and processing input data through the decoder layer. 
-    The __init__ method initializes the layer with configuration settings and creates necessary components such as self-attention mechanism, block sparse mixture of experts, and layer normalization.
-    
-    The construct method processes the input hidden states along with optional arguments like attention mask, position ids, past key values, and various output flags. 
-    It applies layer normalization, self-attention mechanism, block sparse mixture of experts, and additional layer normalization before returning the processed hidden states. 
+    This class represents a decoder layer for the Mixtral model, used for processing input sequences in
+    neural network models. It includes functionality for self-attention, block sparse mixture of experts,
+    layer normalization, and other operations specific to the Mixtral architecture.
+
+    The MixtralDecoderLayer class inherits from nn.Cell and contains methods for initialization and processing input
+    data through the decoder layer. The __init__ method initializes the layer with configuration settings and creates
+    necessary components such as self-attention mechanism, block sparse mixture of experts, and layer normalization.
+
+    The construct method processes the input hidden states along with optional arguments like attention mask,
+    position ids, past key values, and various output flags. It applies layer normalization, self-attention mechanism,
+    block sparse mixture of experts, and additional layer normalization before returning the processed hidden states.
     Output can include attentions weights, present key values, and router logits based on the specified output flags.
-    
+
     Please refer to the class code for detailed implementation and usage of the MixtralDecoderLayer.
     """
     def __init__(self, config: MixtralConfig, layer_idx: int):
         """
         Initializes an instance of MixtralDecoderLayer.
-        
+
         Args:
             self (MixtralDecoderLayer): The instance of MixtralDecoderLayer.
             config (MixtralConfig): An instance of MixtralConfig containing configuration parameters for the layer.
             layer_idx (int): An integer representing the index of the layer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If config is not an instance of MixtralConfig or if layer_idx is not an integer.
+            TypeError: If config is not an instance of MixtralConfig or if layer_idx is not an integer.
         """
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -820,14 +852,19 @@ class MixtralDecoderLayer(nn.Cell):
 class MixtralPreTrainedModel(PreTrainedModel):
 
     """
-    The `MixtralPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for Mixtral models. 
-    
-    This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell` parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance
-of `nn.Dense`, the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute of the `config` object. If the `cell` has a bias, it is initialized with
-zeros. If the `cell` is an instance of `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a standard deviation specified by the `initializer_range`
-attribute of the `config` object. If the `cell` has a `padding_idx`, the weight at the `padding_idx` is set to 0.
-    
-    Note: This docstring does not include signatures or any other code.
+    The `MixtralPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for
+    Mixtral models.
+
+    This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell`
+    parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance of `nn.Dense`,
+    the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute
+    of the `config` object. If the `cell` has a bias, it is initialized with zeros. If the `cell` is an instance of
+    `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a
+    standard deviation specified by the `initializer_range` attribute of the `config` object. If the `cell` has a
+    `padding_idx`, the weight at the `padding_idx` is set to 0.
+
+    Note:
+        This docstring does not include signatures or any other code.
     """
     config_class = MixtralConfig
     base_model_prefix = "model"
@@ -864,14 +901,14 @@ class MixtralModel(MixtralPreTrainedModel):
     def __init__(self, config: MixtralConfig):
         """
         Initializes an instance of the MixtralModel class.
-        
+
         Args:
             self: The instance of the class.
             config (MixtralConfig): The configuration object containing various parameters for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -892,31 +929,31 @@ class MixtralModel(MixtralPreTrainedModel):
     def get_input_embeddings(self):
         """
         Get the input embeddings for the MixtralModel.
-        
+
         Args:
             self: The instance of the MixtralModel class.
-        
+
         Returns:
-            None. This method returns the input embeddings for the MixtralModel.
-        
+            embed_tokens: This method returns the input embeddings for the MixtralModel.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the MixtralModel.
-        
+
         Args:
             self (MixtralModel): The instance of the MixtralModel class.
             value (Any): The input embeddings to be set for the model. It can be of any valid type.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = value
 
@@ -934,30 +971,30 @@ class MixtralModel(MixtralPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MoeModelOutputWithPast]:
         """
-            Constructs the MixtralModel.
-            
-            Args:
-                self: The object itself.
-                input_ids (mindspore.Tensor, optional): The input tensor IDs. Default is None.
-                attention_mask (mindspore.Tensor, optional): The attention mask tensor. Default is None.
-                position_ids (mindspore.Tensor, optional): The position IDs tensor. Default is None.
-                past_key_values (List[mindspore.Tensor], optional): The list of past key value tensors. Default is None.
-                inputs_embeds (mindspore.Tensor, optional): The input embeddings tensor. Default is None.
-                use_cache (bool, optional): Whether to use cache. Default is None.
-                output_attentions (bool, optional): Whether to output attention tensors. Default is None.
-                output_hidden_states (bool, optional): Whether to output hidden states. Default is None.
-                output_router_logits (bool, optional): Whether to output router logits. Default is None.
-                return_dict (bool, optional): Whether to return a dictionary. Default is None.
-                
-            Returns:
-                Union[Tuple, MoeModelOutputWithPast]: The output of the MixtralModel, which can be a tuple or an instance of MoeModelOutputWithPast.
-                
-            Raises:
-                ValueError: If both input_ids and inputs_embeds are specified.
-                ValueError: If neither input_ids nor inputs_embeds are specified.
-                Warning: If use_cache is True and gradient checkpointing is enabled.
-                
-            """
+        Constructs the MixtralModel.
+
+        Args:
+            self: The object itself.
+            input_ids (mindspore.Tensor, optional): The input tensor IDs. Default is None.
+            attention_mask (mindspore.Tensor, optional): The attention mask tensor. Default is None.
+            position_ids (mindspore.Tensor, optional): The position IDs tensor. Default is None.
+            past_key_values (List[mindspore.Tensor], optional): The list of past key value tensors. Default is None.
+            inputs_embeds (mindspore.Tensor, optional): The input embeddings tensor. Default is None.
+            use_cache (bool, optional): Whether to use cache. Default is None.
+            output_attentions (bool, optional): Whether to output attention tensors. Default is None.
+            output_hidden_states (bool, optional): Whether to output hidden states. Default is None.
+            output_router_logits (bool, optional): Whether to output router logits. Default is None.
+            return_dict (bool, optional): Whether to return a dictionary. Default is None.
+
+        Returns:
+            Union[Tuple, MoeModelOutputWithPast]: The output of the MixtralModel, which can be a tuple or
+                an instance of MoeModelOutputWithPast.
+
+        Raises:
+            ValueError: If both input_ids and inputs_embeds are specified.
+            ValueError: If neither input_ids nor inputs_embeds are specified.
+            Warning: If use_cache is True and gradient checkpointing is enabled.
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits
@@ -1072,44 +1109,35 @@ class MixtralModel(MixtralPreTrainedModel):
 
 
 class MixtralForCausalLM(MixtralPreTrainedModel):
-
     """
     Represents a Mixtral model for causal language modeling.
-    
-    This class provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and
-reordering cache values.
-    
-    The class inherits from MixtralPreTrainedModel and contains the following methods:
-    - __init__(self, config)
-    - get_input_embeddings(self)
-    - set_input_embeddings(self, value)
-    - get_output_embeddings(self)
-    - set_output_embeddings(self, new_embeddings)
-    - set_decoder(self, decoder)
-    - get_decoder(self)
-    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs)
-    - _reorder_cache(past_key_values, beam_idx)
-    
-    The class also includes a detailed example demonstrating the usage of the MixtralForCausalLM model for generating text.
-    
+
+    This class provides methods for initializing the model, setting and getting input and output embeddings,
+    setting and getting the decoder, constructing the model, preparing inputs for generation, and reordering
+    cache values.
+
+    The class inherits from MixtralPreTrainedModel.
+    The class also includes a detailed example demonstrating the usage of the MixtralForCausalLM model for
+    generating text.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes an instance of the MixtralForCausalLM class.
-        
+
         Args:
             self: The instance of the class.
-            config: A dictionary containing configuration parameters for the model.
+            config:
+                A dictionary containing configuration parameters for the model.
+
                 - Type: dict
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be a valid dictionary object.
-        
+
         Returns:
-            None. The method initializes various attributes of the MixtralForCausalLM instance.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1125,29 +1153,30 @@ reordering cache values.
 
     def get_input_embeddings(self):
         """Retrieve input embeddings from the model.
-        
+
         Args:
             self (MixtralForCausalLM): The instance of the MixtralForCausalLM class.
-            
+
         Returns:
             None: This method returns the input embeddings from the model.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings of the MixtralForCausalLM model.
-        
+
         Args:
             self (MixtralForCausalLM): The instance of the MixtralForCausalLM class.
-            value (object): The new input embeddings to be set for the model. It can be of any compatible type that can be assigned to the 'embed_tokens' attribute of the model.
-        
+            value (object): The new input embeddings to be set for the model.
+                It can be of any compatible type that can be assigned to the 'embed_tokens' attribute of the model.
+
         Returns:
-            None. This method updates the 'embed_tokens' attribute of the model in place.
-        
+            None: This method updates the 'embed_tokens' attribute of the model in place.
+
         Raises:
             None.
         """
@@ -1156,33 +1185,34 @@ reordering cache values.
     def get_output_embeddings(self):
         """
         Retrieve the output embeddings from the MixtralForCausalLM model.
-        
+
         Args:
             self: An instance of the MixtralForCausalLM class.
-        
+
         Returns:
-            None. This method returns the output embeddings of the model.
-        
+            The output embeddings of the model.
+
         Raises:
             None.
-        
-        This method retrieves the output embeddings from the MixtralForCausalLM model. The output embeddings represent the learned representations of the model's output tokens. These embeddings can be used for
-downstream tasks such as fine-tuning or further analysis.
+
+        This method retrieves the output embeddings from the MixtralForCausalLM model.
+        The output embeddings represent the learned representations of the model's output tokens.
+        These embeddings can be used for downstream tasks such as fine-tuning or further analysis.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings of the MixtralForCausalLM model.
-        
+
         Args:
             self (MixtralForCausalLM): The instance of the MixtralForCausalLM model.
-            new_embeddings (object): The new output embeddings to be set for the model. 
+            new_embeddings (object): The new output embeddings to be set for the model.
                 Should be compatible with the model's architecture and dimensions.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1191,33 +1221,33 @@ downstream tasks such as fine-tuning or further analysis.
     def set_decoder(self, decoder):
         """
         Sets the decoder for MixtralForCausalLM.
-        
+
         Args:
             self (MixtralForCausalLM): The instance of MixtralForCausalLM.
             decoder: The decoder object to be set for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.model = decoder
 
     def get_decoder(self):
         """
         Method to retrieve the decoder from the MixtralForCausalLM model.
-        
+
         Args:
             self (MixtralForCausalLM): The instance of MixtralForCausalLM class.
                 This parameter is required to access the model.
                 It should be an instance of the MixtralForCausalLM class.
-        
+
         Returns:
             None: This method returns None as it simply retrieves and returns the model's decoder.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model
 
@@ -1243,23 +1273,24 @@ downstream tasks such as fine-tuning or further analysis.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, MoeCausalLMOutputWithPast]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, MixtralForCausalLM
-
-        >>> model = MixtralForCausalLM.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
-        >>> tokenizer = AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
-
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, MixtralForCausalLM
+            ...
+            >>> model = MixtralForCausalLM.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
+            >>> tokenizer = AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
+            ...
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            ...
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits
@@ -1337,20 +1368,24 @@ downstream tasks such as fine-tuning or further analysis.
     ):
         """
         Prepare inputs for generation in the MixtralForCausalLM class.
-        
+
         Args:
             self (object): The instance of the MixtralForCausalLM class.
             input_ids (torch.Tensor): The input tensor containing tokenized input IDs.
-            past_key_values (Cache or tuple or None): The past key values for autoregressive generation or None if no past values are available.
-            attention_mask (torch.Tensor or None): The attention mask tensor to avoid attending to padding tokens, or None if no mask is provided.
+            past_key_values (Cache or tuple or None): The past key values for autoregressive generation or
+                None if no past values are available.
+            attention_mask (torch.Tensor or None): The attention mask tensor to avoid attending to padding tokens,
+                or None if no mask is provided.
             inputs_embeds (torch.Tensor or None): The input embeddings tensor, or None if input_ids is used for embeddings.
             output_router_logits (bool): A flag indicating whether to output router logits for routing the generated tokens.
-        
+
         Returns:
-            dict: A dictionary containing the model inputs for generation, including input_ids, position_ids, past_key_values, use_cache, attention_mask, and output_router_logits.
-        
+            dict: A dictionary containing the model inputs for generation, including input_ids, position_ids,
+                past_key_values, use_cache, attention_mask, and output_router_logits.
+
         Raises:
-            ValueError: If the input_ids and attention_mask dimensions are inconsistent or if the cache length exceeds the maximum length.
+            ValueError: If the input_ids and attention_mask dimensions are inconsistent or if the cache length
+                exceeds the maximum length.
             TypeError: If the past_key_values type is invalid.
             IndexError: If the input_ids shape is invalid.
         """
@@ -1413,33 +1448,35 @@ downstream tasks such as fine-tuning or further analysis.
     def _reorder_cache(past_key_values, beam_idx):
         """
         Reorders the cache for each layer in the MixtralForCausalLM class based on the provided beam index.
-        
+
         Args:
             past_key_values (tuple): A tuple of past key values for each layer in the model.
                 Each element in the tuple represents the past key values for a single layer,
                 and is itself a tuple of tensors.
             beam_idx (torch.Tensor): A tensor containing the beam indices.
-        
+
         Returns:
-            tuple: The reordered past key values for each layer. 
+            tuple: The reordered past key values for each layer.
                 Each element in the tuple represents the reordered past key values for a single layer,
                 and is itself a tuple of tensors.
-        
+
         Raises:
             None.
-        
+
         Note:
             This method is a static method, which means it can be called on the class itself
             without creating an instance of the class.
-        
+
         Example:
+            ```python
             >>> past_key_values = ((tensor([[1, 2, 3]]), tensor([[4, 5, 6]]))),
-                                  (tensor([[7, 8, 9]]), tensor([[10, 11, 12]]))))
+            (tensor([[7, 8, 9]]), tensor([[10, 11, 12]]))))
             >>> beam_idx = tensor([1, 0])
             >>> reordered_past = MixtralForCausalLM._reorder_cache(past_key_values, beam_idx)
             >>> print(reordered_past)
             ((tensor([[4, 5, 6]]), tensor([[1, 2, 3]]))),
              (tensor([[10, 11, 12]]), tensor([[7, 8, 9]]))))
+             ```
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1454,49 +1491,58 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
 
     """
     MixtralForSequenceClassification
-    
-    This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and is designed to handle sequence classification tasks. It includes methods for initializing the
-model, getting and setting input embeddings, and constructing the model for sequence classification. The class also provides detailed documentation for the construct method, which accepts various input
-parameters and returns the sequence classification output.
-    
+
+    This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and
+    is designed to handle sequence classification tasks. It includes methods for initializing the model, getting and
+    setting input embeddings, and constructing the model for sequence classification.
+    The class also provides detailed documentation for the construct method, which accepts various input parameters and
+    returns the sequence classification output.
+
     Attributes:
         num_labels: An integer representing the number of labels for sequence classification.
         model: An instance of MixtralModel used for the sequence classification task.
         score: A neural network module for generating scores based on hidden states.
-    
+
     Methods:
-        __init__(self, config): Initializes the MixtralForSequenceClassification instance with the provided configuration.
-        get_input_embeddings(self): Retrieves the input embeddings from the model.
-        set_input_embeddings(self, value): Sets the input embeddings for the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence
-classification, processing the input data and returning the sequence classification output.
-    
-    The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, and return_dict. The labels parameter is optional and can be used for computing the sequence classification/regression loss. The method also handles different problem types such as
-regression, single-label classification, and multi-label classification, and computes the loss accordingly.
-    
+        __init__: Initializes the MixtralForSequenceClassification instance with the provided configuration.
+        get_input_embeddings: Retrieves the input embeddings from the model.
+        set_input_embeddings: Sets the input embeddings for the model.
+        construct: Constructs the model for sequence classification, processing the input data and returning the
+            sequence classification output.
+
+    The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids,
+    past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
+    The labels parameter is optional and can be used for computing the sequence classification/regression loss.
+    The method also handles different problem types such as regression, single-label classification, and multi-label
+    classification, and computes the loss accordingly.
+
     Returns:
-        When return_dict is False, the construct method returns a tuple containing the loss and other sequence classifier outputs. When return_dict is True, it returns a SequenceClassifierOutputWithPast object
-that includes the loss, logits, past_key_values, hidden_states, and attentions.
-    
-    Note: The class documentation and method descriptions are based on the provided Python code and its associated functionality.
+        Conditional returns:
+
+            - When return_dict is False, the construct method returns a tuple containing the loss and other sequence
+            classifier outputs.
+            - When return_dict is True, it returns a SequenceClassifierOutputWithPast object that
+            includes the loss, logits, past_key_values, hidden_states, and attentions.
+
+    Note:
+        The class documentation and method descriptions are based on the provided Python code and its associated functionality.
     """
     def __init__(self, config):
         """
         Initializes an instance of MixtralForSequenceClassification class.
-        
+
         Args:
             self: The object instance itself.
             config (object): An object containing configuration settings for the model.
                 It should have a 'num_labels' attribute specifying the number of output labels.
-                
+
         Returns:
-            None. This method initializes the MixtralForSequenceClassification object with the provided configuration.
-        
+            None.
+
         Raises:
-            - AttributeError: If the 'config' parameter does not contain the required 'num_labels' attribute.
-            - TypeError: If the 'config' parameter is not of the expected type.
-            - ValueError: If there are issues during the initialization process.
+            AttributeError: If the 'config' parameter does not contain the required 'num_labels' attribute.
+            TypeError: If the 'config' parameter is not of the expected type.
+            ValueError: If there are issues during the initialization process.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1509,32 +1555,32 @@ that includes the loss, logits, past_key_values, hidden_states, and attentions.
     def get_input_embeddings(self):
         """
         Method: get_input_embeddings
-        
+
         Description:
         This method retrieves the input embeddings from the model.
-        
+
         Args:
-        - self: An instance of the MixtralForSequenceClassification class.
-        
+            self: An instance of the MixtralForSequenceClassification class.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None: This method does not return any value.
+
         Raises:
-        - None
+            None
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the MixtralForSequenceClassification model.
-        
+
         Args:
             self (MixtralForSequenceClassification): The instance of the MixtralForSequenceClassification class.
             value (torch.Tensor): The input embeddings to be set for the model. It should be of type torch.Tensor.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1554,10 +1600,11 @@ that includes the loss, logits, past_key_values, hidden_states, and attentions.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

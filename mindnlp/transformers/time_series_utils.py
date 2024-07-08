@@ -67,10 +67,10 @@ class AffineTransformed(TransformedDistribution):
             value (Any): The value to be assigned to the attribute.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         object.__setattr__(self, name, value)
 
@@ -129,11 +129,12 @@ class ParameterProjection(nn.Cell):
             x (mindspore.Tensor): The input tensor representing the data to be projected.
             
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the projected tensor(s) after applying parameter projection.
+            Tuple[mindspore.Tensor]:
+                A tuple containing the projected tensor(s) after applying parameter projection.
         
         Raises:
-            - TypeError: If the input tensor 'x' is not of type mindspore.Tensor.
-            - ValueError: If there is an issue with the domain mapping operation.
+            TypeError: If the input tensor 'x' is not of type mindspore.Tensor.
+            ValueError: If there is an issue with the domain mapping operation.
         """
         params_unbounded = [proj(x) for proj in self.proj]
 
@@ -153,10 +154,10 @@ class LambdaLayer(nn.Cell):
             function (function): The function that will be stored in the LambdaLayer instance.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None
         """
         super().__init__()
         self.function = function
@@ -173,12 +174,12 @@ class LambdaLayer(nn.Cell):
             *args: Variable length argument list.
                 - Type: Any
                 - Purpose: Additional arguments that can be passed to the lambda function.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.function(x, *args)
 
@@ -194,16 +195,16 @@ class DistributionOutput:
     def __init__(self, dim: int = 1) -> None:
         """
         Initializes an instance of the DistributionOutput class.
-        
+
         Args:
             self (DistributionOutput): The instance of the class.
             dim (int, optional): The dimension of the output. Defaults to 1.
-        
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.dim = dim
         self.args_dim = {k: dim * self.args_dim[k] for k in self.args_dim}
@@ -211,28 +212,35 @@ class DistributionOutput:
     def _base_distribution(self, distr_args):
         """
         Method: _base_distribution
-        
-        This method is a helper method for the DistributionOutput class. It creates an instance of the distribution class specified by the class variable 'distribution_class' using the provided 'distr_args'
-and returns it.
-        
+
+        This method is a helper method for the DistributionOutput class.
+        It creates an instance of the distribution class specified by the class variable 'distribution_class' using
+        the provided 'distr_args' and returns it.
+
         Args:
-            - self: A reference to the current instance of the DistributionOutput class.
-                Type: DistributionOutput
-                Purpose: Allows access to the class's variables and methods.
-                Restrictions: N/A
-        
-            - distr_args: A list of arguments to be passed to the distribution class constructor.
-                Type: list
-                Purpose: Specifies the arguments required to instantiate the distribution class.
-                Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
-        
+            self:
+                A reference to the current instance of the DistributionOutput class.
+
+                - Type: DistributionOutput
+                - Purpose: Allows access to the class's variables and methods.
+                - Restrictions: None.
+            distr_args:
+                A list of arguments to be passed to the distribution class constructor.
+
+                - Type: list
+                - Purpose: Specifies the arguments required to instantiate the distribution class.
+                - Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
+
         Returns:
-            - None: This method does not return any value.
-                Type: None
-                Purpose: The method is used for its side effects, specifically, creating an instance of the distribution class.
+            None:
+                This method does not return any value.
+
+                - Type: None
+                - Purpose: The method is used for its side effects, specifically, creating an instance of the
+                distribution class.
         
         Raises:
-            - N/A: This method does not raise any exceptions.
+            None.
         """
         #if self.dim == 1:
         return self.distribution_class(*distr_args)
@@ -324,7 +332,7 @@ class StudentTOutput(DistributionOutput):
                 It should be a 1D tensor.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the input tensors are not in the expected format.
@@ -359,11 +367,12 @@ class NormalOutput(DistributionOutput):
                 Restrictions: Should be of type mindspore.Tensor.
         
         Returns:
-            None
-            Purpose: The method does not return any specific value. It processes the input tensors and modifies them in place.
+            None:
+                - Purpose: The method does not return any specific value.
+                It processes the input tensors and modifies them in place.
         
         Raises:
-            N/A
+            None
         """
         scale = cls.squareplus(scale).clamp_min(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         return loc.squeeze(-1), scale.squeeze(-1)

@@ -85,7 +85,7 @@ class GPTNeoXConfig(PretrainedConfig):
             attention_bias (bool, optional): Whether to use attention bias. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the hidden size is not divisible by the number of attention heads.

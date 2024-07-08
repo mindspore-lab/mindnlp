@@ -71,30 +71,24 @@ class MSErnieEmbeddings(nn.Cell):
             This method initializes the `MSErnieEmbeddings` object by setting up the necessary embedding layers and other
             attributes. It takes in the `config` object which contains the configuration parameters for the embeddings.
             
-            - `word_embeddings`: A `nn.Embedding` layer that maps word indices to word embeddings. It has dimensions 
-              (config.vocab_size, config.hidden_size) and uses the `config.pad_token_id` as the padding index.
-              
-            - `position_embeddings`: A `nn.Embedding` layer that maps position indices to position embeddings. It has 
-              dimensions (config.max_position_embeddings, config.hidden_size).
-              
-            - `token_type_embeddings`: A `nn.Embedding` layer that maps token type indices to token type embeddings. It has 
-              dimensions (config.type_vocab_size, config.hidden_size).
-              
-            - `use_task_id`: A boolean indicating whether to use task type embeddings. If `True`, an additional 
-              `task_type_embeddings` layer is created with dimensions (config.task_type_vocab_size, config.hidden_size).
-              
-            - `LayerNorm`: A `nn.LayerNorm` layer that applies layer normalization to the embeddings. It has dimensions
-              [config.hidden_size] and uses `config.layer_norm_eps` as epsilon.
-              
-            - `dropout`: A `nn.Dropout` layer that applies dropout to the embeddings with probability `config.hidden_dropout_prob`.
-            
-            - `position_embedding_type`: A string indicating the type of position embeddings to use. It defaults to 'absolute'.
-            
-            - `position_ids`: A tensor containing the position indices. It is created using `ops.arange` and has dimensions
-              (1, config.max_position_embeddings).
-              
-            - `token_type_ids`: A tensor containing the token type indices. It is created using `ops.zeros` with the same 
-              dimensions as `position_ids`.
+            - `word_embeddings`: A `nn.Embedding` layer that maps word indices to word embeddings. It has dimensions
+            (config.vocab_size, config.hidden_size) and uses the `config.pad_token_id` as the padding index.
+            - `position_embeddings`: A `nn.Embedding` layer that maps position indices to position embeddings.
+            It has dimensions (config.max_position_embeddings, config.hidden_size).
+            - `token_type_embeddings`: A `nn.Embedding` layer that maps token type indices to token type embeddings.
+            It has dimensions (config.type_vocab_size, config.hidden_size).
+            - `use_task_id`: A boolean indicating whether to use task type embeddings. If `True`, an additional
+            `task_type_embeddings` layer is created with dimensions (config.task_type_vocab_size, config.hidden_size).
+            - `LayerNorm`: A `nn.LayerNorm` layer that applies layer normalization to the embeddings.
+            It has dimensions [config.hidden_size] and uses `config.layer_norm_eps` as epsilon.
+            - `dropout`:
+                A `nn.Dropout` layer that applies dropout to the embeddings with probability `config.hidden_dropout_prob`.
+            - `position_embedding_type`:
+                A string indicating the type of position embeddings to use. It defaults to 'absolute'.
+            - `position_ids`: A tensor containing the position indices.
+                It is created using `ops.arange` and has dimensions (1, config.max_position_embeddings).
+            - `token_type_ids`: A tensor containing the token type indices. It is created using `ops.zeros` with the same
+            dimensions as `position_ids`.
         """
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
@@ -124,7 +118,7 @@ class MSErnieEmbeddings(nn.Cell):
     ) -> mindspore.Tensor:
         """
         Constructs the MSErnie embeddings for the given input.
-        
+
         Args:
             self (MSErnieEmbeddings): The instance of the MSErnieEmbeddings class.
             input_ids (Optional[mindspore.Tensor]): The input tensor containing the token ids. Default is None.
@@ -133,10 +127,10 @@ class MSErnieEmbeddings(nn.Cell):
             position_ids (Optional[mindspore.Tensor]): The tensor containing the position ids. Default is None.
             inputs_embeds (Optional[mindspore.Tensor]): The tensor containing the input embeddings. Default is None.
             past_key_values_length (int): The length of past key values. Default is 0.
-        
+
         Returns:
             mindspore.Tensor: The tensor representing the constructed embeddings.
-        
+
         Raises:
             None
         """
@@ -186,9 +180,11 @@ class MSErnieEmbeddings(nn.Cell):
 class MSErnieSelfAttention(nn.Cell):
 
     """
-    This class represents the self-attention mechanism for the MSErnie model. It calculates attention scores between input sequences and produces context layers based on the attention weights. The class
-inherits from nn.Cell and is designed to be used within the MSErnie model for natural language processing tasks.
-    
+    This class represents the self-attention mechanism for the MSErnie model.
+    It calculates attention scores between input sequences and produces context layers based on the attention weights.
+    The class inherits from nn.Cell and is designed to be used within the MSErnie model for natural language processing
+    tasks.
+
     Attributes:
         num_attention_heads (int): The number of attention heads in the self-attention mechanism.
         attention_head_size (int): The size of each attention head.
@@ -201,48 +197,57 @@ inherits from nn.Cell and is designed to be used within the MSErnie model for na
         max_position_embeddings (int): The maximum number of position embeddings.
         distance_embedding (nn.Embedding): Embedding layer for distance-based positional encodings.
         is_decoder (bool): Indicates if the self-attention mechanism is used in a decoder context.
-    
+
     Methods:
-        transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        transpose_for_scores:
             Transposes the input tensor to prepare it for attention score calculations.
-        
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] =
-None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
-            Constructs the self-attention mechanism using the provided input tensors and masks. It calculates attention scores, applies position embeddings, performs softmax, and produces context layers.
-    
+
+        construct:
+            Constructs the self-attention mechanism using the provided input tensors and masks.
+            It calculates attention scores, applies position embeddings, performs softmax, and produces context layers.
+
             Args:
-                hidden_states (mindspore.Tensor): The input tensor to the self-attention mechanism.
-                attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention scores.
-                head_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention heads.
-                encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from an encoder, if cross-attention is used.
-                encoder_attention_mask (Optional[mindspore.Tensor]): Attention mask for encoder hidden states.
-                past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Cached key and value tensors from previous iterations.
-                output_attentions (Optional[bool]): Flag to indicate whether to output attention weights.
-    
+
+            - hidden_states (mindspore.Tensor): The input tensor to the self-attention mechanism.
+            - attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention scores.
+            - head_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention heads.
+            - encoder_hidden_states (Optional[mindspore.Tensor]):
+                Hidden states from an encoder, if cross-attention is used.
+            - encoder_attention_mask (Optional[mindspore.Tensor]): Attention mask for encoder hidden states.
+            - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                Cached key and value tensors from previous iterations.
+            - output_attentions (Optional[bool]): Flag to indicate whether to output attention weights.
+
             Returns:
-                Tuple[mindspore.Tensor]: Tuple containing the context layer and optionally the attention probabilities and cached key-value pairs.
+
+            - Tuple[mindspore.Tensor]:
+                Tuple containing the context layer and optionally the attention probabilities and cached key-value pairs.
     """
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes an instance of the MSErnieSelfAttention class.
-        
+
         Args:
             self: The object instance.
-            config: The configuration object containing various parameters.
-                   - Type: object
-                   - Purpose: Specifies the configuration settings for the self-attention module.
-                   - Restrictions: None
-        
-            position_embedding_type: The type of position embedding to use.
-                                     - Type: str or None
-                                     - Purpose: Specifies the type of position embedding to use in the self-attention module.
-                                     - Restrictions: If None, the position_embedding_type will default to 'absolute'.
-        
+            config:
+                The configuration object containing various parameters.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the self-attention module.
+                - Restrictions: None
+
+            position_embedding_type:
+                The type of position embedding to use.
+
+                - Type: str or None
+                - Purpose: Specifies the type of position embedding to use in the self-attention module.
+                - Restrictions: If None, the position_embedding_type will default to 'absolute'.
         Returns:
-            None
-        
+            None.
+
         Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads and the config object does not have an 'embedding_size' attribute.
+            ValueError: If the hidden size is not a multiple of the number of attention heads and
+                the config object does not have an 'embedding_size' attribute.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -272,14 +277,15 @@ None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value:
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method transposes the input tensor for attention scores calculation.
-        
+
         Args:
             self (MSErnieSelfAttention): The instance of the MSErnieSelfAttention class.
             x (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
-            mindspore.Tensor: A transposed tensor of shape (batch_size, num_attention_heads, sequence_length, attention_head_size).
-        
+            mindspore.Tensor:
+                A transposed tensor of shape (batch_size, num_attention_heads, sequence_length, attention_head_size).
+
         Raises:
             None.
         """
@@ -299,26 +305,35 @@ None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value:
     ) -> Tuple[mindspore.Tensor]:
         """
         This method constructs the self-attention mechanism for MSErnie model.
-        
+
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input hidden states. Shape (batch_size, sequence_length, hidden_size).
-        - attention_mask (Optional[mindspore.Tensor]): An optional attention mask tensor. Shape (batch_size, num_heads, sequence_length, sequence_length).
-        - head_mask (Optional[mindspore.Tensor]): An optional head mask tensor for controlling the attention heads. Shape (num_heads,).
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional encoder hidden states for cross-attention. Shape (batch_size, encoder_seq_length, hidden_size).
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional attention mask for encoder_hidden_states. Shape (batch_size, num_heads, sequence_length, encoder_seq_length).
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors. Shape ((past_key_tensor, past_value_tensor)).
-        - output_attentions (Optional[bool]): Flag to output attentions. Default is False.
-        
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input hidden states. Shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]):
+                An optional attention mask tensor. Shape (batch_size, num_heads, sequence_length, sequence_length).
+            head_mask (Optional[mindspore.Tensor]):
+                An optional head mask tensor for controlling the attention heads. Shape (num_heads,).
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                Optional encoder hidden states for cross-attention. Shape (batch_size, encoder_seq_length, hidden_size).
+            encoder_attention_mask (Optional[mindspore.Tensor]):
+                Optional attention mask for encoder_hidden_states.
+                Shape (batch_size, num_heads, sequence_length, encoder_seq_length).
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                Optional tuple of past key and value tensors. Shape ((past_key_tensor, past_value_tensor)).
+            output_attentions (Optional[bool]): Flag to output attentions. Default is False.
+
         Returns:
-        Tuple[mindspore.Tensor]: Tuple containing the context layer tensor and optionally the attention probabilities tensor. 
-        The context layer tensor represents the output of the self-attention mechanism. Shape (batch_size, sequence_length, hidden_size).
-        The attention probabilities tensor represents the attention distribution. Shape (batch_size, num_heads, sequence_length, encoder_seq_length).
-        
+            Tuple[mindspore.Tensor]: Tuple containing the context layer tensor and optionally
+                the attention probabilities tensor.
+            The context layer tensor represents the output of the self-attention mechanism.
+                Shape (batch_size, sequence_length, hidden_size).
+            The attention probabilities tensor represents the attention distribution.
+                Shape (batch_size, num_heads, sequence_length, encoder_seq_length).
+
         Raises:
-        - ValueError: If the dimensions of input tensors are not compatible for matrix multiplication.
-        - IndexError: If accessing past key and value tensors leads to index out of range.
-        - RuntimeError: If there is an issue with the computation or masking operations.
+            ValueError: If the dimensions of input tensors are not compatible for matrix multiplication.
+            IndexError: If accessing past key and value tensors leads to index out of range.
+            RuntimeError: If there is an issue with the computation or masking operations.
         """
         mixed_query_layer = self.query(hidden_states)
 
@@ -417,36 +432,39 @@ class MSErnieSelfOutput(nn.Cell):
 
     """
     MSErnieSelfOutput represents the self-output layer of the Ernie model in MindSpore.
-    
-    This class inherits from nn.Cell and contains methods for initializing and constructing the self-output layer, which includes dense, LayerNorm, and dropout operations.
-    
+
+    This class inherits from nn.Cell and contains methods for initializing and constructing the self-output layer,
+    which includes dense, LayerNorm, and dropout operations.
+
     Attributes:
         dense (nn.Dense): The dense layer for linear transformation of hidden states.
         LayerNorm (nn.LayerNorm): The layer normalization for normalizing hidden states.
         dropout (nn.Dropout): The dropout layer for adding regularization to hidden states.
-    
+
     Methods:
-        __init__(self, config): Initializes the MSErnieSelfOutput instance with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the self-output layer by performing dense, dropout, and LayerNorm operations on the
-hidden states.
-    
+        __init__: Initializes the MSErnieSelfOutput instance with the provided configuration.
+        construct: Constructs the self-output layer by performing dense, dropout, and LayerNorm operations on
+            the hidden states.
+
     Returns:
         mindspore.Tensor: The output tensor after passing through the self-output layer transformations.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieSelfOutput class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters for the MSErnieSelfOutput class.
-                Type: object
-                Purpose: Specifies the configuration settings for the MSErnieSelfOutput instance.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                An object containing configuration parameters for the MSErnieSelfOutput class.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the MSErnieSelfOutput instance.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -457,16 +475,17 @@ hidden states.
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output of the MSErnieSelfOutput class by performing a series of operations on the input hidden_states and input_tensor.
-        
+        This method constructs the output of the MSErnieSelfOutput class by performing a series of operations on the
+        input hidden_states and input_tensor.
+
         Args:
             self (MSErnieSelfOutput): The instance of the MSErnieSelfOutput class.
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
             input_tensor (mindspore.Tensor): The input tensor used for the addition operation.
-        
+
         Returns:
             mindspore.Tensor: The output tensor after the series of operations.
-        
+
         Raises:
             None
         """
@@ -480,36 +499,39 @@ hidden states.
 class MSErnieAttention(nn.Cell):
 
     """
-    This class represents the attention mechanism used in the MSErnie model. It is responsible for calculating the attention scores between the input sequence and itself or encoder hidden states. The attention
-scores are then used to weigh the importance of different parts of the input sequence during the model's computation.
-    
+    This class represents the attention mechanism used in the MSErnie model.
+    It is responsible for calculating the attention scores between the input sequence and itself or encoder hidden states.
+    The attention scores are then used to weigh the importance of different parts of the input sequence during the
+    model's computation.
+
     This class inherits from the nn.Cell class.
-    
+
     Methods:
-        - __init__(self, config, position_embedding_type=None): Initializes the MSErnieAttention instance.
-        - prune_heads(self, heads): Prunes the specified attention heads from the model.
-        - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention
-mechanism by calculating attention scores and applying them to the input sequence.
-    
+        __init__: Initializes the MSErnieAttention instance.
+        prune_heads: Prunes the specified attention heads from the model.
+        construct: Constructs the attention mechanism by calculating attention scores and applying them to the
+            input sequence.
+
     Attributes:
-        - self: An instance of MSErnieSelfAttention, representing the self-attention mechanism.
-        - self_attn: An instance of MSErnieSelfAttention, representing the self-attention mechanism (used in older versions of MindSpore).
-        - output: An instance of MSErnieSelfOutput, representing the output layer of the attention mechanism.
-        - pruned_heads: A set that stores the indices of the pruned attention heads.
-    
+        self: An instance of MSErnieSelfAttention, representing the self-attention mechanism.
+        self_attn: An instance of MSErnieSelfAttention,
+            representing the self-attention mechanism (used in older versions of MindSpore).
+        output: An instance of MSErnieSelfOutput, representing the output layer of the attention mechanism.
+        pruned_heads: A set that stores the indices of the pruned attention heads.
+
     """
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes an instance of the MSErnieAttention class.
-        
+
         Args:
             self: The object itself.
             config: An object of type 'config' containing configuration settings.
             position_embedding_type: (Optional) A string specifying the type of position embedding. Default is None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -523,14 +545,14 @@ mechanism by calculating attention scores and applying them to the input sequenc
     def prune_heads(self, heads):
         """
         Prunes the specified attention heads from the MSErnieAttention layer.
-        
+
         Args:
             self (MSErnieAttention): The instance of the MSErnieAttention class.
             heads (List[int]): A list of attention head indices to be pruned.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -563,22 +585,33 @@ mechanism by calculating attention scores and applying them to the input sequenc
     ) -> Tuple[mindspore.Tensor]:
         """
         This method constructs the MSErnieAttention module.
-        
+
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states.
-        - attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length) representing the attention mask for the input sequence. Defaults to None.
-        - head_mask (Optional[mindspore.Tensor]): An optional tensor of shape (num_heads,) representing the mask for the attention heads. Defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder. Defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) representing the attention mask for the encoder hidden states. Defaults to None.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors for fast decoding. Defaults to None.
-        - output_attentions (Optional[bool]): A boolean flag indicating whether to output attentions. Defaults to False.
-        
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor):
+                The input tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states.
+            attention_mask (Optional[mindspore.Tensor]):
+                An optional input tensor of shape (batch_size, sequence_length) representing the attention mask for
+                the input sequence. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]):
+                An optional tensor of shape (num_heads,) representing the mask for the attention heads.
+                Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                An optional tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of
+                the encoder. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]):
+                An optional tensor of shape (batch_size, sequence_length) representing the attention mask for the
+                encoder hidden states. Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                An optional tuple containing the past key and value tensors for fast decoding. Defaults to None.
+            output_attentions (Optional[bool]): A boolean flag indicating whether to output attentions. Defaults to False.
+
         Returns:
-        - Tuple[mindspore.Tensor]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size).
-        
+            Tuple[mindspore.Tensor]: A tuple containing the attention output tensor of shape
+                (batch_size, sequence_length, hidden_size).
+
         Raises:
-        - No specific exceptions are raised by this method.
+            No specific exceptions are raised by this method.
         """
         if LESS_MS_2_2:
             self_outputs = self.self_attn(
@@ -610,31 +643,37 @@ class MSErnieIntermediate(nn.Cell):
 
     """
     This class represents the intermediate layer of the MSErnie model, which is used for feature extraction and transformation.
-    
-    The MSErnieIntermediate class inherits from the nn.Cell class, which is a base class for all neural network layers in the MindSpore framework.
-    
+
+    The MSErnieIntermediate class inherits from the nn.Cell class, which is a base class for all neural network layers
+    in the MindSpore framework.
+
     Attributes:
-        dense (nn.Dense): A fully connected layer that transforms the input tensor to the hidden size defined in the configuration.
+        dense (nn.Dense): A fully connected layer that transforms the input tensor to the hidden size defined
+            in the configuration.
         intermediate_act_fn (function): The activation function applied to the hidden states after the dense layer.
-    
+
     Methods:
         __init__(self, config): Initializes the MSErnieIntermediate instance with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Performs the forward pass of the intermediate layer.
-    
+        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+            Performs the forward pass of the intermediate layer.
+
     """
     def __init__(self, config):
         """Initializes an instance of the MSErnieIntermediate class.
-        
+
         Args:
             self: An instance of the MSErnieIntermediate class.
-            config: A configuration object that contains the following attributes:
+            config:
+                A configuration object that contains the following attributes:
+
                 - hidden_size (int): The size of the hidden layer.
                 - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or function): The activation function to use in the hidden layer. If a string is provided, the corresponding function will be retrieved from the ACT2FN dictionary.
-        
+                - hidden_act (str or function): The activation function to use in the hidden layer.
+                If a string is provided, the corresponding function will be retrieved from the ACT2FN dictionary.
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -648,14 +687,14 @@ class MSErnieIntermediate(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Method to construct intermediate hidden states in the MSErnieIntermediate class.
-        
+
         Args:
             self (MSErnieIntermediate): The instance of the MSErnieIntermediate class.
             hidden_states (mindspore.Tensor): A tensor containing the hidden states to be processed.
-            
+
         Returns:
             mindspore.Tensor: The processed hidden states after passing through the dense layer and activation function.
-        
+
         Raises:
             None
         """
@@ -668,33 +707,32 @@ class MSErnieIntermediate(nn.Cell):
 class MSErnieOutput(nn.Cell):
 
     """
-    MSErnieOutput is a class that represents the output layer for the MSErnie model in MindSpore. 
+    MSErnieOutput is a class that represents the output layer for the MSErnie model in MindSpore.
     This class inherits from nn.Cell and contains methods to process hidden states and input tensors.
-    
+
     Attributes:
         dense (nn.Dense): A fully connected layer to transform the hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module to normalize the hidden states.
         dropout (nn.Dropout): A dropout layer to apply dropout to the hidden states.
-    
+
     Methods:
-        __init__(self, config): Initializes the MSErnieOutput class with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: 
-            Processes the hidden states and input tensor to generate the output tensor.
-    
+        __init__: Initializes the MSErnieOutput class with the provided configuration.
+        construct: Processes the hidden states and input tensor to generate the output tensor.
+
     Note:
         This class is specifically designed for the MSErnie model in MindSpore and should be used as the final output layer.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieOutput class.
-        
+
         Args:
             self: The instance of the class.
             config: An object of type 'Config' containing configuration settings for the MSErnieOutput.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -706,21 +744,21 @@ class MSErnieOutput(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the output tensor of the MSErnie model.
-        
+
         Args:
             self (MSErnieOutput): The instance of the MSErnieOutput class.
             hidden_states (mindspore.Tensor): The hidden states tensor generated by the model.
                 Shape: (batch_size, sequence_length, hidden_size).
             input_tensor (mindspore.Tensor): The input tensor to the layer.
                 Shape: (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             mindspore.Tensor: The output tensor of the MSErnie model after processing the hidden states and input tensor.
                 Shape: (batch_size, sequence_length, hidden_size).
-        
+
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If the shapes of the input tensors are incompatible for addition.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If the shapes of the input tensors are incompatible for addition.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -732,51 +770,53 @@ class MSErnieOutput(nn.Cell):
 class MSErnieLayer(nn.Cell):
 
     """
-    This class represents a layer of the MSErnie model, designed for natural language processing tasks. 
-    The MSErnieLayer class is responsible for handling self-attention and cross-attention mechanisms within the model. 
-    It inherits from nn.Cell and contains methods for initialization, constructing the layer, and performing feed-forward operations on the attention output.
-    
+    This class represents a layer of the MSErnie model, designed for natural language processing tasks.
+    The MSErnieLayer class is responsible for handling self-attention and cross-attention mechanisms within the model.
+    It inherits from nn.Cell and contains methods for initialization, constructing the layer,
+    and performing feed-forward operations on the attention output.
+
     Attributes:
-        - chunk_size_feed_forward: The size of the chunk for feed-forward operations.
-        - seq_len_dim: The dimension of the sequence length.
-        - attention: The self-attention mechanism used in the layer.
-        - is_decoder: A flag indicating whether the layer is used as a decoder in the model.
-        - add_cross_attention: A flag indicating whether cross-attention is added to the layer.
-        - crossattention: The cross-attention mechanism used in the layer.
-        - intermediate: The intermediate layer in the feed-forward network.
-        - output: The output layer in the feed-forward network.
-    
+        chunk_size_feed_forward: The size of the chunk for feed-forward operations.
+        seq_len_dim: The dimension of the sequence length.
+        attention: The self-attention mechanism used in the layer.
+        is_decoder: A flag indicating whether the layer is used as a decoder in the model.
+        add_cross_attention: A flag indicating whether cross-attention is added to the layer.
+        crossattention: The cross-attention mechanism used in the layer.
+        intermediate: The intermediate layer in the feed-forward network.
+        output: The output layer in the feed-forward network.
+
     Methods:
-        - __init__(self, config): Initializes the MSErnieLayer with the provided configuration.
-        - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer by processing the input hidden states
-and optional arguments.
-        - feed_forward_chunk(self, attention_output): Performs feed-forward operations on the attention output to generate the final layer output.
-    
+        __init__: Initializes the MSErnieLayer with the provided configuration.
+        construct: Constructs the layer by processing the input hidden states and optional arguments.
+        feed_forward_chunk: Performs feed-forward operations on the attention output to generate the final layer output.
+
     Note:
-        - If cross-attention is added, the layer should be used as a decoder model.
-        - Instantiation with cross-attention layers requires setting `config.add_cross_attention=True`.
-        - The construct method processes hidden states and optional arguments to generate the final outputs.
-        - The feed_forward_chunk method handles the feed-forward operations on the attention output to produce the layer output.
+        If cross-attention is added, the layer should be used as a decoder model.
+        Instantiation with cross-attention layers requires setting `config.add_cross_attention=True`.
+        The construct method processes hidden states and optional arguments to generate the final outputs.
+        The feed_forward_chunk method handles the feed-forward operations on the attention output to produce the layer output.
     """
     def __init__(self, config):
         """
         Initializes a MSErnieLayer object with the given configuration.
-        
+
         Args:
             self: The MSErnieLayer instance.
-            config: An object containing the configuration parameters for the MSErnieLayer.
+            config:
+                An object containing the configuration parameters for the MSErnieLayer.
+
                 - chunk_size_feed_forward (int): The chunk size for feed forward operations.
                 - is_decoder (bool): Indicates if the layer is used as a decoder model.
                 - add_cross_attention (bool): Indicates if cross attention is added.
                 - position_embedding_type (str): The type of position embedding for cross attention.
-                  Only applicable if add_cross_attention is True.
-        
+                Only applicable if add_cross_attention is True.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If add_cross_attention is True and the layer is not used as a decoder model.
-        
+
         """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -803,27 +843,40 @@ and optional arguments.
     ) -> Tuple[mindspore.Tensor]:
         """
         Constructs an MSErnieLayer.
-        
-        This method applies the MSErnie layer to the input hidden states and returns the output of the layer. The MSErnie layer consists of self-attention, cross-attention (if decoder), and feed-forward
-sublayers.
-        
+
+        This method applies the MSErnie layer to the input hidden states and returns the output of the layer.
+        The MSErnie layer consists of self-attention, cross-attention (if decoder), and feed-forward sublayers.
+
         Args:
             self: The object instance.
             hidden_states (mindspore.Tensor): The input hidden states. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask indicating which positions should be attended to and which should be ignored. Shape: (batch_size, sequence_length).
-            head_mask (Optional[mindspore.Tensor]): The mask for the individual attention heads. Shape: (num_heads,) or (num_layers, num_heads) or (batch_size, num_heads, sequence_length, sequence_length).
-            encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder if cross-attention is enabled. Shape: (batch_size, encoder_sequence_length, hidden_size).
-            encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder if cross-attention is enabled. Shape: (batch_size, encoder_sequence_length).
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The cached key-value pairs of the self-attention and cross-attention layers from previous steps. Shape: (2, num_layers, num_heads,
-sequence_length, key_value_size).
+            attention_mask (Optional[mindspore.Tensor]):
+                The attention mask indicating which positions should be attended to and which should be ignored.
+                Shape: (batch_size, sequence_length).
+            head_mask (Optional[mindspore.Tensor]):
+                The mask for the individual attention heads.
+                Shape: (num_heads,) or (num_layers, num_heads) or (batch_size, num_heads, sequence_length, sequence_length).
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                The hidden states of the encoder if cross-attention is enabled.
+                Shape: (batch_size, encoder_sequence_length, hidden_size).
+            encoder_attention_mask (Optional[mindspore.Tensor]):
+                The attention mask for the encoder if cross-attention is enabled.
+                Shape: (batch_size, encoder_sequence_length).
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]):
+                The cached key-value pairs of the self-attention and cross-attention layers from previous steps.
+                Shape: (2, num_layers, num_heads, sequence_length, key_value_size).
             output_attentions (Optional[bool]): Whether to output the attention weights. Default: False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the output of the MSErnie layer. The first element is the output of the feed-forward sublayer. If the layer is a decoder, the tuple also includes the
-cached key-value pairs for self-attention and cross-attention.
-        
+            Tuple[mindspore.Tensor]:
+                A tuple containing the output of the MSErnie layer.
+                The first element is the output of the feed-forward sublayer.
+                If the layer is a decoder, the tuple also includes the cached key-value pairs for self-attention
+                and cross-attention.
+
         Raises:
-            ValueError: If `encoder_hidden_states` are provided but the model is not instantiated with cross-attention layers by setting `config.add_cross_attention=True`.
+            ValueError: If `encoder_hidden_states` are provided but the model is not instantiated with cross-attention
+                layers by setting `config.add_cross_attention=True`.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -886,16 +939,17 @@ cached key-value pairs for self-attention and cross-attention.
     def feed_forward_chunk(self, attention_output):
         """
         Performs a feed forward chunk operation on the given attention output.
-        
+
         Args:
             self (MSErnieLayer): An instance of the MSErnieLayer class.
-            attention_output: The attention output tensor to be processed. It should be a tensor of shape (batch_size, sequence_length, hidden_size).
-        
+            attention_output: The attention output tensor to be processed.
+                It should be a tensor of shape (batch_size, sequence_length, hidden_size).
+
         Returns:
             None: This method does not directly return any value. Instead, it updates the layer output.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -907,34 +961,36 @@ class MSErnieEncoder(nn.Cell):
 
     """
     MSErnieEncoder represents a customized encoder for the MSErnie model that inherits from nn.Cell.
-    
+
     Attributes:
         config: A dictionary containing configuration parameters for the encoder.
         layer: A CellList containing MSErnieLayer instances for each hidden layer in the encoder.
         gradient_checkpointing: A boolean indicating whether gradient checkpointing is enabled in the encoder.
-    
+
     Methods:
-        __init__(self, config): Initializes the MSErnieEncoder with the given configuration.
-        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states): Constructs the forward
-pass of the encoder with optional outputs based on the input parameters.
-    
+        __init__: Initializes the MSErnieEncoder with the given configuration.
+        construct: Constructs the forward
+        pass of the encoder with optional outputs based on the input parameters.
+
     Returns:
-        Union[Tuple[mindspore.Tensor], dict]: A tuple containing relevant output tensors or a dictionary with optional outputs based on the method parameters.
+        Union[Tuple[mindspore.Tensor], dict]:
+            A tuple containing relevant output tensors or a dictionary with optional outputs based on the method parameters.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieEncoder class.
-        
+
         Args:
             self (object): The instance of the MSErnieEncoder class.
             config (object): Configuration object containing parameters for the MSErnieEncoder.
                 This object should include the following attributes:
-                    - num_hidden_layers (int): Number of hidden layers for the encoder.
-                    - Other configuration parameters specific to the MSErnieEncoder.
-                    
+
+                - num_hidden_layers (int): Number of hidden layers for the encoder.
+                - Other configuration parameters specific to the MSErnieEncoder.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -956,27 +1012,29 @@ pass of the encoder with optional outputs based on the input parameters.
         output_hidden_states: Optional[bool] = False,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         """
-        This method constructs the MSErnie encoder with the provided input parameters and returns the output hidden states, decoder cache, all hidden states, self attentions, and cross attentions.
-        
+        This method constructs the MSErnie encoder with the provided input parameters and returns the
+        output hidden states, decoder cache, all hidden states, self attentions, and cross attentions.
+
         Args:
-        - self: The instance of the MSErnieEncoder class.
-        - hidden_states (mindspore.Tensor): The input hidden states to the encoder.
-        - attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens.
-        - head_mask (Optional[mindspore.Tensor]): Mask for masked multi-head attention.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Tuple of past key values for fast decoding.
-        - use_cache (Optional[bool]): Flag to use the cache for decoding.
-        - output_attentions (Optional[bool]): Flag to output attentions.
-        - output_hidden_states (Optional[bool]): Flag to output hidden states.
-        
+            self: The instance of the MSErnieEncoder class.
+            hidden_states (mindspore.Tensor): The input hidden states to the encoder.
+            attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens.
+            head_mask (Optional[mindspore.Tensor]): Mask for masked multi-head attention.
+            encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Tuple of past key values for fast decoding.
+            use_cache (Optional[bool]): Flag to use the cache for decoding.
+            output_attentions (Optional[bool]): Flag to output attentions.
+            output_hidden_states (Optional[bool]): Flag to output hidden states.
+
         Returns:
-        Union[Tuple[mindspore.Tensor], dict]: Depending on the output flags, returns a tuple containing hidden states, next decoder cache, all hidden states, self attentions, and cross attentions. If any of
-these values are None, they are excluded from the tuple.
-        
+            Union[Tuple[mindspore.Tensor], dict]: Depending on the output flags, returns a tuple containing hidden states,
+                next decoder cache, all hidden states, self attentions, and cross attentions. If any of these values are
+                None, they are excluded from the tuple.
+
         Raises:
-        - None
-        
+            None
+
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -1029,33 +1087,33 @@ class MSErniePooler(nn.Cell):
 
     """
     This class represents a pooler for the MSErnie model. It inherits from nn.Cell.
-    
+
     Attributes:
         dense (nn.Dense): A fully connected layer used for pooling operations.
         activation (nn.Tanh): An activation function applied to the pooled output.
-    
+
     Methods:
-        __init__(self, config): Initializes the MSErniePooler class.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the pooled output tensor.
-    
+        __init__: Initializes the MSErniePooler class.
+        construct: Constructs the pooled output tensor.
+
     """
     def __init__(self, config):
         """
         __init__
-        
+
         Initializes an instance of the MSErniePooler class.
-        
+
         Args:
             self (MSErniePooler): The instance of the MSErniePooler class.
             config: The configuration object containing the parameters for the MSErniePooler instance.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config parameter does not contain the required attributes.
-            - RuntimeError: If there is an issue with initializing the dense layer or activation function.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config parameter does not contain the required attributes.
+            RuntimeError: If there is an issue with initializing the dense layer or activation function.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1064,17 +1122,21 @@ class MSErniePooler(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method is part of the class MSErniePooler and is used to construct a pooled output from the given hidden states tensor.
-        
+
         Args:
             self: The instance of the MSErniePooler class.
-            hidden_states (mindspore.Tensor): A tensor containing the hidden states. It is expected to be of shape (batch_size, sequence_length, hidden_size) where batch_size represents the number of input
-sequences in the batch, sequence_length represents the length of the sequences, and hidden_size represents the size of the hidden states. The hidden states are the output of the Ernie model and are used to
-construct the pooled output.
-        
+            hidden_states (mindspore.Tensor): A tensor containing the hidden states.
+                It is expected to be of shape (batch_size, sequence_length, hidden_size)
+                where batch_size represents the number of input sequences in the batch, sequence_length represents
+                the length of the sequences, and hidden_size represents the size of the hidden states.
+                The hidden states are the output of the Ernie model and are used to construct the pooled output.
+
         Returns:
-            mindspore.Tensor: The constructed pooled output tensor. It represents the aggregated representation of the input sequences and is of shape (batch_size, hidden_size) where batch_size represents the
-number of input sequences in the batch and hidden_size represents the size of the hidden states.
-        
+            mindspore.Tensor: The constructed pooled output tensor.
+                It represents the aggregated representation of the input sequences and is of shape
+                (batch_size, hidden_size) where batch_size represents the number of input sequences in the batch and
+                hidden_size represents the size of the hidden states.
+
         Raises:
             None
         """
@@ -1090,39 +1152,43 @@ number of input sequences in the batch and hidden_size represents the size of th
 class MSErniePredictionHeadTransform(nn.Cell):
 
     '''
-    The MSErniePredictionHeadTransform class represents a transformation module for an ERNIE prediction head. 
-    This class inherits from nn.Cell and is used to process hidden states for ERNIE predictions. 
-    
+    The MSErniePredictionHeadTransform class represents a transformation module for an ERNIE prediction head.
+    This class inherits from nn.Cell and is used to process hidden states for ERNIE predictions.
+
     Attributes:
-    - dense: A fully connected neural network layer with input and output size of config.hidden_size.
-    - transform_act_fn: Activation function used for transforming hidden states.
-    - LayerNorm: Layer normalization module with hidden size specified by config.hidden_size and epsilon specified by config.layer_norm_eps.
-    
+        dense: A fully connected neural network layer with input and output size of config.hidden_size.
+        transform_act_fn: Activation function used for transforming hidden states.
+        LayerNorm: Layer normalization module with hidden size specified by config.hidden_size
+            and epsilon specified by config.layer_norm_eps.
+
     Methods:
-    - __init__(config): Initializes the MSErniePredictionHeadTransform instance with the provided configuration.
-    - construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies transformations to the input hidden states and returns the processed hidden states.
-    
+        __init__: Initializes the MSErniePredictionHeadTransform instance with the provided configuration.
+        construct: Applies transformations to the input hidden states and returns the processed hidden states.
+
     Usage:
-    Instantiate an MSErniePredictionHeadTransform object with the desired configuration and utilize the construct method to process hidden states for ERNIE predictions.
+        Instantiate an MSErniePredictionHeadTransform object with the desired configuration and utilize the
+        construct method to process hidden states for ERNIE predictions.
     '''
     def __init__(self, config):
         """
         Initializes the MSErniePredictionHeadTransform class.
-        
+
         Args:
             self (MSErniePredictionHeadTransform): The instance of the MSErniePredictionHeadTransform class.
-            config: A configuration object containing settings for the transformation.
-                Type: object
-                Purpose: Specifies the configuration parameters for the transformation.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                A configuration object containing settings for the transformation.
+
+                - Type: object
+                - Purpose: Specifies the configuration parameters for the transformation.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None. This method initializes the MSErniePredictionHeadTransform class with the provided configuration.
-        
+            None.
+
         Raises:
-            - TypeError: If the configuration object is not of the expected type.
-            - KeyError: If the specified hidden activation function is not found in the ACT2FN dictionary.
-            - ValueError: If there are issues with the provided configuration parameters.
+            TypeError: If the configuration object is not of the expected type.
+            KeyError: If the specified hidden activation function is not found in the ACT2FN dictionary.
+            ValueError: If there are issues with the provided configuration parameters.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1134,16 +1200,19 @@ class MSErniePredictionHeadTransform(nn.Cell):
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method 'construct' in the class 'MSErniePredictionHeadTransform' processes the hidden states using a series of transformations and returns the processed hidden states as a 'mindspore.Tensor'
-object.
-        
+        This method 'construct' in the class 'MSErniePredictionHeadTransform' processes the hidden states using
+        a series of transformations and returns the processed hidden states as a 'mindspore.Tensor'  object.
+
         Args:
             self (MSErniePredictionHeadTransform): The instance of the class MSErniePredictionHeadTransform.
-            hidden_states (mindspore.Tensor): The input hidden states to be processed. It should be a tensor object containing the hidden states information.
-        
+            hidden_states (mindspore.Tensor): The input hidden states to be processed.
+                It should be a tensor object containing the hidden states information.
+
         Returns:
-            mindspore.Tensor: Returns the processed hidden states after applying dense layer, activation function, and layer normalization.
-        
+            mindspore.Tensor:
+                Returns the processed hidden states after applying dense layer, activation function,
+                and layer normalization.
+
         Raises:
             No specific exceptions are documented to be raised by this method.
         """
@@ -1157,32 +1226,36 @@ object.
 class MSErnieLMPredictionHead(nn.Cell):
 
     """
-    This class represents a prediction head for the MSErnie language model, which is used for language modeling tasks. 
+    This class represents a prediction head for the MSErnie language model, which is used for language modeling tasks.
     It is a subclass of `nn.Cell`.
-    
+
     Attributes:
-        transform (MSErniePredictionHeadTransform): An instance of the MSErniePredictionHeadTransform class that applies transformations to the input hidden states.
-        decoder (nn.Dense): A fully connected layer that takes the transformed hidden states as input and produces predictions.
+        transform (MSErniePredictionHeadTransform):
+            An instance of the MSErniePredictionHeadTransform class that applies transformations to the input hidden states.
+        decoder (nn.Dense):
+            A fully connected layer that takes the transformed hidden states as input and produces predictions.
         bias (Parameter): The bias term used in the fully connected layer.
-    
+
     Methods:
-        __init__(self, config): Initializes an instance of the MSErnieLMPredictionHead class.
-        construct(self, hidden_states): Applies transformations and produces predictions based on the input hidden states.
-    
+        __init__: Initializes an instance of the MSErnieLMPredictionHead class.
+        construct: Applies transformations and produces predictions based on the input hidden states.
+
     """
     def __init__(self, config):
         """
         Initialize the MSErnieLMPredictionHead class.
-        
+
         Args:
             self: The current instance of the class.
             config: An object containing configuration settings for the prediction head.
-                    It is expected to have attributes including 'hidden_size' and 'vocab_size'.
-                    'hidden_size' specifies the size of the hidden layer, and 'vocab_size' specifies the size of the vocabulary.
-                    
+                It is expected to have attributes including 'hidden_size' and 'vocab_size'.
+                'hidden_size' specifies the size of the hidden layer, and 'vocab_size' specifies
+                the size of the vocabulary.
+
         Returns:
-            None. This method initializes various components of the prediction head such as the transform, decoder, and bias.
-        
+            None:
+                This method initializes various components of the prediction head such as the transform, decoder, and bias.
+
         Raises:
             None.
         """
@@ -1201,14 +1274,14 @@ class MSErnieLMPredictionHead(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the MSErnieLMPredictionHead.
-        
+
         Args:
             self (MSErnieLMPredictionHead): An instance of the MSErnieLMPredictionHead class.
             hidden_states (Tensor): The input hidden states. Expected shape is (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1222,13 +1295,13 @@ class MSErnieOnlyMLMHead(nn.Cell):
 
     """
     This class represents a prediction head for Masked Language Modeling (MLM) tasks using the MSErnie model.
-    
+
     This class inherits from nn.Cell and is responsible for constructing prediction scores based on the sequence output
     from the MSErnie model.
-    
+
     Attributes:
         predictions (MSErnieLMPredictionHead): Instance of MSErnieLMPredictionHead used for generating prediction scores.
-    
+
     Methods:
         construct(sequence_output: mindspore.Tensor) -> mindspore.Tensor:
             Constructs prediction scores based on the input sequence_output tensor.
@@ -1236,18 +1309,20 @@ class MSErnieOnlyMLMHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieOnlyMLMHead class.
-        
+
         Args:
             self: The instance of the MSErnieOnlyMLMHead class.
-            
-            config: A configuration object containing settings for the MSErnieOnlyMLMHead instance.
-                    Type: Any
-                    Purpose: Specifies the configuration settings for the model.
-                    Restrictions: The config object must be compatible with the MSErnieOnlyMLMHead class.
-        
+
+            config:
+                A configuration object containing settings for the MSErnieOnlyMLMHead instance.
+
+                - Type: Any
+                - Purpose: Specifies the configuration settings for the model.
+                - Restrictions: The config object must be compatible with the MSErnieOnlyMLMHead class.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1257,16 +1332,16 @@ class MSErnieOnlyMLMHead(nn.Cell):
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the masked language model (MLM) head for the MSErnie model.
-        
+
         Args:
             self (MSErnieOnlyMLMHead): The instance of the MSErnieOnlyMLMHead class.
             sequence_output (mindspore.Tensor): The output tensor from the preceding layer, typically the encoder.
                 It represents the sequence output that will be used for predicting masked tokens.
-        
+
         Returns:
             mindspore.Tensor: The prediction scores tensor generated by the MLM head.
                 This tensor contains the predicted scores for each token in the input sequence.
-        
+
         Raises:
             None
         """
@@ -1278,42 +1353,50 @@ class MSErnieOnlyMLMHead(nn.Cell):
 class MSErnieOnlyNSPHead(nn.Cell):
 
     """
-    The `MSErnieOnlyNSPHead` class is a subclass of `nn.Cell` that represents a neural network head for the MSErnie model, specifically designed for the Next Sentence Prediction (NSP) task.
-    
-    This class initializes an instance of `MSErnieOnlyNSPHead` with a configuration object, which is used to define the hidden size of the model. The `config` parameter should be an instance of `MSErnieConfig`
-or a class derived from it.
-    
-    The `construct` method takes a `pooled_output` tensor as input and computes the next sentence prediction score using a dense layer. The `pooled_output` tensor should be of shape (batch_size, hidden_size),
-where `hidden_size` is the size of the hidden layers in the model.
-    
-    The `seq_relationship` attribute is an instance of `nn.Dense` that performs the computation of the next sentence prediction score. It takes the `pooled_output` tensor as input and returns a tensor of shape
-(batch_size, 2), where the second dimension represents the probability scores for two possible sentence relationships.
-    
+    The `MSErnieOnlyNSPHead` class is a subclass of `nn.Cell` that represents a neural network head for the MSErnie model,
+    specifically designed for the Next Sentence Prediction (NSP) task.
+
+    This class initializes an instance of `MSErnieOnlyNSPHead` with a configuration object, which is used to define
+    the hidden size of the model.
+    The `config` parameter should be an instance of `MSErnieConfig` or a class derived from it.
+
+    The `construct` method takes a `pooled_output` tensor as input and computes the next sentence prediction score
+    using a dense layer.
+    The `pooled_output` tensor should be of shape (batch_size, hidden_size), where `hidden_size` is the size of
+    the hidden layers in the model.
+
+    The `seq_relationship` attribute is an instance of `nn.Dense` that performs the computation of the next sentence
+    prediction score.
+    It takes the `pooled_output` tensor as input and returns a tensor of shape (batch_size, 2),
+    where the second dimension represents the probability scores for two possible sentence relationships.
+
     The `construct` method returns the computed `seq_relationship_score` tensor.
-    
-    Example usage:
-    
-    config = MSErnieConfig(hidden_size=768)
-    head = MSErnieOnlyNSPHead(config)
-    output = head.construct(pooled_output)
-    
+
+    Example:
+        ```python
+        >>> config = MSErnieConfig(hidden_size=768)
+        >>> head = MSErnieOnlyNSPHead(config)
+        >>> output = head.construct(pooled_output)
+        ```
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieOnlyNSPHead class.
-        
+
         Args:
             self (MSErnieOnlyNSPHead): An instance of the MSErnieOnlyNSPHead class.
-            config: A configuration object containing the model's settings.
+            config:
+                A configuration object containing the model's settings.
+
                 - Type: Any valid object
                 - Purpose: Specifies the configuration parameters for the model.
                 - Restrictions: None
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
@@ -1321,16 +1404,17 @@ where `hidden_size` is the size of the hidden layers in the model.
     def construct(self, pooled_output):
         """
         This method constructs the sequence relationship score based on the pooled output for the MSErnieOnlyNSPHead class.
-        
+
         Args:
             self (object): The instance of the MSErnieOnlyNSPHead class.
             pooled_output (object): The pooled output obtained from the model.
-            
+
         Returns:
-            None: This method does not return any value, but calculates the sequence relationship score based on the pooled output.
-        
+            None: This method does not return any value, but calculates the sequence relationship score
+                based on the pooled output.
+
         Raises:
-            None: This method does not raise any exceptions.
+            NNone.
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -1340,35 +1424,44 @@ where `hidden_size` is the size of the hidden layers in the model.
 class MSErniePreTrainingHeads(nn.Cell):
 
     """
-    This class represents the pre-training heads of the MSErnie model, which includes prediction scores and sequence relationship scores.
-    
+    This class represents the pre-training heads of the MSErnie model, which includes prediction scores and
+    sequence relationship scores.
+
     The class inherits from the nn.Cell class.
-    
+
     Attributes:
-        predictions (MSErnieLMPredictionHead): An instance of the MSErnieLMPredictionHead class, responsible for generating prediction scores based on sequence outputs.
-        seq_relationship (nn.Dense): A fully connected layer that produces sequence relationship scores based on pooled outputs.
-    
+        predictions (MSErnieLMPredictionHead):
+            An instance of the MSErnieLMPredictionHead class, responsible for generating prediction scores
+            based on sequence outputs.
+        seq_relationship (nn.Dense):
+            A fully connected layer that produces sequence relationship scores based on pooled outputs.
+
     Methods:
         construct(sequence_output, pooled_output):
-            Constructs the pre-training heads by generating prediction scores and sequence relationship scores based on the given sequence and pooled outputs.
+            Constructs the pre-training heads by generating prediction scores and sequence relationship scores
+            based on the given sequence and pooled outputs.
+
             Args:
-                sequence_output (Tensor): The sequence output from the MSErnie model.
-                pooled_output (Tensor): The pooled output from the MSErnie model.
+
+            - sequence_output (Tensor): The sequence output from the MSErnie model.
+            - pooled_output (Tensor): The pooled output from the MSErnie model.
+
             Returns:
-                prediction_scores (Tensor): The prediction scores generated by the predictions module.
-                seq_relationship_score (Tensor): The sequence relationship scores generated by the seq_relationship module.
+
+            - prediction_scores (Tensor): The prediction scores generated by the predictions module.
+            - seq_relationship_score (Tensor): The sequence relationship scores generated by the seq_relationship module.
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSErniePreTrainingHeads class.
-        
+
         Args:
             self (MSErniePreTrainingHeads): The instance of the class itself.
             config: An object containing the configuration parameters for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1379,24 +1472,30 @@ class MSErniePreTrainingHeads(nn.Cell):
     def construct(self, sequence_output, pooled_output):
         """
         This method constructs prediction scores and sequence relationship scores for pre-training tasks in the MSErnie model.
-        
+
         Args:
             self (object): The instance of the MSErniePreTrainingHeads class.
-            sequence_output (object): The output sequence generated by the model.
-                Type: Any
-                Purpose: Represents the input sequence for pre-training tasks.
-                Restrictions: Should be a valid output sequence object.
-            pooled_output (object): The pooled output generated by the model.
-                Type: Any
-                Purpose: Represents the pooled output for pre-training tasks.
-                Restrictions: Should be a valid pooled output object.
-        
+            sequence_output (object):
+                The output sequence generated by the model.
+
+                - Type: Any
+                - Purpose: Represents the input sequence for pre-training tasks.
+                - Restrictions: Should be a valid output sequence object.
+            pooled_output (object):
+                The pooled output generated by the model.
+
+                - Type: Any
+                - Purpose: Represents the pooled output for pre-training tasks.
+                - Restrictions: Should be a valid pooled output object.
+
         Returns:
-            tuple: A tuple containing the prediction scores and sequence relationship score.
-                Type: tuple
-                Purpose: Contains the prediction scores for the input sequence and the sequence relationship score.
-                Restrictions: None
-        
+            tuple:
+                A tuple containing the prediction scores and sequence relationship score.
+
+                - Type: tuple
+                - Purpose: Contains the prediction scores for the input sequence and the sequence relationship score.
+                - Restrictions: None
+
         Raises:
             None
         """
@@ -1436,7 +1535,6 @@ class MSErniePreTrainedModel(PreTrainedModel):
 
 class MSErnieModel(MSErniePreTrainedModel):
     """
-
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
     cross-attention is added between the self-attention layers, following the architecture described in [Attention is
     all you need](https://arxiv.org/abs/1706.03762) by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
@@ -1450,15 +1548,15 @@ class MSErnieModel(MSErniePreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the MSErnieModel class.
-        
+
         Args:
             self: The object instance.
             config (object): The configuration object that contains the model parameters.
             add_pooling_layer (bool): Indicates whether to add a pooling layer. Default is True.
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         """
@@ -1477,15 +1575,15 @@ class MSErnieModel(MSErniePreTrainedModel):
     def get_input_embeddings(self):
         """
         Get the input embeddings for the MSErnieModel.
-        
+
         Args:
             self (MSErnieModel): An instance of the MSErnieModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1493,16 +1591,16 @@ class MSErnieModel(MSErniePreTrainedModel):
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the MSErnieModel.
-        
+
         Args:
             self (MSErnieModel): The instance of the MSErnieModel class.
             value: The new input embeddings to be set. This should be of type torch.Tensor.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -1532,24 +1630,26 @@ class MSErnieModel(MSErniePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors
+                of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1636,14 +1736,17 @@ class MSErnieModel(MSErniePreTrainedModel):
 class MSErnieForPreTraining(MSErniePreTrainedModel):
 
     """
-    MSErnieForPreTraining is a class that extends MSErniePreTrainedModel and is designed for pre-training the Ernie model for masked language modeling and next sentence prediction tasks.
-    
-    The class includes methods for initializing the model with configuration, getting and setting output embeddings, and constructing the model for training. The 'construct' method takes various input tensors
-such as input_ids, attention_mask, token_type_ids, etc., and computes the total loss for masked language modeling and next sentence prediction. The method returns the total loss, prediction scores, sequence
-relationship scores, and additional outputs if specified.
-    
-    Example usage of the MSErnieForPreTraining class involves initializing a tokenizer and the model, processing inputs using the tokenizer, and obtaining prediction and sequence relationship logits from the
-model's outputs.
+    MSErnieForPreTraining is a class that extends MSErniePreTrainedModel and is designed for pre-training the
+    Ernie model for masked language modeling and next sentence prediction tasks.
+
+    The class includes methods for initializing the model with configuration, getting and setting output embeddings,
+    and constructing the model for training. The 'construct' method takes various input tensors
+    such as input_ids, attention_mask, token_type_ids, etc., and computes the total loss for masked language modeling
+    and next sentence prediction. The method returns the total loss, prediction scores, sequence relationship scores,
+    and additional outputs if specified.
+
+    Example usage of the MSErnieForPreTraining class involves initializing a tokenizer and the model, processing inputs
+    using the tokenizer, and obtaining prediction and sequence relationship logits from the model's outputs.
     """
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -1651,16 +1754,16 @@ model's outputs.
     def __init__(self, config):
         """
         Initializes an instance of MSErnieForPreTraining.
-        
+
         Args:
             self (object): The instance of the class.
             config (object): Configuration object containing settings for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -1674,19 +1777,21 @@ model's outputs.
     def get_output_embeddings(self):
         """
         Returns the output embeddings from the MSErnieForPreTraining model.
-        
+
         Args:
             self: An instance of the MSErnieForPreTraining class.
-        
+
         Returns:
-            None. The method returns the output embeddings from the model.
-        
+            The output embeddings from the model.
+
         Raises:
             None.
-        
-        Example usage:
+
+        Example:
+            ```python
             >>> model = MSErnieForPreTraining()
             >>> embeddings = model.get_output_embeddings()
+            ```
         """
         return self.cls.predictions.decoder
 
@@ -1694,16 +1799,16 @@ model's outputs.
     def set_output_embeddings(self, new_embeddings):
         """
         Method to set new output embeddings in the MSErnieForPreTraining model.
-        
+
         Args:
             self (MSErnieForPreTraining): The instance of the MSErnieForPreTraining class.
                 This parameter represents the current instance of the class.
             new_embeddings (object): The new output embeddings to be set in the model.
                 This parameter should be of the desired type for output embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1724,6 +1829,7 @@ model's outputs.
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
+        Args:
             labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
                 config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
@@ -1738,22 +1844,22 @@ model's outputs.
                 Used to hide legacy arguments that have been deprecated.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], dict]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, ErnieForPreTraining
-
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-        >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
-
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.prediction_logits
-        >>> seq_relationship_logits = outputs.seq_relationship_logits
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, ErnieForPreTraining
+            ...
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            ...
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> prediction_logits = outputs.prediction_logits
+            >>> seq_relationship_logits = outputs.seq_relationship_logits
+            ```
         """
         outputs = self.ernie(
             input_ids,
@@ -1785,21 +1891,21 @@ class MSErnieForCausalLM(MSErniePreTrainedModel):
     """
     MSErnieForCausalLM
     ------------------
-    
-    This class is an implementation of the MSErnie model for causal language modeling (LM). It inherits from the MSErniePreTrainedModel class.
-    
+
+    This class is an implementation of the MSErnie model for causal language modeling (LM).
+    It inherits from the MSErniePreTrainedModel class.
+
     Attributes:
         ernie (MSErnieModel): The main MSErnie model.
         cls (MSErnieOnlyMLMHead): The MLM head for generating predictions.
-        
+
     Methods:
-        __init__(self, config): Initializes the MSErnieForCausalLM class.
-        get_output_embeddings(self): Retrieves the output embeddings of the model.
-        set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
-        construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, past_key_values, use_cache,
-output_attentions, output_hidden_states): Constructs the MSErnie model for causal language modeling.
-        prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, use_cache, **model_kwargs): Prepares the inputs for text generation.
-        _reorder_cache(self, past_key_values, beam_idx): Reorders the cache for beam search decoding.
+        __init__: Initializes the MSErnieForCausalLM class.
+        get_output_embeddings: Retrieves the output embeddings of the model.
+        set_output_embeddings: Sets the output embeddings of the model.
+        construct: Constructs the MSErnie model for causal language modeling.
+        prepare_inputs_for_generation: Prepares the inputs for text generation.
+        _reorder_cache: Reorders the cache for beam search decoding.
     """
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -1807,17 +1913,19 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
     def __init__(self, config):
         """
         Initializes an instance of MSErnieForCausalLM class.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration settings for the model.
+            config (object):
+                An object containing configuration settings for the model.
+
                 - Type: Config
                 - Purpose: Specifies the model configuration parameters.
                 - Restrictions: Must be provided to initialize the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1836,16 +1944,17 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the MSErnieForCausalLM model.
-        
+
         Args:
             self: The instance of the MSErnieForCausalLM class.
-        
+
         Returns:
-            None. The method returns the output embeddings of the model which are of type None. These embeddings represent the learned representation of the input data.
-        
+            decoder: The method returns the output embeddings of the model which are of type None.
+                These embeddings represent the learned representation of the input data.
+
         Raises:
-            None. This method does not raise any exceptions.
-        
+            None.
+
         """
         return self.cls.predictions.decoder
 
@@ -1853,14 +1962,14 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
     def set_output_embeddings(self, new_embeddings):
         """
         Sets new output embeddings for the model.
-        
+
         Args:
             self (MSErnieForCausalLM): The instance of the MSErnieForCausalLM class.
             new_embeddings (Any): The new embeddings to be set for the output layer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1884,28 +1993,30 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having
+                4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         if labels is not None:
             use_cache = False
@@ -1945,9 +2056,9 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
     ):
         """
         Prepare inputs for generation.
-        
+
         This method prepares the input tensors for generating text using the MSErnie model for causal language modeling.
-        
+
         Args:
             self (MSErnieForCausalLM): The instance of the MSErnieForCausalLM class.
             input_ids (torch.Tensor): The input tensor containing the tokenized input text.
@@ -1962,18 +2073,20 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
             use_cache (bool): Whether to use the past key-value cache for fast decoding.
                 Default: True.
             **model_kwargs: Additional model-specific keyword arguments.
-        
+
         Returns:
-            dict: A dictionary containing the prepared input tensors.
+            dict:
+                A dictionary containing the prepared input tensors.
+
                 - 'input_ids' (torch.Tensor): The modified input tensor.
-                    Shape: [batch_size, modified_sequence_length].
+                Shape: [batch_size, modified_sequence_length].
                 - 'attention_mask' (torch.Tensor): The attention mask tensor.
-                    Shape: [batch_size, modified_sequence_length].
+                Shape: [batch_size, modified_sequence_length].
                 - 'past_key_values' (Tuple[torch.Tensor]): The past key-value pairs.
-                    Each tuple element contains past key-value tensors.
-                    Shape: [(batch_size, num_heads, modified_sequence_length, hidden_size // num_heads)] * num_layers.
+                Each tuple element contains past key-value tensors.
+                Shape: [(batch_size, num_heads, modified_sequence_length, hidden_size // num_heads)] * num_layers.
                 - 'use_cache' (bool): The flag indicating whether to use the past key-value cache.
-        
+
         Raises:
             None
         """
@@ -2006,28 +2119,31 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
     def _reorder_cache(self, past_key_values, beam_idx):
         """
         Reorders the cache items based on the provided beam index.
-        
+
         Args:
             self (MSErnieForCausalLM): The instance of the MSErnieForCausalLM class.
             past_key_values (tuple): A tuple containing the past key-value states for each layer.
             beam_idx (torch.Tensor): An index tensor representing the beam index.
-        
+
         Returns:
             tuple: A tuple containing the reordered past key-value states.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method takes in the past key-value states and reorders them based on the provided beam index. It returns a tuple containing the reordered past key-value states.
-        
-        The 'self' parameter refers to the instance of the MSErnieForCausalLM class in which this method is called.
-        
-        The 'past_key_values' parameter is a tuple containing the past key-value states for each layer. These states are used to preserve information over time steps during generation.
-        
-        The 'beam_idx' parameter is a tensor representing the beam index. It is used to determine the order in which the past key-value states should be reordered.
-        
-        The method does not raise any exceptions.
+            This method takes in the past key-value states and reorders them based on the provided beam index.
+            It returns a tuple containing the reordered past key-value states.
+
+            The 'self' parameter refers to the instance of the MSErnieForCausalLM class in which this method is called.
+
+            The 'past_key_values' parameter is a tuple containing the past key-value states for each layer.
+            These states are used to preserve information over time steps during generation.
+
+            The 'beam_idx' parameter is a tensor representing the beam index.
+            It is used to determine the order in which the past key-value states should be reordered.
+
+            The method does not raise any exceptions.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -2040,28 +2156,27 @@ output_attentions, output_hidden_states): Constructs the MSErnie model for causa
 class MSErnieForMaskedLM(MSErniePreTrainedModel):
 
     """
-    The `MSErnieForMaskedLM` class is a Python class that represents a model for masked language modeling (MLM) using the MSErnie architecture. It is designed to generate predictions for masked tokens in a
-given input sequence.
-    
-    This class inherits from the `MSErniePreTrainedModel` class, which provides the basic functionality and configuration for the MSErnie model.
-    
+    The `MSErnieForMaskedLM` class is a Python class that represents a model for masked language modeling (MLM) using
+    the MSErnie architecture. It is designed to generate predictions for masked tokens in a given input sequence.
+
+    This class inherits from the `MSErniePreTrainedModel` class, which provides the basic functionality and configuration
+    for the MSErnie model.
+
     The `MSErnieForMaskedLM` class contains the following methods:
-    
-    - `__init__(self, config)`: Initializes the `MSErnieForMaskedLM` instance with a given configuration. It creates the MSErnie model and MLM head, and performs additional initialization steps.
-    
-    - `get_output_embeddings(self)`: Returns the decoder layer of the MLM head.
-    
-    - `set_output_embeddings(self, new_embeddings)`: Sets the decoder layer of the MLM head to the given embeddings.
-    
-    - `construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
-output_hidden_states) -> Union[Tuple[mindspore.Tensor], dict]`: Constructs the MSErnie model and performs the forward pass. It takes various input tensors and returns the masked language modeling loss and
-other outputs.
-    
-    - `prepare_inputs_for_generation(self, input_ids, attention_mask, **model_kwargs)`: Prepares the inputs for generation by adding a dummy token for each input sequence and adjusting the attention mask
-accordingly.
-    
-    Please note that the detailed docstring provided here omits method signatures and any other code. Refer to the actual implementation for complete details on the method signatures and any additional code.
-    
+
+    - `__init__(self, config)`: Initializes the `MSErnieForMaskedLM` instance with a given configuration.
+    It creates the MSErnie model and MLM head, and performs additional initialization steps.
+    - `get_output_embeddings`: Returns the decoder layer of the MLM head.
+    - `set_output_embeddings`: Sets the decoder layer of the MLM head to the given embeddings.
+    - `construct`: Constructs the MSErnie model and performs the forward pass.
+    It takes various input tensors and returns the masked language modeling loss and other outputs.
+    - `prepare_inputs_for_generation`:
+    Prepares the inputs for generation by adding a dummy token for each input sequence and adjusting the
+    attention mask accordingly.
+
+    Please note that the detailed docstring provided here omits method signatures and any other code.
+    Refer to the actual implementation for complete details on the method signatures and any additional code.
+
     """
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -2069,28 +2184,26 @@ accordingly.
     def __init__(self, config):
         """
         Initializes an instance of the `MSErnieForMaskedLM` class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object of type `Config` containing the configuration parameters. 
-        
+            config: An object of type `Config` containing the configuration parameters.
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method initializes the `MSErnieForMaskedLM` instance by setting up the configuration and the model components. It takes in the `config` parameter, which is an object of type `Config` and contains
-the necessary configuration parameters for the model.
-        
+
+        This method initializes the `MSErnieForMaskedLM` instance by setting up the configuration and the model components.
+        It takes in the `config` parameter, which is an object of type `Config` and contains
+        the necessary configuration parameters for the model.
         The `self` parameter refers to the instance of the class itself.
-        
-        If the `config.is_decoder` attribute is True, a warning message is logged to ensure that the `config.is_decoder` attribute is set to False for bi-directional self-attention.
-        
-        The method then initializes the `ernie` attribute by creating an instance of the `MSErnieModel` class, passing the `config` object and setting the `add_pooling_layer` attribute to False.
-        
+        If the `config.is_decoder` attribute is True, a warning message is logged to ensure that the `config.is_decoder`
+        attribute is set to False for bi-directional self-attention.
+        The method then initializes the `ernie` attribute by creating an instance of the `MSErnieModel` class,
+        passing the `config` object and setting the `add_pooling_layer` attribute to False.
         The `cls` attribute is initialized with an instance of the `MSErnieOnlyMLMHead` class, using the `config` object.
-        
         Finally, the `post_init` method is called to perform any additional initialization tasks.
         """
         super().__init__(config)
@@ -2111,24 +2224,27 @@ the necessary configuration parameters for the model.
     def get_output_embeddings(self):
         """
         Returns the output embeddings for the MSErnieForMaskedLM model.
-        
+
         Args:
             self: An instance of the MSErnieForMaskedLM class.
-        
+
         Returns:
-            None. The method returns a value of type 'None'.
-        
+            None: The method returns a value of type 'None'.
+
         Raises:
             None.
-        
-        This method retrieves the output embeddings of the MSErnieForMaskedLM model. The output embeddings represent the predicted decoder values for the given input.
-        
+
+        This method retrieves the output embeddings of the MSErnieForMaskedLM model.
+        The output embeddings represent the predicted decoder values for the given input.
+
         Note:
             The output embeddings are obtained using the `predictions.decoder` attribute of the `self.cls` object.
-        
+
         Example:
+            ```python
             >>> model = MSErnieForMaskedLM()
             >>> embeddings = model.get_output_embeddings()
+            ```
         """
         return self.cls.predictions.decoder
 
@@ -2136,17 +2252,17 @@ the necessary configuration parameters for the model.
     def set_output_embeddings(self, new_embeddings):
         """"
         Sets the output embeddings for the MSErnieForMaskedLM model.
-        
+
         Args:
             self (object): The instance of the MSErnieForMaskedLM class.
             new_embeddings (object): The new embeddings to be set as the output embeddings for the model.
                 Should be of the same type as the current output embeddings.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None: This method does not return any value.
+
         Raises:
-            N/A
+            None.
         """
         self.cls.predictions.decoder = new_embeddings
 
@@ -2166,10 +2282,11 @@ the necessary configuration parameters for the model.
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         outputs = self.ernie(
             input_ids,
@@ -2199,24 +2316,26 @@ the necessary configuration parameters for the model.
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **model_kwargs):
         """
         Prepare inputs for generation.
-        
+
         This method takes three parameters: self, input_ids, and attention_mask.
         It prepares the input data for generation by modifying the input_ids and attention_mask tensors.
-        
+
         Args:
             self (MSErnieForMaskedLM): The instance of the MSErnieForMaskedLM class.
             input_ids (Tensor): The input tensor of shape [batch_size, sequence_length].
                 It contains the input token IDs.
             attention_mask (Tensor, optional): The attention mask tensor of shape [batch_size, sequence_length].
                 It is used to mask out the padding tokens. Defaults to None.
-        
+
         Returns:
-            dict: A dictionary containing the modified input_ids and attention_mask tensors.
+            dict:
+                A dictionary containing the modified input_ids and attention_mask tensors.
+
                 - 'input_ids' (Tensor): The modified input tensor of shape [batch_size, sequence_length+1].
-                    It contains the input token IDs with an additional dummy token appended.
+                It contains the input token IDs with an additional dummy token appended.
                 - 'attention_mask' (Tensor): The modified attention mask tensor of shape [batch_size, sequence_length+1].
-                    It is used to mask out the padding tokens with an additional padding token appended.
-        
+                It is used to mask out the padding tokens with an additional padding token appended.
+
         Raises:
             ValueError: If the PAD token is not defined for generation.
         """
@@ -2239,50 +2358,55 @@ the necessary configuration parameters for the model.
 class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
 
     """
-    This class represents a model for next sentence prediction using MSErnie, a pre-trained model for natural language understanding. It inherits from the MSErniePreTrainedModel class.
-    
-    The class has an initializer method that takes a configuration object as input. It initializes an instance of the MSErnieModel class and the MSErnieOnlyNSPHead class, and then calls the post_init method.
-    
-    The construct method is used to perform the next sentence prediction task. It takes several input tensors, such as input_ids, attention_mask, token_type_ids, and labels. It returns a tuple containing the
-next sentence prediction loss, the sequence relationship scores, and additional outputs.
-    
-    The labels parameter is optional and is used for computing the next sequence prediction loss. The labels should be a tensor of shape (batch_size,) containing indices in the range [0, 1]. A label of 0
-indicates that sequence B is a continuation of sequence A, while a label of 1 indicates that sequence B is a random sequence.
-    
-    Here is an example of how to use this class:
-    
-    
-    from transformers import AutoTokenizer, MSErnieForNextSentencePrediction
-    
-    tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    model = MSErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    
-    prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-    next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-    encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-    
-    outputs = model(**encoding, labels=mindspore.Tensor([1]))
-    logits = outputs.logits
-    assert logits[0, 0] < logits[0, 1]  # next sentence was random
-    
-    
-    Note: The 'next_sentence_label' argument in the construct method is deprecated and will be removed in a future version. Use the 'labels' argument instead.
+    This class represents a model for next sentence prediction using MSErnie, a pre-trained model for natural language
+    understanding. It inherits from the MSErniePreTrainedModel class.
+
+    The class has an initializer method that takes a configuration object as input.
+    It initializes an instance of the MSErnieModel class and the MSErnieOnlyNSPHead class, and then calls the post_init method.
+
+    The construct method is used to perform the next sentence prediction task. It takes several input tensors,
+    such as input_ids, attention_mask, token_type_ids, and labels.
+    It returns a tuple containing the next sentence prediction loss, the sequence relationship scores, and additional outputs.
+
+    The labels parameter is optional and is used for computing the next sequence prediction loss.
+    The labels should be a tensor of shape (batch_size,) containing indices in the range [0, 1]. A label of 0 indicates
+    that sequence B is a continuation of sequence A, while a label of 1 indicates that sequence B is a random sequence.
+
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, MSErnieForNextSentencePrediction
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        >>> model = MSErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        ...
+        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        ...
+        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+        >>> logits = outputs.logits
+        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+        ```
+
+    Note:
+        The 'next_sentence_label' argument in the construct method is deprecated and will be removed in a future version.
+        Use the 'labels' argument instead.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-        """ 
+        """
         Initializes an instance of MSErnieForNextSentencePrediction.
-        
+
         Args:
             self: The instance of the class.
             config: The configuration object containing settings for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided 'config' parameter is not of the expected type.
-            - ValueError: If any required attribute in the 'config' object is missing.
+            TypeError: If the provided 'config' parameter is not of the expected type.
+            ValueError: If any required attribute in the 'config' object is missing.
         """
         super().__init__(config)
 
@@ -2307,32 +2431,33 @@ indicates that sequence B is a continuation of sequence A, while a label of 1 in
         **kwargs,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
-            (see `input_ids` docstring). Indices should be in `[0, 1]`:
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
+                (see `input_ids` docstring). Indices should be in `[0, 1]`:
 
-            - 0 indicates sequence B is a continuation of sequence A,
-            - 1 indicates sequence B is a random sequence.
+                - 0 indicates sequence B is a continuation of sequence A,
+                - 1 indicates sequence B is a random sequence.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], dict]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, ErnieForNextSentencePrediction
-
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-        >>> model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
-
-        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-
-        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
-        >>> logits = outputs.logits
-        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, ErnieForNextSentencePrediction
+            ...
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            ...
+            >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+            >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+            ...
+            >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+            >>> logits = outputs.logits
+            >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+            ```
         """
         if "next_sentence_label" in kwargs:
             warnings.warn(
@@ -2370,31 +2495,32 @@ class MSErnieForSequenceClassification(MSErniePreTrainedModel):
 
     """
     This class represents an implementation of MSErnie for sequence classification. It is a subclass of `MSErniePreTrainedModel`.
-    
+
     Attributes:
-    - `num_labels` (int): The number of labels for sequence classification.
-    - `config` (object): The configuration object for MSErnie.
-    - `ernie` (object): The MSErnieModel instance for feature extraction.
-    - `dropout` (object): The dropout layer for regularization.
-    - `classifier` (object): The fully connected layer for classification.
-    - `problem_type` (str): The type of problem being solved for classification.
-                             Options are 'regression', 'single_label_classification', and 'multi_label_classification'.
-    
+        `num_labels` (int): The number of labels for sequence classification.
+        `config` (object): The configuration object for MSErnie.
+        `ernie` (object): The MSErnieModel instance for feature extraction.
+        `dropout` (object): The dropout layer for regularization.
+        `classifier` (object): The fully connected layer for classification.
+        `problem_type` (str): The type of problem being solved for classification.
+            Options are 'regression', 'single_label_classification', and 'multi_label_classification'.
+
     Methods:
-    - `construct`: Constructs the MSErnie model for sequence classification.
-    
+        `construct`: Constructs the MSErnie model for sequence classification.
+
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         """Initializes an instance of the `MSErnieForSequenceClassification` class.
-        
+
         Args:
             self: The instance of the class.
-            config (MSErnieConfig): The configuration object for the model. It contains various hyperparameters and settings.
-            
+            config (MSErnieConfig): The configuration object for the model.
+                It contains various hyperparameters and settings.
+
         Returns:
             None.
-            
+
         Raises:
             None.
         """
@@ -2426,10 +2552,11 @@ class MSErnieForSequenceClassification(MSErniePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         outputs = self.ernie(
             input_ids,
@@ -2475,29 +2602,35 @@ class MSErnieForSequenceClassification(MSErniePreTrainedModel):
 class MSErnieForMultipleChoice(MSErniePreTrainedModel):
 
     """
-    MSErnieForMultipleChoice represents a multiple choice question answering model based on the ERNIE (Enhanced Representation through kNowledge Integration) architecture. 
-    This class extends MSErniePreTrainedModel and provides methods for constructing the model, including processing input data, computing logits, and calculating loss for training. 
-    The model utilizes an ERNIE model for encoding input sequences and a classifier for predicting the correct choice among multiple options. 
-    The construct method takes various input tensors such as input_ids, attention_mask, token_type_ids, and labels, and returns the loss and reshaped logits for the multiple choice classification task. 
+    MSErnieForMultipleChoice represents a multiple choice question answering model based on the ERNIE
+    (Enhanced Representation through kNowledge Integration) architecture.
+    This class extends MSErniePreTrainedModel and provides methods for constructing the model,
+    including processing input data, computing logits, and calculating loss for training.
+    The model utilizes an ERNIE model for encoding input sequences and a classifier for predicting the correct choice
+    among multiple options.
+    The construct method takes various input tensors such as input_ids, attention_mask, token_type_ids, and labels,
+    and returns the loss and reshaped logits for the multiple choice classification task.
     Additionally, the class includes functionality for handling dropout during training and post-initialization tasks.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieForMultipleChoice class.
-        
+
         Args:
             self (MSErnieForMultipleChoice): The current instance of the MSErnieForMultipleChoice class.
-            config: An object containing configuration settings for the model.
-                Type: Dict
-                Purpose: Specifies the configuration parameters for the model.
-                Restrictions: Must be a valid dictionary object.
-        
+            config:
+                An object containing configuration settings for the model.
+
+                - Type: Dict
+                - Purpose: Specifies the configuration parameters for the model.
+                - Restrictions: Must be a valid dictionary object.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -2525,10 +2658,11 @@ class MSErnieForMultipleChoice(MSErniePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
@@ -2571,22 +2705,25 @@ class MSErnieForMultipleChoice(MSErniePreTrainedModel):
 class MSErnieForTokenClassification(MSErniePreTrainedModel):
 
     """
-    MSErnieForTokenClassification is a class that represents a token classification model based on MSErnie (MindSpore implementation of ERNIE) for sequence labeling tasks.
-    
-    This class inherits from MSErniePreTrainedModel and provides functionality for token classification by utilizing an ERNIE-based model architecture. It includes methods for initializing the model with
-configuration parameters, constructing the model for inference or training, and computing token classification loss.
-    
+    MSErnieForTokenClassification is a class that represents a token classification model based on MSErnie
+    (MindSpore implementation of ERNIE) for sequence labeling tasks.
+
+    This class inherits from MSErniePreTrainedModel and provides functionality for token classification by utilizing
+    an ERNIE-based model architecture.
+    It includes methods for initializing the model with configuration parameters, constructing the model
+    for inference or training, and computing token classification loss.
+
     Attributes:
         num_labels (int): The number of labels for token classification tasks.
         ernie (MSErnieModel): The ERNIE model used for token classification.
         dropout (nn.Dropout): Dropout layer for regularization.
         classifier (nn.Dense): Fully connected layer for classification.
-        
+
     Methods:
-        __init__(self, config): Initializes the MSErnieForTokenClassification model with the given configuration.
-        construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states): Constructs the model for inference or
-training and computes token classification loss if labels are provided.
-    
+        __init__: Initializes the MSErnieForTokenClassification model with the given configuration.
+        construct: Constructs the model for inference or training and computes token classification loss if labels
+            are provided.
+
     Args:
         config (object): The configuration object containing model hyperparameters.
         input_ids (mindspore.Tensor, optional): Tensor of input token IDs for the model.
@@ -2599,10 +2736,11 @@ training and computes token classification loss if labels are provided.
         labels (mindspore.Tensor, optional): Tensor of labels for token classification.
         output_attentions (bool, optional): Flag to output attentions.
         output_hidden_states (bool, optional): Flag to output hidden states.
-    
+
     Returns:
-        Union[Tuple[mindspore.Tensor], dict]: Tuple containing model outputs and optionally additional information such as attentions and hidden states.
-    
+        Union[Tuple[mindspore.Tensor], dict]:
+            Tuple containing model outputs and optionally additional information such as attentions and hidden states.
+
     Raises:
         ValueError: If the number of labels provided is not compatible with the model architecture.
     """
@@ -2610,14 +2748,14 @@ training and computes token classification loss if labels are provided.
     def __init__(self, config):
         """
         Initializes a new instance of the `MSErnieForTokenClassification` class.
-        
+
         Args:
             self: The object itself.
             config: An instance of the `MSErnieConfig` class containing the model configuration.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -2648,8 +2786,9 @@ training and computes token classification loss if labels are provided.
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         outputs = self.ernie(
             input_ids,
@@ -2679,22 +2818,22 @@ training and computes token classification loss if labels are provided.
 class MSErnieForQuestionAnswering(MSErniePreTrainedModel):
 
     """
-    MSErnieForQuestionAnswering represents a model for question answering tasks using the MSErnie architecture. 
-    This class inherits from MSErniePreTrainedModel and includes methods for initializing the model and constructing the forward pass 
+    MSErnieForQuestionAnswering represents a model for question answering tasks using the MSErnie architecture.
+    This class inherits from MSErniePreTrainedModel and includes methods for initializing the model and constructing the forward pass
     for predicting start and end positions of answers within a text sequence.
-    
+
     Attributes:
         num_labels (int): The number of labels for the classifier output.
         ernie (MSErnieModel): The MSErnie model used as the base for question answering.
         qa_outputs (nn.Dense): The fully connected layer for predicting start and end positions within the sequence.
-    
+
     Methods:
-        __init__(config): Initializes the model with the given configuration.
-        construct(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states) ->
-Tuple[mindspore.Tensor, ...]: 
-            Constructs the forward pass of the model for question answering, predicting start and end positions within the input sequence.
+        __init__: Initializes the model with the given configuration.
+        construct:
+            Constructs the forward pass of the model for question answering, predicting start and end positions within
+            the input sequence.
             Returns the total loss and output logits for start and end positions, along with any additional model outputs.
-    
+
     Args:
         config: The configuration object containing model hyperparameters.
         input_ids (mindspore.Tensor): The input token IDs of the sequence.
@@ -2708,7 +2847,7 @@ Tuple[mindspore.Tensor, ...]:
         end_positions (mindspore.Tensor): The end positions of the answer span in the sequence.
         output_attentions (bool): Flag to output attentions weights.
         output_hidden_states (bool): Flag to output hidden states of the model.
-    
+
     Returns:
         Tuple containing the total loss, start logits, end logits, and any additional model outputs.
     """
@@ -2716,17 +2855,19 @@ Tuple[mindspore.Tensor, ...]:
     def __init__(self, config):
         """
         Initializes a new instance of the MSErnieForQuestionAnswering class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the MSErnieConfig class containing the configuration parameters for the model.
+            config:
+                An instance of the MSErnieConfig class containing the configuration parameters for the model.
+
                 - Type: MSErnieConfig
                 - Purpose: Specifies the model configuration.
                 - Restrictions: Must be a valid MSErnieConfig object.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -2754,14 +2895,15 @@ Tuple[mindspore.Tensor, ...]:
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         outputs = self.ernie(
             input_ids,
@@ -2804,9 +2946,9 @@ Tuple[mindspore.Tensor, ...]:
 
 class MSUIE(MSErniePreTrainedModel):
     """
-    Ernie Model with two linear layer on top of the hidden-states
-    output to compute `start_prob` and `end_prob`,
+    Ernie Model with two linear layer on top of the hidden-states output to compute `start_prob` and `end_prob`,
     designed for Universal Information Extraction.
+
     Args:
         config (:class:`ErnieConfig`):
             An instance of ErnieConfig used to construct UIE
@@ -2814,14 +2956,14 @@ class MSUIE(MSErniePreTrainedModel):
     def __init__(self, config: ErnieConfig):
         """
         Initializes an instance of the MSUIE class.
-        
+
         Args:
             self: The instance of the class.
             config (ErnieConfig): The configuration object for the Ernie model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -2856,15 +2998,17 @@ class MSUIE(MSErniePreTrainedModel):
                 See :class:`ErnieModel`.
             attention_mask (Tensor, optional):
                 See :class:`ErnieModel`.
+
         Example:
-            .. code-block::
-                import paddle
-                from paddlenlp.transformers import UIE, ErnieTokenizer
-                tokenizer = ErnieTokenizer.from_pretrained('uie-base')
-                model = UIE.from_pretrained('uie-base')
-                inputs = tokenizer("Welcome to use PaddlePaddle and PaddleNLP!")
-                inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
-                start_prob, end_prob = model(**inputs)
+            ```python
+            >>> import paddle
+            >>> from paddlenlp.transformers import UIE, ErnieTokenizer
+            >>> tokenizer = ErnieTokenizer.from_pretrained('uie-base')
+            >>> model = UIE.from_pretrained('uie-base')
+            >>> inputs = tokenizer("Welcome to use PaddlePaddle and PaddleNLP!")
+            >>> inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
+            >>> start_prob, end_prob = model(**inputs)
+            ```
         """
         outputs = self.ernie(
             input_ids=input_ids,

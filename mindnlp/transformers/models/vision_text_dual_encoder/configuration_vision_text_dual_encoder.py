@@ -44,31 +44,31 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
         kwargs (*optional*):
             Dictionary of keyword arguments.
 
-    Examples:
-
-    ```python
-    >>> from transformers import ViTConfig, BertConfig, VisionTextDualEncoderConfig, VisionTextDualEncoderModel
-
-    >>> # Initializing a BERT and ViT configuration
-    >>> config_vision = ViTConfig()
-    >>> config_text = BertConfig()
-
-    >>> config = VisionTextDualEncoderConfig.from_vision_text_configs(config_vision, config_text, projection_dim=512)
-
-    >>> # Initializing a BERT and ViT model (with random weights)
-    >>> model = VisionTextDualEncoderModel(config=config)
-
-    >>> # Accessing the model configuration
-    >>> config_vision = model.config.vision_config
-    >>> config_text = model.config.text_config
-
-    >>> # Saving the model, including its configuration
-    >>> model.save_pretrained("vit-bert")
-
-    >>> # loading model and config from pretrained folder
-    >>> vision_text_config = VisionTextDualEncoderConfig.from_pretrained("vit-bert")
-    >>> model = VisionTextDualEncoderModel.from_pretrained("vit-bert", config=vision_text_config)
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import ViTConfig, BertConfig, VisionTextDualEncoderConfig, VisionTextDualEncoderModel
+        ...
+        >>> # Initializing a BERT and ViT configuration
+        >>> config_vision = ViTConfig()
+        >>> config_text = BertConfig()
+        ...
+        >>> config = VisionTextDualEncoderConfig.from_vision_text_configs(config_vision, config_text, projection_dim=512)
+        ...
+        >>> # Initializing a BERT and ViT model (with random weights)
+        >>> model = VisionTextDualEncoderModel(config=config)
+        ...
+        >>> # Accessing the model configuration
+        >>> config_vision = model.config.vision_config
+        >>> config_text = model.config.text_config
+        ...
+        >>> # Saving the model, including its configuration
+        >>> model.save_pretrained("vit-bert")
+        ...
+        >>> # loading model and config from pretrained folder
+        >>> vision_text_config = VisionTextDualEncoderConfig.from_pretrained("vit-bert")
+        >>> model = VisionTextDualEncoderModel.from_pretrained("vit-bert", config=vision_text_config)
+        ```
+    """
 
     model_type = "vision-text-dual-encoder"
     is_composition = True

@@ -33,7 +33,6 @@ class MvpConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 50267):
             Vocabulary size of the MVP model. Defines the number of different tokens that can be represented by the
@@ -87,20 +86,21 @@ class MvpConfig(PretrainedConfig):
             The length of prompt.
         prompt_mid_dim (`int`, *optional*, defaults to 800):
             Dimensionality of the "intermediate" layer in prompt.
+
     Example:
-
-    ```python
-    >>> from transformers import MvpConfig, MvpModel
-
-    >>> # Initializing a MVP RUCAIBox/mvp style configuration
-    >>> configuration = MvpConfig()
-
-    >>> # Initializing a model (with random weights) from the RUCAIBox/mvp style configuration
-    >>> model = MvpModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import MvpConfig, MvpModel
+        ...
+        >>> # Initializing a MVP RUCAIBox/mvp style configuration
+        >>> configuration = MvpConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the RUCAIBox/mvp style configuration
+        >>> model = MvpModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "mvp"
     keys_to_ignore_at_inference = ["past_key_values"]

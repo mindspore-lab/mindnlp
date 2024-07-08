@@ -51,11 +51,12 @@ def build_chat_input(model, tokenizer, messages: List[dict], max_new_tokens: int
     Args:
         model (object): The chat generation model object.
         tokenizer (object): The tokenizer object for encoding and decoding the messages.
-        messages (List[dict]): A list of dictionaries representing the chat messages, where each dictionary contains 'role' (user or system) and 'content' (the message text).
+        messages (List[dict]): A list of dictionaries representing the chat messages,
+            where each dictionary contains 'role' (user or system) and 'content' (the message text).
         max_new_tokens (int, optional): The maximum number of new tokens that can be added to the input. Defaults to 0.
     
     Returns:
-        None: This function does not return any value.
+        None.
     
     Raises:
         AssertionError: If the 'role' in the messages is not correctly specified.
@@ -107,69 +108,77 @@ def build_chat_input(model, tokenizer, messages: List[dict], max_new_tokens: int
 class TextIterStreamer:
 
     """
-    The TextIterStreamer class represents a streamer for iterating over text data. It provides functionality for processing and streaming text data using a specified tokenizer.
+    The TextIterStreamer class represents a streamer for iterating over text data.
+    It provides functionality for processing and streaming text data using a specified tokenizer.
     
     Parameters:
-    - tokenizer (object): The tokenizer to be used for processing the text data.
-    - skip_prompt (bool, optional): If set to True, prompts are skipped during iteration. Defaults to False.
-    - skip_special_tokens (bool, optional): If set to True, special tokens are skipped during iteration. Defaults to False.
-    
+        tokenizer (object): The tokenizer to be used for processing the text data.
+        skip_prompt (bool, optional): If set to True, prompts are skipped during iteration. Defaults to False.
+        skip_special_tokens (bool, optional): If set to True, special tokens are skipped during iteration. Defaults to False.
+
     Attributes:
-    - tokenizer (object): The specified tokenizer for processing the text data.
-    - skip_prompt (bool): Indicates whether prompts are skipped during iteration.
-    - skip_special_tokens (bool): Indicates whether special tokens are skipped during iteration.
-    - tokens (list): A list to store the processed tokens.
-    - text_queue (Queue): A queue to store the processed text data.
-    - next_tokens_are_prompt (bool): Indicates whether the next tokens are prompts.
-    
+        tokenizer (object): The specified tokenizer for processing the text data.
+        skip_prompt (bool): Indicates whether prompts are skipped during iteration.
+        skip_special_tokens (bool): Indicates whether special tokens are skipped during iteration.
+        tokens (list): A list to store the processed tokens.
+        text_queue (Queue): A queue to store the processed text data.
+        next_tokens_are_prompt (bool): Indicates whether the next tokens are prompts.
+
     Methods:
-    - put(self, value): Adds the processed value to the token list and the text queue.
-    - end(self): Signals the end of text data processing.
-    - __iter__(self): Returns the iterator object.
-    - __next__(self): Retrieves the next processed text data.
-    
+        put(self, value): Adds the processed value to the token list and the text queue.
+        end(self): Signals the end of text data processing.
+        __iter__(self): Returns the iterator object.
+        __next__(self): Retrieves the next processed text data.
+
     Raises:
-    - StopIteration: When the end of text data processing is reached.
-    
+        - StopIteration: When the end of text data processing is reached.
+
     Note:
-    - The put method processes the input value and adds it to the token list and text queue. If skip_prompt is set to True, prompts are skipped during processing. The end method signals the end of text data
-processing, and the __next__ method retrieves the next processed text data. 
-    
+        - The put method processes the input value and adds it to the token list and text queue.
+        If skip_prompt is set to True, prompts are skipped during processing.
+        The end method signals the end of text data processing, and the __next__ method retrieves the next processed text data.
+
     Example:
-    
-    # Create a TextIterStreamer instance
-    streamer = TextIterStreamer(tokenizer, skip_prompt=True, skip_special_tokens=False)
-    
-    # Add processed text data
-    streamer.put(processed_value)
-    
-    # Signal the end of text data processing
-    streamer.end()
-    
-    # Iterate over processed text data
-    for text_data in streamer:
-        print(text_data)
-    
+        ```python
+        >>> # Create a TextIterStreamer instance
+        >>> streamer = TextIterStreamer(tokenizer, skip_prompt=True, skip_special_tokens=False)
+        ...
+        >>> # Add processed text data
+        >>> streamer.put(processed_value)
+        ...
+        >>> # Signal the end of text data processing
+        >>> streamer.end()
+        ...
+        >>> # Iterate over processed text data
+        >>> for text_data in streamer:
+        >>>     print(text_data)
+        ```
+
     """
     def __init__(self, tokenizer, skip_prompt=False, skip_special_tokens=False):
         """
         Initializes a new instance of the TextIterStreamer class.
-        
+
         Args:
             self (TextIterStreamer): The current instance of the TextIterStreamer class.
             tokenizer (object): The tokenizer object used for tokenization.
             skip_prompt (bool): A flag indicating whether to skip the prompt during tokenization.
             skip_special_tokens (bool): A flag indicating whether to skip special tokens during tokenization.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
             None.
-        
-        This method initializes the TextIterStreamer class by setting the tokenizer, skip_prompt, and skip_special_tokens attributes. It also initializes the tokens and text_queue attributes. The tokenizer
-object is used for tokenization. The skip_prompt flag is used to determine whether the prompt should be skipped during tokenization. The skip_special_tokens flag is used to determine whether special tokens
-should be skipped during tokenization. The tokens attribute is an empty list that will store the tokens. The text_queue attribute is a queue used for storing the text.
+
+        This method initializes the TextIterStreamer class by setting the tokenizer, skip_prompt,
+        and skip_special_tokens attributes.
+        It also initializes the tokens and text_queue attributes.
+        The tokenizer  object is used for tokenization.
+        The skip_prompt flag is used to determine whether the prompt should be skipped during tokenization.
+        The skip_special_tokens flag is used to determine whether special tokens  should be skipped during tokenization.
+        The tokens attribute is an empty list that will store the tokens.
+        The text_queue attribute is a queue used for storing the text.
         """
         self.tokenizer = tokenizer
         self.skip_prompt = skip_prompt
@@ -185,13 +194,12 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
                 The instance of the TextIterStreamer class.
             value: array-like
                 The input value to be added to the tokens. It should be an array-like object containing the tokens to be added.
-        
+
         Returns:
-            None: 
-                This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         if self.skip_prompt and self.next_tokens_are_prompt:
             self.next_tokens_are_prompt = False
@@ -205,16 +213,16 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
     def end(self):
         """
         Ends the text iteration process by putting a None value into the text queue.
-        
+
         Args:
             self (TextIterStreamer): An instance of the TextIterStreamer class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             The method is used to signal the end of the text iteration process by putting a None
             value into the text queue. This allows other parts of the program to detect the end of
@@ -225,16 +233,17 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
     def __iter__(self):
         """
         __iter__ method in the TextIterStreamer class.
-        
+
         Args:
             self: An instance of the TextIterStreamer class.
                 This parameter represents the instance of the TextIterStreamer class on which the method is being called.
                 It is required for accessing the attributes and methods within the class.
-        
+
         Returns:
-            None.
-            This method does not return any value explicitly. Instead, it returns the instance of the TextIterStreamer class itself.
-        
+            None:
+                This method does not return any value explicitly.
+                Instead, it returns the instance of the TextIterStreamer class itself.
+
         Raises:
             This method does not raise any exceptions explicitly.
         """
@@ -243,16 +252,16 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
     def __next__(self):
         """
         Docstring for the '__next__' method in the 'TextIterStreamer' class.
-        
+
         Args:
             self: (TextIterStreamer) The instance of the TextIterStreamer class.
                 It represents the current object on which the method is being called.
-        
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            StopIteration: If the value retrieved from the text_queue is None, 
+            StopIteration: If the value retrieved from the text_queue is None,
                 this exception is raised to signal the end of iteration.
         """
         value = self.text_queue.get()
@@ -305,14 +314,14 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
 def _get_interleave(n):
     """
-    This function returns an interleaved list of length n. 
-    
+    This function returns an interleaved list of length n.
+
     Args:
         n (int): The length of the interleaved list to be generated. It must be a positive integer.
-    
+
     Returns:
         list: Returns a list of length n containing interleaved values.
-    
+
     Raises:
         ValueError: If the input parameter n is not a positive integer.
     """
@@ -368,14 +377,15 @@ class RMSNorm(nn.Cell):
     def construct(self, hidden_states):
         """
         This method constructs RMSNorm by normalizing the hidden states.
-        
+
         Args:
             self (RMSNorm): The instance of the RMSNorm class.
-            hidden_states (Tensor): The input hidden states to be normalized. Should be a tensor of shape (batch_size, hidden_size).
-        
+            hidden_states (Tensor):
+                The input hidden states to be normalized. Should be a tensor of shape (batch_size, hidden_size).
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the hidden_states tensor is not of the correct shape.
             TypeError: If the data type of self.weight is not mindspore.float16 or mindspore.bfloat16.
@@ -397,22 +407,22 @@ class RotaryEmbedding(nn.Cell):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         __init__(self, dim, max_position_embeddings=2048, base=10000)
-            
+
         Initialize the RotaryEmbedding object.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimensionality of the input data.
             max_position_embeddings (int, optional): The maximum sequence length for position embeddings. Defaults to 2048.
             base (int, optional): The base value used in the calculation. Defaults to 10000.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the input parameters are not within the expected range or format.
-            - TypeError: If the input parameters are not of the expected type.
-            - RuntimeError: If there is an issue with the operations or calculations performed within the method.
+            ValueError: If the input parameters are not within the expected range or format.
+            TypeError: If the input parameters are not of the expected type.
+            RuntimeError: If there is an issue with the operations or calculations performed within the method.
         """
         super().__init__()
         self.inv_freq = 1.0 / (base ** (ops.arange(0, dim, 2).float() / dim))
@@ -428,33 +438,40 @@ class RotaryEmbedding(nn.Cell):
     def construct(self, x, seq_len=None):
         """
         Constructs the rotary embedding for a given sequence length.
-        
+
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
             x: The input tensor of shape (batch_size, ..., seq_len, ...).
             seq_len (int): The length of the input sequence. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached.
-        
-        This method constructs the rotary embedding for a given sequence length. It updates the cached cosine and sine values based on the input sequence length.
-        
-        If the input sequence length (seq_len) is greater than the maximum sequence length cached (self.max_seq_len_cached), the method computes the cosine and sine values for the updated sequence length. It
-then updates the cached cosine (self.cos_cached) and sine (self.sin_cached) values accordingly.
-        
-        The rotary embedding is computed using the inverse frequency tensor (self.inv_freq). The frequency tensor is generated by multiplying the sequence length with the inverse frequency tensor. The
-resulting tensor is concatenated with itself along the last axis to create the embedding tensor (emb).
-        
-        The cosine and sine values are computed from the embedding tensor using the cos and sin functions, respectively. The resulting cosine and sine tensors are then stored in the cached variables
-(self.cos_cached and self.sin_cached) to be reused in subsequent calls.
-        
-        Finally, the method returns the cosine and sine tensors sliced to the specified sequence length (seq_len), converted to the same data type as the input tensor (x.dtype).
-        
-        Note: The maximum sequence length cached (self.max_seq_len_cached) is updated only when the input sequence length (seq_len) is greater than it. This ensures that the cached values are reused for
-shorter sequences, improving efficiency.
+
+        This method constructs the rotary embedding for a given sequence length.
+        It updates the cached cosine and sine values based on the input sequence length.
+
+        If the input sequence length (seq_len) is greater than the maximum sequence length cached (self.max_seq_len_cached),
+        the method computes the cosine and sine values for the updated sequence length.
+        It then updates the cached cosine (self.cos_cached) and sine (self.sin_cached) values accordingly.
+
+        The rotary embedding is computed using the inverse frequency tensor (self.inv_freq).
+        The frequency tensor is generated by multiplying the sequence length with the inverse frequency tensor.
+        The resulting tensor is concatenated with itself along the last axis to create the embedding tensor (emb).
+
+        The cosine and sine values are computed from the embedding tensor using the cos and sin functions, respectively.
+        The resulting cosine and sine tensors are then stored in the cached variables (self.cos_cached and self.sin_cached)
+        to be reused in subsequent calls.
+
+        Finally, the method returns the cosine and sine tensors sliced to the specified sequence length (seq_len),
+        converted to the same data type as the input tensor (x.dtype).
+
+        Note:
+            The maximum sequence length cached (self.max_seq_len_cached) is updated only when the input sequence length
+            (seq_len) is greater than it.
+            This ensures that the cached values are reused for shorter sequences, improving efficiency.
         """
         # x: [bs, num_attention_heads, seq_len, head_size]
         # This `if` block is unlikely to be run after we build sin/cos in `__init__`. Keep the logic here just in case.
@@ -505,7 +522,7 @@ class MLP(nn.Cell):
     ):
         """
         __init__ method for the MLP class.
-        
+
         Args:
             self: Reference to the current instance of the class.
             hidden_size (int): The size of the hidden layer in the MLP.
@@ -514,12 +531,12 @@ class MLP(nn.Cell):
                 Specifies the number of neurons in the intermediate layer.
             hidden_act (str): The activation function for the hidden layer.
                 Specifies the activation function to be used in the hidden layer.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.gate_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
@@ -530,16 +547,16 @@ class MLP(nn.Cell):
     def construct(self, x):
         """
         Method 'construct' in class 'MLP' constructs a multi-layer perceptron.
-        
+
         Args:
             self (object): The instance of the class.
             x (tensor): The input tensor to be processed by the MLP.
-        
+
         Returns:
-            None. The method modifies the internal state of the MLP object.
-        
+            None: The method modifies the internal state of the MLP object.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -549,20 +566,25 @@ class Attention(nn.Cell):
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes an instance of the Attention class.
-        
+
         Args:
             self: The instance of the class.
-            config (BaiChuanConfig): An object of type BaiChuanConfig containing configuration parameters for the attention mechanism.
+            config (BaiChuanConfig):
+                An object of type BaiChuanConfig containing configuration parameters for the attention mechanism.
+
                 - The 'config' parameter is required.
                 - It specifies the configuration settings for the attention mechanism.
                 - The 'config' parameter must be of type BaiChuanConfig.
-        
+
         Returns:
             None
-        
+
         Raises:
-            ValueError: Raised if 'hidden_size' is not divisible by 'num_heads'.
-                - This exception is raised when the size of the hidden state is not evenly divisible by the number of attention heads.
+            ValueError:
+                Raised if 'hidden_size' is not divisible by 'num_heads'.
+
+                - This exception is raised when the size of the hidden state is not evenly divisible
+                by the number of attention heads.
                 - The 'hidden_size' and 'num_heads' parameters must satisfy this condition.
         """
         super().__init__()
@@ -583,20 +605,21 @@ class Attention(nn.Cell):
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
         """
-        This method reshapes the input tensor to match the specified dimensions for batch size, sequence length, number of heads, and head dimension.
-        
+        This method reshapes the input tensor to match the specified dimensions for
+        batch size, sequence length, number of heads, and head dimension.
+
         Args:
             tensor (Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the sequence.
             bsz (int): The batch size.
-            
+
         Returns:
             None: This method returns None as the reshaped tensor is directly modified in place.
-        
+
         Raises:
-            - ValueError: If the input tensor does not have the required dimensions.
-            - TypeError: If the input tensor is not of type Tensor, or if seq_len and bsz are not integers.
-            - RuntimeError: If the method encounters a runtime error while reshaping the tensor.
+            ValueError: If the input tensor does not have the required dimensions.
+            TypeError: If the input tensor is not of type Tensor, or if seq_len and bsz are not integers.
+            RuntimeError: If the method encounters a runtime error while reshaping the tensor.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -611,22 +634,24 @@ class Attention(nn.Cell):
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
         """
         Method 'construct' in the class 'Attention' processes hidden states using self-attention mechanism.
-        
+
         Args:
-        - self: The instance of the Attention class.
-        - hidden_states (Tensor): Input hidden states of shape (batch size, sequence length, hidden size).
-        - attention_mask (Optional[Tensor]): Masking tensor to control which tokens can attend to which other tokens.
-        - position_ids (Optional[Tensor]): Tensor indicating the position of each token in the sequence.
-        - past_key_value (Optional[Tuple[Tensor]]): Tuple containing past key and value states for caching.
-        - output_attentions (bool): Flag to determine whether to output attention weights.
-        - use_cache (bool): Flag to indicate if caching of key and value states should be used.
-        
+            self: The instance of the Attention class.
+            hidden_states (Tensor): Input hidden states of shape (batch size, sequence length, hidden size).
+            attention_mask (Optional[Tensor]): Masking tensor to control which tokens can attend to which other tokens.
+            position_ids (Optional[Tensor]): Tensor indicating the position of each token in the sequence.
+            past_key_value (Optional[Tuple[Tensor]]): Tuple containing past key and value states for caching.
+            output_attentions (bool): Flag to determine whether to output attention weights.
+            use_cache (bool): Flag to indicate if caching of key and value states should be used.
+
         Returns:
-        Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]: The output of the attention mechanism, attention weights (if output_attentions is True), and updated key and value states for caching.
-        
+            Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
+                The output of the attention mechanism, attention weights (if output_attentions is True),
+                and updated key and value states for caching.
+
         Raises:
-        - ValueError: If the shape of attention weights is incorrect.
-        - ValueError: If the shape of attention mask is incorrect.
+            ValueError: If the shape of attention weights is incorrect.
+            ValueError: If the shape of attention mask is incorrect.
         """
         bsz, q_len, _ = hidden_states.shape
 
@@ -691,9 +716,11 @@ class Attention(nn.Cell):
 class BaiChuanAttention(nn.Cell):
 
     """
-    BaiChuanAttention class represents an attention mechanism component used in neural network models. It is designed to calculate attention weights and apply them to the input hidden states to generate the
-final output. This class inherits from nn.Cell.
-    
+    BaiChuanAttention class represents an attention mechanism component used in neural network models.
+    It is designed to calculate attention weights and apply them to the input hidden states to generate the
+    final output.
+    This class inherits from nn.Cell.
+
     Attributes:
         config (BaiChuanConfig): An instance of BaiChuanConfig containing configuration parameters for the attention mechanism.
         hidden_size (int): The size of the hidden state vectors.
@@ -702,41 +729,42 @@ final output. This class inherits from nn.Cell.
         max_position_embeddings (int): The maximum length of the input sequence.
         W_pack (nn.Dense): A dense layer used for linear transformation.
         o_proj (nn.Dense): A dense layer used for projecting the attention output.
-    
+
     Methods:
-        __init__(self, config: BaiChuanConfig): Initializes the BaiChuanAttention instance with the provided configuration.
-        _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int): Reshapes the input tensor into the desired shape for further processing.
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, output_attentions: bool = False, use_cache:
-bool = False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: Constructs the attention mechanism by calculating attention weights and output based on the input hidden
-states and additional parameters.
-    
+        __init__: Initializes the BaiChuanAttention instance with the provided configuration.
+        _shape: Reshapes the input tensor into the desired shape for further processing.
+        construct: Constructs the attention mechanism by calculating attention weights
+            and output based on the input hidden states and additional parameters.
+
     Raises:
         ValueError: If the hidden size is not divisible by the number of attention heads.
-    
+
     Returns:
-        Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor, attention weights (if requested), and past key-value states (if
-caching is enabled).
+        Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+            A tuple containing the attention output tensor, attention weights (if requested), and past key-value states (if
+            caching is enabled).
     """
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes an instance of the BaiChuanAttention class.
-        
+
         Args:
             self: The instance of the class.
             config (BaiChuanConfig): The configuration object for BaiChuanAttention.
                 This object contains various parameters and settings for the attention mechanism.
                 It is expected to have the following attributes:
+
                 - hidden_size (int): The size of the hidden state.
                 - num_attention_heads (int): The number of attention heads.
                 - model_max_length (int): The maximum length of the model.
-                    This is used for positional embeddings.
-                    
+                This is used for positional embeddings.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the hidden_size is not divisible by the num_attention_heads.
-        
+
         Note:
             This method initializes the BaiChuanAttention object by setting its configuration attributes.
             It also initializes the W_pack and o_proj layers using the hidden_size and num_attention_heads values.
@@ -760,33 +788,35 @@ caching is enabled).
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         Reshapes the input tensor for the BaiChuanAttention module.
-        
+
         Args:
             self (BaiChuanAttention): The instance of the BaiChuanAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the sequence in the tensor.
             bsz (int): The batch size of the tensor.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-            This method reshapes the input tensor to match the required shape for BaiChuanAttention module. 
-            It rearranges the dimensions of the tensor according to the number of heads and the head dimension. 
+            This method reshapes the input tensor to match the required shape for BaiChuanAttention module.
+            It rearranges the dimensions of the tensor according to the number of heads and the head dimension.
             The dimensions are rearranged in the following order: (bsz, seq_len, num_heads, head_dim).
-        
+
         Example:
-            # Create an instance of BaiChuanAttention
-            attention = BaiChuanAttention()
-            
-            # Create a tensor
-            tensor = mindspore.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-            
-            # Reshape the tensor using the _shape method
-            attention._shape(tensor, 5, 2)
+            ```python
+            >>> # Create an instance of BaiChuanAttention
+            >>> attention = BaiChuanAttention()
+            ...
+            >>> # Create a tensor
+            >>> tensor = mindspore.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            ...
+            >>> # Reshape the tensor using the _shape method
+            >>> attention._shape(tensor, 5, 2)
+            ```
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -800,22 +830,28 @@ caching is enabled).
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
         Constructs the attention mechanism for the BaiChuanAttention class.
-        
+
         Args:
             self (BaiChuanAttention): An instance of the BaiChuanAttention class.
-            hidden_states (mindspore.Tensor): The hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length).
+            hidden_states (mindspore.Tensor):
+                The hidden states tensor of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]):
+                An optional tensor of shape (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length).
                 It is used as a mask to prevent attention to certain positions. Defaults to None.
-            past_key_value (Optional[Tuple[mindspore.Tensor]]): An optional tuple containing the past key and value states tensors of shape (batch_size, past_sequence_length, hidden_size).
+            past_key_value (Optional[Tuple[mindspore.Tensor]]):
+                An optional tuple containing the past key and value states tensors of shape (batch_size, past_sequence_length, hidden_size).
                 If provided, the attention mechanism will incorporate the past key and value states. Defaults to None.
             output_attentions (bool): A flag indicating whether to return the attention weights. Defaults to False.
             use_cache (bool): A flag indicating whether to cache the key and value states for future use. Defaults to False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size),
-            an optional tensor representing the attention weights of shape (batch_size, num_heads, sequence_length, sequence_length), and
-            an optional tuple containing the key and value states tensors of shape (batch_size, sequence_length, hidden_size).
-            
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing
+
+                - the attention output tensor of shape (batch_size, sequence_length, hidden_size),
+                - an optional tensor representing the attention weights of shape (batch_size, num_heads, sequence_length, sequence_length),
+                - and an optional tuple containing the key and value states tensors of shape (batch_size, sequence_length, hidden_size).
+
         Raises:
             None.
         '''
@@ -870,18 +906,20 @@ class DecoderLayer(nn.Cell):
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes an instance of the DecoderLayer class.
-        
+
         Args:
             self: The instance of the DecoderLayer class.
-            config (BaiChuanConfig): The configuration object containing various settings for the DecoderLayer.
+            config (BaiChuanConfig):
+                The configuration object containing various settings for the DecoderLayer.
+
                 - hidden_size (int): The size of the hidden state.
                 - intermediate_size (int): The size of the intermediate layer in the MLP.
                 - hidden_act (str): The activation function to be used in the hidden layer of the MLP.
                 - rms_norm_eps (float): The epsilon value for RMSNorm.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -951,44 +989,46 @@ class DecoderLayer(nn.Cell):
 
 class BaiChuanLayer(nn.Cell):
 
-    ''' 
-    The BaiChuanLayer class represents a layer used for implementing a specific type of neural network cell. This class inherits from the nn.Cell class. 
-    
+    '''
+    The BaiChuanLayer class represents a layer used for implementing a specific type of neural network cell.
+    This class inherits from the nn.Cell class.
+
     Attributes:
         hidden_size (int): The size of the hidden layer.
         self_attn (BaiChuanAttention): An instance of the BaiChuanAttention class for self-attention mechanism.
         mlp (MLP): An instance of the MLP class for multi-layer perceptron operations.
         input_layernorm (RMSNorm): An instance of the RMSNorm class for input layer normalization.
         post_attention_layernorm (RMSNorm): An instance of the RMSNorm class for post-attention layer normalization.
-    
+
     Methods:
-        __init__(self, config: BaiChuanConfig): Initializes the BaiChuanLayer class.
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = False,
-use_cache: Optional[bool] = False) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: Constructs the BaiChuanLayer with the given parameters and returns the hidden states with
-optional present key value computed during attention.
-    
+        __init__: Initializes the BaiChuanLayer class.
+        construct:
+            Constructs the BaiChuanLayer with the given parameters and returns the hidden states with
+            optional present key value computed during attention.
+
     Raises:
-        N/A
-    
+        None
+
     Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the hidden states and optional present key value.
-    
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+            A tuple containing the hidden states and optional present key value.
+
     Note:
         This class is designed to be used as a part of a neural network model for specific tasks.
-    
+
     '''
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes a new instance of the BaiChuanLayer class.
-        
+
         Args:
             self: The instance of the BaiChuanLayer class.
-            config (BaiChuanConfig): An instance of BaiChuanConfig containing the configuration parameters for the layer. 
+            config (BaiChuanConfig): An instance of BaiChuanConfig containing the configuration parameters for the layer.
                 It specifies the hidden size, intermediate size, hidden activation function, and epsilon for RMS normalization.
-        
+
         Returns:
-            None. This method initializes the attributes of the BaiChuanLayer instance but does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1013,9 +1053,9 @@ optional present key value computed during attention.
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Constructs the BaiChuanLayer.
-        
-        This method applies a series of transformations to the input hidden states to generate the output tensor. 
-        
+
+        This method applies a series of transformations to the input hidden states to generate the output tensor.
+
         Args:
             self (BaiChuanLayer): The instance of the BaiChuanLayer class.
             hidden_states (mindspore.Tensor): The input hidden states tensor.
@@ -1023,13 +1063,14 @@ optional present key value computed during attention.
             past_key_value (Optional[Tuple[mindspore.Tensor]]): The optional tuple of past key and value tensors. Defaults to None.
             output_attentions (Optional[bool]): Whether to output the attentions. Defaults to False.
             use_cache (Optional[bool]): Whether to use cache. Defaults to False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and the optional tuple of present key and value tensors.
-        
+            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+                The output tensor and the optional tuple of present key and value tensors.
+
         Raises:
             None.
-        
+
         """
         residual = hidden_states
 
@@ -1071,14 +1112,14 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """
         Initializes the weights for the given cell.
-        
+
         Args:
             self (BaiChuanPreTrainedModel): The instance of the BaiChuanPreTrainedModel class.
             cell: The cell for which the weights need to be initialized.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -1105,18 +1146,20 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes a new instance of the BaiChuan7bModel class.
-        
+
         Args:
             self: The instance of the BaiChuan7bModel class.
-            config (BaiChuanConfig): An instance of BaiChuanConfig containing configuration parameters.
+            config (BaiChuanConfig):
+                An instance of BaiChuanConfig containing configuration parameters.
+
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be an instance of BaiChuanConfig.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(config)
         self.padding_idx = config.pad_token_id
@@ -1132,33 +1175,34 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     def get_input_embeddings(self):
         """
         Retrieves the input embeddings for the BaiChuan7bModel.
-        
+
         Args:
             self: The instance of BaiChuan7bModel.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method retrieves the input embeddings for the BaiChuan7bModel. The input embeddings are obtained by calling the 'embed_tokens' method of the instance.
+
+        This method retrieves the input embeddings for the BaiChuan7bModel.
+        The input embeddings are obtained by calling the 'embed_tokens' method of the instance.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings for the BaiChuan7bModel.
-        
+
         Args:
             self (BaiChuan7bModel): The instance of the BaiChuan7bModel class.
             new_embeddings (Any): The new embeddings to be set. This can be of any type.
-        
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = new_embeddings
 
@@ -1166,17 +1210,18 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
         """
         This method prepares the decoder attention mask based on the provided parameters.
-        
+
         Args:
             self (BaiChuan7bModel): The instance of the BaiChuan7bModel class.
-            attention_mask (torch.Tensor): The attention mask tensor to be applied during decoding. If None, no attention mask will be applied.
+            attention_mask (torch.Tensor): The attention mask tensor to be applied during decoding.
+                If None, no attention mask will be applied.
             input_shape (tuple): The shape of the input tensor (batch_size, sequence_length, hidden_size).
             inputs_embeds (torch.Tensor): The embedded input tensor of shape (batch_size, sequence_length, hidden_size).
             past_key_values_length (int): The length of past key values to consider for the attention mask.
-        
+
         Returns:
             None: This method returns the combined attention mask or None if no attention mask is applied.
-        
+
         Raises:
             ValueError: If the input_shape[-1] is less than or equal to 1.
             TypeError: If the input data types are incompatible for mask operations.
@@ -1214,25 +1259,27 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         This method constructs the BaiChuan7bModel by processing the input data and generating model outputs.
-        
+
         Args:
-        - self (object): The instance of the class BaiChuan7bModel.
-        - input_ids (Tensor): The input tensor containing token indices representing the input sequence. Default is None.
-        - attention_mask (Optional[Tensor]): Optional tensor specifying the attention mask for the input sequence. Default is None.
-        - position_ids (Optional[Tensor]): Optional tensor specifying the position indices for the input sequence. Default is None.
-        - past_key_values (Optional[List[Tensor]]): Optional list of tensors containing past key values for the model. Default is None.
-        - inputs_embeds (Optional[Tensor]): Optional tensor containing the embeddings of the input tokens. Default is None.
-        - use_cache (Optional[bool]): Optional boolean flag indicating whether to use cache during model computation. Default is None.
-        - output_attentions (Optional[bool]): Optional boolean flag indicating whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Optional boolean flag indicating whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Optional boolean flag indicating whether to return the output as a dictionary. Default is None.
-        
+            self (object): The instance of the class BaiChuan7bModel.
+            input_ids (Tensor): The input tensor containing token indices representing the input sequence. Default is None.
+            attention_mask (Optional[Tensor]): Optional tensor specifying the attention mask for the input sequence. Default is None.
+            position_ids (Optional[Tensor]): Optional tensor specifying the position indices for the input sequence. Default is None.
+            past_key_values (Optional[List[Tensor]]): Optional list of tensors containing past key values for the model. Default is None.
+            inputs_embeds (Optional[Tensor]): Optional tensor containing the embeddings of the input tokens. Default is None.
+            use_cache (Optional[bool]): Optional boolean flag indicating whether to use cache during model computation. Default is None.
+            output_attentions (Optional[bool]): Optional boolean flag indicating whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Optional boolean flag indicating whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Optional boolean flag indicating whether to return the output as a dictionary. Default is None.
+
         Returns:
-        - Union[Tuple, BaseModelOutputWithPast]: Returns a tuple or BaseModelOutputWithPast object containing the model outputs.
-        
+            Union[Tuple, BaseModelOutputWithPast]: Returns a tuple or BaseModelOutputWithPast object containing the model outputs.
+
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously, if neither decoder_input_ids nor decoder_inputs_embeds are specified, or if an invalid configuration is
-encountered during model construction.
+            ValueError:
+                Raised if both input_ids and inputs_embeds are specified simultaneously,
+                if neither decoder_input_ids nor decoder_inputs_embeds are specified,
+                or if an invalid configuration is encountered during model construction.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1330,48 +1377,50 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
 
     """
     This class represents a BaiChuan13b model for natural language processing tasks. It is a subclass of the BaiChuanPreTrainedModel class.
-    
-    The BaiChuan13bModel class contains methods for initializing the model, getting and setting input embeddings, generating an alibi mask, and constructing the model.
-    
+    The BaiChuan13bModel class contains methods for initializing the model, getting and setting input embeddings,
+    generating an alibi mask, and constructing the model.
+
     Attributes:
-        - padding_idx (int): The index used for padding tokens in the embedding layer.
-        - vocab_size (int): The size of the vocabulary.
-        - n_head (int): The number of attention heads.
-        - embed_tokens (nn.Embedding): The embedding layer for input tokens.
-        - layers (nn.CellList): A list of BaiChuanLayer instances representing the layers of the model.
-        - norm (RMSNorm): The normalization layer applied after the model layers.
-        - max_cache_pos (int): The maximum position of past key values for caching.
-        - first_run (bool): A flag indicating if it is the first run of the model.
-        - alibi_mask (Optional[mindspore.Tensor]): A tensor representing the alibi mask.
-    
+        padding_idx (int): The index used for padding tokens in the embedding layer.
+        vocab_size (int): The size of the vocabulary.
+        n_head (int): The number of attention heads.
+        embed_tokens (nn.Embedding): The embedding layer for input tokens.
+        layers (nn.CellList): A list of BaiChuanLayer instances representing the layers of the model.
+        norm (RMSNorm): The normalization layer applied after the model layers.
+        max_cache_pos (int): The maximum position of past key values for caching.
+        first_run (bool): A flag indicating if it is the first run of the model.
+        alibi_mask (Optional[mindspore.Tensor]): A tensor representing the alibi mask.
+
     Methods:
-        - __init__(self, config: BaiChuanConfig): Initializes the BaiChuan13bModel instance with a configuration.
-        - get_input_embeddings(self): Returns the input embeddings of the model.
-        - set_input_embeddings(self, value): Sets the input embeddings of the model.
-        - get_alibi_mask(self, tensor, seq_length_with_past): Generates an alibi mask based on the tensor and sequence length.
-        - construct(self, input_ids, attention_mask, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the
-model output.
-    
+        __init__(self, config: BaiChuanConfig): Initializes the BaiChuan13bModel instance with a configuration.
+        get_input_embeddings(self): Returns the input embeddings of the model.
+        set_input_embeddings(self, value): Sets the input embeddings of the model.
+        get_alibi_mask(self, tensor, seq_length_with_past): Generates an alibi mask based on the tensor and sequence length.
+        construct(self, input_ids, attention_mask, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
+            Constructs the model with the given inputs and returns the model output.
+
     Note:
-    - The BaiChuan13bModel class is designed to be used for natural language processing tasks, such as text classification or language generation.
-    - The model architecture follows the BaiChuan13b configuration, which includes embedding layers, multiple layers of BaiChuanLayer, and normalization layers.
-    - The alibi mask is used for attention calculations and is generated based on the input tensor and sequence length.
-    - The construct method is the main entry point for using the model, which takes various inputs and returns the model output.
+        - The BaiChuan13bModel class is designed to be used for natural language processing tasks, such as text classification or language generation.
+        - The model architecture follows the BaiChuan13b configuration, which includes embedding layers, multiple layers of BaiChuanLayer, and normalization layers.
+        - The alibi mask is used for attention calculations and is generated based on the input tensor and sequence length.
+        - The construct method is the main entry point for using the model, which takes various inputs and returns the model output.
     """
     def __init__(self, config: BaiChuanConfig):
         """
         __init__
-        
+
         This method initializes an instance of the BaiChuan13bModel class.
-        
+
         Args:
             self: The instance of the BaiChuan13bModel class.
-            config (BaiChuanConfig): An object of type BaiChuanConfig containing configuration parameters for the model. It specifies the configuration parameters such as pad_token_id, vocab_size,
-num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max_length.
-        
+            config (BaiChuanConfig):
+                An object of type BaiChuanConfig containing configuration parameters for the model.
+                It specifies the configuration parameters such as pad_token_id, vocab_size,
+                num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max_length.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1391,13 +1440,13 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
     def get_input_embeddings(self):
         """
         This method returns the input embeddings for the BaiChuan13bModel.
-        
+
         Args:
             self: The instance of the BaiChuan13bModel class.
-        
+
         Returns:
             None: This method returns the input embeddings for the BaiChuan13bModel as an instance of 'embed_tokens'.
-        
+
         Raises:
             None
         """
@@ -1406,17 +1455,19 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
     def set_input_embeddings(self, value):
         """
         Method to set the input embeddings for the BaiChuan13bModel.
-        
+
         Args:
             self (BaiChuan13bModel): The instance of the BaiChuan13bModel class.
-            value: The input embeddings to be set for the model.
-                Type: Any
-                Purpose: Represents the new input embeddings to be assigned to the model.
-                Restrictions: None
-        
+            value:
+                The input embeddings to be set for the model.
+
+                - Type: Any
+                - Purpose: Represents the new input embeddings to be assigned to the model.
+                - Restrictions: None
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1424,19 +1475,20 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
 
     def get_alibi_mask(self, tensor, seq_length_with_past):
         """
-        This method is a member of the 'BaiChuan13bModel' class and is used to obtain an alibi mask based on the input tensor and sequence length with past information.
-        
+        This method is a member of the 'BaiChuan13bModel' class and is used to obtain an alibi mask
+        based on the input tensor and sequence length with past information.
+
         Args:
             self (object): The instance of the class.
             tensor (Tensor): The input tensor used to derive the alibi mask.
             seq_length_with_past (int): The length of the sequence with past information.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the 'seq_length_with_past' parameter is not an integer.
-            - RuntimeError: If the method encounters issues during execution.
+            ValueError: If the 'seq_length_with_past' parameter is not an integer.
+            RuntimeError: If the method encounters issues during execution.
         """
         if self.training:
             slopes = mindspore.Tensor(_get_interleave(self.n_head))
@@ -1467,7 +1519,7 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         Constructs the BaiChuan13bModel.
-        
+
         Args:
             self: The object instance.
             input_ids (mindspore.Tensor, optional): The input tensor of shape [batch_size, sequence_length].
@@ -1478,10 +1530,12 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
             output_attentions (bool, optional): Whether to output attention weights.
             output_hidden_states (bool, optional): Whether to output hidden states.
             return_dict (bool, optional): Whether to return a dictionary instead of a tuple.
-        
+
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The output tuple or BaseModelOutputWithPast object containing the last hidden state, past key values, hidden states, and attentions.
-        
+            Union[Tuple, BaseModelOutputWithPast]:
+                The output tuple or BaseModelOutputWithPast object containing the last hidden state,
+                past key values, hidden states, and attentions.
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are provided simultaneously.
             ValueError: If neither input_ids nor inputs_embeds are provided.
@@ -1582,17 +1636,19 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     def __init__(self, config, size=None):
         """
         Initializes a new instance of BaiChuanForCausalLM.
-        
+
         Args:
             self: The instance of the class.
             config: The configuration for the model.
             size (str, optional): The size of the model. Defaults to None. Must be either '7b' or '13b'.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the size parameter is not '7b' or '13b', a ValueError is raised with the message 'BaiChuan model only supports 7b and 13b, please check your config.'
+            ValueError:
+                If the size parameter is not '7b' or '13b', a ValueError is raised with the message 'BaiChuan model
+                only supports 7b and 13b, please check your config.'
         """
         super().__init__(config)
         if size == '7b':
@@ -1611,29 +1667,29 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     def get_input_embeddings(self):
         """
         Method to retrieve the input embeddings from the model for the BaiChuanForCausalLM class.
-        
+
         Args:
             self: The instance of the BaiChuanForCausalLM class. It is used to access the model's embed_tokens.
-            
+
         Returns:
-            None. This method returns the input embeddings from the model to be used in the BaiChuanForCausalLM class.
-        
+            None: This method returns the input embeddings from the model to be used in the BaiChuanForCausalLM class.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
         """
         Set the input embeddings for the BaiChuanForCausalLM model.
-        
+
         Args:
             self (BaiChuanForCausalLM): The instance of the BaiChuanForCausalLM class.
             new_embeddings (torch.Tensor): The new input embeddings to be set for the model. Should be of shape (vocab_size, embedding_dim).
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the new_embeddings parameter is not of type torch.Tensor.
             ValueError: If the shape of new_embeddings does not match the expected shape (vocab_size, embedding_dim).
@@ -1643,13 +1699,13 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     def get_output_embeddings(self):
         """
         This method retrieves the output embeddings from the BaiChuanForCausalLM model.
-        
+
         Args:
             self: An instance of the BaiChuanForCausalLM class.
-        
+
         Returns:
-            None. The method returns the lm_head attribute which contains the output embeddings.
-        
+            lm_head: The method returns the lm_head attribute which contains the output embeddings.
+
         Raises:
             None.
         """
@@ -1658,15 +1714,15 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings for BaiChuanForCausalLM model.
-        
+
         Args:
             self (BaiChuanForCausalLM): The instance of BaiChuanForCausalLM class.
             new_embeddings (Any): The new embeddings to be set as the output embeddings for the model.
                 This can be of any type.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1699,7 +1755,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
         Constructs the Causal Language Model for the BaiChuan model.
-        
+
         Args:
             self (BaiChuanForCausalLM): The instance of the BaiChuanForCausalLM class.
             input_ids (Tensor, optional): The input tensor containing the token IDs. Default: None.
@@ -1712,14 +1768,18 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             output_attentions (Optional[bool], optional): Whether to output attentions. Default: None.
             output_hidden_states (Optional[bool], optional): Whether to output hidden states. Default: None.
             return_dict (Optional[bool], optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
-            Union[Tuple, CausalLMOutputWithPast]: The model outputs. If `return_dict` is False, returns a tuple containing the logits and the various model outputs. If `return_dict` is True, returns an
-instance of `CausalLMOutputWithPast` containing the loss, logits, past key values, hidden states, and attentions.
-        
+            Union[Tuple, CausalLMOutputWithPast]:
+                The model outputs.
+
+                - If `return_dict` is False, returns a tuple containing the logits and the various model outputs.
+                - If `return_dict` is True, returns an instance of `CausalLMOutputWithPast` containing the loss,
+                logits, past key values, hidden states, and attentions.
+
         Raises:
             ValueError: If the BaiChuan model is not of type BaiChuan7bModel or BaiChuan13bModel.
-        
+
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1785,17 +1845,22 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
     ):
         """
         This method prepares inputs for generation in the BaiChuanForCausalLM class.
-        
+
         Args:
             self (object): The instance of the class.
             input_ids (torch.Tensor): The input token IDs. Shape (batch_size, sequence_length).
-            past_key_values (tuple, optional): Tuple of tensors containing cached key and value projection states of the model. Default is None.
-            attention_mask (torch.Tensor, optional): Mask to avoid performing attention on padding token indices. Shape (batch_size, sequence_length).
-            inputs_embeds (torch.Tensor, optional): The embedded representation of the input tokens. Shape (batch_size, sequence_length, hidden_size).
-            
+            past_key_values (tuple, optional):
+                Tuple of tensors containing cached key and value projection states of the model. Default is None.
+            attention_mask (torch.Tensor, optional):
+                Mask to avoid performing attention on padding token indices. Shape (batch_size, sequence_length).
+            inputs_embeds (torch.Tensor, optional):
+                The embedded representation of the input tokens. Shape (batch_size, sequence_length, hidden_size).
+
         Returns:
-            dict: A dictionary containing model inputs for generation, including 'input_ids', 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
-        
+            dict:
+                A dictionary containing model inputs for generation, including 'input_ids', 'position_ids',
+                'past_key_values', 'use_cache', and 'attention_mask'.
+
         Raises:
             ValueError: If attention_mask and position_ids are both provided and have mismatched shapes.
             ValueError: If inputs_embeds and past_key_values are both provided.
@@ -1831,18 +1896,19 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
     def _reorder_cache(past_key_values, beam_idx):
         """
         Reorders the cache for the given beam indices.
-        
+
         Args:
-            past_key_values (tuple): A tuple containing the past key and value tensors for each layer. 
+            past_key_values (tuple): A tuple containing the past key and value tensors for each layer.
                 Each element in the tuple is a tuple of tensors representing the past states for the corresponding layer.
             beam_idx (tensor): A 1-D tensor containing the indices of the beams for reordering the cache.
-        
+
         Returns:
-            None. This method modifies the 'past_key_values' in place to reorder the cache based on the 'beam_idx'.
-        
+            None: This method modifies the 'past_key_values' in place to reorder the cache based on the 'beam_idx'.
+
         Raises:
             ValueError: If the length of 'past_key_values' does not match the number of layers in the model.
-            IndexError: If the 'beam_idx' contains indices that are out of range for the dimensions of the tensors in 'past_key_values'.
+            IndexError: If the 'beam_idx' contains indices that are out of range for the dimensions of
+                the tensors in 'past_key_values'.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1852,19 +1918,24 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
     def chat(self, tokenizer, messages: List[dict], stream=False,
              generation_config: Optional[GenerationConfig]=None):
         """
-        Method: chat
-        
+        Method:
+            chat
+
         Description:
-        This method allows for conducting a chat conversation using the BaiChuanForCausalLM model. It takes in the necessary input parameters and returns the response generated by the model.
-        
+            This method allows for conducting a chat conversation using the BaiChuanForCausalLM model.
+            It takes in the necessary input parameters and returns the response generated by the model.
+
         Args:
             self: The instance of the BaiChuanForCausalLM class.
             tokenizer: An object of the tokenizer class used for tokenizing the input messages.
-            messages: A list of dictionaries representing the chat messages. Each dictionary contains the following keys:
+            messages: A list of dictionaries representing the chat messages.
+                Each dictionary contains the following keys:
+
                 - 'role': The role of the message sender (e.g., 'system', 'user', 'assistant').
                 - 'content': The content of the message.
             stream: A boolean value indicating whether the chat conversation should be streamed or not. Default is False.
-            generation_config: An optional object of the GenerationConfig class that specifies the generation configurations. If not provided, the instance's generation_config will be used.
+            generation_config: An optional object of the GenerationConfig class that specifies the generation configurations.
+                If not provided, the instance's generation_config will be used.
         
         Returns:
             None

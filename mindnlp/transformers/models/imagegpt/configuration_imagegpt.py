@@ -28,7 +28,6 @@ class ImageGPTConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 512):
             Vocabulary size of the GPT-2 model. Defines the number of different tokens that can be represented by the
@@ -68,19 +67,19 @@ class ImageGPTConfig(PretrainedConfig):
             dot-product/softmax to float() when training with mixed precision.
 
     Example:
+        ```python
+        >>> from transformers import ImageGPTConfig, ImageGPTModel
 
-    ```python
-    >>> from transformers import ImageGPTConfig, ImageGPTModel
+        >>> # Initializing a ImageGPT configuration
+        >>> configuration = ImageGPTConfig()
 
-    >>> # Initializing a ImageGPT configuration
-    >>> configuration = ImageGPTConfig()
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = ImageGPTModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = ImageGPTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "imagegpt"
     keys_to_ignore_at_inference = ["past_key_values"]

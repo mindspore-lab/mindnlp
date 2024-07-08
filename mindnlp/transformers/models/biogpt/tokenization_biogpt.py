@@ -180,10 +180,10 @@ class BioGptTokenizer(PreTrainedTokenizer):
                 It represents the tokenizer object.
                 
         Returns:
-            None. The method returns a vocabulary dictionary that contains tokens and their respective encodings.
+            None: The method returns a vocabulary dictionary that contains tokens and their respective encodings.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return dict(self.encoder, **self.added_tokens_encoder)
 
@@ -204,13 +204,20 @@ class BioGptTokenizer(PreTrainedTokenizer):
             ValueError: If the language code is invalid or unsupported.
             Exception: If any other error occurs during tokenization.
         
-        This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text. It first checks if the MosesTokenizer for the specified language is already cached. If not, it
-creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
-        
-        The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of the MosesTokenizer. 'aggressive_dash_splits' determines whether to perform aggressive dash
-splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
-        
-        Note: This method assumes that the BioGptTokenizer instance has been properly initialized with the necessary resources for tokenization.
+        This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text.
+        It first checks if the MosesTokenizer for the specified language is already cached.
+        If not, it creates a new MosesTokenizer instance for the language and adds it to the cache.
+        The tokenization is then performed using the cached MosesTokenizer object.
+
+        The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of
+        the MosesTokenizer.
+        'aggressive_dash_splits' determines whether to perform aggressive dash splitting,
+        'return_str' specifies whether to return a string or a list of tokens,
+        and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
+
+        Note:
+            This method assumes that the BioGptTokenizer instance has been properly initialized with the necessary
+            resources for tokenization.
         """
         if lang not in self.cache_moses_tokenizer:
             moses_tokenizer = self.sm.MosesTokenizer(lang=lang)
@@ -222,21 +229,22 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
     def moses_detokenize(self, tokens, lang):
         """
         Performs Moses detokenization on a list of tokens for a specified language.
-        
+
         Args:
             self (BioGptTokenizer): An instance of the BioGptTokenizer class.
             tokens (list): A list of tokens to be detokenized.
             lang (str): The language of the tokens. Must be a supported language.
-        
+
         Returns:
-            None. The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
-        
+            None: The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
+
         Raises:
             KeyError: If the specified language is not supported.
             TypeError: If the tokens parameter is not a list.
-        
-        Note: This method utilizes a cache to store MosesDetokenizer objects for each language, 
-        ensuring efficient detokenization by reusing previously created instances.
+
+        Note:
+            This method utilizes a cache to store MosesDetokenizer objects for each language,
+            ensuring efficient detokenization by reusing previously created instances.
         """
         if lang not in self.cache_moses_detokenizer:
             moses_detokenizer = self.sm.MosesDetokenizer(lang=lang)
@@ -246,33 +254,39 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
     def bpe(self, token):
         """
         Performs Byte Pair Encoding (BPE) on a given token.
-        
+
         Args:
             self: An instance of the BioGptTokenizer class.
             token (str): The token to be encoded using BPE.
-        
+
         Returns:
             str: The BPE-encoded representation of the token.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively
-merges the most frequent pairs of subword units to create a vocabulary of subword units.
-        
-        The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
-        
-        The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges
-can be made. The resulting subword units are then joined together to form the encoded token.
-        
-        Note that the method may use a cache to store previously encoded tokens for efficiency.
-        
+            This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization
+            technique that breaks down a token into a sequence of subword units.
+            The BPE algorithm iteratively  merges the most frequent pairs of subword units to create a vocabulary
+            of subword units.
+
+            The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
+
+            The method returns the BPE-encoded representation of the token as a string.
+            The encoded representation is obtained by iteratively merging the most frequent pairs of subword units
+            until no more merges can be made.
+            The resulting subword units are then joined together to form the encoded token.
+
+            Note that the method may use a cache to store previously encoded tokens for efficiency.
+
         Example:
-            tokenizer = BioGptTokenizer()
-            encoded_token = tokenizer.bpe('sequence')
-            print(encoded_token)
-            # Output: 'seq uence'</w>'
+            ```python
+            >>> tokenizer = BioGptTokenizer()
+            >>> encoded_token = tokenizer.bpe('sequence')
+            >>> print(encoded_token)
+            >>> # Output: 'seq uence'</w>'
+            ```
         """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
         if token in self.cache:
@@ -443,8 +457,8 @@ can be made. The resulting subword units are then joined together to form the en
             Tuple[str]: A tuple containing the paths to the saved vocabulary file and merge file.
         
         Raises:
-            - OSError: If the specified save_directory is not a valid directory.
-            - IOError: If there is an issue writing the vocabulary files to the disk.
+            OSError: If the specified save_directory is not a valid directory.
+            IOError: If there is an issue writing the vocabulary files to the disk.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -481,10 +495,10 @@ can be made. The resulting subword units are then joined together to form the en
             self: An instance of the 'BioGptTokenizer' class.
         
         Returns:
-            None. This method does not explicitly return a value, but modifies the state of the object.
+            None: This method does not explicitly return a value, but modifies the state of the object.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sm"] = None
@@ -499,7 +513,7 @@ can be made. The resulting subword units are then joined together to form the en
             d (dict): The dictionary containing the state information to be set. 
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ImportError: If the sacremoses module is not installed, an ImportError is raised. 

@@ -37,7 +37,6 @@ class SentenceTransformer(nn.SequentialCell):
             prompts: Optional[Dict[str, str]] = None,
             default_prompt_name: Optional[str] = None,
             cache_folder: Optional[str] = None,
-            revision: Optional[str] = None,
             local_files_only: bool = False,
             token: Optional[Union[bool, str]] = None,
             truncate_dim: Optional[int] = None,
@@ -61,7 +60,6 @@ class SentenceTransformer(nn.SequentialCell):
                 model_name_or_path,
                 token=token,
                 cache_folder=cache_folder,
-                revision=revision,
                 local_files_only=local_files_only,
             )
         if modules is not None and not isinstance(modules, OrderedDict):
@@ -70,12 +68,11 @@ class SentenceTransformer(nn.SequentialCell):
         super().__init__(modules)
 
     def _load_auto_model(
-        self,
-        model_name_or_path: str,
-        token: Optional[Union[bool, str]],
-        cache_folder: Optional[str],
-        revision: Optional[str] = None,
-        local_files_only: bool = False,
+            self,
+            model_name_or_path: str,
+            token: Optional[Union[bool, str]],
+            cache_folder: Optional[str],
+            local_files_only: bool = False,
     ):
         """
         Creates a simple Transformer + Mean Pooling model and returns the modules
@@ -126,18 +123,18 @@ class SentenceTransformer(nn.SequentialCell):
             return sum(len(t) for t in text)  # Sum of length of individual strings
 
     def encode(
-        self,
-        sentences: Union[str, List[str]],
-        prompt_name: Optional[str] = None,
-        prompt: Optional[str] = None,
-        batch_size: int = 32,
-        show_progress_bar: bool = None,
-        output_value: Optional[Literal["sentence_embedding", "token_embeddings"]] = "sentence_embedding",
-        normalize_embeddings: bool = False,
+            self,
+            sentences: Union[str, List[str]],
+            prompt_name: Optional[str] = None,
+            prompt: Optional[str] = None,
+            batch_size: int = 32,
+            show_progress_bar: bool = None,
+            output_value: Optional[Literal["sentence_embedding", "token_embeddings"]] = "sentence_embedding",
+            normalize_embeddings: bool = False,
     ) -> Union[List[Tensor], Tensor]:
         input_was_string = False
         if isinstance(sentences, str) or not hasattr(
-            sentences, "__len__"
+                sentences, "__len__"
         ):  # Cast an individual sentence to a list with length 1
             sentences = [sentences]
             input_was_string = True
@@ -174,7 +171,7 @@ class SentenceTransformer(nn.SequentialCell):
         sentences_sorted = [sentences[idx] for idx in length_sorted_idx]
 
         for start_index in trange(0, len(sentences), batch_size, desc="Batches", disable=not show_progress_bar):
-            sentences_batch = sentences_sorted[start_index : start_index + batch_size]
+            sentences_batch = sentences_sorted[start_index: start_index + batch_size]
             features = self.tokenize(sentences_batch)
             features.update(extra_features)
 
@@ -191,7 +188,7 @@ class SentenceTransformer(nn.SequentialCell):
                     while last_mask_id > 0 and attention[last_mask_id].item() == 0:
                         last_mask_id -= 1
 
-                    embeddings.append(token_emb[0 : last_mask_id + 1])
+                    embeddings.append(token_emb[0: last_mask_id + 1])
             elif output_value is None:  # Return all outputs
                 embeddings = []
                 for sent_idx in range(len(out_features["sentence_embedding"])):
@@ -211,6 +208,13 @@ class SentenceTransformer(nn.SequentialCell):
             all_embeddings = all_embeddings[0]
 
         return all_embeddings
+
+    def encode_texts(self, texts: List[str]) -> List[List[float]]:
+        texts = [t.replace("\n", " ") for t in texts]
+        embeddings = self.encode(texts)
+        for i, embedding in enumerate(embeddings):
+            embeddings[i] = embedding.tolist()
+        return embeddings
 
 
 if __name__ == '__main__':

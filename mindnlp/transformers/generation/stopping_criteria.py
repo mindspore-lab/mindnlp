@@ -39,7 +39,8 @@ class StoppingCriteria():
             bool: Returns a boolean value indicating whether the stopping criteria has been met.
             
         Raises:
-            NotImplementedError: This exception is raised if the StoppingCriteria class is used directly instead of being subclassed.
+            NotImplementedError:
+                This exception is raised if the StoppingCriteria class is used directly instead of being subclassed.
         """
         raise NotImplementedError("StoppingCriteria needs to be subclassed")
 
@@ -62,7 +63,7 @@ class MaxLengthCriteria(StoppingCriteria):
             max_length (int): The maximum length to be set for the criteria. It must be a positive integer.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_length is not a positive integer.
@@ -83,8 +84,8 @@ class MaxLengthCriteria(StoppingCriteria):
             bool: Returns True if the length of input_ids meets the maximum length criteria, otherwise False.
         
         Raises:
-            - TypeError: If input_ids or scores are not of type mindspore.Tensor.
-            - ValueError: If input_ids or scores are empty or have incompatible shapes.
+            TypeError: If input_ids or scores are not of type mindspore.Tensor.
+            ValueError: If input_ids or scores are empty or have incompatible shapes.
         """
         return input_ids.shape[-1] >= self.max_length
 
@@ -111,10 +112,11 @@ class MaxNewTokensCriteria(StoppingCriteria):
             max_new_tokens (int): The maximum number of new tokens allowed.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            FutureWarning: If the MaxNewTokensCriteria class is deprecated. Suggests using MaxLengthCriteria with max_length equal to start_length plus max_new_tokens instead.
+            FutureWarning: If the MaxNewTokensCriteria class is deprecated.
+                Suggests using MaxLengthCriteria with max_length equal to start_length plus max_new_tokens instead.
         """
         warnings.warn(
             "The class `MaxNewTokensCriteria` is deprecated. "
@@ -137,10 +139,11 @@ class MaxNewTokensCriteria(StoppingCriteria):
             **kwargs: Additional keyword arguments that are not used in this method.
         
         Returns:
-            bool: Returns True if the length of the input_ids is greater than or equal to the max_length defined in the MaxNewTokensCriteria instance; otherwise, returns False.
+            bool: Returns True if the length of the input_ids is greater than or equal to the max_length defined in
+                the MaxNewTokensCriteria instance; otherwise, returns False.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return input_ids.shape[-1] >= self.max_length
 
@@ -169,7 +172,7 @@ class MaxTimeCriteria(StoppingCriteria):
                 Defaults to None, in which case the current time will be used.
         
         Returns:
-            None. This method only initializes the MaxTimeCriteria object.
+            None.
         
         Raises:
             None.
@@ -194,7 +197,7 @@ class MaxTimeCriteria(StoppingCriteria):
                 exceeds the maximum allowed time defined by self.max_time.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return time.time() - self.initial_timestamp > self.max_time
 
@@ -206,15 +209,15 @@ class StoppingCriteriaList(list):
         This method '__call__' in the class 'StoppingCriteriaList' evaluates a list of stopping criteria against the input data.
         
         Args:
-        - self: Represents the instance of the StoppingCriteriaList class.
-        - input_ids (mindspore.Tensor): Tensor containing input IDs for evaluation.
-        - scores (mindspore.Tensor): Tensor containing scores for evaluation.
-        
+            self: Represents the instance of the StoppingCriteriaList class.
+            input_ids (mindspore.Tensor): Tensor containing input IDs for evaluation.
+            scores (mindspore.Tensor): Tensor containing scores for evaluation.
+
         Returns:
-        - bool: Returns a boolean value indicating whether any of the stopping criteria have been met.
-        
+            bool: Returns a boolean value indicating whether any of the stopping criteria have been met.
+
         Raises:
-        - None. This method does not raise any exceptions.
+            None.
         """
         return any(criteria(input_ids, scores) for criteria in self)
 

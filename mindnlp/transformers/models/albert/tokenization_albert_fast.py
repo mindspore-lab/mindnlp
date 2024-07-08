@@ -157,7 +157,7 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
             mask_token (str or AddedToken, optional): The masking token. Defaults to '[MASK]'.
         
         Returns:
-            None. This method initializes the AlbertTokenizerFast class.
+            None.
         
         Raises:
             TypeError: If mask_token is not a string or an AddedToken.

@@ -91,20 +91,21 @@ class RoCBertConfig(PretrainedConfig):
             Defines the way of merging the shape_embed, pronunciation_embed and word_embed, if the value is true,
             output_embed = torch.cat((word_embed, shape_embed, pronunciation_embed), -1), else output_embed =
             (word_embed + shape_embed + pronunciation_embed) / 3
-        Example:
 
-    ```python
-    >>> from transformers import RoCBertModel, RoCBertConfig
-
-    >>> # Initializing a RoCBert weiweishi/roc-bert-base-zh style configuration
-    >>> configuration = RoCBertConfig()
-
-    >>> # Initializing a model from the weiweishi/roc-bert-base-zh style configuration
-    >>> model = RoCBertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import RoCBertModel, RoCBertConfig
+        ...
+        >>> # Initializing a RoCBert weiweishi/roc-bert-base-zh style configuration
+        >>> configuration = RoCBertConfig()
+        ...
+        >>> # Initializing a model from the weiweishi/roc-bert-base-zh style configuration
+        >>> model = RoCBertModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "roc_bert"
 

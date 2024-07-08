@@ -29,41 +29,43 @@ logger = logging.get_logger(__name__)
 class SPTokenizer:
 
     """
-    The `SPTokenizer` class represents a SentencePiece Tokenizer for natural language processing tasks. It provides methods for tokenizing, encoding, and decoding text using a pre-trained model.
+    The `SPTokenizer` class represents a SentencePiece Tokenizer for natural language processing tasks.
+    It provides methods for tokenizing, encoding, and decoding text using a pre-trained model.
     
     Attributes:
-        - `sp_model` (SentencePieceProcessor): The SentencePieceProcessor object loaded with the provided model file.
-        - `n_words` (int): The total number of words in the tokenizer's vocabulary, including special tokens.
-        - `bos_id` (int): The ID of the beginning of sentence (BOS) token in the vocabulary.
-        - `eos_id` (int): The ID of the end of sentence (EOS) token in the vocabulary.
-        - `pad_id` (int): The ID of the padding token in the vocabulary.
-        - `special_tokens` (dict): A dictionary mapping special tokens to their corresponding IDs.
-        - `index_special_tokens` (dict): A dictionary mapping special token IDs to their corresponding tokens.
-        - `role_special_token_expression` (str): A regular expression pattern that matches role special tokens.
-    
+        `sp_model` (SentencePieceProcessor): The SentencePieceProcessor object loaded with the provided model file.
+        `n_words` (int): The total number of words in the tokenizer's vocabulary, including special tokens.
+        `bos_id` (int): The ID of the beginning of sentence (BOS) token in the vocabulary.
+        `eos_id` (int): The ID of the end of sentence (EOS) token in the vocabulary.
+        `pad_id` (int): The ID of the padding token in the vocabulary.
+        `special_tokens` (dict): A dictionary mapping special tokens to their corresponding IDs.
+        `index_special_tokens` (dict): A dictionary mapping special token IDs to their corresponding tokens.
+        `role_special_token_expression` (str): A regular expression pattern that matches role special tokens.
+
     Methods:
-        - `__init__(self, model_path: str)`: Initializes the SPTokenizer object by loading the provided model file and setting up special tokens.
-        - `tokenize(self, s: str, encode_special_tokens=False) -> List[str]`: Tokenizes the input text using the SentencePieceProcessor object.
-        - `encode(self, s: str, bos: bool = False, eos: bool = False) -> List[int]`: Encodes the input text into a sequence of token IDs.
-        - `decode(self, t: List[int]) -> str`: Decodes a sequence of token IDs into the corresponding text.
-        - `decode_tokens(self, tokens: List[str]) -> str`: Decodes a list of tokens into the corresponding text.
-        - `convert_token_to_id(self, token: str) -> int`: Converts a token (string) to its corresponding ID using the vocabulary.
-        - `convert_id_to_token(self, index: int) -> str`: Converts an ID (integer) to its corresponding token using the vocabulary.
-    
-    Note: The `SPTokenizer` class extends a base class, but the name of the base class is not provided in the code snippet.
+        `__init__`: Initializes the SPTokenizer object by loading the provided model file and setting up special tokens.
+        `tokenize`: Tokenizes the input text using the SentencePieceProcessor object.
+        `encode`: Encodes the input text into a sequence of token IDs.
+        `decode`: Decodes a sequence of token IDs into the corresponding text.
+        `decode_tokens`: Decodes a list of tokens into the corresponding text.
+        `convert_token_to_id`: Converts a token (string) to its corresponding ID using the vocabulary.
+        `convert_id_to_token`: Converts an ID (integer) to its corresponding token using the vocabulary.
+
+    Note:
+        The `SPTokenizer` class extends a base class, but the name of the base class is not provided in the code snippet.
     """
     def __init__(self, model_path: str):
         """
         Initializes an instance of the SPTokenizer class.
-        
+
         Args:
             self: The instance of the SPTokenizer class.
             model_path (str): The path to the model file. It must be a valid file path.
                 This file is used to initialize the SentencePieceProcessor object.
-        
+
         Returns:
             None
-        
+
         Raises:
             AssertionError: If the model_path is not a valid file path.
             AssertionError: If the vocabulary size of the SentencePieceProcessor object does not match the piece size.
@@ -92,16 +94,20 @@ class SPTokenizer:
     def tokenize(self, s: str, encode_special_tokens=False):
         """
         This method tokenizes the input string 's' using the SentencePiece model 'sp_model' in the SPTokenizer class.
-        
+
         Args:
             self: The instance of the SPTokenizer class.
             s (str): The input string to be tokenized.
-            encode_special_tokens (bool): A flag indicating whether special tokens should be encoded. If set to True, the method will encode special tokens; otherwise, it will not. Defaults to False.
-        
+            encode_special_tokens (bool): A flag indicating whether special tokens should be encoded.
+                If set to True, the method will encode special tokens; otherwise, it will not. Defaults to False.
+
         Returns:
-            list: A list of tokenized pieces generated by the SentencePiece model. If encode_special_tokens is False, the method returns the tokenized pieces of the input string 's'. If encode_special_tokens
-is True, the method returns the tokenized pieces with special tokens encoded.
-        
+            list:
+                A list of tokenized pieces generated by the SentencePiece model.
+
+                - If encode_special_tokens is False, the method returns the tokenized pieces of the input string 's'.
+                - If encode_special_tokens is True, the method returns the tokenized pieces with special tokens encoded.
+
         Raises:
             ValueError: If the input string 's' is empty or None.
             TypeError: If the input string 's' is not of type str.
@@ -123,16 +129,17 @@ is True, the method returns the tokenized pieces with special tokens encoded.
     def encode(self, s: str, bos: bool = False, eos: bool = False) -> List[int]:
         """
         This method encodes a given string using the SentencePiece model.
-        
+
         Args:
             self: The instance of the SPTokenizer class.
             s (str): The input string to be encoded.
-            bos (bool, optional): Boolean flag indicating whether to prepend the beginning of sentence token. Defaults to False.
+            bos (bool, optional): Boolean flag indicating whether to prepend the beginning of sentence token.
+                Defaults to False.
             eos (bool, optional): Boolean flag indicating whether to append the end of sentence token. Defaults to False.
-        
+
         Returns:
             List[int]: A list of integers representing the encoded tokens.
-        
+
         Raises:
             AssertionError: If the input 's' is not a string.
         """
@@ -147,14 +154,14 @@ is True, the method returns the tokenized pieces with special tokens encoded.
     def decode(self, t: List[int]) -> str:
         """
         The 'decode' method decodes a list of integers into a string using the sp_model.
-        
+
         Args:
             self: The instance of the SPTokenizer class.
             t (List[int]): A list of integers representing tokens to be decoded into a string.
-        
+
         Returns:
             str: The decoded string.
-        
+
         Raises:
             None.
         """
@@ -174,14 +181,14 @@ is True, the method returns the tokenized pieces with special tokens encoded.
     def decode_tokens(self, tokens: List[str]) -> str:
         """
         Decode the given list of tokens into text using the SentencePiece model.
-        
+
         Args:
             self (SPTokenizer): The instance of the SPTokenizer class.
             tokens (List[str]): A list of tokens to be decoded into text using the SentencePiece model.
-        
+
         Returns:
             str: The decoded text generated from the input tokens.
-        
+
         Raises:
             ValueError: If the input tokens list is empty or contains invalid token values.
             TypeError: If the input tokens are not in the expected format (list of strings).
@@ -208,26 +215,30 @@ is True, the method returns the tokenized pieces with special tokens encoded.
 class ChatGLM3Tokenizer(PreTrainedTokenizer):
 
     """
-    The 'ChatGLM3Tokenizer' class represents a tokenizer for a chat model that inherits from PreTrainedTokenizer. It provides methods for tokenizing, converting tokens to IDs, converting IDs to tokens,
-building model inputs with special tokens, padding, and saving the vocabulary. The class also provides methods for constructing chat inputs, building single messages, and extracting prefix tokens.
-Additionally, it offers properties for accessing special tokens and their IDs, as well as the vocabulary size. Furthermore, it provides a method for converting tokens to a string.
-    
+    The 'ChatGLM3Tokenizer' class represents a tokenizer for a chat model that inherits from PreTrainedTokenizer.
+    It provides methods for tokenizing, converting tokens to IDs, converting IDs to tokens, building model inputs
+    with special tokens, padding, and saving the vocabulary.
+    The class also provides methods for constructing chat inputs, building single messages, and extracting prefix tokens.
+    Additionally, it offers properties for accessing special tokens and their IDs, as well as the vocabulary size.
+    Furthermore, it provides a method for converting tokens to a string.
+
     Attributes:
         name (str): Name of the tokenizer.
         vocab_file (str): Path to the vocabulary file.
         tokenizer (SPTokenizer): Instance of the SPTokenizer for tokenization.
         special_tokens (dict): Dictionary of special tokens and their corresponding IDs.
         encode_special_tokens (bool): Flag indicating whether to encode special tokens.
-    
+
     Properties:
-        unk_token (str): Property for accessing the unknown token.
-        pad_token (str): Property for accessing the padding token.
-        eos_token (str): Property for accessing the end-of-sequence token.
-        unk_token_id (int): Property for accessing the ID of the unknown token.
-        pad_token_id (int): Property for accessing the ID of the padding token.
-        eos_token_id (int): Property for accessing the ID of the end-of-sequence token.
-        vocab_size (int): Property for accessing the size of the vocabulary.
-    
+
+    - unk_token (str): Property for accessing the unknown token.
+    - pad_token (str): Property for accessing the padding token.
+    - eos_token (str): Property for accessing the end-of-sequence token.
+    - unk_token_id (int): Property for accessing the ID of the unknown token.
+    - pad_token_id (int): Property for accessing the ID of the padding token.
+    - eos_token_id (int): Property for accessing the ID of the end-of-sequence token.
+    - vocab_size (int): Property for accessing the size of the vocabulary.
+
     Methods:
         get_command(token): Retrieves the ID of a given token.
         get_vocab(): Returns the vocabulary as a dictionary.
@@ -240,9 +251,11 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
         build_single_message(role, metadata, message): Constructs a single message with role, metadata, and message.
         build_chat_input(query, history=None, role='user'): Constructs chat input from a query and history.
         build_inputs_with_special_tokens(token_ids_0, token_ids_1=None): Builds model inputs with special tokens.
-        _pad(encoded_inputs, max_length=None, padding_strategy=PaddingStrategy.DO_NOT_PAD, pad_to_multiple_of=None, return_attention_mask=None): Pads encoded inputs according to specified parameters.
-    
-    The 'ChatGLM3Tokenizer' class provides a comprehensive set of methods for tokenization and model input construction, making it suitable for use in chat model applications.
+        _pad(encoded_inputs, max_length=None, padding_strategy=PaddingStrategy.DO_NOT_PAD, pad_to_multiple_of=None, return_attention_mask=None):
+            Pads encoded inputs according to specified parameters.
+
+    The 'ChatGLM3Tokenizer' class provides a comprehensive set of methods for tokenization and model input construction,
+    making it suitable for use in chat model applications.
     """
     vocab_files_names = {"vocab_file": "tokenizer.model"}
     model_input_names = ["input_ids", "attention_mask", "position_ids"]
@@ -257,19 +270,20 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     ):
         """
         Initialize a ChatGLM3Tokenizer object.
-        
+
         Args:
-        - vocab_file (str): The path to the vocabulary file.
-        - padding_side (str, optional): Specifies whether padding should be added to the 'left' or 'right' side of the input sequences. Default is 'left'.
-        - clean_up_tokenization_spaces (bool, optional): If True, clean up tokenization spaces. Default is False.
-        - encode_special_tokens (bool, optional): If True, special tokens will be encoded. Default is False.
-        - **kwargs: Additional keyword arguments.
-        
+            vocab_file (str): The path to the vocabulary file.
+            padding_side (str, optional): Specifies whether padding should be added to the 'left' or 'right'
+                side of the input sequences. Default is 'left'.
+            clean_up_tokenization_spaces (bool, optional): If True, clean up tokenization spaces. Default is False.
+            encode_special_tokens (bool, optional): If True, special tokens will be encoded. Default is False.
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        None. This method initializes the ChatGLM3Tokenizer object.
-        
+            None.
+
         Raises:
-        - N/A
+            None.
         """
         self.name = "GLMTokenizer"
         self.vocab_file = vocab_file
@@ -291,20 +305,20 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def get_command(self, token):
         """
         Retrieves the command associated with a given token.
-        
+
         Args:
             self (ChatGLM3Tokenizer): An instance of the ChatGLM3Tokenizer class.
             token (str): The token for which the command needs to be retrieved.
-        
+
         Returns:
             None: This method returns None.
-        
+
         Raises:
             AssertionError: If the token is not a special token for the ChatGLM3Tokenizer instance.
-        
+
         Note:
             This method checks if the given token is one of the special tokens stored in the self.special_tokens dictionary.
-            If it is, the corresponding command is returned. Otherwise, an assertion error is raised if the token is not a 
+            If it is, the corresponding command is returned. Otherwise, an assertion error is raised if the token is not a
             special token for the ChatGLM3Tokenizer instance.
         """
         if token in self.special_tokens:
@@ -316,13 +330,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def unk_token(self) -> str:
         """
         This method 'unk_token' in the class 'ChatGLM3Tokenizer' retrieves the unknown token from the tokenizer.
-        
+
         Args:
             self: An instance of the ChatGLM3Tokenizer class.
-        
+
         Returns:
             str: The unknown token retrieved from the tokenizer.
-        
+
         Raises:
             No specific exceptions are raised within this method.
         """
@@ -332,13 +346,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def pad_token(self) -> str:
         """
         This method returns the string representation of the padding token used in the ChatGLM3Tokenizer.
-        
+
         Args:
             self: The instance of the ChatGLM3Tokenizer class.
-        
+
         Returns:
             str: The string representation of the padding token.
-        
+
         Raises:
             None
         """
@@ -348,13 +362,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def eos_token(self) -> str:
         """
         Returns the end-of-sentence token as a string.
-        
+
         Args:
             self: An instance of the ChatGLM3Tokenizer class.
-        
+
         Returns:
             A string representing the end-of-sentence token.
-        
+
         Raises:
             None.
         """
@@ -364,13 +378,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def unk_token_id(self) -> int:
         """
         This method returns the token ID corresponding to the '<unk>' token in the ChatGLM3Tokenizer class.
-        
+
         Args:
             self: A reference to the instance of the ChatGLM3Tokenizer class.
-            
+
         Returns:
             int: An integer representing the token ID of the '<unk>' token in the tokenizer.
-        
+
         Raises:
             This method does not explicitly raise any exceptions.
         """
@@ -380,13 +394,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def pad_token_id(self) -> int:
         """
         This method returns the token ID for the padding token within the ChatGLM3Tokenizer class.
-        
+
         Args:
             self: An instance of the ChatGLM3Tokenizer class.
-        
+
         Returns:
             int: The token ID corresponding to the '<pad>' token.
-        
+
         Raises:
             - None
         """
@@ -396,13 +410,13 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def eos_token_id(self):
         """
         Returns the ID of the end-of-sentence (EOS) token in the ChatGLM3Tokenizer class.
-        
+
         Args:
             self (ChatGLM3Tokenizer): An instance of the ChatGLM3Tokenizer class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -412,22 +426,26 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     def unk_token(self, value):
         """
         Method 'unk_token' in the class 'ChatGLM3Tokenizer'.
-        
+
         Args:
-            self (object): Reference to the instance of ChatGLM3Tokenizer.
-                Purpose: Represents the current object instance.
-                Restrictions: Must be an instance of ChatGLM3Tokenizer.
-        
-            value (any): The new value to set for the unk_token attribute.
-                Purpose: Specifies the value to set for the unk_token attribute.
-                Restrictions: None.
-        
+            self (object):
+                Reference to the instance of ChatGLM3Tokenizer.
+
+                - Purpose: Represents the current object instance.
+                - Restrictions: Must be an instance of ChatGLM3Tokenizer.
+
+            value (any):
+                The new value to set for the unk_token attribute.
+
+                - Purpose: Specifies the value to set for the unk_token attribute.
+                - Restrictions: None.
+
         Returns:
-            None.
-                Purpose: There is no return value from this method.
-        
+            None:
+                - Purpose: There is no return value from this method.
+
         Raises:
-            None.
+            None:
                 No exceptions are raised explicitly within this method.
         """
         logger.warning("Setting unk_token is not supported, use the default one.")
@@ -435,17 +453,19 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     @pad_token.setter
     def pad_token(self, value):
         """Set the pad_token value for the ChatGLM3Tokenizer.
-        
-        This method sets the pad_token value for the ChatGLM3Tokenizer object. The pad_token value is used during tokenization to represent padding tokens. If this method is called, a warning message will be
-logged indicating that setting pad_token is not supported and the default pad_token value will be used instead.
-        
+
+        This method sets the pad_token value for the ChatGLM3Tokenizer object.
+        The pad_token value is used during tokenization to represent padding tokens.
+        If this method is called, a warning message will be logged indicating that setting pad_token is not supported
+        and the default pad_token value will be used instead.
+
         Args:
             self (ChatGLM3Tokenizer): The ChatGLM3Tokenizer object.
             value (Any): The value to set as the pad_token.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -455,14 +475,15 @@ logged indicating that setting pad_token is not supported and the default pad_to
     def eos_token(self, value):
         """
         Method to set the end-of-sequence token for the ChatGLM3Tokenizer class.
-        
+
         Args:
             self (ChatGLM3Tokenizer): The instance of the ChatGLM3Tokenizer class.
-            value (Any): The value to be set as the end-of-sequence token. This parameter is not used for setting the end-of-sequence token, as it is a read-only property.
-            
+            value (Any): The value to be set as the end-of-sequence token.
+                This parameter is not used for setting the end-of-sequence token, as it is a read-only property.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -472,14 +493,15 @@ logged indicating that setting pad_token is not supported and the default pad_to
     def vocab_size(self):
         """
         This method retrieves the vocabulary size from the ChatGLM3Tokenizer instance.
-        
+
         Args:
             self (ChatGLM3Tokenizer): The instance of the ChatGLM3Tokenizer class.
                 It represents the tokenizer used for processing the text data.
-        
+
         Returns:
-            int: The vocabulary size of the tokenizer. It indicates the total number of unique words present in the tokenizer's vocabulary.
-        
+            int: The vocabulary size of the tokenizer.
+                It indicates the total number of unique words present in the tokenizer's vocabulary.
+
         Raises:
             None
         """
@@ -494,14 +516,14 @@ logged indicating that setting pad_token is not supported and the default pad_to
     def _tokenize(self, text, **kwargs):
         """
         This method tokenizes the input text using the specified tokenizer.
-        
+
         Args:
             text (str): The input text to be tokenized.
             **kwargs: Additional keyword arguments to be passed to the tokenizer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             Any exceptions raised by the underlying 'tokenizer.tokenize' method may be propagated.
         """
@@ -518,26 +540,30 @@ logged indicating that setting pad_token is not supported and the default pad_to
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
         """
         Converts a list of tokens into a string representation using the ChatGLM3Tokenizer.
-        
+
         Args:
             self (ChatGLM3Tokenizer): An instance of the ChatGLM3Tokenizer class.
             tokens (List[str]): A list of tokens to be converted into a string.
-        
+
         Returns:
             str: The string representation of the tokens.
-        
+
         Raises:
             None.
-        
-        This method takes in an instance of the ChatGLM3Tokenizer class and a list of tokens as input. It then uses the tokenizer's 'decode_tokens' method to convert the tokens into a string representation.
-The resulting string is returned as the output.
-        
-        The 'self' parameter is a reference to the current instance of the ChatGLM3Tokenizer class. It is used to access the tokenizer object and its methods.
-        
-        The 'tokens' parameter is a list of strings representing the tokens to be converted into a string. The tokens should be in the same order as they were generated by the tokenizer.
-        
-        The return value is a string representation of the tokens. This can be useful for displaying or manipulating the tokens in a human-readable format.
-        
+
+        This method takes in an instance of the ChatGLM3Tokenizer class and a list of tokens as input.
+        It then uses the tokenizer's 'decode_tokens' method to convert the tokens into a string representation.
+        The resulting string is returned as the output.
+
+        The 'self' parameter is a reference to the current instance of the ChatGLM3Tokenizer class.
+        It is used to access the tokenizer object and its methods.
+
+        The 'tokens' parameter is a list of strings representing the tokens to be converted into a string.
+        The tokens should be in the same order as they were generated by the tokenizer.
+
+        The return value is a string representation of the tokens.
+        This can be useful for displaying or manipulating the tokens in a human-readable format.
+
         This method does not raise any exceptions.
         """
         return self.tokenizer.decode_tokens(tokens)
@@ -573,13 +599,13 @@ The resulting string is returned as the output.
     def get_prefix_tokens(self):
         """
         This method 'get_prefix_tokens' is defined within the 'ChatGLM3Tokenizer' class and retrieves a list of prefix tokens.
-        
+
         Args:
             self: A reference to the instance of the class. It is used to access the instance variables and methods of the class.
-        
+
         Returns:
             Returns a list of prefix tokens which is a combination of the commands '[gMASK]' and 'sop'.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -589,16 +615,16 @@ The resulting string is returned as the output.
     def build_single_message(self, role, metadata, message):
         """
         Builds a single message token for the ChatGLM3Tokenizer.
-        
+
         Args:
             self (ChatGLM3Tokenizer): The instance of the ChatGLM3Tokenizer class.
             role (str): The role of the message sender. It should be one of ['system', 'user', 'assistant', 'observation'].
             metadata (str): The metadata associated with the message.
             message (str): The actual message content.
-        
+
         Returns:
             list: A list of tokens representing the single message built from the role, metadata, and message.
-        
+
         Raises:
             AssertionError: If the 'role' parameter is not one of ['system', 'user', 'assistant', 'observation'].
         """
@@ -611,17 +637,21 @@ The resulting string is returned as the output.
     def build_chat_input(self, query, history=None, role="user"):
         """
         This method builds input for a chat conversation in the ChatGLM3Tokenizer class.
-        
+
         Args:
             self: The instance of the ChatGLM3Tokenizer class.
             query (str): The user's input for the chat conversation.
-            history (list): A list of dictionaries representing the chat history. Each dictionary should have the keys 'role' (str), 'metadata' (str), and 'content' (str). The 'role' key specifies the role of
-the participant in the conversation (either 'user' or 'system'). The 'metadata' key contains optional metadata for the message. The 'content' key contains the actual text content of the message.
+            history (list): A list of dictionaries representing the chat history.
+                Each dictionary should have the keys 'role' (str), 'metadata' (str), and 'content' (str).
+
+                - The 'role' key specifies the role of the participant in the conversation (either 'user' or 'system').
+                - The 'metadata' key contains optional metadata for the message.
+                - The 'content' key contains the actual text content of the message.
             role (str): The role of the participant for the current input. It can be either 'user' or 'system'.
-        
+
         Returns:
-            None. This method builds the input for the chat conversation and does not return any value.
-        
+            None: This method builds the input for the chat conversation and does not return any value.
+
         Raises:
             TypeError: If the input_ids are not of the expected type.
             ValueError: If the return_tensors parameter is not set to 'ms'.
@@ -682,12 +712,13 @@ the participant in the conversation (either 'user' or 'system'). The 'metadata' 
                 Dictionary of tokenized inputs (`List[int]`) or batch of tokenized inputs (`List[List[int]]`).
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
-            padding_strategy: PaddingStrategy to use for padding.
+            padding_strategy:
+                PaddingStrategy to use for padding.
 
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
-                The tokenizer padding sides are defined in self.padding_side:
+                - The tokenizer padding sides are defined in self.padding_side:
 
                     - 'left': pads on the left of the sequences
                     - 'right': pads on the right of the sequences

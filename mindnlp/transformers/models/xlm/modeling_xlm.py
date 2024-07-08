@@ -71,10 +71,10 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
         out (Tensor): The output tensor to store the sinusoidal embeddings.
     
     Returns:
-        None: This function does not return a value.
+        None.
     
     Raises:
-        None: This function does not raise any exceptions.
+        None.
     """
     position_enc = np.array([[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
     out[:, 0::2] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
@@ -111,45 +111,47 @@ class MultiHeadAttention(nn.Cell):
     """
     A class representing a multi-head attention mechanism for neural networks.
     
-    This class implements multi-head attention by dividing the input into multiple heads and processing them in parallel. It includes methods for initializing the attention mechanism, pruning heads based on
-specific criteria, and constructing the attention output based on input, masks, and key-value pairs.
-    
+    This class implements multi-head attention by dividing the input into multiple heads and processing them in parallel. 
+    It includes methods for initializing the attention mechanism, pruning heads based on specific criteria, and 
+    constructing the attention output based on input, masks, and key-value pairs.
+
     Attributes:
-        - layer_id: An identifier for the attention layer.
-        - dim: The dimensionality of the input.
-        - n_heads: The number of attention heads.
-        - dropout: The dropout rate for attention weights.
-        - q_lin: Linear transformation for query vectors.
-        - k_lin: Linear transformation for key vectors.
-        - v_lin: Linear transformation for value vectors.
-        - out_lin: Linear transformation for the final output.
-        - pruned_heads: A set containing indices of pruned attention heads.
-    
+        layer_id: An identifier for the attention layer.
+        dim: The dimensionality of the input.
+        n_heads: The number of attention heads.
+        dropout: The dropout rate for attention weights.
+        q_lin: Linear transformation for query vectors.
+        k_lin: Linear transformation for key vectors.
+        v_lin: Linear transformation for value vectors.
+        out_lin: Linear transformation for the final output.
+        pruned_heads: A set containing indices of pruned attention heads.
+
     Methods:
-        - __init__(self, n_heads, dim, config): Initializes the multi-head attention mechanism.
-        - prune_heads(self, heads): Prunes specified attention heads based on given criteria.
-        - construct(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False): 
-            Constructs the attention output based on input, masks, and key-value pairs.
-    
-    Note: This class inherits from nn.Cell and is designed for neural network architectures that require multi-head attention mechanisms.
+        __init__: Initializes the multi-head attention mechanism.
+        prune_heads: Prunes specified attention heads based on given criteria.
+        construct: Constructs the attention output based on input, masks, and key-value pairs.
+
+    Note:
+        This class inherits from nn.Cell and is designed for neural network architectures that require multi-head 
+        attention mechanisms.
     """
     NEW_ID = itertools.count()
 
     def __init__(self, n_heads, dim, config):
         """Initialize a MultiHeadAttention object.
-        
+
         Args:
             self: The MultiHeadAttention object.
             n_heads (int): The number of attention heads.
             dim (int): The dimension of the input.
             config (object): The configuration object containing the attention dropout.
-        
+
         Returns:
             None
-        
+
         Raises:
             AssertionError: If the dimension is not divisible by the number of attention heads.
-        
+
         """
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
@@ -167,29 +169,32 @@ specific criteria, and constructing the attention output based on input, masks, 
     def prune_heads(self, heads):
         """
         Prunes the attention heads in a MultiHeadAttention layer.
-        
+
         Args:
             self (MultiHeadAttention): The instance of the MultiHeadAttention class.
             heads (List[int]): A list of integers representing the indices of the attention heads to be pruned.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method prunes the specified attention heads in a MultiHeadAttention layer. The attention heads are pruned based on the given indices. The method performs the following steps:
-        
+
+        This method prunes the specified attention heads in a MultiHeadAttention layer. 
+        The attention heads are pruned based on the given indices. The method performs the following steps:
+
         1. Calculates the attention_head_size by dividing the dimension (self.dim) by the number of heads (self.n_heads).
         2. If the list of heads is empty, the method returns without performing any pruning.
-        3. Calls the 'find_pruneable_heads_and_indices' function to find the pruneable heads and their corresponding indices based on the given parameters (heads, self.n_heads, attention_head_size,
-self.pruned_heads).
-        4. Prunes the linear layers q_lin, k_lin, v_lin, and out_lin using the 'prune_linear_layer' function, passing the calculated indices (index) as a parameter.
+        3. Calls the 'find_pruneable_heads_and_indices' function to find the pruneable heads and their corresponding 
+        indices based on the given parameters (heads, self.n_heads, attention_head_size, self.pruned_heads).
+        4. Prunes the linear layers q_lin, k_lin, v_lin, and out_lin using the 'prune_linear_layer' function, passing 
+        the calculated indices (index) as a parameter.
         5. Updates the number of heads (self.n_heads) by subtracting the length of the pruneable heads list.
         6. Updates the dimension (self.dim) by multiplying the attention_head_size with the updated number of heads.
         7. Updates the set of pruned heads (self.pruned_heads) by adding the pruneable heads.
-        
-        Note: Pruning attention heads reduces the computational complexity of the MultiHeadAttention layer.
+
+        Note:
+            Pruning attention heads reduces the computational complexity of the MultiHeadAttention layer.
         """
         attention_head_size = self.dim // self.n_heads
         if len(heads) == 0:
@@ -272,39 +277,43 @@ self.pruned_heads).
 class TransformerFFN(nn.Cell):
 
     """
-    TransformerFFN is a class that represents a feed-forward neural network component of a transformer model. It inherits from nn.Cell and includes methods for initializing the network and constructing the
-forward pass.
-    
+    TransformerFFN is a class that represents a feed-forward neural network component of a transformer model. 
+    It inherits from nn.Cell and includes methods for initializing the network and constructing the forward pass.
+
     Attributes:
-    - in_dim (int): The input dimension of the network.
-    - dim_hidden (int): The dimension of the hidden layer in the network.
-    - out_dim (int): The output dimension of the network.
-    - config (object): The configuration object containing parameters for the network.
-    
+        in_dim (int): The input dimension of the network.
+        dim_hidden (int): The dimension of the hidden layer in the network.
+        out_dim (int): The output dimension of the network.
+        config (object): The configuration object containing parameters for the network.
+
     Methods:
-    - __init__(self, in_dim, dim_hidden, out_dim, config): Initializes the TransformerFFN instance with the specified input, hidden, and output dimensions, as well as the configuration object.
-    - construct(self, input): Constructs the forward pass of the network using chunking for the specified input.
-    - ff_chunk(self, input): Implements the feed-forward chunk of the network, including linear transformations, activation function, and dropout.
-    
-    Note: This class assumes the presence of nn, ops, and apply_chunking_to_forward functions and objects for neural network and tensor operations.
+        __init__: Initializes the TransformerFFN instance with the specified input, hidden, and output dimensions, 
+            as well as the configuration object.
+        construct: Constructs the forward pass of the network using chunking for the specified input.
+        ff_chunk: Implements the feed-forward chunk of the network, including linear transformations, 
+            activation function, and dropout.
+
+    Note:
+        This class assumes the presence of nn, ops, and apply_chunking_to_forward functions and objects for neural 
+        network and tensor operations.
     """
     def __init__(self, in_dim, dim_hidden, out_dim, config):
         """
         Initializes an instance of the TransformerFFN class.
-        
+
         Args:
             self (TransformerFFN): The instance of the TransformerFFN class.
             in_dim (int): The input dimension.
             dim_hidden (int): The dimension of the hidden layer.
             out_dim (int): The output dimension.
             config (object): The configuration object containing various settings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         """
         super().__init__()
         self.dropout = config.dropout
@@ -317,33 +326,33 @@ forward pass.
     def construct(self, input):
         """
         Method 'construct' in the class 'TransformerFFN'.
-        
+
         Args:
             self (object): The instance of the TransformerFFN class.
             input (any): The input data to be processed by the method.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
 
     def ff_chunk(self, input):
         """
         Method 'ff_chunk' in the class 'TransformerFFN'.
-        
+
         Args:
             self (object): The instance of the TransformerFFN class.
             input (tensor): The input tensor to the feedforward chunk.
-        
+
         Returns:
             None. The method returns the processed input tensor after passing through the feedforward chunk layers.
-        
+
         Raises:
-            - ValueError: If the input tensor is not in the expected format.
-            - RuntimeError: If an issue occurs during the dropout operation.
+            ValueError: If the input tensor is not in the expected format.
+            RuntimeError: If an issue occurs during the dropout operation.
         """
         x = self.lin1(input)
         x = self.act(x)
@@ -365,20 +374,25 @@ class XLMPreTrainedModel(PreTrainedModel):
     def dummy_inputs(self):
         """
         Generates dummy inputs for the XLMPreTrainedModel.
-        
+
         Args:
             self: An instance of the XLMPreTrainedModel class.
-        
+
         Returns:
-            dict: A dictionary containing the dummy inputs for the model. The dictionary has the following keys:
-                - 'input_ids': A tensor representing the input sequences. The shape of the tensor is (num_sequences, sequence_length),
-                  where num_sequences is the number of input sequences and sequence_length is the maximum length of any sequence.
-                - 'attention_mask': A tensor representing the attention mask for the input sequences. The shape of the tensor is
-                  the same as 'input_ids' and contains 0s and 1s, where 0 indicates padding and 1 indicates a valid token.
-                - 'langs': A tensor representing the language embeddings for the input sequences. The shape of the tensor is the
-                  same as 'input_ids'. If the model is configured to use language embeddings and there are multiple languages,
-                  the tensor contains language embeddings for each token. Otherwise, it is set to None.
-        
+            dict: A dictionary containing the dummy inputs for the model.
+                The dictionary has the following keys:
+
+                - 'input_ids': A tensor representing the input sequences. The shape of the tensor is
+                (num_sequences, sequence_length), where num_sequences is the number of input sequences and
+                sequence_length is the maximum length of any sequence.
+                - 'attention_mask': A tensor representing the attention mask for the input sequences.
+                The shape of the tensor is the same as 'input_ids' and contains 0s and 1s, where 0 indicates padding and
+                1 indicates a valid token.
+                - 'langs': A tensor representing the language embeddings for the input sequences.
+                The shape of the tensor is the same as 'input_ids'. If the model is configured to use language
+                embeddings and there are multiple languages,  the tensor contains language embeddings for each token.
+                Otherwise, it is set to None.
+
         Raises:
             None.
         """
@@ -416,31 +430,38 @@ class XLMForQuestionAnsweringOutput(ModelOutput):
     Base class for outputs of question answering models using a `SquadHead`.
 
     Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned if both `start_positions` and `end_positions` are provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned if both `start_positions` and `end_positions`
+            are provided):
             Classification loss as the sum of start token, end token (and is_impossible if provided) classification
             losses.
-        start_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+        start_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if
+            `start_positions` or `end_positions` is not provided):
             Log probabilities for the top config.start_n_top start token possibilities (beam-search).
-        start_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+        start_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if
+            `start_positions` or `end_positions` is not provided):
             Indices for the top config.start_n_top start token possibilities (beam-search).
-        end_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+        end_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`,
+            *optional*, returned if `start_positions` or `end_positions` is not provided):
             Log probabilities for the top `config.start_n_top * config.end_n_top` end token possibilities
             (beam-search).
-        end_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+        end_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`,
+            *optional*, returned if `start_positions` or `end_positions` is not provided):
             Indices for the top `config.start_n_top * config.end_n_top` end token possibilities (beam-search).
-        cls_logits (`mindspore.Tensor` of shape `(batch_size,)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+        cls_logits (`mindspore.Tensor` of shape `(batch_size,)`, *optional*, returned if `start_positions` or
+            `end_positions` is not provided):
             Log probabilities for the `is_impossible` label of the answers.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+            when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention heads.
     """
     loss: Optional[mindspore.Tensor] = None
     start_top_log_probs: Optional[mindspore.Tensor] = None
@@ -455,40 +476,49 @@ class XLMForQuestionAnsweringOutput(ModelOutput):
 class XLMModel(XLMPreTrainedModel):
 
     """
-    XLMModel is a class representing a transformer model for cross-lingual language model pre-training based on the XLM architecture.
-    
-    This class inherits from XLMPreTrainedModel and implements various methods for initializing the model, handling embeddings, pruning heads, and constructing the model for inference.
-    
-    The __init__ method initializes the model with configuration parameters and sets up the model's architecture. It handles encoder-decoder setup, embeddings, attention mechanisms, layer normalization, and
-other model components.
-    
-    The get_input_embeddings method returns the input embeddings used in the model, while set_input_embeddings allows for updating the input embeddings.
-    
-    The _prune_heads method prunes specific attention heads in the model based on the provided dictionary of {layer_num: list of heads}.
-    
-    The construct method constructs the model for inference, taking input tensors for input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, output settings,
-and returns the model output or a BaseModelOutput object depending on the return_dict setting.
-    
-    Overall, XLMModel provides a comprehensive implementation of the XLM transformer model for cross-lingual language tasks.
+    XLMModel is a class representing a transformer model for cross-lingual language model pre-training based on the
+    XLM architecture.
+
+    This class inherits from XLMPreTrainedModel and implements various methods for initializing the model, handling
+    embeddings, pruning heads, and constructing the model for inference.
+
+    The __init__ method initializes the model with configuration parameters and sets up the model's architecture.
+    It handles encoder-decoder setup, embeddings, attention mechanisms, layer normalization, and other model components.
+
+    The get_input_embeddings method returns the input embeddings used in the model, while set_input_embeddings allows
+    for updating the input embeddings.
+
+    The _prune_heads method prunes specific attention heads in the model based on the provided dictionary of
+    {layer_num: list of heads}.
+
+    The construct method constructs the model for inference, taking input tensors for input_ids, attention_mask, langs,
+    token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, output settings, and returns the model
+    output or a BaseModelOutput object depending on the return_dict setting.
+
+    Overall, XLMModel provides a comprehensive implementation of the XLM transformer model for cross-lingual language
+    tasks.
     """
     def __init__(self, config):
         """
         This method initializes an instance of the XLMModel class with the provided configuration.
-        
+
         Args:
             self: The instance of the XLMModel class.
-            config: An object containing configuration parameters for the XLMModel.
-                    - Type: object
-                    - Purpose: Specifies the configuration settings for the XLMModel.
-                    - Restrictions: Must be a valid configuration object.
-        
+            config:
+                An object containing configuration parameters for the XLMModel.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the XLMModel.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            NotImplementedError: If the provided configuration indicates that the XLMModel is used as a decoder, since XLM can only be used as an encoder.
+            NotImplementedError: If the provided configuration indicates that the XLMModel is used as a decoder,
+                since XLM can only be used as an encoder.
             AssertionError: If the transformer dimension is not a multiple of the number of heads.
-        
+
         """
         super().__init__(config)
 
@@ -567,33 +597,33 @@ and returns the model output or a BaseModelOutput object depending on the return
     def get_input_embeddings(self):
         """
         Retrieve the input embeddings from the XLMModel.
-        
+
         Args:
             self (XLMModel): An instance of the XLMModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings
 
     def set_input_embeddings(self, new_embeddings):
         """Set the input embeddings for the XLMModel.
-        
+
         This method sets the input embeddings for the XLMModel using the given new_embeddings.
-        
+
         Args:
             self (XLMModel): The instance of the XLMModel class.
             new_embeddings (Any): The new embeddings to set for the XLMModel. It can be of any type.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
-        
+            None.
+
         """
         self.embeddings = new_embeddings
 
@@ -622,7 +652,7 @@ and returns the model output or a BaseModelOutput object depending on the return
     ) -> Union[Tuple, BaseModelOutput]:
         '''
         Constructs the XLM model.
-        
+
         Args:
             self: The object itself.
             input_ids (Optional[mindspore.Tensor]): The input tensor of shape (batch_size, sequence_length).
@@ -633,16 +663,18 @@ and returns the model output or a BaseModelOutput object depending on the return
             lengths (Optional[mindspore.Tensor]): The lengths tensor of shape (batch_size,).
             cache (Optional[Dict[str, mindspore.Tensor]]): The cache tensor.
             head_mask (Optional[mindspore.Tensor]): The head mask tensor.
-            inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape (batch_size, sequence_length, embedding_size).
+            inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape
+                (batch_size, sequence_length, embedding_size).
             output_attentions (Optional[bool]): Whether to output attentions.
             output_hidden_states (Optional[bool]): Whether to output hidden states.
             return_dict (Optional[bool]): Whether to return a dictionary.
-        
+
         Returns:
             Union[Tuple, BaseModelOutput]: The model output, which can be a tuple of tensors or a BaseModelOutput object.
-        
+
         Raises:
-            AssertionError: If the lengths tensor shape does not match the batch size or if the maximum length in the lengths tensor exceeds the sequence length.
+            AssertionError: If the lengths tensor shape does not match the batch size or if the maximum length in the
+                lengths tensor exceeds the sequence length.
             AssertionError: If the position_ids tensor shape does not match the input tensor shape.
             AssertionError: If the langs tensor shape does not match the input tensor shape.
         '''
@@ -773,22 +805,24 @@ class XLMPredLayer(nn.Cell):
     def __init__(self, config):
         """
         Initialize the XLMPredLayer class.
-        
+
         Args:
             self: The instance of the XLMPredLayer class.
-            config: A configuration object containing the following attributes:
+            config:
+                A configuration object containing the following attributes:
+
                 - asm (bool): Indicates whether to use Adaptive Softmax. If False, a Dense layer will be used.
                 - n_words (int): Number of words in the vocabulary.
                 - pad_index (int): Index of the padding token.
                 - emb_dim (int): Dimension of the embedding.
                 - asm_cutoffs (list of int): Cutoffs for Adaptive Softmax.
                 - asm_div_value (float): Divisor value for Adaptive Softmax.
-        
+
         Returns:
-            None. This method initializes the XLMPredLayer object with the specified configuration.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.asm = config.asm
@@ -829,38 +863,40 @@ class XLMPredLayer(nn.Cell):
 class XLMWithLMHeadModel(XLMPreTrainedModel):
 
     """
-    XLMWithLMHeadModel represents a transformer model with a language modeling head based on the XLM (Cross-lingual Language Model) architecture.
-    
-    This class inherits from XLMPreTrainedModel and provides methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and constructing the model for language
-modeling tasks.
-    
+    XLMWithLMHeadModel represents a transformer model with a language modeling head based on the XLM
+    (Cross-lingual Language Model) architecture.
+
+    This class inherits from XLMPreTrainedModel and provides methods for initializing the model, getting and setting
+    output embeddings, preparing inputs for generation, and constructing the model for language modeling tasks.
+
     Attributes:
         transformer (XLMModel): The XLMModel instance used for the transformer architecture.
         pred_layer (XLMPredLayer): The XLMPredLayer instance used for the language modeling head.
-    
+
     Methods:
-        __init__(self, config): Initializes the XLMWithLMHeadModel instance with the given configuration.
-        get_output_embeddings(self): Returns the output embeddings from the language modeling head.
-        set_output_embeddings(self, new_embeddings): Sets new output embeddings for the language modeling head.
-        prepare_inputs_for_generation(self, input_ids, **kwargs): Prepares input tensors for language generation tasks.
-        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the
-model for language modeling tasks and returns the masked language model output.
-    
-    Note: The construct method includes detailed documentation for its parameters and return value, including optional and shifted labels for language modeling.
+        __init__: Initializes the XLMWithLMHeadModel instance with the given configuration.
+        get_output_embeddings: Returns the output embeddings from the language modeling head.
+        set_output_embeddings: Sets new output embeddings for the language modeling head.
+        prepare_inputs_for_generation: Prepares input tensors for language generation tasks.
+        construct: Constructs the model for language modeling tasks and returns the masked language model output.
+
+    Note:
+        The construct method includes detailed documentation for its parameters and return value, including optional
+        and shifted labels for language modeling.
     """
     _tied_weights_keys = ["pred_layer.proj.weight"]
 
     def __init__(self, config):
         """
         Initializes a new instance of the XLMWithLMHeadModel class.
-        
+
         Args:
             self (XLMWithLMHeadModel): The current instance of the XLMWithLMHeadModel class.
             config: The configuration object for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -874,50 +910,55 @@ model for language modeling tasks and returns the masked language model output.
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the XLMWithLMHeadModel.
-        
+
         Args:
             self (XLMWithLMHeadModel): The instance of the XLMWithLMHeadModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.pred_layer.proj
 
     def set_output_embeddings(self, new_embeddings):
         """
         Method to set new output embeddings for the XLM model with a language modeling head.
-        
+
         Args:
             self (XLMWithLMHeadModel): The instance of the XLMWithLMHeadModel class.
             new_embeddings (torch.nn.Embedding): The new embeddings to be set as the output embeddings.
                 This parameter should be an instance of torch.nn.Embedding class representing the new embeddings.
-                
+
         Returns:
-            None.
-            This method does not return any value explicitly but updates the output embeddings of the model in-place.
-        
+            None:
+                This method does not return any value explicitly but updates the output embeddings of the model in-place.
+
         Raises:
-            - TypeError: If the new_embeddings parameter is not an instance of torch.nn.Embedding.
-            - ValueError: If the shape or type of the new_embeddings parameter is not compatible with the model's requirements.
+            TypeError: If the new_embeddings parameter is not an instance of torch.nn.Embedding.
+            ValueError: If the shape or type of the new_embeddings parameter is not compatible with the model's
+                requirements.
         """
         self.pred_layer.proj = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         """
         Prepare the inputs for generation in XLMWithLMHeadModel.
-        
+
         Args:
             self: The instance of the XLMWithLMHeadModel class.
             input_ids (Tensor): The input tensor containing token IDs. Shape (batch_size, sequence_length).
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation.
-                - 'input_ids' (Tensor): The input tensor with additional mask token appended. Shape (batch_size, sequence_length + 1).
-                - 'langs' (Tensor or None): The tensor specifying the language IDs for each token, or None if lang_id is not provided.
-        
+            dict:
+                A dictionary containing the prepared inputs for generation.
+
+                - 'input_ids' (Tensor): The input tensor with additional mask token appended.
+                Shape (batch_size, sequence_length + 1).
+                - 'langs' (Tensor or None): The tensor specifying the language IDs for each token,
+                or None if lang_id is not provided.
+
         Raises:
             ValueError: If the input_ids tensor is not valid or if an error occurs during tensor operations.
             TypeError: If the input_ids tensor is not of type Tensor.
@@ -951,10 +992,11 @@ model for language modeling tasks and returns the masked language model output.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -990,46 +1032,48 @@ model for language modeling tasks and returns the masked language model output.
 class XLMForSequenceClassification(XLMPreTrainedModel):
 
     """
-    XLMForSequenceClassification includes the logic to classify sequences using a transformer-based model. 
-    This class inherits from XLMPreTrainedModel and implements the specific logic for sequence classification using the XLM model.
-    
+    XLMForSequenceClassification includes the logic to classify sequences using a transformer-based model.
+    This class inherits from XLMPreTrainedModel and implements the specific logic for sequence classification
+    using the XLM model.
+
     Attributes:
         num_labels (int): The number of labels for sequence classification.
         config (XLMConfig): The configuration for the XLM model.
         transformer (XLMModel): The transformer model used for sequence classification.
         sequence_summary (SequenceSummary): The sequence summarization layer.
-    
+
     Args:
         config (XLMConfig): The configuration object for the XLMForSequenceClassification model.
-    
+
     Methods:
-        construct(input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict):
+        construct:
             This method constructs the sequence classification model and returns the sequence classifier output.
-    
+
     Raises:
         ValueError: If the number of labels is invalid or the problem type is not recognized.
-    
+
     Returns:
-        Union[Tuple, SequenceClassifierOutput]: A tuple containing the loss and output if loss is not None, else the output.
-    
+        Union[Tuple, SequenceClassifierOutput]:
+            A tuple containing the loss and output if loss is not None, else the output.
+
     Raises:
         ValueError: If the number of labels is invalid or the problem type is not recognized.
     """
     def __init__(self, config):
         """
         Initializes an instance of the XLMForSequenceClassification class.
-        
+
         Args:
             self (XLMForSequenceClassification): The current instance of the XLMForSequenceClassification class.
-            config (XLMConfig): The configuration object containing settings for the model initialization. 
-                                It must include the number of labels 'num_labels' and other necessary configurations.
-        
+            config (XLMConfig): The configuration object containing settings for the model initialization.
+                It must include the number of labels 'num_labels' and other necessary configurations.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type XLMConfig.
-            - ValueError: If the config object does not contain the required 'num_labels' attribute.
+            TypeError: If the config parameter is not of type XLMConfig.
+            ValueError: If the config object does not contain the required 'num_labels' attribute.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1058,10 +1102,11 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1118,29 +1163,32 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
 class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
 
     """
-    This class represents a simple XLM model for question answering. It inherits from XLMPreTrainedModel and includes methods for constructing the model and handling question answering tasks.
-    
+    This class represents a simple XLM model for question answering. It inherits from XLMPreTrainedModel
+    and includes methods for constructing the model and handling question answering tasks.
+
     Attributes:
         transformer (XLMModel): The XLMModel instance for the transformer component of the model.
         qa_outputs (nn.Dense): The output layer for question answering predictions.
-    
+
     Methods:
-        - construct: Construct the model for question answering tasks, with optional input parameters and return values. This method includes detailed descriptions of the input and output tensors, as well as
-the expected behavior of the model during inference.
-    
-    Note: This class is intended for use with the MindSpore framework.
+        construct: Construct the model for question answering tasks, with optional input parameters and return values.
+            This method includes detailed descriptions of the input and output tensors, as well as
+            the expected behavior of the model during inference.
+
+    Note:
+        This class is intended for use with the MindSpore framework.
     """
     def __init__(self, config):
         """
         Initializes a new instance of the 'XLMForQuestionAnsweringSimple' class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the 'XLMConfig' class containing the configuration parameters for the model.
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         """
@@ -1170,14 +1218,15 @@ the expected behavior of the model during inference.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1235,50 +1284,48 @@ the expected behavior of the model during inference.
 class XLMForQuestionAnswering(XLMPreTrainedModel):
 
     """
-    The `XLMForQuestionAnswering` class is a model for question answering tasks using the XLM (Cross-lingual Language Model) architecture. It is designed to take input sequences and output the start and end
-positions of the answer within the sequence.
-    
-    This class inherits from `XLMPreTrainedModel`, which provides the base functionality for loading and using pre-trained XLM models.
-    
+    The `XLMForQuestionAnswering` class is a model for question answering tasks using the XLM
+    (Cross-lingual Language Model) architecture. It is designed to take input sequences and output the start and end
+    positions of the answer within the sequence.
+
+    This class inherits from `XLMPreTrainedModel`, which provides the base functionality for loading and using
+    pre-trained XLM models.
+
     Attributes:
-        - `transformer`: An instance of the `XLMModel` class, which is responsible for encoding the input sequences.
-        - `qa_outputs`: An instance of the `SQuADHead` class, which is responsible for predicting the start and end positions of the answer.
-        
-    Methods:
-        - `__init__(self, config)`: Initializes the `XLMForQuestionAnswering` class by calling the parent class's `__init__` method and setting up the `transformer` and `qa_outputs` attributes.
-        - `construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, start_positions, end_positions, is_impossible, cls_index, p_mask,
-output_attentions, output_hidden_states, return_dict)`: Constructs the model by encoding the input sequences using the `transformer` and predicting the start and end positions using the `qa_outputs`. Returns
-the predicted start and end positions, along with other optional outputs depending on the value of `return_dict`.
-    
+        `transformer`: An instance of the `XLMModel` class, which is responsible for encoding the input sequences.
+        `qa_outputs`: An instance of the `SQuADHead` class, which is responsible for predicting the start and end
+        positions of the answer.
+
     Example:
-        
-        from transformers import AutoTokenizer, XLMForQuestionAnswering
-    
-        tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
-        model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")
-    
-        input_ids = mindspore.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
-        start_positions = mindspore.tensor([1])
-        end_positions = mindspore.tensor([3])
-    
-        outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
-        loss = outputs.loss
-        
+        ```python
+        >>> from transformers import AutoTokenizer, XLMForQuestionAnswering
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
+        >>> model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")
+        ...
+        >>> input_ids = mindspore.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
+        >>> start_positions = mindspore.tensor([1])
+        >>> end_positions = mindspore.tensor([3])
+        ...
+        >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
+        >>> loss = outputs.loss
+        ```
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the XLMForQuestionAnswering class.
-        
+
         Args:
             self (XLMForQuestionAnswering): The current instance of the XLMForQuestionAnswering class.
             config: The configuration object containing settings for the XLMForQuestionAnswering model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided 'config' parameter is not of the expected type.
-            - ValueError: If there are issues during the initialization process of the XLMForQuestionAnswering instance.
+            TypeError: If the provided 'config' parameter is not of the expected type.
+            ValueError: If there are issues during the initialization process of the XLMForQuestionAnswering instance.
         """
         super().__init__(config)
 
@@ -1309,42 +1356,44 @@ the predicted start and end positions, along with other optional outputs dependi
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, XLMForQuestionAnsweringOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        is_impossible (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels whether a question has an answer or no answer (SQuAD 2.0)
-        cls_index (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the classification token to use as input for computing plausibility of the
-            answer.
-        p_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Optional mask of tokens which can't be in answers (e.g. [CLS], [PAD], ...). 1.0 means token should be
-            masked. 0.0 mean token is not masked.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            is_impossible (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels whether a question has an answer or no answer (SQuAD 2.0)
+            cls_index (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the classification token to use as input for computing plausibility of the
+                answer.
+            p_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Optional mask of tokens which can't be in answers (e.g. [CLS], [PAD], ...). 1.0 means token should be
+                masked. 0.0 mean token is not masked.
 
         Returns:
+            `Union[Tuple, XLMForQuestionAnsweringOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, XLMForQuestionAnswering
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
-        >>> model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")
-
-        >>> input_ids = mindspore.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(
-        ...     0
-        ... )  # Batch size 1
-        >>> start_positions = mindspore.tensor([1])
-        >>> end_positions = mindspore.tensor([3])
-
-        >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
-        >>> loss = outputs.loss
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, XLMForQuestionAnswering
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
+            >>> model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")
+            ...
+            >>> input_ids = mindspore.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(
+            ...     0
+            ... )  # Batch size 1
+            >>> start_positions = mindspore.tensor([1])
+            >>> end_positions = mindspore.tensor([3])
+            ...
+            >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
+            >>> loss = outputs.loss
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -1392,33 +1441,34 @@ the predicted start and end positions, along with other optional outputs dependi
 class XLMForTokenClassification(XLMPreTrainedModel):
 
     """XLMForTokenClassification
-    
-    This class is a token classification model based on the XLM architecture. It is designed for token-level classification tasks, such as named entity recognition or part-of-speech tagging. The model takes
-input sequences and predicts a label for each token in the sequence.
-    
-    The XLMForTokenClassification class inherits from the XLMPreTrainedModel class, which provides the basic functionality for pre-training and fine-tuning XLM models.
-    
+
+    This class is a token classification model based on the XLM architecture. It is designed for token-level
+    classification tasks, such as named entity recognition or part-of-speech tagging. The model takes input sequences
+    and predicts a label for each token in the sequence.
+
+    The XLMForTokenClassification class inherits from the XLMPreTrainedModel class, which provides the basic
+    functionality for pre-training and fine-tuning XLM models.
+
     Attributes:
         num_labels (int): The number of labels for token classification.
         transformer (XLMModel): The XLMModel instance used for the transformer architecture.
         dropout (nn.Dropout): Dropout layer for regularization.
         classifier (nn.Dense): Linear layer for classification.
-        
+
     Methods:
-        __init__(self, config): Initializes the XLMForTokenClassification instance.
-        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the
-XLMForTokenClassification model and performs token classification.
-    
+        __init__: Initializes the XLMForTokenClassification instance.
+        construct: Constructs the XLMForTokenClassification model and performs token classification.
+
     """
     def __init__(self, config):
         """Initialize the XLMForTokenClassification class.
-        
+
             Args:
                 config (XLMConfig): The configuration object for the model.
-        
+
             Returns:
                 None
-        
+
             Raises:
                 None
             """
@@ -1449,8 +1499,9 @@ XLMForTokenClassification model and performs token classification.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1493,49 +1544,54 @@ XLMForTokenClassification model and performs token classification.
 class XLMForMultipleChoice(XLMPreTrainedModel):
 
     """
-    XLMForMultipleChoice represents a XLM model for multiple choice tasks. It is a subclass of XLMPreTrainedModel and includes methods for building the model, processing input data, and computing multiple
-choice classification loss.
-    
+    XLMForMultipleChoice represents a XLM model for multiple choice tasks. It is a subclass of XLMPreTrainedModel
+    and includes methods for building the model, processing input data, and computing multiple choice classification
+    loss.
+
     Attributes:
         transformer: An instance of XLMModel for processing input data.
         sequence_summary: An instance of SequenceSummary for summarizing the transformer outputs.
         logits_proj: An instance of nn.Dense for projecting the sequence summary outputs.
-        
+
     Args:
         config: The model configuration.
         *inputs: Variable length input for the model.
         **kwargs: Additional keyword arguments for the model.
-    
+
     Methods:
         construct: Constructs the model and processes the input data for multiple choice tasks.
-    
+
     Returns:
-        Union[Tuple, MultipleChoiceModelOutput]: A tuple containing the loss and model outputs or an instance of MultipleChoiceModelOutput.
-    
+        Union[Tuple, MultipleChoiceModelOutput]: A tuple containing the loss and model outputs or an instance of
+            MultipleChoiceModelOutput.
+
     Note:
-        This class inherits from XLMPreTrainedModel and follows the implementation details specific to XLM multiple choice models.
-    
+        This class inherits from XLMPreTrainedModel and follows the implementation details specific to XLM
+        multiple choice models.
+
     See Also:
         XLMPreTrainedModel: The base class for all XLM model implementations.
         XLMModel: The base transformer model used for processing input data.
         SequenceSummary: A class for summarizing transformer outputs.
         MultipleChoiceModelOutput: The output class for multiple choice model predictions.
-    
+
     Raises:
         ValueError: If invalid input data or model configuration is provided.
         RuntimeError: If errors occur during model processing or loss computation.
-    
-    Examples:
-        # Initialize XLMForMultipleChoice model
-        model = XLMForMultipleChoice(config)
-    
-        # Process input data and compute multiple choice classification loss
-        outputs = model.construct(input_ids, attention_mask, labels=labels)
-    
-        # Access model outputs
-        logits = outputs.logits
-        hidden_states = outputs.hidden_states
-        attentions = outputs.attentions
+
+    Example:
+        ```python
+        >>> # Initialize XLMForMultipleChoice model
+        >>> model = XLMForMultipleChoice(config)
+        ...
+        >>> # Process input data and compute multiple choice classification loss
+        >>> outputs = model.construct(input_ids, attention_mask, labels=labels)
+        ...
+        >>> # Access model outputs
+        >>> logits = outputs.logits
+        >>> hidden_states = outputs.hidden_states
+        >>> attentions = outputs.attentions
+        ```
     """
     def __init__(self, config, *inputs, **kwargs):
         """
@@ -1546,12 +1602,12 @@ choice classification loss.
             config: The configuration object containing various parameters for model initialization.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - TypeError: If the provided config parameter is not of the correct type.
-            - ValueError: If the config parameter is missing required attributes.
-            - RuntimeError: If an error occurs during the initialization process.
+            TypeError: If the provided config parameter is not of the correct type.
+            ValueError: If the config parameter is missing required attributes.
+            RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__(config, *inputs, **kwargs)
 
@@ -1579,10 +1635,11 @@ choice classification loss.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]

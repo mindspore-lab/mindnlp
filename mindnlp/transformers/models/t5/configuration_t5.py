@@ -111,7 +111,8 @@ class T5Config(PretrainedConfig):
             d_kv (int, optional): The dimension of the key and value. Defaults to 64.
             d_ff (int, optional): The dimension of the feed forward layer. Defaults to 2048.
             num_layers (int, optional): The number of layers. Defaults to 6.
-            num_decoder_layers (int, optional): The number of decoder layers. Defaults to the value of num_layers if not provided.
+            num_decoder_layers (int, optional): The number of decoder layers. Defaults to the value of num_layers
+                if not provided.
             num_heads (int, optional): The number of attention heads. Defaults to 8.
             relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
             relative_attention_max_distance (int, optional): The maximum distance for relative attention. Defaults to 128.
@@ -126,7 +127,7 @@ class T5Config(PretrainedConfig):
             classifier_dropout (float, optional): The dropout rate for the classifier. Defaults to 0.0.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
             ValueError: If the feed_forward_proj is not a valid activation function of the dense layer.

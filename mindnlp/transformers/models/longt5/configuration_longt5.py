@@ -108,7 +108,8 @@ class LongT5Config(PretrainedConfig):
         eos_token_id=1,
         **kwargs,
     ):
-        """Initialize the LongT5Config object.
+        """
+        Initialize the LongT5Config object.
         
         Args:
             self (LongT5Config): The LongT5Config instance.
@@ -137,10 +138,11 @@ class LongT5Config(PretrainedConfig):
             eos_token_id (int, optional): The token ID for end of sequence. Defaults to 1.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            ValueError: If the `feed_forward_proj` parameter is not in the correct format or is not a valid activation function.
+            ValueError: If the `feed_forward_proj` parameter is not in the correct format or is not a valid
+                activation function.
         
         """
         self.vocab_size = vocab_size

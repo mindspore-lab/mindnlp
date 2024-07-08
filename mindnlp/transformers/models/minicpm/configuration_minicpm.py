@@ -54,7 +54,7 @@ class MiniCPMConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -99,18 +99,20 @@ class MiniCPMConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import MiniCPMModel, MiniCPMConfig
-
-    >>> # Initializing a MiniCPM minicpm-7b style configuration
-    >>> configuration = MiniCPMConfig()
-
-    >>> # Initializing a model from the minicpm-7b style configuration
-    >>> model = MiniCPMModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import MiniCPMModel, MiniCPMConfig
+        ...
+        >>> # Initializing a MiniCPM minicpm-7b style configuration
+        >>> configuration = MiniCPMConfig()
+        ...
+        >>> # Initializing a model from the minicpm-7b style configuration
+        >>> model = MiniCPMModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "minicpm"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -172,7 +174,7 @@ class MiniCPMConfig(PretrainedConfig):
             scale_depth (int, optional): The scaling factor for the depth of the model. Defaults to 1.
         
         Returns:
-            None. This method initializes the MiniCPMConfig instance.
+            None.
         
         Raises:
             None.

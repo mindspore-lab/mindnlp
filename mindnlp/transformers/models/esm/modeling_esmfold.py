@@ -136,10 +136,13 @@ class EsmForProteinFoldingOutput(ModelOutput):
 def collate_dense_tensors(samples: List[mindspore.Tensor], pad_v: float = 0) -> mindspore.Tensor:
     """
     Takes a list of tensors with the following dimensions:
-        [(d_11, ..., d_1K),
-         (d_21, ..., d_2K), ..., (d_N1, ..., d_NK)]
+
+    ```[(d_11, ..., d_1K),
+     (d_21, ..., d_2K), ..., (d_N1, ..., d_NK)]```
+
     and stack + pads them into a single tensor of:
-    (N, max_i=1,N { d_i1 }, ..., max_i=1,N {diK})
+
+    ```(N, max_i=1,N { d_i1 }, ..., max_i=1,N {diK})```
     """
     if len(samples) == 0:
         return mindspore.Tensor()
@@ -177,14 +180,15 @@ def permute_final_dims(tensor: mindspore.Tensor, inds: List[int]):
     
     Args:
         tensor (mindspore.Tensor): The input tensor to be permuted.
-        inds (List[int]): A list of integers representing the indices of the dimensions to be permuted. The dimensions are 0-indexed.
+        inds (List[int]):
+            A list of integers representing the indices of the dimensions to be permuted. The dimensions are 0-indexed.
     
     Returns:
-        None: This function returns None.
+        None.
     
     Raises:
-        - ValueError: If the indices provided in 'inds' are out of bounds or not in the correct format.
-        - TypeError: If the input tensor is not of type mindspore.Tensor.
+        ValueError: If the indices provided in 'inds' are out of bounds or not in the correct format.
+        TypeError: If the input tensor is not of type mindspore.Tensor.
     """
     zero_index = -1 * len(inds)
     first_inds = list(range(len(tensor.shape[:zero_index])))
@@ -197,13 +201,14 @@ def dict_multimap(fn, dicts):
     
     - fn: A function that will be applied to the values of the dictionaries.
     - dicts: A list of dictionaries.
-    
-    The function returns a new dictionary with the same keys as the first dictionary in the input list, where the values are the result of applying the given function to the corresponding values from all the
-input dictionaries.
-    
+
+    The function returns a new dictionary with the same keys as the first dictionary in the input list,
+    where the values are the result of applying the given function to the corresponding values from all the
+    input dictionaries.
+
     Raises:
-    - KeyError: If a key is not found in the dictionaries.
-    - TypeError: If the values are not suitable for the given function.
+        KeyError: If a key is not found in the dictionaries.
+        TypeError: If the values are not suitable for the given function.
     """
     first = dicts[0]
     new_dict = {}
@@ -220,18 +225,18 @@ input dictionaries.
 def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
     """
     This function initializes weights with a truncated normal distribution.
-    
+
     Args:
-    - weights (Tensor): The weights to be initialized.
-    - scale (float, optional): The scale factor for the standard deviation. Defaults to 1.0.
-    - fan (str, optional): Specifies the mode for computing the fan. Defaults to 'fan_in'.
-    
+        weights (Tensor): The weights to be initialized.
+        scale (float, optional): The scale factor for the standard deviation. Defaults to 1.0.
+        fan (str, optional): Specifies the mode for computing the fan. Defaults to 'fan_in'.
+
     Returns:
-    None: This function does not return any value.
-    
+        None.
+
     Raises:
-    - ValueError: If the shape of the weights is not valid.
-    - ImportError: If scipy is not available and it is required for the initialization.
+        ValueError: If the shape of the weights is not valid.
+        ImportError: If scipy is not available and it is required for the initialization.
     """
     shape = weights.shape
     scale = scale / max(1, shape[1])
@@ -256,15 +261,15 @@ def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
 def ipa_point_weights_init_(weights):
     """
     Initializes the IPA (International Phonetic Alphabet) point weights.
-    
+
     Args:
         weights (list): A list of weights to be initialized.
-    
+
     Returns:
-        None. This function does not return any value.
-    
+        None.
+
     Raises:
-        None. This function does not raise any exceptions.
+        None.
     """
     softplus_inverse_1 = 0.541324854612918
     weights[:] = softplus_inverse_1
@@ -317,38 +322,38 @@ class EsmFoldLinear(nn.Dense):
 class EsmFoldLayerNorm(nn.Cell):
 
     """
-    EsmFoldLayerNorm represents a custom layer normalization module with additional trainable parameters for weight and bias. 
+    EsmFoldLayerNorm represents a custom layer normalization module with additional trainable parameters for weight and bias.
     This class inherits from nn.Cell and implements the Layer Normalization operation with custom weight and bias parameters.
-    
+
     Attributes:
         c_in (int): Number of input channels for the layer normalization operation.
         eps (float): Epsilon value used in the normalization operation.
         weight (Parameter): Trainable parameter representing the weights for the normalization operation.
         bias (Parameter): Trainable parameter representing the bias for the normalization operation.
         layer_norm (ops.LayerNorm): Layer normalization operation with custom weight and bias parameters.
-    
+
     Methods:
-        __init__(self, c_in, eps=1e-05):
+        __init__:
             Initializes the EsmFoldLayerNorm instance with the specified input channels and epsilon value.
-    
-        construct(self, x):
+
+        construct:
             Applies the layer normalization operation with custom weight and bias parameters to the input tensor x.
-    
+
     Returns:
         Tensor: The normalized output tensor after applying the layer normalization operation with custom parameters.
     """
     def __init__(self, c_in, eps=1e-5):
         """
         Initialize the EsmFoldLayerNorm class.
-        
+
         Args:
             self: The instance of the EsmFoldLayerNorm class.
             c_in (int): The number of input channels for the layer normalization. Must be a positive integer.
             eps (float, optional): The epsilon value for numerical stability in layer normalization. Default is 1e-05.
-        
+
         Returns:
-            None. This method initializes the EsmFoldLayerNorm class with the specified parameters.
-        
+            None.
+
         Raises:
             ValueError: If c_in is not a positive integer.
             ValueError: If eps is not a valid epsilon value (not a float).
@@ -366,16 +371,17 @@ class EsmFoldLayerNorm(nn.Cell):
     def construct(self, x):
         """
         Constructs a normalized layer using the EsmFold algorithm.
-        
+
         Args:
             self (EsmFoldLayerNorm): An instance of the EsmFoldLayerNorm class.
             x: The input tensor to be normalized. Should have shape (batch_size, features).
-        
+
         Returns:
-            None: This method does not return a value. The normalized layer is stored within the instance of the EsmFoldLayerNorm class.
-        
+            None: This method does not return a value.
+                The normalized layer is stored within the instance of the EsmFoldLayerNorm class.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         y, _, _ = self.layer_norm(x, self.weight, self.bias)
         return y
@@ -444,20 +450,22 @@ class EsmFoldAttention(nn.Cell):
     def _prep_qkv(self, q_x: mindspore.Tensor, kv_x: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Prepares the query, key, and value tensors for the EsmFoldAttention module.
-        
+
         Args:
             self (EsmFoldAttention): The instance of the EsmFoldAttention module.
             q_x (mindspore.Tensor): The query tensor.
                 It should have a shape of (batch_size, seq_length, hidden_size).
             kv_x (mindspore.Tensor): The key-value tensor.
                 It should have a shape of (batch_size, seq_length, hidden_size).
-        
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing the query, key, and value tensors.
-            - q: The transformed query tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
-            - k: The transformed key tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
-            - v: The transformed value tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
-        
+            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+                A tuple containing the query, key, and value tensors.
+
+                - q: The transformed query tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
+                - k: The transformed key tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
+                - v: The transformed value tensor with a shape of (batch_size, seq_length, no_heads, hidden_size//no_heads).
+
         Raises:
             None.
         """
@@ -483,18 +491,18 @@ class EsmFoldAttention(nn.Cell):
     def _wrap_up(self, o: mindspore.Tensor, q_x: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method '_wrap_up' in the class 'EsmFoldAttention' performs a wrapping up operation on the input tensors.
-        
+
         Args:
             self: An instance of the 'EsmFoldAttention' class.
             o (mindspore.Tensor): Input tensor representing the output from previous layers.
                 Shape should be compatible with the subsequent operations.
             q_x (mindspore.Tensor): Input tensor representing the query tensor.
                 Shape should be compatible with the subsequent operations.
-        
+
         Returns:
             mindspore.Tensor: A tensor resulting from the wrapping up operation.
                 The shape and content of the tensor depend on the operations performed within the method.
-        
+
         Raises:
             No specific exceptions are documented to be raised by this method under normal operation.
         """
@@ -580,36 +588,37 @@ class EsmFoldAttention(nn.Cell):
 class EsmFoldTriangleAttention(nn.Cell):
 
     """
-    This class represents an attention mechanism called EsmFoldTriangleAttention, which is used in the ESMFold model. It is designed to calculate attention weights between pairs of elements in a tensor. 
-    
+    This class represents an attention mechanism called EsmFoldTriangleAttention, which is used in the ESMFold model.
+    It is designed to calculate attention weights between pairs of elements in a tensor.
+
     The EsmFoldTriangleAttention class inherits from the nn.Cell class and has the following attributes:
-    
+
     Attributes:
-        c_in: 
+        c_in:
             Input channel dimension.
-        c_hidden: 
+        c_hidden:
             Overall hidden channel dimension (not per-head).
-        no_heads: 
+        no_heads:
             Number of attention heads.
-        starting: 
+        starting:
             Flag indicating if the attention is applied to the starting point of a pair.
-        inf: 
+        inf:
             Value used as infinity for masking.
-        layer_norm: 
+        layer_norm:
             Layer normalization module applied to the input tensor.
-        linear: 
+        linear:
             Linear transformation layer used for computing triangle biases.
-        mha: 
+        mha:
             EsmFoldAttention module used for calculating attention weights.
-    
+
     Methods:
-        __init__(self, c_in, c_hidden, no_heads, starting=True, inf=1000000000.0):
+        __init__:
             Initializes an instance of the EsmFoldTriangleAttention class.
-        
-        _chunk(self, x, biases, chunk_size, use_memory_efficient_kernel=False, use_lma=False, inplace_safe=False):
+
+        _chunk:
             Splits the input tensor into chunks and applies the EsmFoldAttention module to each chunk.
-        
-        construct(self, x, mask=None, chunk_size=None, use_memory_efficient_kernel=False, use_lma=False, inplace_safe=False):
+
+        construct:
             Applies the attention mechanism to the input tensor and returns the output tensor.
     """
     def __init__(self, c_in, c_hidden, no_heads, starting=True, inf=1e9):
@@ -727,19 +736,19 @@ class EsmFoldTriangleMultiplicativeUpdate(nn.Cell):
     def __init__(self, config, _outgoing=True):
         """
         Initializes an instance of the EsmFoldTriangleMultiplicativeUpdate class.
-        
+
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters.
-            _outgoing (bool): A boolean indicating whether the update is outgoing (default is True). 
-        
+            _outgoing (bool): A boolean indicating whether the update is outgoing (default is True).
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If config is not provided or is not of the expected type.
-            - ValueError: If config.pairwise_state_dim is not accessible or does not have the expected value.
-            - RuntimeError: If an issue occurs during the initialization of linear layers or normalization layers.
+            TypeError: If config is not provided or is not of the expected type.
+            ValueError: If config.pairwise_state_dim is not accessible or does not have the expected value.
+            RuntimeError: If an issue occurs during the initialization of linear layers or normalization layers.
         """
         super().__init__()
         c_hidden = config.pairwise_state_dim
@@ -762,16 +771,17 @@ class EsmFoldTriangleMultiplicativeUpdate(nn.Cell):
     ) -> mindspore.Tensor:
         """
         Combines two projections using a multiplicative update method.
-        
+
         Args:
             self (EsmFoldTriangleMultiplicativeUpdate): The instance of the EsmFoldTriangleMultiplicativeUpdate class.
             a (mindspore.Tensor): The first projection tensor.
             b (mindspore.Tensor): The second projection tensor.
-            _inplace_chunk_size (Optional[int], optional): The size of the chunk for in-place computation. Defaults to None.
-        
+            _inplace_chunk_size (Optional[int], optional): The size of the chunk for in-place computation.
+                Defaults to None.
+
         Returns:
             mindspore.Tensor: The combined projection tensor.
-        
+
         Raises:
             None.
         """
@@ -1128,9 +1138,10 @@ class EsmFoldPreTrainedModel(EsmPreTrainedModel):
 class EsmFoldSelfAttention(nn.Cell):
 
     """
-    This class represents a self-attention mechanism for processing sequences, specifically designed for handling sequences of varying lengths. 
+    This class represents a self-attention mechanism for processing sequences, specifically designed for handling
+    sequences of varying lengths.
     It implements a multi-head self-attention mechanism with optional gating, bias, and masking capabilities.
-    
+
     Attributes:
         embed_dim (int): The dimension of the input embedding.
         num_heads (int): The number of attention heads.
@@ -1140,21 +1151,23 @@ class EsmFoldSelfAttention(nn.Cell):
         o_proj (nn.Dense): Output projection layer.
         g_proj (nn.Dense): Gating projection layer (if gated is True).
         rescale_factor (float): Scaling factor for the attention weights.
-    
+
     Methods:
         construct(self, x, mask=None, bias=None, indices=None):
             Performs self-attention on the input batch of sequences with optional mask and external pairwise bias.
-            
+
             Inputs:
-                x (Tensor): Batch of input sequences of shape (B x L x C).
-                mask (Tensor, optional): Batch of boolean masks where 1 denotes valid positions and 0 denotes padding positions of shape (B x L_k).
-                bias (Tensor, optional): Batch of scalar pairwise attention biases of shape (B x Lq x Lk x num_heads).
-                indices (Tensor, optional): Additional indices for attention computation.
-            
+
+            - x (Tensor): Batch of input sequences of shape (B x L x C).
+            - mask (Tensor, optional): Batch of boolean masks where 1 denotes valid positions and 0 denotes padding positions of shape (B x L_k).
+            - bias (Tensor, optional): Batch of scalar pairwise attention biases of shape (B x Lq x Lk x num_heads).
+            - indices (Tensor, optional): Additional indices for attention computation.
+
             Outputs:
-                y (Tensor): Sequence projection of shape (B x L x embed_dim).
-                attention_maps (Tensor): Attention maps of shape (B x L x L x num_heads).
-    
+
+            - y (Tensor): Sequence projection of shape (B x L x embed_dim).
+            - attention_maps (Tensor): Attention maps of shape (B x L x L x num_heads).
+
     Note:
         - Gating mechanism is applied if 'gated' is set to True.
         - The attention weights are softmax normalized.
@@ -1162,22 +1175,22 @@ class EsmFoldSelfAttention(nn.Cell):
         - Masking is supported to handle sequences of different lengths.
     """
     def __init__(self, embed_dim, num_heads, head_width, gated=False):
-        """ 
+        """
         Initializes the EsmFoldSelfAttention class.
-        
+
         Args:
             self: The instance of the class.
             embed_dim (int): The dimension of the input embeddings.
             num_heads (int): The number of attention heads.
             head_width (int): The width of each attention head.
             gated (bool, optional): Specifies whether the attention mechanism is gated. Defaults to False.
-        
+
         Returns:
-            None. This method initializes the EsmFoldSelfAttention class and does not return any value.
-        
+            None.
+
         Raises:
             AssertionError: If embed_dim is not equal to the product of num_heads and head_width.
-        
+
         """
         super().__init__()
         assert embed_dim == num_heads * head_width
@@ -1205,10 +1218,10 @@ class EsmFoldSelfAttention(nn.Cell):
 
         Inputs:
             x: batch of input sequneces (.. x L x C) mask: batch of boolean masks where 1=valid, 0=padding position (..
-            x L_k) bias: batch of scalar pairwise attention biases (.. x Lq x Lk x num_heads)
+                x L_k) bias: batch of scalar pairwise attention biases (.. x Lq x Lk x num_heads)
 
         Outputs:
-          sequence projection (B x L x embed_dim), attention maps (B x L x L x num_heads)
+            sequence projection (B x L x embed_dim), attention maps (B x L x L x num_heads)
         """
         t = self.proj(x).view(*x.shape[:2], self.num_heads, -1)
         t = t.permute(0, 2, 1, 3)
@@ -1245,17 +1258,19 @@ class EsmFoldDropout(nn.Cell):
     def __init__(self, r: float, batch_dim: Union[int, List[int]]):
         """
         Initializes an instance of the EsmFoldDropout class.
-        
+
         Args:
             self: The instance of the class.
             r (float): The dropout rate value.
-            batch_dim (Union[int, List[int]]): The dimension(s) of the input batch. If an integer is provided, it will be converted to a list with that integer as the only element.
-        
+            batch_dim (Union[int, List[int]]):
+                The dimension(s) of the input batch.
+                If an integer is provided, it will be converted to a list with that integer as the only element.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
 
@@ -1268,18 +1283,18 @@ class EsmFoldDropout(nn.Cell):
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs a modified tensor with dropout for the EsmFoldDropout class.
-        
+
         Args:
             self: An instance of the EsmFoldDropout class.
             x (mindspore.Tensor): The input tensor for which the modified tensor is constructed.
-        
+
         Returns:
             mindspore.Tensor: Returns a new tensor, which is the result of applying dropout to the input tensor.
-        
+
         Raises:
-            - TypeError: If the input x is not of type mindspore.Tensor.
-            - ValueError: If the shape manipulation encounters an error during the construction process.
-            - RuntimeError: If there is a runtime issue during the execution of the method.
+            TypeError: If the input x is not of type mindspore.Tensor.
+            ValueError: If the shape manipulation encounters an error during the construction process.
+            RuntimeError: If there is a runtime issue during the execution of the method.
         """
         shape = list(x.shape)
         if self.batch_dim is not None:
@@ -1290,55 +1305,58 @@ class EsmFoldDropout(nn.Cell):
 
 class EsmFoldSequenceToPair(nn.Cell):
 
-    """This class represents a neural network model for transforming sequence states into pairwise states using an attention mechanism.
-    
-    This class inherits from nn.Cell and includes methods for initialization and constructing the pairwise states from sequence states.
-    
+    """
+    This class represents a neural network model for transforming sequence states into pairwise states
+    using an attention mechanism.
+
+    This class inherits from nn.Cell and includes methods for initialization and constructing the pairwise states
+    from sequence states.
+
     Attributes:
         layernorm (nn.LayerNorm): A layer normalization module for normalizing the sequence state dimensions.
         proj (nn.Dense): A fully connected layer for projecting the sequence state into an inner dimension space.
         o_proj (nn.Dense): A fully connected layer for projecting the inner dimension space into pairwise state dimensions.
-    
+
     Methods:
-        __init__(self, sequence_state_dim, inner_dim, pairwise_state_dim): Initializes the EsmFoldSequenceToPair instance with the specified dimensions.
-        
-        construct(self, sequence_state): Transforms the input sequence state tensor into pairwise state tensor.
-    
+        __init__: Initializes the EsmFoldSequenceToPair instance with the specified dimensions.
+
+        construct: Transforms the input sequence state tensor into pairwise state tensor.
+
     Args:
         sequence_state_dim (int): Dimension of the input sequence state.
         inner_dim (int): Dimension of the inner representation used in the transformation.
         pairwise_state_dim (int): Dimension of the output pairwise state.
-    
+
     Inputs:
         sequence_state (Tensor): Input sequence state tensor with shape B x L x sequence_state_dim.
-    
+
     Output:
         pairwise_state (Tensor): Output pairwise state tensor with shape B x L x L x pairwise_state_dim.
-    
+
     Intermediate state:
         Intermediate state tensor with shape B x L x L x 2*inner_dim, used during the transformation process.
-    
+
     Returns:
         Tensor: Pairwise state tensor representing the relationships between elements in the input sequence state.
-    
+
     Raises:
         AssertionError: If the input sequence state tensor does not have the expected shape.
-    
+
     """
     def __init__(self, sequence_state_dim, inner_dim, pairwise_state_dim):
         """
         Initializes the EsmFoldSequenceToPair class.
-        
+
         Args:
             sequence_state_dim (int): The dimension of the input sequence state.
             inner_dim (int): The inner dimension used for projection.
             pairwise_state_dim (int): The dimension of the pairwise state.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
 
@@ -1351,10 +1369,10 @@ class EsmFoldSequenceToPair(nn.Cell):
     def construct(self, sequence_state):
         """
         Inputs:
-          sequence_state: B x L x sequence_state_dim
+            sequence_state: B x L x sequence_state_dim
 
         Output:
-          pairwise_state: B x L x L x pairwise_state_dim
+            pairwise_state: B x L x L x pairwise_state_dim
 
         Intermediate state:
           B x L x L x 2*inner_dim
@@ -1377,43 +1395,44 @@ class EsmFoldSequenceToPair(nn.Cell):
 class EsmFoldPairToSequence(nn.Cell):
 
     """
-    EsmFoldPairToSequence class represents a neural network module for converting pairwise features to sequence features using self-attention mechanism.
-    
+    EsmFoldPairToSequence class represents a neural network module for converting pairwise features to sequence features
+    using self-attention mechanism.
+
     This class inherits from nn.Cell and includes methods for initializing the module and constructing the forward pass.
-    
+
     Attributes:
         pairwise_state_dim (int): Dimension of the pairwise state features.
         num_heads (int): Number of attention heads.
-    
+
     Methods:
-        __init__(pairwise_state_dim, num_heads):
+        __init__:
             Initializes the EsmFoldPairToSequence module with the given pairwise_state_dim and num_heads.
-    
-        construct(pairwise_state):
+
+        construct:
             Applies self-attention mechanism to the input pairwise_state tensor to generate pairwise_bias tensor.
-    
+
     Args:
         pairwise_state_dim (int): Dimension of the pairwise state features.
         num_heads (int): Number of attention heads.
-    
+
     Inputs:
         pairwise_state (tensor): Input tensor of shape B x L x L x pairwise_state_dim.
-    
+
     Outputs:
         pairwise_bias (tensor): Output tensor of shape B x L x L x num_heads.
     """
     def __init__(self, pairwise_state_dim, num_heads):
         """
         Initializes an instance of the EsmFoldPairToSequence class.
-        
+
         Args:
             self: The instance of the class.
             pairwise_state_dim (int): The dimension of the pairwise state.
             num_heads (int): The number of attention heads to use.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If pairwise_state_dim or num_heads is not a positive integer.
             AttributeError: If the attributes layernorm or linear cannot be initialized.
@@ -1426,10 +1445,10 @@ class EsmFoldPairToSequence(nn.Cell):
     def construct(self, pairwise_state):
         """
         Inputs:
-          pairwise_state: B x L x L x pairwise_state_dim
+            pairwise_state: B x L x L x pairwise_state_dim
 
         Output:
-          pairwise_bias: B x L x L x num_heads
+            pairwise_bias: B x L x L x num_heads
         """
         assert len(pairwise_state.shape) == 4
         z = self.layernorm(pairwise_state)
@@ -1440,53 +1459,60 @@ class EsmFoldPairToSequence(nn.Cell):
 class EsmFoldResidueMLP(nn.Cell):
 
     """
-    This class represents a multi-layer perceptron (MLP) used for folding residues in the ESM (Evolutionary Scale Modeling) framework. It inherits from the nn.Cell class.
-    
-    The EsmFoldResidueMLP class implements a MLP architecture with layer normalization, dense layers, ReLU activation, and dropout. The MLP takes an input tensor and applies a series of linear transformations
-to produce an output tensor. The output tensor is then added element-wise to the input tensor, resulting in the folded residue representation.
-    
+    This class represents a multi-layer perceptron (MLP) used for folding residues in the ESM
+    (Evolutionary Scale Modeling) framework. It inherits from the nn.Cell class.
+
+    The EsmFoldResidueMLP class implements a MLP architecture with layer normalization, dense layers, ReLU activation,
+    and dropout. The MLP takes an input tensor and applies a series of linear transformations to produce an output
+    tensor. The output tensor is then added element-wise to the input tensor, resulting in the folded residue
+    representation.
+
     Attributes:
-        - embed_dim (int): The dimensionality of the input and output tensors.
-        - inner_dim (int): The dimensionality of the intermediate hidden layer in the MLP.
-        - dropout (float, optional): The dropout probability applied after the ReLU activation. Defaults to 0.
-    
+        embed_dim (int): The dimensionality of the input and output tensors.
+        inner_dim (int): The dimensionality of the intermediate hidden layer in the MLP.
+        dropout (float, optional): The dropout probability applied after the ReLU activation. Defaults to 0.
+
     Methods:
-        - __init__(self, embed_dim, inner_dim, dropout=0): Initializes an instance of the EsmFoldResidueMLP class.
+        __init__:
+            Initializes an instance of the EsmFoldResidueMLP class.
+
             - embed_dim (int): The dimensionality of the input and output tensors.
             - inner_dim (int): The dimensionality of the intermediate hidden layer in the MLP.
             - dropout (float, optional): The dropout probability applied after the ReLU activation. Defaults to 0.
-        
-        - construct(self, x): Applies the MLP to the input tensor x and returns the folded residue representation.
+
+        construct(self, x):
+            Applies the MLP to the input tensor x and returns the folded residue representation.
+
             - x (Tensor): The input tensor of shape (batch_size, embed_dim).
-    
-    Example usage:
-    
-    embed_dim = 128
-    inner_dim = 256
-    dropout = 0.2
-    
-    mlp = EsmFoldResidueMLP(embed_dim, inner_dim, dropout)
-    input_tensor = torch.randn(batch_size, embed_dim)
-    
-    output = mlp.construct(input_tensor)
-    
+
+    Example:
+        ```python
+        >>> embed_dim = 128
+        >>> inner_dim = 256
+        >>> dropout = 0.2
+        ...
+        >>> mlp = EsmFoldResidueMLP(embed_dim, inner_dim, dropout)
+        >>> input_tensor = torch.randn(batch_size, embed_dim)
+        ...
+        >>> output = mlp.construct(input_tensor)
+        ```
     """
     def __init__(self, embed_dim, inner_dim, dropout=0):
         """
         Initializes the EsmFoldResidueMLP class.
-        
+
         Args:
             self (object): The instance of the class.
             embed_dim (int): The dimension of the input embeddings.
             inner_dim (int): The dimension of the inner layer.
             dropout (float, optional): The dropout probability. Defaults to 0.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If embed_dim or inner_dim is not an integer, or if dropout is not a float.
-            - ValueError: If embed_dim or inner_dim is less than or equal to 0, or if dropout is not within the range [0, 1].
+            TypeError: If embed_dim or inner_dim is not an integer, or if dropout is not a float.
+            ValueError: If embed_dim or inner_dim is less than or equal to 0, or if dropout is not within the range [0, 1].
         """
         super().__init__()
 
@@ -1501,17 +1527,17 @@ to produce an output tensor. The output tensor is then added element-wise to the
     def construct(self, x):
         """
         Constructs an output value by adding the input value with the result of the multi-layer perceptron (MLP) operation.
-        
+
         Args:
             self (EsmFoldResidueMLP): Instance of the EsmFoldResidueMLP class.
             x (any): Input value to be used in the construction process.
-        
+
         Returns:
-            None. The constructed value is returned as the result of adding the input value with the MLP operation.
-        
+            None: The constructed value is returned as the result of adding the input value with the MLP operation.
+
         Raises:
-            - TypeError: If the input value 'x' is not compatible for addition with the MLP operation.
-            - ValueError: If the MLP operation encounters any unexpected issues during computation.
+            TypeError: If the input value 'x' is not compatible for addition with the MLP operation.
+            ValueError: If the MLP operation encounters any unexpected issues during computation.
         """
         return x + self.mlp(x)
 
@@ -1519,52 +1545,64 @@ to produce an output tensor. The output tensor is then added element-wise to the
 class EsmFoldTriangularSelfAttentionBlock(nn.Cell):
 
     """
-    This class represents a block of Triangular Self-Attention for the EsmFold model. It is used to process sequence and pairwise states in the EsmFold model.
-    
+    This class represents a block of Triangular Self-Attention for the EsmFold model.
+    It is used to process sequence and pairwise states in the EsmFold model.
+
     Attributes:
         layernorm_1 (nn.LayerNorm): A layer normalization module for the sequence state dimension.
         sequence_to_pair (EsmFoldSequenceToPair): A module that converts the sequence state to pairwise state.
         pair_to_sequence (EsmFoldPairToSequence): A module that converts the pairwise state to sequence state.
         seq_attention (EsmFoldSelfAttention): A self-attention module for the sequence state.
-        tri_mul_out (EsmFoldTriangleMultiplicativeUpdate): A module that performs triangular multiplicative update on the pairwise state.
-        tri_mul_in (EsmFoldTriangleMultiplicativeUpdate): A module that performs triangular multiplicative update on the pairwise state.
-        tri_att_start (EsmFoldTriangleAttention): A module that performs triangular attention on the pairwise state starting from a specific position.
-        tri_att_end (EsmFoldTriangleAttention): A module that performs triangular attention on the pairwise state ending at a specific position.
+        tri_mul_out (EsmFoldTriangleMultiplicativeUpdate):
+            A module that performs triangular multiplicative update on the pairwise state.
+        tri_mul_in (EsmFoldTriangleMultiplicativeUpdate):
+            A module that performs triangular multiplicative update on the pairwise state.
+        tri_att_start (EsmFoldTriangleAttention):
+            A module that performs triangular attention on the pairwise state starting from a specific position.
+        tri_att_end (EsmFoldTriangleAttention):
+            A module that performs triangular attention on the pairwise state ending at a specific position.
         mlp_seq (EsmFoldResidueMLP): A multilayer perceptron module for the sequence state.
         mlp_pair (EsmFoldResidueMLP): A multilayer perceptron module for the pairwise state.
         drop (nn.Dropout): A dropout module.
         row_drop (EsmFoldDropout): A dropout module that applies dropout on rows of the pairwise state.
         col_drop (EsmFoldDropout): A dropout module that applies dropout on columns of the pairwise state.
-    
+
     Methods:
         construct(sequence_state, pairwise_state, mask=None, chunk_size=None, **__kwargs):
             Process the sequence and pairwise states.
-    
+
             Args:
-                sequence_state (torch.Tensor): Input sequence state tensor of shape (batch_size, sequence_length, sequence_state_dim).
-                pairwise_state (torch.Tensor): Input pairwise state tensor of shape (batch_size, sequence_length, sequence_length, pairwise_state_dim).
-                mask (torch.Tensor, optional): Boolean tensor of valid positions, with shape (batch_size, sequence_length). Defaults to None.
-                chunk_size (int, optional): The size of the attention chunks. Defaults to None.
-    
+
+            - sequence_state (torch.Tensor): Input sequence state tensor of shape
+            (batch_size, sequence_length, sequence_state_dim).
+            - pairwise_state (torch.Tensor): Input pairwise state tensor of shape
+            (batch_size, sequence_length, sequence_length, pairwise_state_dim).
+            - mask (torch.Tensor, optional): Boolean tensor of valid positions, with shape
+            (batch_size, sequence_length). Defaults to None.
+            - chunk_size (int, optional): The size of the attention chunks. Defaults to None.
+
             Returns:
-                sequence_state (torch.Tensor): Processed sequence state tensor of shape (batch_size, sequence_length, sequence_state_dim).
-                pairwise_state (torch.Tensor): Processed pairwise state tensor of shape (batch_size, sequence_length, sequence_length, pairwise_state_dim).
+
+            - sequence_state (torch.Tensor): Processed sequence state tensor of shape
+            (batch_size, sequence_length, sequence_state_dim).
+            - pairwise_state (torch.Tensor): Processed pairwise state tensor of shape
+            (batch_size, sequence_length, sequence_length, pairwise_state_dim).
     """
     def __init__(self, config):
         """
         This method initializes an instance of the EsmFoldTriangularSelfAttentionBlock class.
-        
+
         Args:
             self: The instance of the EsmFoldTriangularSelfAttentionBlock class.
             config: The configuration object containing parameters for the attention block.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - NotImplementedError: If the method is not implemented for any reason.
-            - ValueError: If the provided configuration object is invalid or missing required parameters.
-            - TypeError: If the provided configuration object is of incorrect type.
+            NotImplementedError: If the method is not implemented for any reason.
+            ValueError: If the provided configuration object is invalid or missing required parameters.
+            TypeError: If the provided configuration object is of incorrect type.
         """
         super().__init__()
         self.config = config
@@ -1672,40 +1710,42 @@ class EsmCategoricalMixture:
 
     """
     EsmCategoricalMixture represents a categorical mixture distribution for probability calculations based on given logits.
-    
-    This class provides methods for initializing the distribution, calculating the log probability of a given value, and computing the mean of the distribution.
-    
+
+    This class provides methods for initializing the distribution, calculating the log probability of a given value,
+    and computing the mean of the distribution.
+
     Attributes:
         param: The logits parameter for the categorical mixture distribution.
         bins: The number of bins for the distribution (default is 50).
         start: The starting value for the bins (default is 0).
         end: The ending value for the bins (default is 1).
-    
+
     Methods:
-        __init__(self, param, bins=50, start=0, end=1): Initializes the categorical mixture distribution with the given parameters.
-        log_prob(self, true): Calculates the log probability of a given value within the distribution.
-        mean(self): Computes the mean of the categorical mixture distribution.
-    
-    Note: This class inherits from an unspecified parent class.
+        __init__: Initializes the categorical mixture distribution with the given parameters.
+        log_prob: Calculates the log probability of a given value within the distribution.
+        mean: Computes the mean of the categorical mixture distribution.
+
+    Note:
+        This class inherits from an unspecified parent class.
     """
     def __init__(self, param, bins=50, start=0, end=1):
-        """ 
+        """
         Initializes an instance of the EsmCategoricalMixture class.
-        
+
         Args:
             self: Instance of the EsmCategoricalMixture class.
             param: The logits parameter to be assigned to the instance.
             bins: Number of bins for creating the v_bins attribute. Default is 50.
             start: The starting value for the linspace function. Default is 0.
             end: The ending value for the linspace function. Default is 1.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the start value is greater than or equal to the end value.
-            - TypeError: If the param or bins parameter types are incompatible.
-            - ValueError: If the bins parameter is less than 1.
+            ValueError: If the start value is greater than or equal to the end value.
+            TypeError: If the param or bins parameter types are incompatible.
+            ValueError: If the bins parameter is less than 1.
         """
         # All tensors are of shape ..., bins.
         self.logits = param
@@ -1715,20 +1755,23 @@ class EsmCategoricalMixture:
     def log_prob(self, true):
         """
         This method calculates the log probability of a given true value in the context of a categorical mixture model.
-        
+
         Args:
             self: EsmCategoricalMixture
                 The instance of the EsmCategoricalMixture class.
             true: torch.Tensor
-                The true value for which the log probability needs to be calculated. It should be a tensor of shape (batch_size,) where batch_size is the number of samples. The true values should be within the
-range of valid classes for the categorical mixture model.
-        
+                The true value for which the log probability needs to be calculated.
+                It should be a tensor of shape (batch_size,) where batch_size is the number of samples.
+                The true values should be within the range of valid classes for the categorical mixture model.
+
         Returns:
-            None: 
-                This method does not return any value. The log probability is calculated and stored internally within the EsmCategoricalMixture instance.
-        
+            None:
+                This method does not return any value. The log probability is calculated and stored internally within
+                the EsmCategoricalMixture instance.
+
         Raises:
-            ValueError: If the true tensor does not have the expected shape or if it contains values outside the range of valid classes for the categorical mixture model.
+            ValueError: If the true tensor does not have the expected shape or if it contains values outside the
+                range of valid classes for the categorical mixture model.
             IndexError: If the true tensor index is out of bounds.
         """
         # Shapes are:
@@ -1741,17 +1784,17 @@ range of valid classes for the categorical mixture model.
     def mean(self):
         """
         Method 'mean' calculates the mean value of the categorical mixture distribution in the EsmCategoricalMixture class.
-        
+
         Args:
             self: The instance of the EsmCategoricalMixture class.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - NotImplementedError: If the method is called without implementing it in a subclass.
-            - ValueError: If the input data is not in the expected format.
-            - RuntimeError: If the operation fails due to unforeseen circumstances.
+            NotImplementedError: If the method is called without implementing it in a subclass.
+            ValueError: If the input data is not in the expected format.
+            RuntimeError: If the operation fails due to unforeseen circumstances.
         """
         return (ops.softmax(self.logits, -1) @ self.v_bins.unsqueeze(1)).squeeze(-1)
 
@@ -1759,20 +1802,20 @@ range of valid classes for the categorical mixture model.
 def categorical_lddt(logits, bins=50):
     """
     This function calculates the average log-likelihood of a categorical distribution.
-    
+
     Args:
         logits (array-like): The logits representing the categorical distribution.
             It should be a 2-dimensional array-like object with shape (n_samples, n_classes),
             where n_samples is the number of samples and n_classes is the number of classes.
         bins (int, optional): The number of bins used for discretizing the logits. Defaults to 50.
-    
+
     Returns:
         float: The average log-likelihood of the categorical distribution.
-    
+
     Raises:
         ValueError: If the logits parameter is not a 2-dimensional array-like object.
         ValueError: If the bins parameter is not a positive integer.
-    
+
     """
     # Logits are ..., 37, bins.
     return EsmCategoricalMixture(logits, bins=bins).mean()
@@ -1783,10 +1826,10 @@ def get_axial_mask(mask):
     Helper to convert B x L mask of valid positions to axial mask used in row column attentions.
 
     Input:
-      mask: B x L tensor of booleans
+        mask: B x L tensor of booleans
 
     Output:
-      mask: B x L x L tensor of booleans
+        mask: B x L x L tensor of booleans
     """
     if mask is None:
         return None
@@ -1802,40 +1845,43 @@ def get_axial_mask(mask):
 class EsmFoldRelativePosition(nn.Cell):
 
     """
-    Represents a class for constructing relative position embeddings for protein folding using the ESM (Evolutionary Scale Modeling) framework. 
-    
-    This class inherits from the nn.Cell class and provides methods for initializing the class and constructing pairwise state embeddings based on residue indices and optional masking.
-    
+    Represents a class for constructing relative position embeddings for protein folding using the ESM
+    (Evolutionary Scale Modeling) framework.
+
+    This class inherits from the nn.Cell class and provides methods for initializing the class and constructing pairwise
+    state embeddings based on residue indices and optional masking.
+
     Attributes:
-        - bins: An integer representing the number of position bins used for constructing the embeddings.
-        - embedding: An instance of nn.Embedding used for creating the embeddings based on the position differences.
-    
+        bins: An integer representing the number of position bins used for constructing the embeddings.
+        embedding: An instance of nn.Embedding used for creating the embeddings based on the position differences.
+
     Methods:
-        - __init__(config): Initializes the EsmFoldRelativePosition class with the provided configuration.
-        - construct(residue_index, mask=None): Constructs pairwise state embeddings based on the given residue indices and optional mask.
-    
+        __init__: Initializes the EsmFoldRelativePosition class with the provided configuration.
+        construct: Constructs pairwise state embeddings based on the given residue indices and optional mask.
+
     Args:
-        - config: An object containing configuration parameters for initializing the class.
-        - residue_index: A B x L tensor of indices (dtype=torch.long) representing the residue indices.
-        - mask: A B x L tensor of booleans representing an optional mask.
-    
+        config: An object containing configuration parameters for initializing the class.
+        residue_index: A B x L tensor of indices (dtype=torch.long) representing the residue indices.
+        mask: A B x L tensor of booleans representing an optional mask.
+
     Returns:
-        - pairwise_state: A B x L x L x pairwise_state_dim tensor of embeddings based on the input residue indices and mask.
-    
+        pairwise_state: A B x L x L x pairwise_state_dim tensor of embeddings based on the input residue indices and mask.
+
     Raises:
-        - ValueError: If the dtype of residue_index is not torch.long or if the shapes of residue_index and mask are inconsistent.
+        ValueError:
+            If the dtype of residue_index is not torch.long or if the shapes of residue_index and mask are inconsistent.
     """
     def __init__(self, config):
         """
         Initializes an instance of the EsmFoldRelativePosition class.
-        
+
         Args:
             self (EsmFoldRelativePosition): The current instance of the class.
             config: The configuration object containing the necessary parameters.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1849,10 +1895,10 @@ class EsmFoldRelativePosition(nn.Cell):
     def construct(self, residue_index, mask=None):
         """
         Input:
-          residue_index: B x L tensor of indices (dytpe=torch.long) mask: B x L tensor of booleans
+            residue_index: B x L tensor of indices (dytpe=torch.long) mask: B x L tensor of booleans
 
         Output:
-          pairwise_state: B x L x L x pairwise_state_dim tensor of embeddings
+            pairwise_state: B x L x L x pairwise_state_dim tensor of embeddings
         """
         if residue_index.dtype != mindspore.int64:
             raise ValueError(f"`residue_index` has dtype {residue_index.dtype}, it should be `torch.long`.")
@@ -1876,32 +1922,36 @@ class EsmFoldRelativePosition(nn.Cell):
 class EsmFoldAngleResnetBlock(nn.Cell):
 
     """
-    This class represents an EsmFoldAngleResnetBlock, which is a block used in the construction of an EsmFold model. 
+    This class represents an EsmFoldAngleResnetBlock, which is a block used in the construction of an EsmFold model.
     It inherits from the nn.Cell class.
-    
+
     Attributes:
-        linear_1 (EsmFoldLinear): A linear layer used in the block, initialized with a rectified linear unit (ReLU) activation function.
-        linear_2 (EsmFoldLinear): Another linear layer used in the block, initialized with a final activation function.
+        linear_1 (EsmFoldLinear):
+            A linear layer used in the block, initialized with a rectified linear unit (ReLU) activation function.
+        linear_2 (EsmFoldLinear):
+            Another linear layer used in the block, initialized with a final activation function.
         relu (nn.ReLU): An instance of the ReLU activation function.
-    
+
     Methods:
-        __init__(self, config): Initializes the EsmFoldAngleResnetBlock with the given configuration.
-        construct(self, a: mindspore.Tensor) -> mindspore.Tensor: Constructs the EsmFoldAngleResnetBlock using the input tensor.
-    
+        __init__: Initializes the EsmFoldAngleResnetBlock with the given configuration.
+        construct: Constructs the EsmFoldAngleResnetBlock using the input tensor.
+
     """
     def __init__(self, config):
         """
         Initializes an EsmFoldAngleResnetBlock object.
-        
+
         Args:
             self (EsmFoldAngleResnetBlock): The current instance of the EsmFoldAngleResnetBlock class.
-            config (object): A configuration object containing the parameters for initializing the EsmFoldAngleResnetBlock.
+            config (object):
+                A configuration object containing the parameters for initializing the EsmFoldAngleResnetBlock.
+
                 - resnet_dim (int): The dimension of the resnet block.
                 - init (str): The initialization method for the linear layers. Possible values are 'relu' and 'final'.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the provided config object is not of the expected type.
             ValueError: If the config object does not contain the required parameters.
@@ -1916,14 +1966,14 @@ class EsmFoldAngleResnetBlock(nn.Cell):
     def construct(self, a: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs a computation graph for the EsmFoldAngleResnetBlock.
-        
+
         Args:
             self (EsmFoldAngleResnetBlock): The instance of the EsmFoldAngleResnetBlock class.
             a (mindspore.Tensor): The input tensor for the computation graph.
-        
+
         Returns:
             mindspore.Tensor: The output tensor resulting from the computation graph.
-        
+
         Raises:
             None
         """
@@ -1944,17 +1994,19 @@ class EsmFoldAngleResnet(nn.Cell):
     def __init__(self, config):
         '''
         Initializes the EsmFoldAngleResnet class.
-        
+
         Args:
             self (EsmFoldAngleResnet): The instance of the EsmFoldAngleResnet class.
-            config: The configuration object containing parameters for the EsmFoldAngleResnet initialization.
+            config:
+                The configuration object containing parameters for the EsmFoldAngleResnet initialization.
+
                 - Type: object
                 - Purpose: Specifies the configuration settings for the EsmFoldAngleResnet class.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         '''
@@ -2023,47 +2075,50 @@ class EsmFoldInvariantPointAttention(nn.Cell):
     Implements Algorithm 22.
     """
     def __init__(self, config):
-        '''Initializes an instance of the EsmFoldInvariantPointAttention class.
-        
+        '''
+        Initializes an instance of the EsmFoldInvariantPointAttention class.
+
         Args:
             self: The instance of the class.
             config: An object containing the configuration settings.
-            
+
         Returns:
             None
-            
+
         Raises:
             None
-        
+
         Description:
-        This method initializes the EsmFoldInvariantPointAttention instance by setting various parameters and creating necessary objects.
-        
+            This method initializes the EsmFoldInvariantPointAttention instance by setting various parameters and
+            creating necessary objects.
+
         Parameters:
-        - self: The instance of the class.
-        - config: An object containing the configuration settings.
-        
+            self: The instance of the class.
+            config: An object containing the configuration settings.
+
         The config object must have the following attributes:
+
         - sequence_dim: An integer representing the dimension of the sequence.
         - pairwise_dim: An integer representing the dimension of the pairwise data.
         - ipa_dim: An integer representing the dimension of the ipa data.
         - num_heads_ipa: An integer representing the number of heads for the ipa.
         - num_qk_points: An integer representing the number of query and key points.
         - num_v_points: An integer representing the number of value points.
-        
+
         Attributes:
-        - hidden_dim: An integer representing the ipa dimension.
-        - num_heads: An integer representing the number of ipa heads.
-        - num_qk_points: An integer representing the number of query and key points.
-        - num_v_points: An integer representing the number of value points.
-        - linear_q: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hc.
-        - linear_kv: An instance of the EsmFoldLinear class with input dimension c_s and output dimension 2 * hc.
-        - linear_q_points: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hpq.
-        - linear_kv_points: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hpkv.
-        - linear_b: An instance of the EsmFoldLinear class with input dimension c_z and output dimension num_heads_ipa.
-        - head_weights: A Parameter object representing the weights of the ipa heads.
-        - linear_out: An instance of the EsmFoldLinear class with input dimension concat_out_dim and output dimension c_s.
-        - softmax: An instance of the Softmax class used for softmax activation.
-        - softplus: An instance of the Softplus class used for softplus activation.
+            hidden_dim: An integer representing the ipa dimension.
+            num_heads: An integer representing the number of ipa heads.
+            num_qk_points: An integer representing the number of query and key points.
+            num_v_points: An integer representing the number of value points.
+            linear_q: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hc.
+            linear_kv: An instance of the EsmFoldLinear class with input dimension c_s and output dimension 2 * hc.
+            linear_q_points: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hpq.
+            linear_kv_points: An instance of the EsmFoldLinear class with input dimension c_s and output dimension hpkv.
+            linear_b: An instance of the EsmFoldLinear class with input dimension c_z and output dimension num_heads_ipa.
+            head_weights: A Parameter object representing the weights of the ipa heads.
+            linear_out: An instance of the EsmFoldLinear class with input dimension concat_out_dim and output dimension c_s.
+            softmax: An instance of the Softmax class used for softmax activation.
+            softplus: An instance of the Softplus class used for softplus activation.
         '''
         super().__init__()
         self.config = config
@@ -2246,19 +2301,19 @@ class EsmFoldBackboneUpdate(nn.Cell):
     def __init__(self, config):
         """
         Initializes the EsmFoldBackboneUpdate class.
-        
+
         Args:
             self: The instance of the class.
             config: A dictionary containing configuration parameters for the backbone update.
-                    It should include the 'sequence_dim' parameter representing the dimension of the input sequence.
-                    
+                It should include the 'sequence_dim' parameter representing the dimension of the input sequence.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not provided or is not a dictionary.
-            - ValueError: If the 'sequence_dim' parameter is missing in the config dictionary.
-            - ValueError: If the 'sequence_dim' parameter in the config dictionary is not a positive integer.
+            TypeError: If the config parameter is not provided or is not a dictionary.
+            ValueError: If the 'sequence_dim' parameter is missing in the config dictionary.
+            ValueError: If the 'sequence_dim' parameter in the config dictionary is not a positive integer.
         """
         super().__init__()
 
@@ -2281,37 +2336,40 @@ class EsmFoldStructureModuleTransitionLayer(nn.Cell):
 
     """
     EsmFoldStructureModuleTransitionLayer
-    
+
     Represents a transition layer for the EsmFold structure module, inheriting from nn.Cell.
-    
-    This class initializes with the provided configuration and constructs a transition layer for the EsmFold structure module using the specified linear layers and activation functions.
-    
+
+    This class initializes with the provided configuration and constructs a transition layer for the EsmFold structure
+    module using the specified linear layers and activation functions.
+
     Attributes:
         linear_1 (EsmFoldLinear): The first linear layer for the transition.
         linear_2 (EsmFoldLinear): The second linear layer for the transition.
         linear_3 (EsmFoldLinear): The third linear layer for the transition.
         relu (nn.ReLU): The rectified linear unit activation function.
-    
+
     Methods:
         construct(s): Constructs the transition layer for the EsmFold structure module using the input tensor 's'.
-    
+
     Returns:
         The output tensor after applying the transition layer to the input tensor 's'.
     """
     def __init__(self, config):
         """
         Initializes a new instance of the EsmFoldStructureModuleTransitionLayer class.
-        
+
         Args:
             self: The instance of the class.
-            config: The configuration object containing the parameters for initializing the transition layer.
-                Type: object
-                Purpose: Specifies the configuration parameters required for initializing the transition layer.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                The configuration object containing the parameters for initializing the transition layer.
+
+                - Type: object
+                - Purpose: Specifies the configuration parameters required for initializing the transition layer.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -2325,16 +2383,16 @@ class EsmFoldStructureModuleTransitionLayer(nn.Cell):
 
     def construct(self, s):
         """Constructs a new EsmFoldStructureModuleTransitionLayer.
-        
-        This method takes in two parameters, self and s. 
-        
+
+        This method takes in two parameters, self and s.
+
         Args:
             self (EsmFoldStructureModuleTransitionLayer): An instance of the EsmFoldStructureModuleTransitionLayer class.
             s (Tensor): The input tensor.
-        
+
         Returns:
             Tensor: The output tensor after applying linear transformations and element-wise addition.
-        
+
         Raises:
             None.
         """
@@ -2353,31 +2411,31 @@ class EsmFoldStructureModuleTransitionLayer(nn.Cell):
 class EsmFoldStructureModuleTransition(nn.Cell):
 
     """
-    The EsmFoldStructureModuleTransition class represents a module for transitioning the fold structure in a neural network. 
+    The EsmFoldStructureModuleTransition class represents a module for transitioning the fold structure in a neural network.
     This class inherits from the nn.Cell class and is used to construct transition layers for the fold structure module.
-    
+
     Attributes:
         config: A configuration object containing parameters for the module.
         layers: A CellList containing the transition layers for the module.
         dropout: A dropout layer with a specified dropout rate.
         layer_norm: A layer normalization layer for normalizing the output.
-    
+
     Methods:
-        __init__(self, config): Initializes the EsmFoldStructureModuleTransition with the given configuration.
-        construct(self, s): Constructs the transition layers for the fold structure module using the input s.
-    
+        __init__: Initializes the EsmFoldStructureModuleTransition with the given configuration.
+        construct: Constructs the transition layers for the fold structure module using the input s.
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the EsmFoldStructureModuleTransition class.
-        
+
         Args:
             self: The instance of the class.
             config: An object of type 'Config' that holds the configuration settings for the module.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -2395,18 +2453,18 @@ class EsmFoldStructureModuleTransition(nn.Cell):
     def construct(self, s):
         """
         Constructs the EsmFoldStructureModuleTransition.
-        
-        This method takes in two parameters: self and s. 
-        
+
+        This method takes in two parameters: self and s.
+
         Args:
             self (EsmFoldStructureModuleTransition): An instance of the EsmFoldStructureModuleTransition class.
             s (unknown type): The input data.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A: This method does not raise any exceptions.
+            None.
         """
         for l in self.layers:
             s = l(s)
@@ -2420,31 +2478,36 @@ class EsmFoldStructureModuleTransition(nn.Cell):
 class EsmFoldStructureModule(nn.Cell):
 
     """
-    The EsmFoldStructureModule class represents a module for predicting protein structure using Evolutionary Structure Model (ESM) and folding techniques. It inherits from the nn.Cell class.
-    
-    The class includes methods for initializing the module, constructing the protein structure prediction, and converting torsion angles to frames and literature positions to atom14 positions. The construct
-method takes evolutionary formers' output, amino acid indices, and optional sequence mask as input and returns a dictionary of predicted outputs. The _init_residue_constants method initializes constants used
-in the module for calculating torsion angles to frames and literature positions to atom14 positions.
-    
-    The class also includes the code for initializing the default frames, group indices, atom masks, and literature positions, and for converting torsion angles to frames and frames and literature positions to
-atom14 positions.
-    
+    The EsmFoldStructureModule class represents a module for predicting protein structure using Evolutionary Structure
+    Model (ESM) and folding techniques. It inherits from the nn.Cell class.
+
+    The class includes methods for initializing the module, constructing the protein structure prediction, and
+    converting torsion angles to frames and literature positions to atom14 positions.
+    The construct method takes evolutionary formers' output, amino acid indices, and optional sequence mask as input and
+    returns a dictionary of predicted outputs. The _init_residue_constants method initializes constants used
+    in the module for calculating torsion angles to frames and literature positions to atom14 positions.
+
+    The class also includes the code for initializing the default frames, group indices, atom masks, and literature
+    positions, and for converting torsion angles to frames and frames and literature positions to atom14 positions.
+
     Please note that the detailed implementation and usage of the class methods are described in the code provided.
     """
     def __init__(self, config):
         '''
         Initializes an instance of the EsmFoldStructureModule class.
-        
+
         Args:
             self (EsmFoldStructureModule): The instance of the class itself.
-            config: A configuration object containing parameters for initializing the module.
-                Type: Custom configuration object
-                Purpose: Stores various configuration parameters for the module.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                A configuration object containing parameters for initializing the module.
+
+                - Type: Custom configuration object
+                - Purpose: Stores various configuration parameters for the module.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         '''
@@ -2479,17 +2542,18 @@ atom14 positions.
         _offload_inference=False,
     ):
         """
+
         Args:
             evoformer_output_dict:
                 Dictionary containing:
-                    "single":
-                        [*, N_res, C_s] single representation
-                    "pair":
-                        [*, N_res, N_res, C_z] pair representation
+
+                - "single": [*, N_res, C_s] single representation
+                - "pair": [*, N_res, N_res, C_z] pair representation
             aatype:
                 [*, N_res] amino acid indices
             mask:
                 Optional [*, N_res] sequence mask
+
         Returns:
             A dictionary of outputs
         """
@@ -2580,28 +2644,35 @@ atom14 positions.
     def _init_residue_constants(self, float_dtype):
         """
         Initializes the residue constants required for EsmFoldStructureModule.
-        
+
         Args:
             self (EsmFoldStructureModule): An instance of the EsmFoldStructureModule class.
             float_dtype (dtype): The data type of the floating point values.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method initializes the following residue constants:
-        - default_frames: A tensor containing the default frames for rigid groups. If not already initialized, it is created using the 'restype_rigid_group_default_frame' constant and the provided float_dtype.
-        - group_idx: A tensor mapping atom14 indices to rigid group indices. If not already initialized, it is created using the 'restype_atom14_to_rigid_group' constant.
-        - atom_mask: A tensor containing the atom14 mask. If not already initialized, it is created using the 'restype_atom14_mask' constant and the provided float_dtype.
-        - lit_positions: A tensor containing the positions of atom14 rigid groups. If not already initialized, it is created using the 'restype_atom14_rigid_group_positions' constant and the provided
-float_dtype.
-        
+            This method initializes the following residue constants:
+
+            - default_frames: A tensor containing the default frames for rigid groups.
+            If not already initialized, it is created using the 'restype_rigid_group_default_frame' constant and the
+            provided float_dtype.
+            - group_idx: A tensor mapping atom14 indices to rigid group indices.
+            If not already initialized, it is created using the 'restype_atom14_to_rigid_group' constant.
+            - atom_mask: A tensor containing the atom14 mask.
+            If not already initialized, it is created using the 'restype_atom14_mask' constant and the provided
+            float_dtype.
+            - lit_positions: A tensor containing the positions of atom14 rigid groups.
+            If not already initialized, it is created using the 'restype_atom14_rigid_group_positions' constant and
+            the provided float_dtype.
+
         Note:
-        - This method should be called before using any other functionality of the EsmFoldStructureModule class.
-        - The 'float_dtype' parameter determines the precision of the floating point values used in the tensors.
+            - This method should be called before using any other functionality of the EsmFoldStructureModule class.
+            - The 'float_dtype' parameter determines the precision of the floating point values used in the tensors.
         """
         if not hasattr(self, "default_frames"):
             self.default_frames = mindspore.tensor(
@@ -2626,16 +2697,16 @@ float_dtype.
     def torsion_angles_to_frames(self, r, alpha, f):
         """
         Converts torsion angles to frames using the given parameters.
-        
+
         Args:
             self (EsmFoldStructureModule): The instance of the EsmFoldStructureModule class.
             r (numpy.ndarray): The input array of shape (N, 3) containing the residue atoms' coordinates in angstroms.
             alpha (numpy.ndarray): The input array of shape (N, 3) containing the residue angles in radians.
             f (numpy.ndarray): The input array of shape (N, 3, 3) containing the reference frames.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the input arrays have incompatible shapes or types.
             TypeError: If the input parameters are not of the expected types.
@@ -2649,17 +2720,17 @@ float_dtype.
     def frames_and_literature_positions_to_atom14_pos(self, r, f):  # [*, N, 8]  # [*, N]
         """
         Converts frames and literature positions to atom14 positions.
-        
+
         Args:
             self (EsmFoldStructureModule): The instance of the EsmFoldStructureModule class.
             r (object): The 'r' parameter representing some variable.
             f (object): The 'f' parameter representing some variable.
-        
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # Lazily initialize the residue constants on the correct device
         self._init_residue_constants(r.get_rots().dtype)
@@ -2676,41 +2747,47 @@ float_dtype.
 class EsmFoldingTrunk(nn.Cell):
 
     """
-    EsmFoldingTrunk is a neural network cell that represents the trunk of the ESM-Fold model. It inherits from the nn.Cell class and contains methods for initializing and constructing the model, as well as a
-static method for computing distograms.
-    
+    EsmFoldingTrunk is a neural network cell that represents the trunk of the ESM-Fold model.
+    It inherits from the nn.Cell class and contains methods for initializing and constructing the model, as well as a
+    static method for computing distograms.
+
     Attributes:
         config: A configuration object specifying the dimensions and parameters for the ESM-Fold model.
-    
+
     Methods:
-        __init__(self, config): Initializes the EsmFoldingTrunk instance with the provided configuration.
-        
-        set_chunk_size(self, chunk_size): Sets the chunk size for processing sequences and pair features.
-        
-        construct(self, seq_feats, pair_feats, true_aa, residx, mask, no_recycles): Constructs the ESM-Fold model using the provided input tensors and parameters, and returns the predicted structure wrapped in
-a Coordinates object.
-        
-        distogram(coords, min_bin, max_bin, num_bins): A static method that computes distograms based on the input coordinates and bin parameters.
-    
-    Note: This class assumes the presence of the required modules and dependencies for the ESM-Fold model.
+        __init__: Initializes the EsmFoldingTrunk instance with the provided configuration.
+
+        set_chunk_size: Sets the chunk size for processing sequences and pair features.
+
+        construct: Constructs the ESM-Fold model using the provided input tensors and parameters, and returns the
+        predicted structure wrapped in a Coordinates object.
+
+        distogram(coords, min_bin, max_bin, num_bins):
+            A static method that computes distograms based on the input coordinates and bin parameters.
+
+    Note:
+        This class assumes the presence of the required modules and dependencies for the ESM-Fold model.
     """
     def __init__(self, config):
         '''
         Initializes an instance of the EsmFoldingTrunk class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the EsmFoldingTrunk.
+            config:
+                An object containing the configuration parameters for the EsmFoldingTrunk.
+
                 - sequence_state_dim: An integer representing the dimension of the sequence state.
                 - pairwise_state_dim: An integer representing the dimension of the pairwise state.
                 - num_blocks: An integer specifying the number of blocks.
                 - structure_module: An object containing the configuration parameters for the structure module.
+
                     - sequence_dim: An integer representing the dimension of the sequence.
                     - pairwise_dim: An integer representing the dimension of the pairwise.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         '''
@@ -2739,16 +2816,16 @@ a Coordinates object.
     def set_chunk_size(self, chunk_size):
         """
         Sets the chunk size for the EsmFoldingTrunk.
-        
+
         Args:
             self: The instance of the EsmFoldingTrunk class.
             chunk_size (int): The size of the chunk to be set. It should be a positive integer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         # This parameter means the axial attention will be computed
         # in a chunked manner. This should make the memory used more or less O(L) instead of O(L^2).
@@ -2759,11 +2836,11 @@ a Coordinates object.
     def construct(self, seq_feats, pair_feats, true_aa, residx, mask, no_recycles):
         """
         Inputs:
-          seq_feats: B x L x C tensor of sequence features pair_feats: B x L x L x C tensor of pair features residx: B
-          x L long tensor giving the position in the sequence mask: B x L boolean tensor indicating valid residues
+            seq_feats: B x L x C tensor of sequence features pair_feats: B x L x L x C tensor of pair features residx: B
+            x L long tensor giving the position in the sequence mask: B x L boolean tensor indicating valid residues
 
         Output:
-          predicted_structure: B x L x (num_atoms_per_residue * 3) tensor wrapped in a Coordinates object
+            predicted_structure: B x L x (num_atoms_per_residue * 3) tensor wrapped in a Coordinates object
         """
         s_s_0 = seq_feats
         s_z_0 = pair_feats
@@ -2823,19 +2900,21 @@ a Coordinates object.
     def distogram(coords, min_bin, max_bin, num_bins):
         """
         Method to calculate the distance histogram based on the provided coordinates.
-        
+
         Args:
-            coords (Tensor): A tensor containing the coordinates of atoms in the structure. Expected shape should be (N, 3, L), where N is the number of atoms,
-                             3 represents x, y, z coordinates, and L is the length of the structure.
+            coords (Tensor): A tensor containing the coordinates of atoms in the structure.
+                Expected shape should be (N, 3, L), where N is the number of atoms, 3 represents x, y, z coordinates,
+                and L is the length of the structure.
             min_bin (int): The minimum distance value for binning the distances.
             max_bin (int): The maximum distance value for binning the distances.
             num_bins (int): The number of bins to divide the distance range into.
-        
+
         Returns:
-            None. The method calculates the distance histogram and returns the histogram bins.
-        
+            None: The method calculates the distance histogram and returns the histogram bins.
+
         Raises:
-            ValueError: If the input coordinates tensor is not in the expected shape or if any of the distance parameters (min_bin, max_bin, num_bins) are invalid.
+            ValueError: If the input coordinates tensor is not in the expected shape or if any of the distance
+                parameters (min_bin, max_bin, num_bins) are invalid.
             RuntimeError: If there is an issue with the calculation process.
         """
         # Coords are [... L x 3 x 3], where it's [N, CA, C] x 3 coordinates.
@@ -2859,35 +2938,37 @@ a Coordinates object.
 class EsmForProteinFolding(EsmPreTrainedModel):
 
     """
-    EsmForProteinFolding is a class that represents a model for protein folding using the ESM (Evolutionary Scale Modeling) approach. It inherits from EsmPreTrainedModel and implements methods for protein
-structure prediction and inference.
-    
-    The class includes methods for initializing the model, converting input sequences to protein structures, and generating Protein Data Bank (PDB) files from model outputs. It also provides functionality for
-language model representations, masking input sequences, and inferring protein structures from input sequences.
-    
-    Example usage:
-    
-    from transformers import AutoTokenizer, EsmForProteinFolding
-    
-    model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
-    inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
-    outputs = model(**inputs)
-    folded_positions = outputs.positions
-    
+    EsmForProteinFolding is a class that represents a model for protein folding using the ESM
+    (Evolutionary Scale Modeling) approach.
+    It inherits from EsmPreTrainedModel and implements methods for protein structure prediction and inference.
+
+    The class includes methods for initializing the model, converting input sequences to protein structures,
+    and generating Protein Data Bank (PDB) files from model outputs. It also provides functionality for
+    language model representations, masking input sequences, and inferring protein structures from input sequences.
+
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, EsmForProteinFolding
+        ...
+        >>> model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
+        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
+        >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
+        >>> outputs = model(**inputs)
+        >>> folded_positions = outputs.positions
+        ```
     """
     _no_split_modules = ["EsmFoldStructureModule", "EsmFoldTriangularSelfAttentionBlock"]
 
     def __init__(self, config):
         """Initializes an instance of the EsmForProteinFolding class.
-        
+
         Args:
             self: The instance of the class.
             config: An object containing configuration settings for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -2947,27 +3028,32 @@ language model representations, masking input sequences, and inferring protein s
     @staticmethod
     def _af2_to_esm_from_vocab_list(vocab_list: List[str]) -> mindspore.Tensor:
         """
-        Converts a vocabulary list to a mindspore Tensor, specifically for the ESM (Evolutionary Scale Modeling) implementation, in the context of protein folding.
-        
+        Converts a vocabulary list to a mindspore Tensor, specifically for the ESM (Evolutionary Scale Modeling)
+        implementation, in the context of protein folding.
+
         Args:
-            vocab_list (List[str]): A list of strings representing the vocabulary. Each string corresponds to a specific residue or token.
-        
+            vocab_list (List[str]): A list of strings representing the vocabulary.
+                Each string corresponds to a specific residue or token.
+
         Returns:
-            mindspore.Tensor: The resulting Tensor representing the reordered vocabulary list. The Tensor contains the indices of the vocabulary list elements, with the first element being the index of '<pad>'
-and the following elements being the indices of the residues from the 'restypes_with_x' list.
-        
+            mindspore.Tensor: The resulting Tensor representing the reordered vocabulary list.
+                The Tensor contains the indices of the vocabulary list elements, with the first element being the index
+                of '<pad>' and the following elements being the indices of the residues from the 'restypes_with_x' list.
+
         Raises:
             None.
-        
+
         Note:
             - The '<pad>' element is a special token used for padding sequences.
             - 'residue_constants.restypes_with_x' is a predefined list of residue types with an additional 'x' type.
-        
+
         Example:
+            ```python
             >>> vocab_list = ['<pad>', 'A', 'C', 'D', 'E', 'F', 'G']
             >>> EsmForProteinFolding._af2_to_esm_from_vocab_list(vocab_list)
             Tensor(shape=[8], dtype=Int32, value=
             [0, 1, 2, 3, 4, 5, 6])
+            ```
         """
         # Remember that t is shifted from residue_constants by 1 (0 is padding).
         esm_reorder = [vocab_list.index("<pad>")] + [vocab_list.index(v) for v in residue_constants.restypes_with_x]
@@ -2983,18 +3069,18 @@ and the following elements being the indices of the residues from the 'restypes_
     ) -> EsmForProteinFoldingOutput:
         r"""
         Returns:
+            EsmForProteinFoldingOutput
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, EsmForProteinFolding
-
-        >>> model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
-        >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
-        >>> outputs = model(**inputs)
-        >>> folded_positions = outputs.positions
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, EsmForProteinFolding
+            ...
+            >>> model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
+            >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
+            >>> outputs = model(**inputs)
+            >>> folded_positions = outputs.positions
+            ```
 
         """
         cfg = self.config.esmfold_config
@@ -3096,29 +3182,42 @@ and the following elements being the indices of the residues from the 'restypes_
 
     def af2_idx_to_esm_idx(self, aa, mask):
         """
-        This method 'af2_idx_to_esm_idx' is defined in the class 'EsmForProteinFolding' and is used to convert the input indices from one representation to another.
+        This method 'af2_idx_to_esm_idx' is defined in the class 'EsmForProteinFolding' and is used to convert the
+        input indices from one representation to another.
         
         Args:
-            self: The instance of the class. It is automatically passed as the first argument. Used to access the attributes and methods of the class.
-            aa: A tensor representing the input indices. Type: torch.Tensor. Purpose: It is used to calculate the converted indices. Restrictions: Should be a tensor of indices.
-            mask: A tensor representing the mask. Type: torch.Tensor. Purpose: It is used to mask the input indices. Restrictions: Should be a tensor of masks.
+            self: The instance of the class. It is automatically passed as the first argument. Used to access the
+                attributes and methods of the class.
+            aa:
+                A tensor representing the input indices.
+
+                - Type: torch.Tensor.
+                - Purpose: It is used to calculate the converted indices. Restrictions: Should be a tensor of indices.
+            mask:
+                A tensor representing the mask.
+
+                - Type: torch.Tensor.
+                - Purpose: It is used to mask the input indices. Restrictions: Should be a tensor of masks.
         
         Returns:
-            None: This method does not return any value. The converted indices are updated in the instance attribute 'af2_to_esm'.
+            None: This method does not return any value.
+                The converted indices are updated in the instance attribute 'af2_to_esm'.
         
         Raises:
-            N/A
+            None.
         """
         aa = (aa + 1).masked_fill(mask != 1, 0)
         return self.af2_to_esm[aa]
 
     def compute_language_model_representations(self, esmaa: mindspore.Tensor) -> mindspore.Tensor:
         ''' 
-        The method 'compute_language_model_representations' in the class 'EsmForProteinFolding' computes the representations of the language model.
+        The method 'compute_language_model_representations' in the class 'EsmForProteinFolding' computes the
+        representations of the language model.
         
         Args:
             self: The instance of the class.
-            esmaa (mindspore.Tensor): A tensor representing the input data with shape (B, L), where B is the batch size and L is the sequence length.
+            esmaa (mindspore.Tensor): A tensor representing the input data with shape (B, L), where B is the batch size
+                and L is the sequence length.
         
         Returns:
             mindspore.Tensor: A tensor representing the language model representations.
@@ -3151,7 +3250,8 @@ and the following elements being the indices of the residues from the 'restypes_
 
     def bert_mask(self, aa, esmaa, mask, pattern):
         """
-        This method 'bert_mask' in the class 'EsmForProteinFolding' masks specific elements in the input arrays based on the provided pattern.
+        This method 'bert_mask' in the class 'EsmForProteinFolding' masks specific elements in the input arrays based on
+        the provided pattern.
         
         Args:
             self: The instance of the class.
@@ -3164,7 +3264,7 @@ and the following elements being the indices of the residues from the 'restypes_
             None: This method does not return any explicit value but modifies the input arrays in-place. It returns None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         new_aa = aa.copy()
         target = aa.copy()
@@ -3184,16 +3284,17 @@ and the following elements being the indices of the residues from the 'restypes_
         
         Args:
             self (EsmForProteinFolding): An instance of the EsmForProteinFolding class.
-            seqs (Union[str, List[str]]): The protein sequences to perform inference on. It can be a single sequence as a string
-                or a list of multiple sequences. Each sequence should be a string.
-            position_ids (Optional[Tensor]): The position IDs for the sequences. If None, default position IDs will be used. 
-                Default is None.
+            seqs (Union[str, List[str]]): The protein sequences to perform inference on.
+                It can be a single sequence as a string or a list of multiple sequences.
+                Each sequence should be a string.
+            position_ids (Optional[Tensor]): The position IDs for the sequences.
+                If None, default position IDs will be used. Default is None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if isinstance(seqs, str):
             lst = [seqs]

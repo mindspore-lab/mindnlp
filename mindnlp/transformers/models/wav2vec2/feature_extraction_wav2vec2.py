@@ -88,7 +88,7 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method initializes the Wav2Vec2FeatureExtractor class.
+            None.
         
         Raises:
             None.
@@ -144,11 +144,11 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
                 index) among:
 
                 - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
+                sequence if provided).
                 - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
+                acceptable input length for the model if that argument is not provided.
                 - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+                lengths).
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
             truncation (`bool`):

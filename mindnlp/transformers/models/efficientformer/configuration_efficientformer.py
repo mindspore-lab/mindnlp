@@ -91,19 +91,19 @@ class EfficientFormerConfig(PretrainedConfig):
             The size (resolution) of each image.
 
     Example:
-
-    ```python
-    >>> from transformers import EfficientFormerConfig, EfficientFormerModel
-
-    >>> # Initializing a EfficientFormer efficientformer-l1 style configuration
-    >>> configuration = EfficientFormerConfig()
-
-    >>> # Initializing a EfficientFormerModel (with random weights) from the efficientformer-l3 style configuration
-    >>> model = EfficientFormerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import EfficientFormerConfig, EfficientFormerModel
+        ...
+        >>> # Initializing a EfficientFormer efficientformer-l1 style configuration
+        >>> configuration = EfficientFormerConfig()
+        ...
+        >>> # Initializing a EfficientFormerModel (with random weights) from the efficientformer-l3 style configuration
+        >>> model = EfficientFormerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "efficientformer"
 

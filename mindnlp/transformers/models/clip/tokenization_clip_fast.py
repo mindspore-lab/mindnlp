@@ -104,12 +104,14 @@ class CLIPTokenizerFast(PreTrainedTokenizerFast):
             pad_token (str, optional): The padding token. Default is 'endoftext'.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            ValueError: Raised if the backend tokenizer pre_tokenizer does not match the expected format. The CLIP tokenizer in this version has been heavily modified from transformers version 4.17.0. To
-resolve this issue, convert the existing tokenizer to be compatible with this version using `CLIPTokenizerFast.from_pretrained("path_to_local_folder_or_hub_repo", from_slow=True)`. If using an older tokenizer
-version, revert to a version prior to 4.17.0 of transformers.
+            ValueError: Raised if the backend tokenizer pre_tokenizer does not match the expected format.
+                The CLIP tokenizer in this version has been heavily modified from transformers version 4.17.0. To
+                resolve this issue, convert the existing tokenizer to be compatible with this version using
+                `CLIPTokenizerFast.from_pretrained("path_to_local_folder_or_hub_repo", from_slow=True)`.
+                If using an older tokenizer version, revert to a version prior to 4.17.0 of transformers.
         """
         super().__init__(
             vocab_file,
@@ -137,17 +139,20 @@ version, revert to a version prior to 4.17.0 of transformers.
     # Very ugly hack to enable padding to have a correct decoding see https://github.com/huggingface/tokenizers/issues/872
     def _wrap_decode_method_backend_tokenizer(self):
         """
-        This method '_wrap_decode_method_backend_tokenizer' is a private method within the 'CLIPTokenizerFast' class. It wraps the 'decode' method of the backend tokenizer by modifying its behavior.
-        
+        This method '_wrap_decode_method_backend_tokenizer' is a private method within the 'CLIPTokenizerFast' class.
+        It wraps the 'decode' method of the backend tokenizer by modifying its behavior.
+
         Args:
-            self (CLIPTokenizerFast): The instance of the CLIPTokenizerFast class itself. It is used to access the backend_tokenizer attribute and modify the decode method.
-        
+            self (CLIPTokenizerFast): The instance of the CLIPTokenizerFast class itself.
+                It is used to access the backend_tokenizer attribute and modify the decode method.
+
         Returns:
-            None: This method does not return any value explicitly, but it modifies the behavior of the 'decode' method of the backend tokenizer.
-        
+            None: This method does not return any value explicitly,
+                but it modifies the behavior of the 'decode' method of the backend tokenizer.
+
         Raises:
-            No specific exceptions are raised within this method. However, potential exceptions that could be raised during the execution of the modified 'decode' method of the backend tokenizer should be
-handled within that method.
+            None: However, potential exceptions that could be raised during the execution of the modified 'decode'
+                method of the backend tokenizer should be handled within that method.
         """
         orig_decode_method = self.backend_tokenizer.decode
 
@@ -215,7 +220,8 @@ handled within that method.
         Args:
             self (CLIPTokenizerFast): The instance of the CLIPTokenizerFast class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): An optional prefix to be included in the saved filenames. Default is None.
+            filename_prefix (Optional[str], optional): An optional prefix to be included in the saved filenames.
+                Default is None.
         
         Returns:
             Tuple[str]: A tuple containing the filenames of the saved vocabulary files.

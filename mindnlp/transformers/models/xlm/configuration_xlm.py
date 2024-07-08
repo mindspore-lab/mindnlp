@@ -97,29 +97,24 @@ class XLMConfig(PretrainedConfig):
             Whether or not the initialized model should be a transformer encoder or decoder as seen in Vaswani et al.
         summary_type (`string`, *optional*, defaults to "first"):
             Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
-
             Has to be one of the following options:
 
-                - `"last"`: Take the last token hidden state (like XLNet).
-                - `"first"`: Take the first token hidden state (like BERT).
-                - `"mean"`: Take the mean of all tokens hidden states.
-                - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
-                - `"attn"`: Not implemented now, use multi-head attention.
+            - `"last"`: Take the last token hidden state (like XLNet).
+            - `"first"`: Take the first token hidden state (like BERT).
+            - `"mean"`: Take the mean of all tokens hidden states.
+            - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
+            - `"attn"`: Not implemented now, use multi-head attention.
         summary_use_proj (`bool`, *optional*, defaults to `True`):
             Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
-
             Whether or not to add a projection after the vector extraction.
         summary_activation (`str`, *optional*):
             Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
-
             Pass `"tanh"` for a tanh activation to the output, any other value will result in no activation.
         summary_proj_to_labels (`bool`, *optional*, defaults to `True`):
             Used in the sequence classification and multiple choice models.
-
             Whether the projection outputs should have `config.num_labels` or `config.hidden_size` classes.
         summary_first_dropout (`float`, *optional*, defaults to 0.1):
             Used in the sequence classification and multiple choice models.
-
             The dropout ratio to be used after the projection and activation.
         start_n_top (`int`, *optional*, defaults to 5):
             Used in the SQuAD evaluation script.
@@ -130,20 +125,20 @@ class XLMConfig(PretrainedConfig):
         lang_id (`int`, *optional*, defaults to 1):
             The ID of the language used by the model. This parameter is used when generating text in a given language.
 
-    Examples:
-
-    ```python
-    >>> from transformers import XLMConfig, XLMModel
-
-    >>> # Initializing a XLM configuration
-    >>> configuration = XLMConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = XLMModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import XLMConfig, XLMModel
+        ...
+        >>> # Initializing a XLM configuration
+        >>> configuration = XLMConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = XLMModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "xlm"
     attribute_map = {
         "hidden_size": "emb_dim",

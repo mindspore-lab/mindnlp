@@ -29,9 +29,9 @@ class CohereConfig(PretrainedConfig):
     model according to the specified arguments, defining the model architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
-    documentation from [`PretrainedConfig`] for more information. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the [CohereForAI/c4ai-command-r-v01](https://huggingface.co/CohereForAI/c4ai-command-r-v01) model.
-
+    documentation from [`PretrainedConfig`] for more information.
+    Instantiating a configuration with the defaults will yield a similar configuration to that of the
+    [CohereForAI/c4ai-command-r-v01](https://huggingface.co/CohereForAI/c4ai-command-r-v01) model.
 
     Args:
         vocab_size (`int`, *optional*, defaults to 256000):
@@ -50,7 +50,7 @@ class CohereConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -83,18 +83,20 @@ class CohereConfig(PretrainedConfig):
         use_qk_norm (`bool`, *optional*, defaults to `False`):
             Whether to use query-key normalization in the attention
 
-    ```python
-    >>> from transformers import CohereModel, CohereConfig
-
-    >>> # Initializing a Cohere model configuration
-    >>> configuration = CohereConfig()
-
-    >>> # Initializing a model from the Cohere configuration
-    >>> model = CohereModel(configuration) # doctest: +SKIP
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config # doctest: +SKIP
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import CohereModel, CohereConfig
+        ...
+        >>> # Initializing a Cohere model configuration
+        >>> configuration = CohereConfig()
+        ...
+        >>> # Initializing a model from the Cohere configuration
+        >>> model = CohereModel(configuration) # doctest: +SKIP
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config # doctest: +SKIP
+        ```
+        """
 
     model_type = "cohere"
     keys_to_ignore_at_inference = ["past_key_values"]

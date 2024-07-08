@@ -44,6 +44,7 @@ _EXPECTED_OUTPUT_SHAPE = [3, 896, 448]
 class SegGptEncoderOutput(ModelOutput):
     """
     Output type of [`SegGptEncoderOutput`].
+
     Args:
         last_hidden_state (`ms.Tensor` of shape `(batch_size, patch_height, patch_width, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
@@ -53,10 +54,11 @@ class SegGptEncoderOutput(ModelOutput):
         attentions (`Tuple[ms.Tensor]`, `optional`, returned when `config.output_attentions=True`):
             Tuple of *ms.Tensor* (one for each layer) of shape
             `(batch_size, num_heads, seq_len, seq_len)`.
-        intermediate_hidden_states (`Tuple[ms.Tensor]`, `optional`, returned when `config.intermediate_hidden_state_indices` is set):
+        intermediate_hidden_states (`Tuple[ms.Tensor]`, `optional`, returned when
+            `config.intermediate_hidden_state_indices` is set):
             Tuple of `ms.Tensor` of shape `(batch_size, patch_height, patch_width, hidden_size)`.
-            Each element in the Tuple corresponds to the output of the layer specified in `config.intermediate_hidden_state_indices`.
-            Additionaly, each feature passes through a LayerNorm.
+            Each element in the Tuple corresponds to the output of the layer specified in
+            `config.intermediate_hidden_state_indices`. Additionaly, each feature passes through a LayerNorm.
     """
 
     last_hidden_state: ms.Tensor
@@ -570,7 +572,8 @@ class SegGptEncoder(nn.Cell):
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextLayerNorm with ConvNext->SegGpt
 class SegGptLayerNorm(nn.Cell):
-    r"""LayerNorm that supports two data formats: channels_last (default) or channels_first.
+    r"""
+    LayerNorm that supports two data formats: channels_last (default) or channels_first.
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
@@ -735,36 +738,37 @@ class SegGptModel(SegGptPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SegGptEncoderOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
-            Ground truth mask for input images.
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
+                Ground truth mask for input images.
 
         Returns:
+            `Union[Tuple, SegGptEncoderOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import SegGptImageProcessor, SegGptModel
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
-        >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
-        >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
-
-        >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
-        >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
-        >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
-
-        >>> checkpoint = "BAAI/seggpt-vit-large"
-        >>> model = SegGptModel.from_pretrained(checkpoint)
-        >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
-
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> list(outputs.last_hidden_state.shape)
-        [1, 56, 28, 1024]
-        ```
+        Example:
+            ```python
+            >>> from transformers import SegGptImageProcessor, SegGptModel
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
+            >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
+            >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
+            ...
+            >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
+            >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
+            >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
+            ...
+            >>> checkpoint = "BAAI/seggpt-vit-large"
+            >>> model = SegGptModel.from_pretrained(checkpoint)
+            >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
+            ...
+            >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> list(outputs.last_hidden_state.shape)
+            [1, 56, 28, 1024]
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -916,36 +920,37 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SegGptImageSegmentationOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
-            Ground truth mask for input images.
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
+                Ground truth mask for input images.
 
         Returns:
+            `Union[Tuple, SegGptImageSegmentationOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import SegGptImageProcessor, SegGptForImageSegmentation
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
-        >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
-        >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
-
-        >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
-        >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
-        >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
-
-        >>> checkpoint = "BAAI/seggpt-vit-large"
-        >>> model = SegGptForImageSegmentation.from_pretrained(checkpoint)
-        >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
-
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> result = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[image_input.size[::-1]])[0]
-        >>> print(list(result.shape))
-        [170, 297]
-        ```
+        Example:
+            ```python
+            >>> from transformers import SegGptImageProcessor, SegGptForImageSegmentation
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
+            >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
+            >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
+            ...
+            >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
+            >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
+            >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
+            ...
+            >>> checkpoint = "BAAI/seggpt-vit-large"
+            >>> model = SegGptForImageSegmentation.from_pretrained(checkpoint)
+            >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
+            ...
+            >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> result = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[image_input.size[::-1]])[0]
+            >>> print(list(result.shape))
+            [170, 297]
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (

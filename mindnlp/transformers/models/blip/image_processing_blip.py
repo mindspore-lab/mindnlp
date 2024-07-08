@@ -98,18 +98,23 @@ class BlipImageProcessor(BaseImageProcessor):
         Args:
             self: The BlipImageProcessor instance.
             do_resize (bool, optional): Specifies whether to resize the image. Defaults to True.
-            size (Dict[str, int], optional): Specifies the desired height and width of the image. Defaults to {'height': 384, 'width': 384}.
-            resample (PILImageResampling, optional): Specifies the resampling method for resizing the image. Defaults to PILImageResampling.BICUBIC.
+            size (Dict[str, int], optional): Specifies the desired height and width of the image.
+                Defaults to {'height': 384, 'width': 384}.
+            resample (PILImageResampling, optional): Specifies the resampling method for resizing the image.
+                Defaults to PILImageResampling.BICUBIC.
             do_rescale (bool, optional): Specifies whether to rescale the image. Defaults to True.
-            rescale_factor (Union[int, float], optional): Specifies the rescale factor for the image. Defaults to 1 / 255.
+            rescale_factor (Union[int, float], optional): Specifies the rescale factor for the image.
+                Defaults to 1 / 255.
             do_normalize (bool, optional): Specifies whether to normalize the image. Defaults to True.
-            image_mean (Optional[Union[float, List[float]]], optional): Specifies the mean value for image normalization. Defaults to None.
-            image_std (Optional[Union[float, List[float]]], optional): Specifies the standard deviation value for image normalization. Defaults to None.
+            image_mean (Optional[Union[float, List[float]]], optional): Specifies the mean value for image normalization.
+                Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional):
+                Specifies the standard deviation value for image normalization. Defaults to None.
             do_convert_rgb (bool, optional): Specifies whether to convert the image to RGB format. Defaults to True.
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -166,12 +171,14 @@ class BlipImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -239,19 +246,22 @@ class BlipImageProcessor(BaseImageProcessor):
                 Whether to convert the image to RGB.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.

@@ -35,7 +35,8 @@ if is_jieba_available():
 class GPTPanguTokenizer(PreTrainedTokenizer):
 
     """
-    This class represents a tokenizer for the GPTPangu model, which is used for tokenizing Chinese text. It inherits from the PreTrainedTokenizer class.
+    This class represents a tokenizer for the GPTPangu model, which is used for tokenizing Chinese text.
+    It inherits from the PreTrainedTokenizer class.
     
     Attributes:
         sp (sentencepiece.SentencePieceProcessor): An instance of the SentencePieceProcessor class used for tokenization.
@@ -45,25 +46,26 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
         vocab_size (int): Returns the size of the vocabulary used by the tokenizer.
     
     Methods:
-        __init__(model_file, **kwargs):
+        __init__:
             Initializes the GPTPanguTokenizer object.
             
-        get_vocab():
+        get_vocab:
             Returns the vocabulary as a dictionary.
             
-        build_inputs_with_special_tokens(token_ids_0, token_ids_1=None):
-            Builds model inputs by adding special tokens to a sequence or a pair of sequences for sequence classification tasks.
+        build_inputs_with_special_tokens:
+            Builds model inputs by adding special tokens to a sequence or a pair of sequences
+            for sequence classification tasks.
             
-        tokenize(text, **kwargs):
+        tokenize:
             Tokenizes a string.
             
-        convert_tokens_to_ids(tokens):
+        convert_tokens_to_ids:
             Converts a list of tokens to their corresponding IDs.
             
-        convert_ids_to_tokens(ids):
+        convert_ids_to_tokens:
             Converts a list of IDs to their corresponding tokens.
             
-        decode(ids, **kwargs):
+        decode:
             Decodes a list of IDs into text.
     """
     # Ref: https://git.openi.org.cn/PCL-Platform.Intelligence/PanGu-Alpha/src/branch/master/tokenization_jieba.py
@@ -86,7 +88,7 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
                 The tokenizer will load the model file during initialization.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -115,13 +117,16 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
+
         - single sequence: `[CLS] X [SEP]`
         - pair of sequences: `[CLS] A [SEP] B [SEP]`
+
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
             token_ids_1 (`List[int]`, *optional*):
                 Optional second list of IDs for sequence pairs.
+
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
@@ -147,29 +152,35 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
     def convert_tokens_to_ids(self, tokens):
         """
         Converts a list of tokens into their corresponding token IDs using the GPTPanguTokenizer.
-        
+
         Args:
             self (GPTPanguTokenizer): An instance of the GPTPanguTokenizer class.
-            tokens (str or list): The tokens to be converted into token IDs. If a string is provided, it will be treated as a single token.
-        
+            tokens (str or list): The tokens to be converted into token IDs.
+                If a string is provided, it will be treated as a single token.
+
         Returns:
-            list or None: A list of token IDs corresponding to the input tokens. Returns None if the input tokens are None.
-        
+            list or None: A list of token IDs corresponding to the input tokens.
+                Returns None if the input tokens are None.
+
         Raises:
             None
-        
+
         Note:
-        - If the input tokens are None, the method returns None.
-        - If the input tokens are a string, the method calls the _convert_token_to_id_with_added_voc() method to convert it into a token ID.
-        - If the input tokens contain special tokens, the method identifies their indices and splits the tokens into segments. Each segment is then encoded using the sp.encode() method and appended to the list
-of token IDs.
-        - The method concatenates all the encoded segments and returns the final list of token IDs.
-        
-        Example usage:
-            tokenizer = GPTPanguTokenizer()
-            tokens = ['Hello', 'world', '!']
-            ids = tokenizer.convert_tokens_to_ids(tokens)
-            # ids = [123, 456, 789]
+            - If the input tokens are None, the method returns None.
+            - If the input tokens are a string, the method calls the _convert_token_to_id_with_added_voc() method to
+            convert it into a token ID.
+            - If the input tokens contain special tokens, the method identifies their indices and splits the tokens
+            into segments. Each segment is then encoded using the sp.encode() method and appended to the list of token
+            IDs.
+            - The method concatenates all the encoded segments and returns the final list of token IDs.
+
+        Example:
+            ```python
+            >>> tokenizer = GPTPanguTokenizer()
+            >>> tokens = ['Hello', 'world', '!']
+            >>> ids = tokenizer.convert_tokens_to_ids(tokens)
+            >>> # ids = [123, 456, 789]
+            ```
         """
         if tokens is None:
             return None
@@ -199,31 +210,31 @@ of token IDs.
     def _convert_token_to_id(self, token):
         """
         Converts a token to its corresponding ID using the GPTPanguTokenizer.
-        
+
         Args:
             self (GPTPanguTokenizer): An instance of the GPTPanguTokenizer class.
             token (str): The token to be converted to its corresponding ID.
-        
+
         Returns:
-            None. This method does not return any value but performs the conversion operation internally.
-        
+            None: This method does not return any value but performs the conversion operation internally.
+
         Raises:
-            - TypeError: If the token provided is not a string.
-            - ValueError: If the token does not exist in the tokenizer's vocabulary.
+            TypeError: If the token provided is not a string.
+            ValueError: If the token does not exist in the tokenizer's vocabulary.
         """
         return self.sp.piece_to_id(token)
 
     def _convert_id_to_token(self, index):
         """
         Converts an index to its corresponding token using the GPTPanguTokenizer.
-        
+
         Args:
             self (GPTPanguTokenizer): An instance of the GPTPanguTokenizer class.
             index (int): The index value to be converted to a token. It should be a non-negative integer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -232,42 +243,44 @@ of token IDs.
     def convert_ids_to_tokens(self, ids):
         """
         Converts a list of token IDs to their corresponding tokens using the GPTPanguTokenizer.
-        
+
         Args:
             self (GPTPanguTokenizer): An instance of the GPTPanguTokenizer class.
             ids (List[int]): A list of token IDs to be converted to tokens. Each ID represents a unique token.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Note:
             The GPTPanguTokenizer must be initialized with a pretrained model before using this method.
-        
+
         Example:
+            ```python
             >>> tokenizer = GPTPanguTokenizer()
             >>> token_ids = [0, 1, 2]
             >>> tokenizer.convert_ids_to_tokens(token_ids)
             ['<s>', 'Hello', '</s>']
-        
+            ```
         """
         return self.decode(ids)
 
     def decode(self, ids, **kwargs):
         """
         Decode the given token IDs into text using the GPTPanguTokenizer.
-        
+
         Args:
             self (GPTPanguTokenizer): An instance of the GPTPanguTokenizer class.
-            ids (Union[mindspore.Tensor, np.ndarray, List[int]]): The token IDs to decode into text. 
+            ids (Union[mindspore.Tensor, np.ndarray, List[int]]): The token IDs to decode into text.
                 If passed as a mindspore.Tensor or np.ndarray, it will be converted to a list of integers.
                 This parameter is required.
-        
+
         Returns:
-            str: The decoded text corresponding to the provided token IDs. 
-            Whitespace characters ' ' will be replaced with spaces, '▂' will be replaced with spaces, and '▃' will be replaced with newline characters '\n'.
+            str: The decoded text corresponding to the provided token IDs.
+                Whitespace characters ' ' will be replaced with spaces, '▂' will be replaced with spaces, and '▃' will
+                be replaced with newline characters.
         
         Raises:
             None: This method does not raise any exceptions.

@@ -216,8 +216,8 @@ def get_resize_output_image_size(
             The size to use for resizing the image. If `size` is a sequence like (h, w), output size will be matched to
             this.
 
-            If `size` is an int and `default_to_square` is `True`, then image will be resized to (size, size). If
-            `size` is an int and `default_to_square` is `False`, then smaller edge of the image will be matched to this
+            - If `size` is an int and `default_to_square` is `True`, then image will be resized to (size, size).
+            - If `size` is an int and `default_to_square` is `False`, then smaller edge of the image will be matched to this
             number. i.e, if height > width, then image will be rescaled to (size * height / width, size).
         default_to_square (`bool`, *optional*, defaults to `True`):
             How to convert `size` when it is a single int. If set to `True`, the `size` will be converted to a square
@@ -414,20 +414,25 @@ def center_crop(
             The target size for the cropped image.
         data_format (`str` or `ChannelDimension`, *optional*):
             The channel dimension format for the output image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use the inferred format of the input image.
         input_data_format (`str` or `ChannelDimension`, *optional*):
             The channel dimension format for the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use the inferred format of the input image.
         return_numpy (`bool`, *optional*):
             Whether or not to return the cropped image as a numpy array. Used for backwards compatibility with the
             previous ImageFeatureExtractionMixin method.
-                - Unset: will return the same type as the input image.
-                - `True`: will return a numpy array.
-                - `False`: will return a `PIL.Image.Image` object.
+
+            - Unset: will return the same type as the input image.
+            - `True`: will return a numpy array.
+            - `False`: will return a `PIL.Image.Image` object.
     Returns:
         `np.ndarray`: The cropped image.
     """
@@ -498,15 +503,16 @@ def center_crop(
 def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.Tensor":
     """
     Converts bounding boxes from center format to corners format.
-    
+
     Args:
-        bboxes_center (mindspore.Tensor): A tensor containing bounding boxes in center format with shape (N, 4) where N is the number of boxes.
-            The four values represent center_x, center_y, width, and height of each bounding box.
-    
+        bboxes_center (mindspore.Tensor): A tensor containing bounding boxes in center format with shape (N, 4)
+            where N is the number of boxes. The four values represent center_x, center_y, width, and height of
+            each bounding box.
+
     Returns:
         mindspore.Tensor: A tensor containing bounding boxes in corners format with shape (N, 4) where N is the number of boxes.
             The four values represent the coordinates of the top-left and bottom-right corners of each bounding box.
-    
+
     Raises:
         None
     """
@@ -522,15 +528,20 @@ def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.T
 def _center_to_corners_format_numpy(bboxes_center: np.ndarray) -> np.ndarray:
     """
     Converts bounding boxes from center format to corners format using NumPy operations.
-    
+
     Args:
-        bboxes_center (np.ndarray): A NumPy array representing bounding boxes in center format. The array should have shape (N, 4) where N is the number of bounding boxes. Each row should contain the
-coordinates of the center (center_x, center_y) and the dimensions (width, height) of a bounding box.
-    
+        bboxes_center (np.ndarray):
+            A NumPy array representing bounding boxes in center format.
+            The array should have shape (N, 4) where N is the number of bounding boxes.
+            Each row should contain the coordinates of the center (center_x, center_y) and the dimensions
+            (width, height) of a bounding box.
+
     Returns:
-        np.ndarray: A NumPy array representing bounding boxes in corners format. The returned array has the same shape as bboxes_center and contains the coordinates of the corners (top-left and bottom-right)
-of each bounding box.
-    
+        np.ndarray:
+            A NumPy array representing bounding boxes in corners format.
+            The returned array has the same shape as bboxes_center and contains the coordinates of the corners
+            (top-left and bottom-right) of each bounding box.
+
     Raises:
         None
     """
@@ -566,17 +577,17 @@ def center_to_corners_format(bboxes_center: TensorType) -> TensorType:
 def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.Tensor":
     """
     Converts bounding box coordinates from the corners format to the center format.
-    
+
     Args:
-        bboxes_corners (mindspore.Tensor): A tensor containing the bounding box coordinates in the corners format. 
-            The tensor shape should be (N, 4), where N is the number of bounding boxes. 
-            The four coordinates represent the top-left and bottom-right corners of each bounding box in the image. 
-    
+        bboxes_corners (mindspore.Tensor): A tensor containing the bounding box coordinates in the corners format.
+            The tensor shape should be (N, 4), where N is the number of bounding boxes.
+            The four coordinates represent the top-left and bottom-right corners of each bounding box in the image.
+
     Returns:
-        mindspore.Tensor: A tensor containing the bounding box coordinates in the center format. 
-            The tensor shape is (N, 4), where N is the number of bounding boxes. 
+        mindspore.Tensor: A tensor containing the bounding box coordinates in the center format.
+            The tensor shape is (N, 4), where N is the number of bounding boxes.
             The four coordinates represent the center coordinates (x, y) and the width and height of each bounding box.
-    
+
     Raises:
         None.
     """
@@ -593,13 +604,14 @@ def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.
 def _corners_to_center_format_numpy(bboxes_corners: np.ndarray) -> np.ndarray:
     """
     Converts bounding box corners format to center format using numpy.
-    
+
     Args:
-        bboxes_corners (np.ndarray): Array of bounding box corners in the format (top_left_x, top_left_y, bottom_right_x, bottom_right_y).
-    
+        bboxes_corners (np.ndarray):
+            Array of bounding box corners in the format (top_left_x, top_left_y, bottom_right_x, bottom_right_y).
+
     Returns:
         np.ndarray: Array of bounding box centers in the format (center_x, center_y, width, height).
-    
+
     Raises:
         None.
     """
@@ -693,27 +705,33 @@ def pad(
             The image to pad.
         padding (`int` or `Tuple[int, int]` or `Iterable[Tuple[int, int]]`):
             Padding to apply to the edges of the height, width axes. Can be one of three formats:
+
             - `((before_height, after_height), (before_width, after_width))` unique pad widths for each axis.
             - `((before, after),)` yields same before and after pad for height and width.
             - `(pad,)` or int is a shortcut for before = after = pad width for all axes.
         mode (`PaddingMode`):
             The padding mode to use. Can be one of:
-                - `"constant"`: pads with a constant value.
-                - `"reflect"`: pads with the reflection of the vector mirrored on the first and last values of the
-                  vector along each axis.
-                - `"replicate"`: pads with the replication of the last value on the edge of the array along each axis.
-                - `"symmetric"`: pads with the reflection of the vector mirrored along the edge of the array.
+
+            - `"constant"`: pads with a constant value.
+            - `"reflect"`: pads with the reflection of the vector mirrored on the first and last values of the
+            vector along each axis.
+            - `"replicate"`: pads with the replication of the last value on the edge of the array along each axis.
+            - `"symmetric"`: pads with the reflection of the vector mirrored along the edge of the array.
         constant_values (`float` or `Iterable[float]`, *optional*):
             The value to use for the padding if `mode` is `"constant"`.
         data_format (`str` or `ChannelDimension`, *optional*):
             The channel dimension format for the output image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use same as the input image.
         input_data_format (`str` or `ChannelDimension`, *optional*):
             The channel dimension format for the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use the inferred format of the input image.
 
     Returns:
@@ -797,13 +815,17 @@ def flip_channel_order(
             The image to flip.
         data_format (`ChannelDimension`, *optional*):
             The channel dimension format for the output image. Can be one of:
-                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use same as the input image.
         input_data_format (`ChannelDimension`, *optional*):
             The channel dimension format for the input image. Can be one of:
-                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+            - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
             If unset, will use the inferred format of the input image.
     """
     input_data_format = infer_channel_dimension_format(image) if input_data_format is None else input_data_format

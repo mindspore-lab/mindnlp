@@ -204,10 +204,10 @@ class ConvBertTokenizer(PreTrainedTokenizer):
                 This parameter represents the current ConvBertTokenizer object.
         
         Returns:
-            None. The method returns the length of the vocabulary stored in the ConvBertTokenizer object.
+            len: The method returns the length of the vocabulary stored in the ConvBertTokenizer object.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return len(self.vocab)
 
@@ -247,11 +247,13 @@ class ConvBertTokenizer(PreTrainedTokenizer):
             is applied to the entire text in case do_basic_tokenize is set to False.
         
         Example:
+            ```python
             >>> tokenizer = ConvBertTokenizer()
             >>> text = "Hello world!"
             >>> tokens = tokenizer._tokenize(text)
             >>> print(tokens)
             ['Hello', 'world', '!']
+            ```
         """
         split_tokens = []
         if self.do_basic_tokenize:
@@ -364,15 +366,15 @@ class ConvBertTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary to a file in the specified directory.
-        
+
         Args:
             self: An instance of the ConvBertTokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved. Must be a valid directory path.
             filename_prefix (Optional[str]): A prefix to be added to the filename. Default is None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             OSError: If the specified save_directory is not a valid directory path.
             IOError: If there are issues with writing to the vocabulary file.
@@ -428,18 +430,23 @@ class BasicTokenizer():
     ):
         """
         Initializes a BasicTokenizer object with the specified parameters.
-        
+
         Args:
             self (object): The instance of the BasicTokenizer class.
-            do_lower_case (bool, optional): Indicates whether the text should be converted to lowercase. Default is True.
-            never_split (list, optional): A list of tokens that should never be split during tokenization. Default is an empty list.
-            tokenize_chinese_chars (bool, optional): Indicates whether Chinese characters should be tokenized individually. Default is True.
-            strip_accents (None or str, optional): Specifies whether to strip accents from the text. Default is None.
-            do_split_on_punc (bool, optional): Indicates whether to split tokens on punctuation marks. Default is True.
-        
+            do_lower_case (bool, optional):
+                Indicates whether the text should be converted to lowercase. Default is True.
+            never_split (list, optional):
+                A list of tokens that should never be split during tokenization. Default is an empty list.
+            tokenize_chinese_chars (bool, optional):
+                Indicates whether Chinese characters should be tokenized individually. Default is True.
+            strip_accents (None or str, optional):
+                Specifies whether to strip accents from the text. Default is None.
+            do_split_on_punc (bool, optional):
+                Indicates whether to split tokens on punctuation marks. Default is True.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -456,7 +463,7 @@ class BasicTokenizer():
         Basic Tokenization of a piece of text. For sub-word tokenization, see WordPieceTokenizer.
 
         Args:
-            never_split (`List[str]`, *optional*)
+            never_split (`List[str]`, *optional*):
                 Kept for backward compatibility purposes. Now implemented directly at the base class level (see
                 [`PreTrainedTokenizer.tokenize`]) List of token not to split.
         """
@@ -588,10 +595,10 @@ class WordpieceTokenizer():
             max_input_chars_per_word (int, optional): The maximum number of characters allowed for an input word. Defaults to 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         '''
         self.vocab = vocab
         self.unk_token = unk_token

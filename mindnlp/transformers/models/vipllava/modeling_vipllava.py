@@ -47,18 +47,21 @@ class VipLlavaCausalLMOutputWithPast(ModelOutput):
             Language modeling loss (for next-token prediction).
         logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed
+            or when `config.use_cache=True`):
             Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
             `(batch_size, num_heads, sequence_length, embed_size_per_head)`)
 
             Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
             `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed
+            or when `config.output_hidden_states=True`):
             Tuple of `torch.FloatTensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -81,9 +84,11 @@ class VipLlavaCausalLMOutputWithPast(ModelOutput):
 class VipLlavaMultiModalProjector(nn.Cell):
 
     """
-    Represents a multi-modal projector for the VipLlava model, used to project hidden states from both vision and text modalities.
+    Represents a multi-modal projector for the VipLlava model, used to project hidden states from both vision and
+    text modalities.
     
-    This class inherits from nn.Cell and contains methods to initialize the projector and construct the projection process.
+    This class inherits from nn.Cell and contains methods to initialize the projector and construct the projection
+    process.
     
     Attributes:
         projector_layernorm (nn.LayerNorm): Layer normalization for the projector.
@@ -93,7 +98,8 @@ class VipLlavaMultiModalProjector(nn.Cell):
     
     Methods:
         __init__: Initializes the multi-modal projector with the provided configuration.
-        construct: Constructs the projection process by applying layer normalization, linear transformations, and activation function.
+        construct: Constructs the projection process by applying layer normalization, linear transformations,
+            and activation function.
     
     """
     def __init__(self, config: VipLlavaConfig):
@@ -127,21 +133,17 @@ class VipLlavaMultiModalProjector(nn.Cell):
 
     def construct(self, hidden_states):
         """
-        
-        construct(self, hidden_states)
-            
-            Constructs the multi-modal projector for the VipLlava model.
-        
-            Args:
-                self (VipLlavaMultiModalProjector): An instance of the VipLlavaMultiModalProjector class.
-                hidden_states (Tensor): The input hidden states to be projected. Should be of shape (batch_size, hidden_size).
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-        
+        Constructs the multi-modal projector for the VipLlava model.
+
+        Args:
+            self (VipLlavaMultiModalProjector): An instance of the VipLlavaMultiModalProjector class.
+            hidden_states (Tensor): The input hidden states to be projected. Should be of shape (batch_size, hidden_size).
+
+        Returns:
+            None
+
+        Raises:
+            None
         """
         hidden_states = self.projector_layernorm(hidden_states)
         hidden_states = self.linear_1(hidden_states)
@@ -172,16 +174,26 @@ class VipLlavaPreTrainedModel(PreTrainedModel):
 
     """
     This class represents a pre-trained model for VipLlava. It is a subclass of the PreTrainedModel class.
-    
-    The VipLlavaPreTrainedModel class provides methods for initializing the weights of the model and checking whether the model supports SDPA (Semi-Definite Programming Algorithm).
-    
+
+    The VipLlavaPreTrainedModel class provides methods for initializing the weights of the model and checking whether
+    the model supports SDPA (Semi-Definite Programming Algorithm).
+
     Methods:
-    - _init_weights(module): Initializes the weights of the given module using random normal distribution with a standard deviation determined by the configuration. If the module has a class_embedding
-attribute, it sets the data of the class_embedding tensor with random values. If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random values and initializes the
-bias tensor with zeros. If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and initializes the padding_idx tensor with zeros.
-    - _supports_sdpa: Retrieves the language_model attribute of the class to check whether the model supports SDPA or not.
-    
-    Note: Please refer to the PreTrainedModel class for additional inherited methods and attributes.
+        _init_weights:
+            Initializes the weights of the given module using random normal distribution with a standard deviation
+            determined by the configuration.
+
+            - If the module has a class_embedding attribute, it sets the data of the class_embedding tensor with random
+            values.
+            - If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random
+            values and initializes the bias tensor with zeros.
+            - If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and
+            initializes the padding_idx tensor with zeros.
+         _supports_sdpa:
+            Retrieves the language_model attribute of the class to check whether the model supports SDPA or not.
+
+    Note:
+        Please refer to the PreTrainedModel class for additional inherited methods and attributes.
     """
     config_class = VipLlavaConfig
     base_model_prefix = "model"
@@ -192,21 +204,26 @@ bias tensor with zeros. If the module is an instance of nn.Embedding, it sets th
 
     def _init_weights(self, module):
         """
-        This method '_init_weights' initializes the weights of the provided 'module' based on the specified standard deviation.
-        
+        This method '_init_weights' initializes the weights of the provided 'module' based on the specified
+        standard deviation.
+
         Args:
-            self: An instance of the VipLlavaPreTrainedModel class.
-                Purpose: Represents the current instance of the class.
-                Restrictions: None.
-        
-            module: The module for which weights are to be initialized.
-                Type: Any valid module object.
-                Purpose: Represents the module whose weights are to be initialized.
-                Restrictions: The module should be a valid PyTorch module.
-        
+            self:
+                An instance of the VipLlavaPreTrainedModel class.
+
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: None.
+
+            module:
+                The module for which weights are to be initialized.
+
+                - Type: Any valid module object.
+                - Purpose: Represents the module whose weights are to be initialized.
+                - Restrictions: The module should be a valid PyTorch module.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -315,29 +332,33 @@ VIPLLAVA_INPUTS_DOCSTRING = r"""
 class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
 
     """
-    This class represents a model for conditional generation using the VipLlava architecture. It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the
-model, and reordering cache. 
-    
+    This class represents a model for conditional generation using the VipLlava architecture.
+    It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the
+    model, and reordering cache.
+
     Methods:
-        - construct: Generates output based on input tokens, image features, attention mask, and other optional parameters. It returns a tuple or VipLlavaCausalLMOutputWithPast object.
-        - prepare_inputs_for_generation: Prepares model inputs for generation, considering past key values, inputs embeds, pixel values, attention mask, and position ids.
-        - _reorder_cache: Reorders the cache for the model.
-    
-    The class also includes methods for handling input and output embeddings, decoder settings, tying weights, and resizing token embeddings.
+        construct: Generates output based on input tokens, image features, attention mask, and other optional parameters.
+            It returns a tuple or VipLlavaCausalLMOutputWithPast object.
+        prepare_inputs_for_generation: Prepares model inputs for generation, considering past key values, inputs embeds,
+            pixel values, attention mask, and position ids.
+        _reorder_cache: Reorders the cache for the model.
+
+    The class also includes methods for handling input and output embeddings, decoder settings, tying weights,
+    and resizing token embeddings.
     """
     def __init__(self, config: VipLlavaConfig):
         """
         Initializes an instance of the VipLlavaForConditionalGeneration class.
-        
+
         Args:
             self: The instance of the VipLlavaForConditionalGeneration class.
             config (VipLlavaConfig): The configuration object containing settings for the model.
                 It is used to initialize the vision tower, multi-modal projector, language model, and other attributes.
                 This parameter is mandatory and must be an instance of VipLlavaConfig.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the provided config parameter is not an instance of VipLlavaConfig.
             RuntimeError: If an error occurs during the initialization process.
@@ -356,30 +377,31 @@ model, and reordering cache.
     def get_input_embeddings(self):
         """
         Returns the input embeddings of the language model used for conditional generation.
-        
+
         Args:
             self: An instance of the VipLlavaForConditionalGeneration class.
-        
+
         Returns:
-            None. This method returns the input embeddings of the language model used for conditional generation. The embeddings are obtained by calling the 'get_input_embeddings()' method of the language
-model.
-        
+            embeddings: This method returns the input embeddings of the language model used for conditional generation.
+                The embeddings are obtained by calling the 'get_input_embeddings()' method of the language model.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.language_model.get_input_embeddings()
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the VipLlavaForConditionalGeneration language model.
-        
+
         Args:
             self (VipLlavaForConditionalGeneration): The instance of the VipLlavaForConditionalGeneration class.
-            value: The input embeddings to be set for the language model. It should be a tensor of shape (vocab_size, embedding_dim).
-        
+            value: The input embeddings to be set for the language model. It should be a tensor of shape
+                (vocab_size, embedding_dim).
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -388,13 +410,13 @@ model.
     def get_output_embeddings(self):
         """
         This method returns the output embeddings from the language model for the VipLlavaForConditionalGeneration class.
-        
+
         Args:
             self: The instance of the VipLlavaForConditionalGeneration class.
-        
+
         Returns:
-            None: This method returns None as it simply retrieves the output embeddings from the language model.
-        
+            embeddings: This method returns None as it simply retrieves the output embeddings from the language model.
+
         Raises:
             None.
         """
@@ -403,31 +425,32 @@ model.
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the VipLlavaForConditionalGeneration model.
-        
+
         Args:
             self (VipLlavaForConditionalGeneration): The instance of the VipLlavaForConditionalGeneration class.
-            new_embeddings (object): The new embeddings to be set for the model's output. It should be compatible with the model's requirements.
-        
+            new_embeddings (object): The new embeddings to be set for the model's output.
+                It should be compatible with the model's requirements.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the new_embeddings parameter is not of the correct type.
-            - ValueError: If the new_embeddings parameter does not meet the model's requirements.
+            TypeError: If the new_embeddings parameter is not of the correct type.
+            ValueError: If the new_embeddings parameter does not meet the model's requirements.
         """
         self.language_model.set_output_embeddings(new_embeddings)
 
     def set_decoder(self, decoder):
         """
         Sets the decoder for the VipLlavaForConditionalGeneration instance.
-        
+
         Args:
             self (VipLlavaForConditionalGeneration): The VipLlavaForConditionalGeneration instance.
             decoder: The decoder to be set for the language model. It should be an instance of the decoder class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -436,53 +459,56 @@ model.
     def get_decoder(self):
         """
         This method returns the decoder from the language model associated with the VipLlavaForConditionalGeneration class.
-        
+
         Args:
             self (VipLlavaForConditionalGeneration): The instance of the VipLlavaForConditionalGeneration class.
                 It is used to access the language model and retrieve the decoder.
-        
+
         Returns:
-            None: This method does not return any value directly. It returns the decoder from the language model.
-        
+            decoder: This method does not return any value directly. It returns the decoder from the language model.
+
         Raises:
-            This method does not raise any exceptions explicitly. However, exceptions related to accessing the language model
-            or retrieving the decoder may be raised indirectly.
+            This method does not raise any exceptions explicitly. However, exceptions related to accessing the
+            language model or retrieving the decoder may be raised indirectly.
         """
         return self.language_model.get_decoder()
 
     def tie_weights(self):
         """
         Method to tie weights for the VipLlavaForConditionalGeneration class.
-        
+
         Args:
-            self: VipLlavaForConditionalGeneration object. Represents an instance of the VipLlavaForConditionalGeneration class.
-        
+            self: VipLlavaForConditionalGeneration object.
+                Represents an instance of the VipLlavaForConditionalGeneration class.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not explicitly raise any exceptions.
+            None.
         """
         return self.language_model.tie_weights()
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
         """
         Resizes the token embeddings of the VipLlavaForConditionalGeneration model.
-        
+
         Args:
             self (VipLlavaForConditionalGeneration): The instance of the VipLlavaForConditionalGeneration class.
             new_num_tokens (Optional[int]): The new number of tokens for resizing the embeddings. Defaults to None.
             pad_to_multiple_of: The value to pad the embeddings to a multiple of. Defaults to None.
-        
+
         Returns:
             nn.Embedding: The resized token embeddings as an instance of nn.Embedding.
-        
+
         Raises:
             None.
-        
-        This method resizes the token embeddings of the VipLlavaForConditionalGeneration model based on the provided parameters. It first resizes the token embeddings of the underlying language model using the
-'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the 'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized
-token embeddings as an instance of nn.Embedding.
+
+        This method resizes the token embeddings of the VipLlavaForConditionalGeneration model based on the provided
+        parameters. It first resizes the token embeddings of the underlying language model using the
+        'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the
+        'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized
+        token embeddings as an instance of nn.Embedding.
         """
         model_embeds = self.language_model.resize_token_embeddings(
             new_num_tokens, pad_to_multiple_of)
@@ -493,24 +519,27 @@ token embeddings as an instance of nn.Embedding.
 
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
         """
-        This method '_merge_input_ids_with_image_features' in the class 'VipLlavaForConditionalGeneration' merges input ids with image features to create final embeddings for conditional generation.
-        
+        This method '_merge_input_ids_with_image_features' in the class 'VipLlavaForConditionalGeneration' merges input
+        ids with image features to create final embeddings for conditional generation.
+
         Args:
-        - self: The instance of the class.
-        - image_features: Tensor containing image features with shape (num_images, num_image_patches, embed_dim).
-        - inputs_embeds: Tensor containing embeddings for input tokens.
-        - input_ids: Tensor containing input token IDs with shape (batch_size, sequence_length).
-        - attention_mask: Tensor containing attention mask for input tokens.
-        - labels: Optional tensor containing labels for tokens.
-        
+            self: The instance of the class.
+            image_features: Tensor containing image features with shape (num_images, num_image_patches, embed_dim).
+            inputs_embeds: Tensor containing embeddings for input tokens.
+            input_ids: Tensor containing input token IDs with shape (batch_size, sequence_length).
+            attention_mask: Tensor containing attention mask for input tokens.
+            labels: Optional tensor containing labels for tokens.
+
         Returns:
-        - final_embedding: Tensor containing final embeddings with shape (batch_size, max_embed_dim, embed_dim).
-        - final_attention_mask: Tensor containing final attention mask with shape (batch_size, max_embed_dim).
-        - final_labels: Tensor containing final labels with shape (batch_size, max_embed_dim). Returns None if labels is None.
-        - position_ids: Tensor containing position IDs.
-        
+            final_embedding: Tensor containing final embeddings with shape (batch_size, max_embed_dim, embed_dim).
+            final_attention_mask: Tensor containing final attention mask with shape (batch_size, max_embed_dim).
+            final_labels: Tensor containing final labels with shape (batch_size, max_embed_dim). Returns None if labels
+                is None.
+            position_ids: Tensor containing position IDs.
+
         Raises:
-        - ValueError: If the input provided to the model is incorrect, raising an exception with details on the mismatch of image tokens and images given.
+            ValueError: If the input provided to the model is incorrect, raising an exception with details on the
+                mismatch of image tokens and images given.
         """
         num_images, num_image_patches, embed_dim = image_features.shape
         batch_size, sequence_length = input_ids.shape
@@ -617,32 +646,32 @@ token embeddings as an instance of nn.Embedding.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, VipLlavaCausalLMOutputWithPast]
 
         Example:
-
-        ```python
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, VipLlavaForConditionalGeneration
-
-        >>> model = VipLlavaForConditionalGeneration.from_pretrained("llava-hf/vip-llava-7b-hf", device_map="auto", torch_dtype=torch.float16)
-        >>> processor = AutoProcessor.from_pretrained("llava-hf/vip-llava-7b-hf")
-
-        >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human:
-<image>\n{}###Assistant:"
-        >>> question = "Can you please describe this image?"
-        >>> prompt = prompt.format(question)
-        >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(text=text, images=image, return_tensors="pt").to(0, torch.float16)
-
-        >>> # Generate
-        >>> generate_ids = model.generate(**inputs, max_new_tokens=20)
-        >>> processor.decode(generate_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
-        The image features a brown and white cat sitting on a green surface, with a red ball in its
-        ```"""
+            ```python
+            >>> import torch
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, VipLlavaForConditionalGeneration
+            ...
+            >>> model = VipLlavaForConditionalGeneration.from_pretrained("llava-hf/vip-llava-7b-hf", device_map="auto", torch_dtype=torch.float16)
+            >>> processor = AutoProcessor.from_pretrained("llava-hf/vip-llava-7b-hf")
+            ...
+            >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human:<image>\n{}###Assistant:"
+            >>> question = "Can you please describe this image?"
+            >>> prompt = prompt.format(question)
+            >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(text=text, images=image, return_tensors="pt").to(0, torch.float16)
+            ...
+            >>> # Generate
+            >>> generate_ids = model.generate(**inputs, max_new_tokens=20)
+            >>> processor.decode(generate_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+            The image features a brown and white cat sitting on a green surface, with a red ball in its
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -756,23 +785,25 @@ token embeddings as an instance of nn.Embedding.
     ):
         """
         Method to prepare inputs for generation in the VipLlavaForConditionalGeneration class.
-        
+
         Args:
-        - self: The instance of the class.
-        - input_ids (Tensor): The input tensor containing token ids of the input sequence.
-        - past_key_values (Cache or tuple): The cache of key values from previous computations or tuple representing past and cache length.
-        - inputs_embeds (Tensor): An optional tensor containing embeddings for input tokens.
-        - pixel_values (Tensor): An optional tensor containing pixel values for image inputs.
-        - attention_mask (Tensor): An optional tensor indicating the attention mask for the input sequence.
-        
+            self: The instance of the class.
+            input_ids (Tensor): The input tensor containing token ids of the input sequence.
+            past_key_values (Cache or tuple): The cache of key values from previous computations or tuple
+                representing past and cache length.
+            inputs_embeds (Tensor): An optional tensor containing embeddings for input tokens.
+            pixel_values (Tensor): An optional tensor containing pixel values for image inputs.
+            attention_mask (Tensor): An optional tensor indicating the attention mask for the input sequence.
+
         Returns:
-        - dict: A dictionary containing model inputs for generation, including inputs_embeds, input_ids, position_ids, past_key_values, use_cache, attention_mask, and pixel_values.
-        
+            dict: A dictionary containing model inputs for generation, including inputs_embeds, input_ids, position_ids,
+                past_key_values, use_cache, attention_mask, and pixel_values.
+
         Raises:
-        - TypeError: If past_key_values is not of type Cache or tuple.
-        - IndexError: If the attention_mask shape is incompatible with input_ids.
-        - ValueError: If the pixel_values tensor is missing.
-        - RuntimeError: If there is an issue with calculating position_ids based on attention_mask.
+            TypeError: If past_key_values is not of type Cache or tuple.
+            IndexError: If the attention_mask shape is incompatible with input_ids.
+            ValueError: If the pixel_values tensor is missing.
+            RuntimeError: If there is an issue with calculating position_ids based on attention_mask.
         """
         if past_key_values is not None:
             if isinstance(past_key_values, Cache):
@@ -834,10 +865,10 @@ token embeddings as an instance of nn.Embedding.
             self: VipLlavaForConditionalGeneration object. The instance of the class.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.language_model._reorder_cache(*args, **kwargs)
 

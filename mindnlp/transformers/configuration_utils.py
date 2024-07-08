@@ -52,7 +52,8 @@ class PretrainedConfig:
             ValueError: If label2id is not a dictionary.
             ValueError: If id2label is not a dictionary.
             ValueError: If num_labels is provided and is incompatible with the id to label map.
-            ValueError: If problem_type is not one of the allowed types: 'regression', 'single_label_classification', 'multi_label_classification'.
+            ValueError: If problem_type is not one of the allowed types: 'regression', 'single_label_classification',
+                'multi_label_classification'.
             AttributeError: If any attribute cannot be set for the instance.
         '''
         self.ms_dtype = kwargs.pop("ms_dtype", None)
@@ -173,10 +174,10 @@ class PretrainedConfig:
             value (any): The value to be assigned to the attribute specified by the key.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - AttributeError: If the key is not found in the attribute map of the parent class.
+            AttributeError: If the key is not found in the attribute map of the parent class.
         """
         if key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
@@ -184,15 +185,18 @@ class PretrainedConfig:
 
     def __getattribute__(self, key):
         """
-        This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the specified attribute key.
-        
+        This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the
+        specified attribute key.
+
         Args:
             self (object): The instance of the PretrainedConfig class.
-            key (str): The key for which the attribute value needs to be retrieved. It should be a string representing the attribute name.
-        
+            key (str): The key for which the attribute value needs to be retrieved.
+                It should be a string representing the attribute name.
+
         Returns:
-            None: This method returns the attribute value corresponding to the provided key. If the key is found in the attribute map, it returns the mapped value; otherwise, it returns None.
-        
+            None: This method returns the attribute value corresponding to the provided key.
+                If the key is found in the attribute map, it returns the mapped value; otherwise, it returns None.
+
         Raises:
             AttributeError: If the key is not found in the attribute map or the attribute itself does not exist.
             TypeError: If the key provided is not a string.
@@ -339,9 +343,8 @@ class PretrainedConfig:
                 </Tip>
 
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
-                If `False`, then this function returns just the final configuration object.
-
-                If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
+                - If `False`, then this function returns just the final configuration object.
+                - If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
                 dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
                 part of `kwargs` which has not been used to update `config` and is otherwise ignored.
             subfolder (`str`, *optional*, defaults to `""`):
@@ -355,26 +358,26 @@ class PretrainedConfig:
         Returns:
             [`PretrainedConfig`]: The configuration object instantiated from this pretrained model.
 
-        Examples:
-
-        ```python
-        # We can't instantiate directly the base class *PretrainedConfig* so let's show the examples on a
-        # derived class: BertConfig
-        config = BertConfig.from_pretrained(
-            "bert-base-uncased"
-        )  # Download configuration from hf-mirror.com and cache.
-        config = BertConfig.from_pretrained(
-            "./test/saved_model/"
-        )  # E.g. config (or model) was saved using *save_pretrained('./test/saved_model/')*
-        config = BertConfig.from_pretrained("./test/saved_model/my_configuration.json")
-        config = BertConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
-        assert config.output_attentions == True
-        config, unused_kwargs = BertConfig.from_pretrained(
-            "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
-        )
-        assert config.output_attentions == True
-        assert unused_kwargs == {"foo": False}
-        ```"""
+        Example:
+            ```python
+            >>> # We can't instantiate directly the base class *PretrainedConfig* so let's show the examples on a
+            >>> # derived class: BertConfig
+            >>> config = BertConfig.from_pretrained(
+            >>>     "bert-base-uncased"
+            >>> )  # Download configuration from hf-mirror.com and cache.
+            >>> config = BertConfig.from_pretrained(
+            >>>     "./test/saved_model/"
+            >>> )  # E.g. config (or model) was saved using *save_pretrained('./test/saved_model/')*
+            >>> config = BertConfig.from_pretrained("./test/saved_model/my_configuration.json")
+            >>> config = BertConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
+            >>> assert config.output_attentions == True
+            >>> config, unused_kwargs = BertConfig.from_pretrained(
+            >>>     "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
+            >>> )
+            >>> assert config.output_attentions == True
+            >>> assert unused_kwargs == {"foo": False}
+            ```
+        """
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
@@ -686,20 +689,20 @@ class PretrainedConfig:
     def num_labels(self, num_labels: int):
         """
         Method to set the number of labels in the PretrainedConfig class.
-        
+
         Args:
             self (PretrainedConfig): The instance of the PretrainedConfig class.
             num_labels (int): The number of labels to set for the configuration.
                 Must be a non-negative integer representing the total number of labels to be used.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None: This method does not return any value.
+
         Raises:
-            - TypeError: If the num_labels parameter is not of type int.
-            - ValueError: If the num_labels parameter is a negative integer.
-            - AttributeError: If the id2label attribute is not present in the instance or is None.
-            - ValueError: If the length of the id2label attribute is not equal to the specified num_labels.
+            TypeError: If the num_labels parameter is not of type int.
+            ValueError: If the num_labels parameter is a negative integer.
+            AttributeError: If the id2label attribute is not present in the instance or is None.
+            ValueError: If the length of the id2label attribute is not equal to the specified num_labels.
         """
         if not hasattr(self, "id2label") or self.id2label is None or len(self.id2label) != num_labels:
             self.id2label = {i: f"LABEL_{i}" for i in range(num_labels)}
@@ -709,18 +712,20 @@ class PretrainedConfig:
     def _attn_implementation(self):
         """
         Returns the implementation type of the attention mechanism.
-        
+
         Args:
             self: An instance of the PretrainedConfig class.
-        
+
         Returns:
-            str: The implementation type of the attention mechanism. Possible values are:
+            str:
+                The implementation type of the attention mechanism. Possible values are:
+
                 - 'eager': If the '_attn_implementation_internal' attribute is set to None or not defined.
                 - The value of '_attn_implementation_internal': If it is not None.
-        
+
         Raises:
             None.
-        
+
         """
         # This property is made private for now (as it cannot be changed and a PreTrainedModel.use_attn_implementation method needs to be implemented.)
         if hasattr(self, "_attn_implementation_internal"):
@@ -735,17 +740,18 @@ class PretrainedConfig:
     @_attn_implementation.setter
     def _attn_implementation(self, value):
         """
-        This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the '_attn_implementation_internal' attribute.
-        
+        This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the
+        '_attn_implementation_internal' attribute.
+
         Args:
             self (object): The instance of the PretrainedConfig class.
             value (any): The value to be assigned to the '_attn_implementation_internal' attribute.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         self._attn_implementation_internal = value
 
@@ -763,62 +769,63 @@ class EncoderDecoderConfig(PretrainedConfig):
         kwargs (*optional*):
             Dictionary of keyword arguments. Notably:
 
-                - **encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
-                  the encoder config.
-                - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
-                  the decoder config.
+            - **encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+              the encoder config.
+            - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+              the decoder config.
 
-    Examples:
-
-    ```python
-    >>> from transformers import BertConfig, EncoderDecoderConfig, EncoderDecoderModel
-
-    >>> # Initializing a BERT bert-base-uncased style configuration
-    >>> config_encoder = BertConfig()
-    >>> config_decoder = BertConfig()
-
-    >>> config = EncoderDecoderConfig.from_encoder_decoder_configs(config_encoder, config_decoder)
-
-    >>> # Initializing a Bert2Bert model (with random weights) from the bert-base-uncased style configurations
-    >>> model = EncoderDecoderModel(config=config)
-
-    >>> # Accessing the model configuration
-    >>> config_encoder = model.config.encoder
-    >>> config_decoder = model.config.decoder
-    >>> # set decoder config to causal lm
-    >>> config_decoder.is_decoder = True
-    >>> config_decoder.add_cross_attention = True
-
-    >>> # Saving the model, including its configuration
-    >>> model.save_pretrained("my-model")
-
-    >>> # loading model and config from pretrained folder
-    >>> encoder_decoder_config = EncoderDecoderConfig.from_pretrained("my-model")
-    >>> model = EncoderDecoderModel.from_pretrained("my-model", config=encoder_decoder_config)
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import BertConfig, EncoderDecoderConfig, EncoderDecoderModel
+        ...
+        >>> # Initializing a BERT bert-base-uncased style configuration
+        >>> config_encoder = BertConfig()
+        >>> config_decoder = BertConfig()
+        ...
+        >>> config = EncoderDecoderConfig.from_encoder_decoder_configs(config_encoder, config_decoder)
+        ...
+        >>> # Initializing a Bert2Bert model (with random weights) from the bert-base-uncased style configurations
+        >>> model = EncoderDecoderModel(config=config)
+        ...
+        >>> # Accessing the model configuration
+        >>> config_encoder = model.config.encoder
+        >>> config_decoder = model.config.decoder
+        >>> # set decoder config to causal lm
+        >>> config_decoder.is_decoder = True
+        >>> config_decoder.add_cross_attention = True
+        ...
+        >>> # Saving the model, including its configuration
+        >>> model.save_pretrained("my-model")
+        ...
+        >>> # loading model and config from pretrained folder
+        >>> encoder_decoder_config = EncoderDecoderConfig.from_pretrained("my-model")
+        >>> model = EncoderDecoderModel.from_pretrained("my-model", config=encoder_decoder_config)
+        ```
+    """
     model_type = "encoder-decoder"
     is_composition = True
 
     def __init__(self, **kwargs):
         """
         Initializes an instance of the EncoderDecoderConfig class.
-        
+
         Args:
             self: An instance of the EncoderDecoderConfig class.
-        
+
         Returns:
             None
-        
+
         Raises:
             AssertionError: If the 'encoder' and 'decoder' parameters are not provided in the kwargs parameter.
             ImportError: If the 'mindnlp' module cannot be imported.
             AttributeError: If the 'AutoConfig' class or its methods cannot be accessed.
             TypeError: If the 'model_type' parameter is missing in either the 'encoder' or 'decoder' configuration.
             ValueError: If any of the 'encoder' or 'decoder' configuration dictionaries are empty.
-        
+
         Note:
-            This method is used to initialize a configuration object for an encoder-decoder model. It expects the following
-            parameters to be passed as keyword arguments:
+            This method is used to initialize a configuration object for an encoder-decoder model.
+            It expects the following parameters to be passed as keyword arguments:
+
             - encoder: A dictionary containing the configuration settings for the encoder model. It should include the
               'model_type' parameter specifying the type of the encoder model.
             - decoder: A dictionary containing the configuration settings for the decoder model. It should include the

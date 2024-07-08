@@ -243,7 +243,7 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
             value (str): The word delimiter token to be set.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -260,7 +260,7 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
             value (list[int]): A list of integers representing the token IDs for word delimiters.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If the provided value is not a list of integers.
@@ -283,27 +283,32 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
             None.
             
         Example:
+            ```python
             >>> tokenizer = Wav2Vec2CTCTokenizer()
             >>> tokenizer.vocab_size()
             50000
+            ```
         """
         return len(self.decoder)
 
     def get_vocab(self) -> Dict:
         """
         Returns the vocabulary used by the Wav2Vec2CTCTokenizer.
-        
+
         Args:
             self (Wav2Vec2CTCTokenizer): An instance of the Wav2Vec2CTCTokenizer class.
-        
+
         Returns:
-            Dict: A dictionary representing the vocabulary used by the tokenizer. The keys are integers representing the token IDs, and the values are the corresponding tokens.
-        
+            Dict: A dictionary representing the vocabulary used by the tokenizer.
+                The keys are integers representing the token IDs, and the values are the corresponding tokens.
+
         Raises:
             None.
-        
-        This method retrieves the vocabulary used by the Wav2Vec2CTCTokenizer instance. The vocabulary is a dictionary that combines the encoder and added_tokens_encoder dictionaries. The encoder dictionary
-maps tokens to unique integer IDs, while the added_tokens_encoder dictionary contains additional tokens added by the user. The resulting vocabulary dictionary is returned.
+
+        This method retrieves the vocabulary used by the Wav2Vec2CTCTokenizer instance. The vocabulary is a dictionary
+        that combines the encoder and added_tokens_encoder dictionaries. The encoder dictionary maps tokens to unique
+        integer IDs, while the added_tokens_encoder dictionary contains additional tokens added by the user.
+        The resulting vocabulary dictionary is returned.
         """
         vocab = dict(self.encoder)
         vocab.update(self.added_tokens_encoder)
@@ -312,21 +317,26 @@ maps tokens to unique integer IDs, while the added_tokens_encoder dictionary con
     def _add_tokens(self, new_tokens: Union[List[str], List[AddedToken]], special_tokens: bool = False) -> int:
         """
         Add tokens to the Wav2Vec2CTCTokenizer's vocabulary.
-        
+
         Args:
             self (Wav2Vec2CTCTokenizer): The instance of the Wav2Vec2CTCTokenizer class.
-            new_tokens (Union[List[str], List[AddedToken]]): A list of new tokens to be added to the vocabulary. Each token can be either a string or an instance of AddedToken.
-            special_tokens (bool, optional): A flag indicating whether the new tokens are special tokens. Defaults to False.
-        
+            new_tokens (Union[List[str], List[AddedToken]]): A list of new tokens to be added to the vocabulary.
+                Each token can be either a string or an instance of AddedToken.
+            special_tokens (bool, optional): A flag indicating whether the new tokens are special tokens.
+                Defaults to False.
+
         Returns:
             int: The number of tokens added to the vocabulary.
-        
+
         Raises:
             None
-        
-        This method takes a list of new tokens and adds them to the vocabulary of the Wav2Vec2CTCTokenizer. The new tokens can be either strings or instances of AddedToken. If a token is a string, a default
-AddedToken object will be created with the token as its text and the following default values for its attributes: rstrip=False, lstrip=False, normalized=False. If a token is already an instance of AddedToken,
-it will be added as is. The method then calls the super()._add_tokens() method to add the tokens to the vocabulary. The special_tokens flag can be used to indicate whether the new tokens are special tokens.
+
+        This method takes a list of new tokens and adds them to the vocabulary of the Wav2Vec2CTCTokenizer.
+        The new tokens can be either strings or instances of AddedToken. If a token is a string, a default AddedToken
+        object will be created with the token as its text and the following default values for its attributes:
+        rstrip=False, lstrip=False, normalized=False. If a token is already an instance of AddedToken,
+        it will be added as is. The method then calls the super()._add_tokens() method to add the tokens to the
+        vocabulary. The special_tokens flag can be used to indicate whether the new tokens are special tokens.
         """
         # Overwritten to never strip!
         to_add = []
@@ -425,15 +435,16 @@ it will be added as is. The method then calls the super()._add_tokens() method t
     ) -> List[Dict[str, Union[str, int]]]:
         """
         Compute offsets for characters based on char repetitions and tokens.
-        
+
         Args:
             char_repetitions (List[int]): A list of integers representing the number of repetitions for each character.
             chars (List[str]): A list of characters.
             ctc_token (int): The CTC token to be filtered out from the offsets.
-        
+
         Returns:
-            List[Dict[str, Union[str, int]]]: A list of dictionaries where each dictionary contains the character, start offset, and end offset.
-        
+            List[Dict[str, Union[str, int]]]: A list of dictionaries where each dictionary contains the character,
+                start offset, and end offset.
+
         Raises:
             None
         """
@@ -454,16 +465,18 @@ it will be added as is. The method then calls the super()._add_tokens() method t
     ) -> Dict[str, Union[str, float]]:
         """
         Method to extract word offsets from a given set of character offsets.
-        
+
         Args:
-            offsets (Dict[str, Union[str, float]]): A dictionary containing character offsets with keys 'char', 'start_offset', and 'end_offset'. 
-                The 'char' key represents the character, 'start_offset' represents the start offset, and 'end_offset' represents the end offset.
+            offsets (Dict[str, Union[str, float]]): A dictionary containing character offsets with keys 'char',
+                'start_offset', and 'end_offset'. The 'char' key represents the character, 'start_offset' represents
+                the start offset, and 'end_offset' represents the end offset.
             word_delimiter_char (str, optional): The character used as a word delimiter. Defaults to a space character.
-        
+
         Returns:
-            Dict[str, Union[str, float]]: A dictionary containing word offsets with keys 'word', 'start_offset', and 'end_offset'.
-                The 'word' key represents the extracted word, 'start_offset' represents the start offset, and 'end_offset' represents the end offset.
-        
+            Dict[str, Union[str, float]]: A dictionary containing word offsets with keys 'word', 'start_offset',
+                and 'end_offset'. The 'word' key represents the extracted word, 'start_offset' represents the start
+                offset, and 'end_offset' represents the end offset.
+
         Raises:
             None
         """
@@ -501,18 +514,18 @@ it will be added as is. The method then calls the super()._add_tokens() method t
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
         """
         Prepare the input text for tokenization.
-        
+
         Args:
             self (Wav2Vec2CTCTokenizer): The instance of the Wav2Vec2CTCTokenizer class.
             text (str): The input text to be prepared for tokenization.
-            is_split_into_words (bool): A flag indicating whether the input text is already split into words. 
-                                        If True, the input text is expected to be split into words; 
-                                        otherwise, the input text is treated as a continuous string. 
-                                        Defaults to False.
-        
+            is_split_into_words (bool): A flag indicating whether the input text is already split into words.
+                If True, the input text is expected to be split into words;
+                otherwise, the input text is treated as a continuous string.
+                Defaults to False.
+
         Returns:
             tuple: A tuple containing the prepared text and optional keyword arguments.
-        
+
         Raises:
             None
         """
@@ -621,8 +634,8 @@ it will be added as is. The method then calls the super()._add_tokens() method t
 
         Returns:
             `List[str]` or [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`]: The list of decoded
-            sentences. Will be a [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`] when
-            `output_char_offsets == True` or `output_word_offsets == True`.
+                sentences. Will be a [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`] when
+                `output_char_offsets == True` or `output_word_offsets == True`.
         """
         batch_decoded = [
             self.decode(
@@ -690,52 +703,52 @@ it will be added as is. The method then calls the super()._add_tokens() method t
 
         Returns:
             `str` or [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`]: The list of decoded
-            sentences. Will be a [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`] when
-            `output_char_offsets == True` or `output_word_offsets == True`.
+                sentences. Will be a [`~models.wav2vec2.tokenization_wav2vec2.Wav2Vec2CTCTokenizerOutput`] when
+                `output_char_offsets == True` or `output_word_offsets == True`.
 
         Example:
-
-        ```python
-        >>> # Let's see how to retrieve time steps for a model
-        >>> from transformers import AutoTokenizer, AutoFeatureExtractor, AutoModelForCTC
-        >>> from datasets import load_dataset
-        >>> import datasets
-        >>> import torch
-
-        >>> # import model, feature extractor, tokenizer
-        >>> model = AutoModelForCTC.from_pretrained("facebook/wav2vec2-base-960h")
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/wav2vec2-base-960h")
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
-
-        >>> # load first sample of English common_voice
-        >>> dataset = load_dataset("mozilla-foundation/common_voice_11_0", "en", split="train", streaming=True)
-        >>> dataset = dataset.cast_column("audio", datasets.Audio(sampling_rate=16_000))
-        >>> dataset_iter = iter(dataset)
-        >>> sample = next(dataset_iter)
-
-        >>> # forward sample through model to get greedily predicted transcription ids
-        >>> input_values = feature_extractor(sample["audio"]["array"], return_tensors="pt").input_values
-        >>> logits = model(input_values).logits[0]
-        >>> pred_ids = torch.argmax(logits, axis=-1)
-
-        >>> # retrieve word stamps (analogous commands for `output_char_offsets`)
-        >>> outputs = tokenizer.decode(pred_ids, output_word_offsets=True)
-        >>> # compute `time_offset` in seconds as product of downsampling ratio and sampling_rate
-        >>> time_offset = model.config.inputs_to_logits_ratio / feature_extractor.sampling_rate
-
-        >>> word_offsets = [
-        ...     {
-        ...         "word": d["word"],
-        ...         "start_time": round(d["start_offset"] * time_offset, 2),
-        ...         "end_time": round(d["end_offset"] * time_offset, 2),
-        ...     }
-        ...     for d in outputs.word_offsets
-        ... ]
-        >>> # compare word offsets with audio `en_train_0/common_voice_en_19121553.mp3` online on the dataset viewer:
-        >>> # https://hf-mirror.com/datasets/mozilla-foundation/common_voice_11_0/viewer/en
-        >>> word_offsets[:3]
-        [{'word': 'THE', 'start_time': 0.7, 'end_time': 0.78}, {'word': 'TRICK', 'start_time': 0.88, 'end_time': 1.08}, {'word': 'APPEARS', 'start_time': 1.2, 'end_time': 1.64}]
-        ```"""
+            ```python
+            >>> # Let's see how to retrieve time steps for a model
+            >>> from transformers import AutoTokenizer, AutoFeatureExtractor, AutoModelForCTC
+            >>> from datasets import load_dataset
+            >>> import datasets
+            >>> import torch
+            ...
+            >>> # import model, feature extractor, tokenizer
+            >>> model = AutoModelForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/wav2vec2-base-960h")
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+            ...
+            >>> # load first sample of English common_voice
+            >>> dataset = load_dataset("mozilla-foundation/common_voice_11_0", "en", split="train", streaming=True)
+            >>> dataset = dataset.cast_column("audio", datasets.Audio(sampling_rate=16_000))
+            >>> dataset_iter = iter(dataset)
+            >>> sample = next(dataset_iter)
+            ...
+            >>> # forward sample through model to get greedily predicted transcription ids
+            >>> input_values = feature_extractor(sample["audio"]["array"], return_tensors="pt").input_values
+            >>> logits = model(input_values).logits[0]
+            >>> pred_ids = torch.argmax(logits, axis=-1)
+            ...
+            >>> # retrieve word stamps (analogous commands for `output_char_offsets`)
+            >>> outputs = tokenizer.decode(pred_ids, output_word_offsets=True)
+            >>> # compute `time_offset` in seconds as product of downsampling ratio and sampling_rate
+            >>> time_offset = model.config.inputs_to_logits_ratio / feature_extractor.sampling_rate
+            ...
+            >>> word_offsets = [
+            ...     {
+            ...         "word": d["word"],
+            ...         "start_time": round(d["start_offset"] * time_offset, 2),
+            ...         "end_time": round(d["end_offset"] * time_offset, 2),
+            ...     }
+            ...     for d in outputs.word_offsets
+            ... ]
+            >>> # compare word offsets with audio `en_train_0/common_voice_en_19121553.mp3` online on the dataset viewer:
+            >>> # https://hf-mirror.com/datasets/mozilla-foundation/common_voice_11_0/viewer/en
+            >>> word_offsets[:3]
+            [{'word': 'THE', 'start_time': 0.7, 'end_time': 0.78}, {'word': 'TRICK', 'start_time': 0.88, 'end_time': 1.08}, {'word': 'APPEARS', 'start_time': 1.2, 'end_time': 1.64}]
+            ```
+        """
         # Convert inputs to python lists
         token_ids = to_py_obj(token_ids)
 
@@ -867,7 +880,8 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
             None
         
         Raises:
-            FutureWarning: This class is deprecated and will be removed in version 5 of Transformers. Please use Wav2Vec2Processor or Wav2Vec2CTCTokenizer instead.
+            FutureWarning: This class is deprecated and will be removed in version 5 of Transformers.
+                Please use Wav2Vec2Processor or Wav2Vec2CTCTokenizer instead.
         """
         warnings.warn(
             "The class `Wav2Vec2Tokenizer` is deprecated and will be removed in version 5 of Transformers. Please use"
@@ -927,13 +941,14 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
         
         Args:
             self (Wav2Vec2Tokenizer): The instance of the Wav2Vec2Tokenizer class.
-            value (str): The value to be set as the word delimiter token. Should be a string representing the word delimiter token.
+            value (str): The value to be set as the word delimiter token. Should be a string
+                representing the word delimiter token.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         self._word_delimiter_token = value
 

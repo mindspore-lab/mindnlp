@@ -371,9 +371,9 @@ def pipeline(
 
     Pipelines are made of:
 
-        - A [tokenizer](tokenizer) in charge of mapping raw textual input to token.
-        - A [model](model) to make predictions from the inputs.
-        - Some (optional) post processing for enhancing model's output.
+    - A [tokenizer](tokenizer) in charge of mapping raw textual input to token.
+    - A [model](model) to make predictions from the inputs.
+    - Some (optional) post processing for enhancing model's output.
 
     Args:
         task (`str`):
@@ -460,24 +460,24 @@ def pipeline(
     Returns:
         [`Pipeline`]: A suitable pipeline for the task.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import pipeline, AutoModelForTokenClassification, AutoTokenizer
 
-    ```python
-    >>> from transformers import pipeline, AutoModelForTokenClassification, AutoTokenizer
+        >>> # Sentiment analysis pipeline
+        >>> analyzer = pipeline("sentiment-analysis")
 
-    >>> # Sentiment analysis pipeline
-    >>> analyzer = pipeline("sentiment-analysis")
+        >>> # Question answering pipeline, specifying the checkpoint identifier
+        >>> oracle = pipeline(
+        ...     "question-answering", model="distilbert-base-cased-distilled-squad", tokenizer="bert-base-cased"
+        ... )
 
-    >>> # Question answering pipeline, specifying the checkpoint identifier
-    >>> oracle = pipeline(
-    ...     "question-answering", model="distilbert-base-cased-distilled-squad", tokenizer="bert-base-cased"
-    ... )
-
-    >>> # Named entity recognition pipeline, passing in a specific model and tokenizer
-    >>> model = AutoModelForTokenClassification.from_pretrained("dbmdz/bert-large-cased-finetuned-conll03-english")
-    >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    >>> recognizer = pipeline("ner", model=model, tokenizer=tokenizer)
-    ```"""
+        >>> # Named entity recognition pipeline, passing in a specific model and tokenizer
+        >>> model = AutoModelForTokenClassification.from_pretrained("dbmdz/bert-large-cased-finetuned-conll03-english")
+        >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        >>> recognizer = pipeline("ner", model=model, tokenizer=tokenizer)
+        ```
+    """
     if model_kwargs is None:
         model_kwargs = {}
     # Make sure we only pass use_auth_token once as a kwarg (it used to be possible to pass it in model_kwargs,

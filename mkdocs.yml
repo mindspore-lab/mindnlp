@@ -61,7 +61,7 @@ nav:
               - streamers: api/transformers/generation/streamers.md
               - utils: api/transformers/generation/utils.md
           - models:
-              - api/transforemrs/models/index.md
+              - api/transformers/models/index.md
               - albert: api/transformers/models/albert.md
               - align: api/transformers/models/align.md
               - altclip: api/transformers/models/altclip.md
@@ -91,20 +91,28 @@ nav:
               - bridgetower: api/transformers/models/bridgetower.md
               - bros: api/transformers/models/bros.md
               - byt5: api/transformers/models/byt5.md
+              - camembert: api/transformers/models/camembert.md
+              - canine: api/transformers/models/canine.md
               - chatglm: api/transformers/models/chatglm.md
               - chatglm2: api/transformers/models/chatglm2.md
               - chatglm3: api/transformers/models/chatglm3.md
               - clip: api/transformers/models/clip.md
               - codegen: api/transformers/models/codegen.md
               - cogvlm: api/transformers/models/cogvlm.md
+              - cohere: api/transformers/models/cohere.md
               - convbert: api/transformers/models/convbert.md
               - convnext: api/transformers/models/convnext.md
               - cpm: api/transformers/models/cpm.md
               - cpmant: api/transformers/models/cpmant.md
               - cpmbee: api/transformers/models/cpmbee.md
+              - ctrl: api/transformers/models/ctrl.md
               - cvt: api/transformers/models/cvt.md
+              - data2vec: api/transformers/models/data2vec.md
               - deberta: api/transformers/models/deberta.md
+              - deberta_v2: api/transformers/models/deberta_v2.md
+              - decision_transformer: api/transformers/models/decision_transformer.md
               - distilbert: api/transformers/models/distilbert.md
+              - efficientformer: api/transformers/models/efficientformer.md
               - efficientnet: api/transformers/models/efficientnet.md
               - electra: api/transformers/models/electra.md
               - encodec: api/transformers/models/encodec.md
@@ -112,20 +120,28 @@ nav:
               - ernie_m: api/transformers/models/ernie_m.md
               - esm: api/transformers/models/esm.md
               - falcon: api/transformers/models/falcon.md
+              - flava: api/transformers/models/flava.md
+              - funnel: api/transformers/models/funnel.md
               - gemma: api/transformers/models/gemma.md
+              - git: api/transformers/models/git.md
               - gpt: api/transformers/models/gpt.md
               - gpt2: api/transformers/models/gpt2.md
               - gpt_bigcode: api/transformers/models/gpt_bigcode.md
               - gpt_neo: api/transformers/models/gpt_neo.md
               - gpt_neox: api/transformers/models/gpt_neox.md
+              - gpt_neox_japanese: api/transformers/models/gpt_neox_japanese.md
               - gpt_pangu: api/transformers/models/gpt_pangu.md
+              - gptj: api/transformers/models/gptj.md
               - graphormer: api/transformers/models/graphormer.md
+              - groupvit: api/transformers/models/groupvit.md
               - hubert: api/transformers/models/hubert.md
+              - imagegpt: api/transformers/models/imagegpt.md
               - internlm: api/transformers/models/internlm.md
               - jamba: api/transformers/models/jamba.md
               - jetmoe: api/transformers/models/jetmoe.md
               - layoutlm: api/transformers/models/layoutlm.md
               - layoutlmv2: api/transformers/models/layoutlmv2.md
+              - led: api/transformers/models/led.md
               - llama: api/transformers/models/llama.md
               - llava: api/transformers/models/llava.md
               - llava_next: api/transformers/models/llava_next.md
@@ -133,6 +149,7 @@ nav:
               - longt5: api/transformers/models/longt5.md
               - luke: api/transformers/models/luke.md
               - mamba: api/transformers/models/mamba.md
+              - marian: api/transformers/models/marian.md
               - maskformer: api/transformers/models/maskformer.md
               - mbart: api/transformers/models/mbart.md
               - megatron_bert: api/transformers/models/megatron_bert.md
@@ -142,32 +159,46 @@ nav:
               - mistral: api/transformers/models/mistral.md
               - mixtral: api/transformers/models/mixtral.md
               - mobilebert: api/transformers/models/mobilebert.md
+              - mobilevit: api/transformers/models/mobilevit.md
               - moss: api/transformers/models/moss.md
               - mpnet: api/transformers/models/mpnet.md
               - mpt: api/transformers/models/mpt.md
               - mt5: api/transformers/models/mt5.md
               - musicgen: api/transformers/models/musicgen.md
               - musicgen_melody: api/transformers/models/musicgen_melody.md
+              - mvp: api/transformers/models/mvp.md
               - nezha: api/transformers/models/nezha.md
+              - nystromformer: api/transformers/models/nystromformer.md
               - olmo: api/transformers/models/olmo.md
               - openelm: api/transformers/models/openelm.md
               - opt: api/transformers/models/opt.md
+              - owlvit: api/transformers/models/owlvit.md
               - pegasus: api/transformers/models/pegasus.md
               - phi: api/transformers/models/phi.md
               - phi3: api/transformers/models/phi3.md
+              - poolformer: api/transformers/models/poolformer.md
               - pop2piano: api/transformers/models/pop2piano.md
               - qwen2: api/transformers/models/qwen2.md
               - qwen2_moe: api/transformers/models/qwen2_moe.md
               - reformer: api/transformers/models/reformer.md
               - regnet: api/transformers/models/regnet.md
+              - rembert: api/transformers/models/rembert.md
               - resnet: api/transformers/models/resnet.md
               - roberta: api/transformers/models/roberta.md
+              - roc_bert: api/transformers/models/roc_bert.md
               - rwkv: api/transformers/models/rwkv.md
               - sam: api/transformers/models/sam.md
               - seamless_m4t: api/transformers/models/seamless_m4t.md
               - seamless_m4t_v2: api/transformers/models/seamless_m4t_v2.md
               - segformer: api/transformers/models/segformer.md
+              - seggpt: api/transformers/models/seggpt.md
+              - speech_encoder_decoder: api/transformers/models/speech_encoder_decoder.md
+              - speech_to_text: api/transformers/models/speech_to_text.md
+              - squeezebert: api/transformers/models/squeezebert.md
+              - stablelm: api/transformers/models/stablelm.md
               - starcoder2: api/transformers/models/starcoder2.md
+              - swiftformer: api/transformers/models/swiftformer.md
+              - switch_transformers: api/transformers/models/switch_transformers.md
               - t5: api/transformers/models/t5.md
               - table_transformer: api/transformers/models/table_transformer.md
               - timesformer: api/transformers/models/timesformer.md
@@ -175,12 +206,18 @@ nav:
               - transformer: api/transformers/models/transformer.md
               - van: api/transformers/models/van.md
               - vipllava: api/transformers/models/vipllava.md
+              - vision_text_dual_encoder: api/transformers/models/vision_text_dual_encoder.md
+              - visual_bert: api/transformers/models/visual_bert.md
               - vit: api/transformers/models/vit.md
               - wav2vec2: api/transformers/models/wav2vec2.md
+              - wav2vec2_conformer: api/transformers/models/wav2vec2_conformer.md
               - wav2vec2_with_lm: api/transformers/models/wav2vec2_with_lm.md
+              - wavlm: api/transformers/models/wavlm.md
               - whisper: api/transformers/models/whisper.md
+              - x_clip: api/transformers/models/x_clip.md
               - xlm: api/transformers/models/xlm.md
               - xlm_roberta: api/transformers/models/xlm_roberta.md
+              - xlm_roberta_xl: api/transformers/models/xlm_roberta_xl.md
               - xlnet: api/transformers/models/xlnet.md
           - pipeline:
               - api/transforemrs/pipeline/index.md

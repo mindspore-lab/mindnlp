@@ -134,7 +134,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             jumanpp_kwargs (dict): Additional keyword arguments for the Jumanpp word tokenizer. Defaults to None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the specified vocabulary or SentencePiece model file cannot be found, or if an invalid tokenizer type is specified.
@@ -218,32 +218,39 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         Method: do_lower_case
         
         Description:
-        This method returns the lower case value of the input.
-        
+            This method returns the lower case value of the input.
+
         Args:
-        - self: Represents the instance of the class BertJapaneseTokenizer. It is used to access the attributes and methods of the class.
-        
+            self: Represents the instance of the class BertJapaneseTokenizer. 
+                It is used to access the attributes and methods of the class.
+
         Returns:
-        None: This method does not return any value, rather it directly accesses and returns the lower case value of the input.
-        
+            None: This method does not return any value, 
+                rather it directly accesses and returns the lower case value of the input.
+
         Raises:
-        This method does not raise any exceptions.
+            None.
         """
         return self.lower_case
 
     def __getstate__(self):
         """
-        This method '__getstate__' is defined within the class 'BertJapaneseTokenizer' and is used to retrieve the internal state of the object for pickling purposes.
-        
+        This method '__getstate__' is defined within the class 'BertJapaneseTokenizer' 
+        and is used to retrieve the internal state of the object for pickling purposes.
+
         Args:
-            self: This parameter represents the instance of the 'BertJapaneseTokenizer' class itself. It is required to access the internal attributes of the object.
-        
+            self: This parameter represents the instance of the 'BertJapaneseTokenizer' class itself. 
+                It is required to access the internal attributes of the object.
+
         Returns:
-            The method returns a dictionary representing the current state of the object. If the 'word_tokenizer_type' attribute of the object is one of ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer'
-attribute is removed from the state dictionary before returning it.
-        
+            a dictionary representing the current state of the object:
+                If the 'word_tokenizer_type' attribute of the object is one of 
+                ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer'
+                
+                attribute is removed from the state dictionary before returning it.
+
         Raises:
-            This method does not raise any exceptions under normal circumstances.
+            None.
         """
         state = dict(self.__dict__)
         if self.word_tokenizer_type in ["mecab", "sudachi", "jumanpp"]:
@@ -255,12 +262,12 @@ attribute is removed from the state dictionary before returning it.
         Args:
             self (BertJapaneseTokenizer): The instance of the BertJapaneseTokenizer class.
             state (dict): The state dictionary containing the attributes to be restored.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         self.__dict__ = state
         if self.word_tokenizer_type == "mecab":
@@ -279,35 +286,37 @@ attribute is removed from the state dictionary before returning it.
     def _tokenize(self, text):
         """
         Tokenizes the given text using word and subword tokenization.
-        
+
         Args:
             self (BertJapaneseTokenizer): The instance of the BertJapaneseTokenizer class.
             text (str): The text to be tokenized.
-        
+
         Returns:
             list: The list of tokens after word and subword tokenization.
-        
+
         Raises:
             None.
-        
-        This method tokenizes the input text using word and subword tokenization techniques. 
-        If the 'do_word_tokenize' flag is set to True, the text is first tokenized into words using the 'word_tokenizer' 
-        with the 'never_split' option set to 'all_special_tokens'. If the flag is set to False, the text is treated 
+
+        This method tokenizes the input text using word and subword tokenization techniques.
+        If the 'do_word_tokenize' flag is set to True, the text is first tokenized into words using the 'word_tokenizer'
+        with the 'never_split' option set to 'all_special_tokens'. If the flag is set to False, the text is treated
         as a single token.
-        
-        If the 'do_subword_tokenize' flag is set to True, each word token is further split into subword tokens using 
-        the 'subword_tokenizer'. The resulting subword tokens are returned as the final list of tokens. If the flag 
+
+        If the 'do_subword_tokenize' flag is set to True, each word token is further split into subword tokens using
+        the 'subword_tokenizer'. The resulting subword tokens are returned as the final list of tokens. If the flag
         is set to False, the word tokens are returned as is.
-        
-        Note: The 'do_word_tokenize' and 'do_subword_tokenize' flags are set during the initialization of the 
+
+        Note: The 'do_word_tokenize' and 'do_subword_tokenize' flags are set during the initialization of the
         BertJapaneseTokenizer class.
-        
+
         Example:
-            tokenizer = BertJapaneseTokenizer()
-            text = "こんにちは、世界！"
-            tokens = tokenizer._tokenize(text)
-            print(tokens)
-            # Output: ['こんにちは', '、', '世界', '！']
+            ```python
+            >>> tokenizer = BertJapaneseTokenizer()
+            >>> text = "こんにちは、世界！"
+            >>> tokens = tokenizer._tokenize(text)
+            >>> print(tokens)
+            >>> # Output: ['こんにちは', '、', '世界', '！']
+            ```
         """
         if self.do_word_tokenize:
             tokens = self.word_tokenizer.tokenize(text, never_split=self.all_special_tokens)
@@ -324,16 +333,18 @@ attribute is removed from the state dictionary before returning it.
     @property
     def vocab_size(self):
         """
-        This method 'vocab_size' in the class 'BertJapaneseTokenizer' retrieves the vocabulary size based on the tokenizer type.
-        
+        This method 'vocab_size' in the class 'BertJapaneseTokenizer' retrieves the vocabulary size
+        based on the tokenizer type.
+
         Args:
             self (object): The instance of the BertJapaneseTokenizer class.
-            
+
         Returns:
-            None: This method does not return any value directly. The vocabulary size is accessed through the property 'vocab_size'.
-            
+            None: This method does not return any value directly.
+                The vocabulary size is accessed through the property 'vocab_size'.
+
         Raises:
-            N/A
+            None
         """
         if self.subword_tokenizer_type == "sentencepiece":
             return len(self.subword_tokenizer.sp_model)
@@ -342,15 +353,19 @@ attribute is removed from the state dictionary before returning it.
     def get_vocab(self):
         """
         This method 'get_vocab' in the class 'BertJapaneseTokenizer' retrieves the vocabulary used by the tokenizer.
-        
+
         Args:
             self: The instance of the BertJapaneseTokenizer class. It is a required parameter for instance method access.
-        
+
         Returns:
-            Returns a dictionary representing the vocabulary. If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs to their corresponding tokens for the range of
-0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the
-added_tokens_encoder.
-        
+            a dictionary representing the vocabulary:
+
+                - If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs
+                to their corresponding tokens for the range of 0 to vocab_size.
+                Any added tokens are then added to this vocabulary.
+                - If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of
+                the existing vocabulary and the added_tokens_encoder.
+
         Raises:
             No specific exceptions are documented to be raised by this method.
         """
@@ -653,7 +668,9 @@ class SudachiTokenizer:
             **sudachi_dict_type**: (*optional*) string
                 dict type of sudachi, choose from `["small", "core", "full"]`.
             **sudachi_projection**: (*optional*) string
-                Word projection mode of sudachi, choose from `["surface", "normalized", "reading", "dictionary", "dictionary_and_surface", "normalized_and_surface", "normalized_nouns"]`.
+                Word projection mode of sudachi, choose from
+                `["surface", "normalized", "reading", "dictionary", "dictionary_and_surface",
+                "normalized_and_surface", "normalized_nouns"]`.
         """
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []
@@ -865,7 +882,7 @@ class BasicTokenizer:
             do_split_on_punc (bool): A flag indicating whether to split on punctuation. Default is True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -1011,10 +1028,11 @@ class WordpieceTokenizer:
             self (WordpieceTokenizer): The instance of the WordpieceTokenizer class.
             vocab (dict): A dictionary containing the vocabulary for tokenization.
             unk_token (str): The token to be used for unknown or out-of-vocabulary words.
-            max_input_chars_per_word (int, optional): The maximum number of characters allowed per word for tokenization. Defaults to 100.
+            max_input_chars_per_word (int, optional):
+                The maximum number of characters allowed per word for tokenization. Defaults to 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is less than or equal to 0.
@@ -1095,10 +1113,11 @@ class SentencepieceTokenizer:
             do_lower_case (bool, optional): Whether to convert all input to lowercase. Default is False.
             remove_space (bool, optional): Whether to remove space in the tokenization. Default is True.
             keep_accents (bool, optional): Whether to keep accents in the tokenization. Default is True.
-            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments to be passed to the SentencePieceProcessor. Default is None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional):
+                Additional keyword arguments to be passed to the SentencePieceProcessor. Default is None.
         
         Returns:
-            None. This method initializes the SentencepieceTokenizer instance.
+            None.
         
         Raises:
             ValueError: If the vocab file is invalid or missing.
@@ -1127,7 +1146,7 @@ class SentencepieceTokenizer:
             None: This method modifies the input text in-place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())

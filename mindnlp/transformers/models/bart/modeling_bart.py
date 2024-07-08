@@ -61,12 +61,14 @@ def _get_unpad_data(attention_mask):
             and sequence_length is the maximum length of the sequences in the batch.
     
     Returns:
-        tuple: A tuple containing the following elements:
+        tuple:
+            A tuple containing the following elements:
+
             - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened attention mask.
-            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch, 
+            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch,
               padded with a zero at the beginning. Its shape is [batch_size + 1].
             - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-    
+
     Raises:
         None.
     """
@@ -104,15 +106,15 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """
         Initializes a new instance of the BartLearnedPositionalEmbedding class.
-        
+
         Args:
             self: The object instance.
             num_embeddings (int): The number of embeddings.
             embedding_dim (int): The dimension of the embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -145,7 +147,7 @@ class BartAttention(nn.Cell):
     ):
         """
         Initializes an instance of the BartAttention class.
-        
+
         Args:
             embed_dim (int): The dimensionality of the input embeddings.
             num_heads (int): The number of attention heads.
@@ -154,10 +156,10 @@ class BartAttention(nn.Cell):
             bias (bool, optional): Whether to include bias terms in the linear projections. Defaults to True.
             is_causal (bool, optional): Whether the attention layer is causal. Defaults to False.
             config (Optional[BartConfig], optional): An optional BART configuration object. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If `embed_dim` is not divisible by `num_heads`.
         """
@@ -185,16 +187,16 @@ class BartAttention(nn.Cell):
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method _shape is defined within the class BartAttention.
-        
+
         Args:
             self: The instance of the BartAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped. It should be a multi-dimensional tensor.
             seq_len (int): The length of the sequence. It should be a positive integer.
             bsz (int): The batch size. It should be a positive integer.
-        
+
         Returns:
-            None: This method does not return any value explicitly.
-        
+            None.
+
         Raises:
             None
         """
@@ -326,17 +328,19 @@ BART_ATTENTION_CLASSES = {
 
 
 class BartEncoderLayer(nn.Cell):
-
     '''
-    BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder. This layer consists of multi-head self-attention mechanism followed by feed-forward neural
-network (FFN) and layer normalization.
-    
+    BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder.
+    This layer consists of multi-head self-attention mechanism followed by feed-forward neural
+    network (FFN) and layer normalization.
+
     Args:
-        config (BartConfig): An instance of BartConfig containing the configuration for the BART model.
-    
+        config (BartConfig):
+            An instance of BartConfig containing the configuration for the BART model.
+
     Raises:
-        ValueError: If the config provided is not of type BartConfig.
-    
+        ValueError:
+            If the config provided is not of type BartConfig.
+
     Attributes:
         embed_dim (int): The dimension of the input embeddings.
         self_attn (BartAttention): The multi-head self-attention mechanism.
@@ -347,32 +351,37 @@ network (FFN) and layer normalization.
         fc1 (nn.Dense): The first fully connected layer in the feed-forward neural network.
         fc2 (nn.Dense): The second fully connected layer in the feed-forward neural network.
         final_layer_norm (nn.LayerNorm): The final layer normalization applied to the output of the feed-forward neural network.
-    
+
     Methods:
-        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
+        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False):
             Applies the BART encoder layer to the input hidden_states.
-    
+
             Args:
-                hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-                attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
-                layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads,).
-                output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-    
+
+            - hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
+            - attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len)
+            where padding elements are indicated by very large negative values.
+            - layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads,).
+            - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+
             Returns:
-                Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: The output tensor and the attention weights if output_attentions is True.
+
+            - Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: The output tensor and the attention weights
+            if output_attentions is True.
     '''
     def __init__(self, config: BartConfig):
         """
         Initializes a new instance of BartEncoderLayer.
-        
+
         Args:
             self: The instance of the class.
-            config (BartConfig): The configuration object for the BART model, containing various parameters such as d_model, encoder_attention_heads, attention_dropout, dropout, activation_function,
-activation_dropout, and encoder_ffn_dim. 
-        
+            config (BartConfig): The configuration object for the BART model, containing various parameters such as
+                d_model, encoder_attention_heads, attention_dropout, dropout, activation_function, activation_dropout,
+                and encoder_ffn_dim.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -447,38 +456,39 @@ activation_dropout, and encoder_ffn_dim.
 class BartDecoderLayer(nn.Cell):
 
     """
-    This class represents a BART decoder layer used in natural language processing tasks. The BARTDecoderLayer class implements the decoder layer architecture for the BART (Bidirectional and Auto-Regressive
-Transformers) model.
-    
+    This class represents a BART decoder layer used in natural language processing tasks.
+    The BARTDecoderLayer class implements the decoder layer architecture for the BART (Bidirectional and Auto-Regressive
+    Transformers) model.
+
     Attributes:
-        - embed_dim (int): The dimension of the input embeddings.
-        - self_attn (BART_ATTENTION_CLASSES): Self-attention mechanism for the decoder layer.
-        - dropout (float): Dropout probability for regularization.
-        - activation_fn (ACT2FN): Activation function used in the decoder layer.
-        - activation_dropout (float): Dropout probability applied to the activation function output.
-        - self_attn_layer_norm (nn.LayerNorm): Layer normalization for the self-attention output.
-        - encoder_attn (BART_ATTENTION_CLASSES): Cross-attention mechanism with the encoder.
-        - encoder_attn_layer_norm (nn.LayerNorm): Layer normalization for the encoder attention output.
-        - fc1 (nn.Dense): Fully connected layer 1 in the decoder.
-        - fc2 (nn.Dense): Fully connected layer 2 in the decoder.
-        - final_layer_norm (nn.LayerNorm): Final layer normalization for the decoder output.
-    
+        embed_dim (int): The dimension of the input embeddings.
+        self_attn (BART_ATTENTION_CLASSES): Self-attention mechanism for the decoder layer.
+        dropout (float): Dropout probability for regularization.
+        activation_fn (ACT2FN): Activation function used in the decoder layer.
+        activation_dropout (float): Dropout probability applied to the activation function output.
+        self_attn_layer_norm (nn.LayerNorm): Layer normalization for the self-attention output.
+        encoder_attn (BART_ATTENTION_CLASSES): Cross-attention mechanism with the encoder.
+        encoder_attn_layer_norm (nn.LayerNorm): Layer normalization for the encoder attention output.
+        fc1 (nn.Dense): Fully connected layer 1 in the decoder.
+        fc2 (nn.Dense): Fully connected layer 2 in the decoder.
+        final_layer_norm (nn.LayerNorm): Final layer normalization for the decoder output.
+
     Methods:
-        - construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
-                    cross_attn_layer_head_mask, past_key_value, output_attentions, use_cache): 
+        construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
+                    cross_attn_layer_head_mask, past_key_value, output_attentions, use_cache):
             Constructs the forward pass of the BART decoder layer.
-    
+
     Args:
-        - hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-        - attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len).
-        - encoder_hidden_states (mindspore.Tensor): Cross-attention input to the layer of shape (batch, seq_len, embed_dim).
-        - encoder_attention_mask (mindspore.Tensor): Encoder attention mask of size (batch, 1, tgt_len, src_len).
-        - layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads).
-        - cross_attn_layer_head_mask (mindspore.Tensor): Mask for cross-attention heads in a given layer of size (decoder_attention_heads).
-        - past_key_value (Tuple(mindspore.Tensor)): Cached past key and value projection states.
-        - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-        - use_cache (bool, optional): Whether to use caching for past key and value states.
-    
+        hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
+        attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len).
+        encoder_hidden_states (mindspore.Tensor): Cross-attention input to the layer of shape (batch, seq_len, embed_dim).
+        encoder_attention_mask (mindspore.Tensor): Encoder attention mask of size (batch, 1, tgt_len, src_len).
+        layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads).
+        cross_attn_layer_head_mask (mindspore.Tensor): Mask for cross-attention heads in a given layer of size (decoder_attention_heads).
+        past_key_value (Tuple(mindspore.Tensor)): Cached past key and value projection states.
+        output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+        use_cache (bool, optional): Whether to use caching for past key and value states.
+
     Returns:
         Tuple containing the decoder layer outputs, optional attentions tensors, and cached key and value states if requested.
     """
@@ -486,19 +496,23 @@ Transformers) model.
         """
         Args:
             self (BartDecoderLayer): The current instance of the BartDecoderLayer class.
-            config (BartConfig): An instance of BartConfig containing the configuration parameters for the decoder layer.
+            config (BartConfig):
+
+                An instance of BartConfig containing the configuration parameters for the decoder layer.
                 The config parameter should have the following attributes:
-                    - d_model (int): The dimension of the model.
-                    - decoder_attention_heads (int): The number of attention heads for the decoder.
-                    - attention_dropout (float): The dropout probability for attention layers.
-                    - activation_function (str): The name of the activation function to be used.
-                    - activation_dropout (float): The dropout probability for activation layers.
-                    - decoder_ffn_dim (int): The dimension of the feed-forward network in the decoder.
+
+                - d_model (int): The dimension of the model.
+                - decoder_attention_heads (int): The number of attention heads for the decoder.
+                - attention_dropout (float): The dropout probability for attention layers.
+                - activation_function (str): The name of the activation function to be used.
+                - activation_dropout (float): The dropout probability for activation layers.
+                - decoder_ffn_dim (int): The dimension of the feed-forward network in the decoder.
+
                 This parameter is used to initialize the decoder layer with the specified configuration.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -631,17 +645,17 @@ class BartClassificationHead(nn.Cell):
     ):
         """
         Initializes a new instance of the BartClassificationHead class.
-        
+
         Args:
             self (BartClassificationHead): The current instance of the class.
             input_dim (int): The input dimension of the classifier.
             inner_dim (int): The inner dimension of the classifier.
             num_classes (int): The number of classes in the classification task.
             pooler_dropout (float): The dropout rate for the classifier's pooler layer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -653,16 +667,16 @@ class BartClassificationHead(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the BartClassificationHead by processing the hidden states input.
-        
+
         Args:
             self (BartClassificationHead): The instance of the BartClassificationHead class.
-            hidden_states (mindspore.Tensor): The input hidden states tensor to be processed. 
+            hidden_states (mindspore.Tensor): The input hidden states tensor to be processed.
                 It should have the shape (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
-            mindspore.Tensor: The processed hidden states tensor after applying dropout, dense, tanh activation, 
+            mindspore.Tensor: The processed hidden states tensor after applying dropout, dense, tanh activation,
                 and output projection operations. It has the shape (batch_size, sequence_length, hidden_size).
-        
+
         Raises:
             None
         """
@@ -677,25 +691,31 @@ class BartClassificationHead(nn.Cell):
 class BartPreTrainedModel(PreTrainedModel):
 
     """
-    BartPreTrainedModel class represents a pre-trained BART (Bidirectional and Auto-Regressive Transformers) model for natural language processing tasks. This class inherits from PreTrainedModel and includes
-methods for initializing weights and generating dummy inputs for the model.
-    
+    BartPreTrainedModel class represents a pre-trained BART (Bidirectional and Auto-Regressive Transformers) model
+    for natural language processing tasks.
+    This class inherits from PreTrainedModel and includes methods for initializing weights and generating
+    dummy inputs for the model.
+
     Attributes:
         config: The configuration instance for the BART model.
-    
+
     Methods:
-        _init_weights(self, cell): Initializes the weights for the BART model based on the specified cell type, using the provided configuration standard deviation.
+        _init_weights(self, cell):
+            Initializes the weights for the BART model based on the specified cell type,
+            using the provided configuration standard deviation.
         dummy_inputs(self): Generates dummy input data for the BART model, including input_ids and attention_mask.
-    
-    Example usage:
-        # Initialize a BART pre-trained model
-        model = BartPreTrainedModel(config)
-    
-        # Initialize the weights for the model
-        model._init_weights(cell)
-    
-        # Generate dummy inputs for the model
-        inputs = model.dummy_inputs()
+
+    Example:
+        ```python
+        >>> # Initialize a BART pre-trained model
+        >>> model = BartPreTrainedModel(config)
+        ...
+        >>> # Initialize the weights for the model
+        >>> model._init_weights(cell)
+        ...
+        >>> # Generate dummy inputs for the model
+        >>> inputs = model.dummy_inputs()
+        ```
     """
     config_class = BartConfig
     base_model_prefix = "model"
@@ -723,20 +743,21 @@ methods for initializing weights and generating dummy inputs for the model.
     def dummy_inputs(self):
         """
         Method: dummy_inputs
-        
+
         Description:
-        This method generates dummy inputs for a BartPreTrainedModel.
-        
+            This method generates dummy inputs for a BartPreTrainedModel.
+
         Args:
-        - self: BartPreTrainedModel
-            The instance of BartPreTrainedModel class.
-        
+            self: BartPreTrainedModel
+                The instance of BartPreTrainedModel class.
+
         Returns:
-        - dict
-            A dictionary containing dummy inputs for the model with the following keys:
-            - 'attention_mask': A Tensor representing the attention mask for the input_ids.
-            - 'input_ids': A Tensor representing the input token IDs.
-        
+            dict:
+                A dictionary containing dummy inputs for the model with the following keys:
+
+                - 'attention_mask': A Tensor representing the attention mask for the input_ids.
+                - 'input_ids': A Tensor representing the input token IDs.
+
         Raises:
         This method does not raise any exceptions.
         """
@@ -760,15 +781,15 @@ class BartEncoder(BartPreTrainedModel):
     """
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """Initializes a new instance of the BartEncoder class.
-        
+
         Args:
             self: The instance of the class.
             config (BartConfig): The configuration object for the Bart model.
             embed_tokens (Optional[nn.Embedding]): The optional embedding tensor for the tokens.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -801,33 +822,36 @@ class BartEncoder(BartPreTrainedModel):
     def get_input_embeddings(self):
         """
         Method to retrieve the input embeddings from the BartEncoder.
-        
+
         Args:
-            self: BartEncoder instance. The self parameter is required to access the instance variables and methods of BartEncoder.
-        
+            self: BartEncoder instance.
+                The self parameter is required to access the instance variables and methods of BartEncoder.
+
         Returns:
-            None. This method returns the embed_tokens attribute from BartEncoder, which represents the input embeddings.
-        
+            None: This method returns the embed_tokens attribute from BartEncoder, which represents the input embeddings.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Method to set the input embeddings for the BartEncoder.
-        
+
         Args:
             self (BartEncoder): The instance of BartEncoder.
                 This parameter refers to the current instance of the BartEncoder class.
-            value: The input embeddings value to be set.
-                Type: Any
-                Purpose: The input embeddings value to assign to the embed_tokens attribute of the BartEncoder instance.
-                Restrictions: None
-        
+            value:
+                The input embeddings value to be set.
+
+                - Type: Any
+                - Purpose: The input embeddings value to assign to the embed_tokens attribute of the BartEncoder instance.
+                - Restrictions: None
+
         Returns:
-            None: This method does not return any value explicitly.
-        
+            None.
+
         Raises:
             None
         """
@@ -967,20 +991,24 @@ class BartDecoder(BartPreTrainedModel):
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the BartDecoder class.
-        
+
         Args:
             self: The BartDecoder instance.
-            config (BartConfig): The configuration object for the Bart model.
+            config (BartConfig):
+                The configuration object for the Bart model.
+
                 - config: BartConfig type.
                 - Purpose: Specifies the configuration settings for the Bart model.
-            embed_tokens (Optional[nn.Embedding]): Optional parameter. The embedding tokens for the Bart model.
+            embed_tokens (Optional[nn.Embedding]):
+                Optional parameter. The embedding tokens for the Bart model.
+
                 - embed_tokens: Optional[nn.Embedding] type.
                 - Purpose: Represents the embedding tokens used in the Bart model.
                 - Restrictions: Must be of type Optional[nn.Embedding]. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1011,29 +1039,30 @@ class BartDecoder(BartPreTrainedModel):
     def get_input_embeddings(self):
         """
         Get the input embeddings for the BartDecoder class.
-        
+
         Args:
             self: An instance of the BartDecoder class.
-        
+
         Returns:
-            None. This method does not return a value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Method to set the input embeddings for the BartDecoder.
-        
+
         Args:
             self (BartDecoder): The instance of the BartDecoder class.
-            value: The input embeddings to be set for the BartDecoder. Should be of the appropriate type.
-        
+            value: The input embeddings to be set for the BartDecoder.
+                Should be of the appropriate type.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1239,43 +1268,45 @@ class BartDecoder(BartPreTrainedModel):
 class BartModel(BartPreTrainedModel):
 
     """
-    BartModel is a class that represents the BART (Bidirectional and Auto-Regressive Transformers) model for sequence-to-sequence tasks. It inherits from BartPreTrainedModel and encapsulates the architecture
-and functionality of the BART model.
-    
+    BartModel is a class that represents the BART (Bidirectional and Auto-Regressive Transformers) model
+    for sequence-to-sequence tasks.
+    It inherits from BartPreTrainedModel and encapsulates the architecture and functionality of the BART model.
+
     Attributes:
         shared (nn.Embedding): Shared embedding layer for both encoder and decoder parts of the model.
         encoder (BartEncoder): Encoder component of the BART model.
         decoder (BartDecoder): Decoder component of the BART model.
-    
+
     Methods:
-        __init__(config: BartConfig): Initializes the BART model with the provided configuration.
-        _tie_weights(): Ties the weights of word embeddings if specified in the configuration.
-        get_input_embeddings(): Retrieves the shared input embeddings.
-        set_input_embeddings(value): Sets the shared input embeddings to the provided value.
-        get_encoder(): Retrieves the encoder component of the model.
-        get_decoder(): Retrieves the decoder component of the model.
-        construct(input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
+        __init__: Initializes the BART model with the provided configuration.
+        _tie_weights: Ties the weights of word embeddings if specified in the configuration.
+        get_input_embeddings: Retrieves the shared input embeddings.
+        set_input_embeddings: Sets the shared input embeddings to the provided value.
+        get_encoder: Retrieves the encoder component of the model.
+        get_decoder: Retrieves the decoder component of the model.
+        construct: Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig):
         """
         Initialize the BartModel class with the provided configuration.
-        
+
         Args:
             self: The instance of the BartModel class.
-            config (BartConfig): The configuration object for the BartModel. It specifies the model's settings and hyperparameters.
+            config (BartConfig): The configuration object for the BartModel.
+                It specifies the model's settings and hyperparameters.
+
                 - config.pad_token_id (int): The index of the padding token in the vocabulary.
                 - config.vocab_size (int): The size of the model's vocabulary.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type BartConfig.
-            - ValueError: If the provided pad_token_id is not a valid index in the vocabulary.
-            - ValueError: If the provided vocab_size is not a valid vocabulary size.
+            TypeError: If the config parameter is not of type BartConfig.
+            ValueError: If the provided pad_token_id is not a valid index in the vocabulary.
+            ValueError: If the provided vocab_size is not a valid vocabulary size.
         """
         super().__init__(config)
 
@@ -1291,28 +1322,34 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     def _tie_weights(self):
         """
         Ties the weights of the word embeddings in the encoder and decoder of the BartModel.
-        
+
         Args:
             self (BartModel): An instance of the BartModel class.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel. The tying of weights means that the same weight parameters are shared between the encoder and
-decoder embeddings.
-        
-        The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True. If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the
-'embed_tokens' in the encoder with the 'shared' weights. It then repeats the process for the 'embed_tokens' in the decoder.
-        
-        Note that tying the weights can help reduce the number of parameters in the model and improve efficiency, especially in scenarios where the encoder and decoder share the same vocabulary.
-        
+            This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel.
+            The tying of weights means that the same weight parameters are shared between the encoder and
+            decoder embeddings.
+
+            The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True.
+            If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the
+            'embed_tokens' in the encoder with the 'shared' weights.
+            It then repeats the process for the 'embed_tokens' in the decoder.
+
+            Note that tying the weights can help reduce the number of parameters in the model and improve efficiency,
+            especially in scenarios where the encoder and decoder share the same vocabulary.
+
         Example:
-            model = BartModel()
-            model._tie_weights()
+            ```python
+            >>> model = BartModel()
+            >>> model._tie_weights()
+            ```
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -1321,18 +1358,18 @@ decoder embeddings.
     def get_input_embeddings(self):
         """
         Method to get the input embeddings for the BartModel.
-        
+
         Args:
-            self: The instance of the BartModel class.
-                Type: BartModel
-                Purpose: Represents the current instance of the BartModel class.
-                Restrictions: None.
-        
+            self:
+                The instance of the BartModel class.
+
+                - Type: BartModel
+                - Purpose: Represents the current instance of the BartModel class.
+                - Restrictions: None.
+
         Returns:
-            None: The method returns None.
-                Type: None
-                Purpose: Indicates that the method does not return any specific value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1341,16 +1378,16 @@ decoder embeddings.
     def set_input_embeddings(self, value):
         """
         Set input embeddings for the BartModel.
-        
+
         Args:
             self (BartModel): The instance of the BartModel class.
             value (torch.Tensor): The input embeddings to be set. It should be a torch.Tensor.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         self.shared = value
         self.encoder.embed_tokens = self.shared
@@ -1359,13 +1396,13 @@ decoder embeddings.
     def get_encoder(self):
         """
         Get the encoder associated with the BartModel.
-        
+
         Args:
             self: BartModel instance. The current instance of BartModel.
-        
+
         Returns:
-            None. The encoder associated with the BartModel instance.
-        
+            encoder: The encoder associated with the BartModel instance.
+
         Raises:
             None.
         """
@@ -1374,17 +1411,17 @@ decoder embeddings.
     def get_decoder(self):
         """
         Method get_decoder in class BartModel.
-        
+
         Args:
             self: BartModel instance.
                 Represents the current instance of the BartModel class.
-        
+
         Returns:
-            None
+            decoder:
                 This method returns the decoder associated with the BartModel instance.
-        
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.decoder
 
@@ -1408,7 +1445,7 @@ decoder embeddings.
     ) -> Union[Tuple, Seq2SeqModelOutput]:
         """
         Constructs the BartModel.
-        
+
         Args:
             self (BartModel): An instance of the BartModel class.
             input_ids (mindspore.Tensor, optional): The input sequence tensor. Default: None.
@@ -1426,11 +1463,12 @@ decoder embeddings.
             output_attentions (Optional[bool], optional): Whether to output attentions. Default: None.
             output_hidden_states (Optional[bool], optional): Whether to output hidden states. Default: None.
             return_dict (Optional[bool], optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
-            Union[Tuple, Seq2SeqModelOutput]: A tuple or a Seq2SeqModelOutput object containing the last hidden state, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last
-hidden state, encoder hidden states, and encoder attentions.
-        
+            Union[Tuple, Seq2SeqModelOutput]: A tuple or a Seq2SeqModelOutput object containing the last hidden state,
+                past key values, decoder hidden states, decoder attentions, cross attentions, encoder last
+                hidden state, encoder hidden states, and encoder attentions.
+
         Raises:
             ValueError: If no `decoder_input_ids` or `decoder_inputs_embeds` are passed and `input_ids` is `None`.
         """
@@ -1507,10 +1545,14 @@ hidden state, encoder hidden states, and encoder attentions.
 class BartForConditionalGeneration(BartPreTrainedModel):
 
     """
-    This class represents a BART model for conditional text generation. It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval, resizing token
-embeddings, output embeddings, model construction, preparing inputs for generation, preparing decoder input ids from labels, and reordering cache. The class includes methods for initializing the model,
-retrieving encoder and decoder, resizing token embeddings, constructing the model, preparing inputs for text generation, and reordering cache for efficient generation. Additionally, it provides methods for
-setting and getting output embeddings and resizing final logits bias. The class also includes a method for preparing decoder input ids from labels for masked language modeling.
+    This class represents a BART model for conditional text generation.
+    It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval,
+    resizing token embeddings, output embeddings, model construction, preparing inputs for generation,
+    preparing decoder input ids from labels, and reordering cache.
+    The class includes methods for initializing the model, retrieving encoder and decoder, resizing token embeddings,
+    constructing the model, preparing inputs for text generation, and reordering cache for efficient generation.
+    Additionally, it provides methods for setting and getting output embeddings and resizing final logits bias.
+    The class also includes a method for preparing decoder input ids from labels for masked language modeling.
     """
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -1518,14 +1560,14 @@ setting and getting output embeddings and resizing final logits bias. The class 
 
     def __init__(self, config: BartConfig):
         """Initialize a BART model for conditional generation.
-        
+
         Args:
             self (BartForConditionalGeneration): The object instance of the BartForConditionalGeneration class.
             config (BartConfig): The configuration object for the BART model.
-        
+
         Returns:
-            None. This method initializes the BART model with the provided configuration.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1540,15 +1582,15 @@ setting and getting output embeddings and resizing final logits bias. The class 
     def get_encoder(self):
         """
         Method to retrieve the encoder from the BartForConditionalGeneration model.
-        
+
         Args:
             self: Instance of the BartForConditionalGeneration class.
                 This parameter refers to the current instance of the class.
-        
+
         Returns:
-            None
-            Returns the encoder obtained from the model.
-        
+            encoder:
+                Returns the encoder obtained from the model.
+
         Raises:
             None
         """
@@ -1557,33 +1599,33 @@ setting and getting output embeddings and resizing final logits bias. The class 
     def get_decoder(self):
         """
         Method to retrieve the decoder module from the BartForConditionalGeneration model.
-        
+
         Args:
             self: An instance of the BartForConditionalGeneration class.
-            
+
         Returns:
-            None. Returns the decoder module from the BartForConditionalGeneration model.
-        
+            decoder: Returns the decoder module from the BartForConditionalGeneration model.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
         """
         Resize the token embeddings for the BartForConditionalGeneration model.
-        
+
         Args:
             self: The instance of the BartForConditionalGeneration class.
             new_num_tokens (int): The new number of tokens to resize the embeddings to.
                 Specifies the desired number of tokens for the embeddings.
             pad_to_multiple_of (Optional[int]): The optional value to pad the resize to a multiple of.
                 If provided, the new embeddings size will be padded to the nearest multiple of this value.
-                
+
         Returns:
             nn.Embedding: The resized token embeddings as an instance of nn.Embedding.
                 Represents the updated embeddings after resizing.
-        
+
         Raises:
             None.
         """
@@ -1592,16 +1634,17 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-        ''' 
+        '''
         Resize the final logits bias to accommodate a different number of tokens.
-        
+
         Args:
             self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
-            new_num_tokens (int): The new number of tokens to resize the final logits bias to. It should be a positive integer.
-        
+            new_num_tokens (int):
+                The new number of tokens to resize the final logits bias to. It should be a positive integer.
+
         Returns:
-            None. The method modifies the final_logits_bias attribute of the BartForConditionalGeneration instance in place.
-        
+            None: The method modifies the final_logits_bias attribute of the BartForConditionalGeneration instance in place.
+
         Raises:
             ValueError: If new_num_tokens is not a positive integer.
         '''
@@ -1616,38 +1659,39 @@ setting and getting output embeddings and resizing final logits bias. The class 
     def get_output_embeddings(self):
         """
         Method to retrieve the output embeddings from the BartForConditionalGeneration model.
-        
+
         Args:
             self: An instance of the BartForConditionalGeneration class.
                 This parameter is required to access the model's output embeddings.
                 It should always be passed as the first argument when calling this method.
-        
+
         Returns:
-            None: This method returns the lm_head attribute of the BartForConditionalGeneration instance.
+            lm_head: This method returns the lm_head attribute of the BartForConditionalGeneration instance.
                 The lm_head attribute represents the output embeddings of the model.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
-        Method: set_output_embeddings
-        
+        Method:
+            set_output_embeddings
+
         Description:
-        Sets the output embeddings for the BartForConditionalGeneration model.
-        
+            Sets the output embeddings for the BartForConditionalGeneration model.
+
         Args:
-        - self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
-        - new_embeddings (Tensor): The new embeddings to be set as the output embeddings for the model.
-        
+            self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
+            new_embeddings (Tensor): The new embeddings to be set as the output embeddings for the model.
+
         Returns:
-        - None: The method does not return any value.
-        
+            None.
+
         Raises:
-        - TypeError: If the new_embeddings parameter is not of type Tensor.
-        - ValueError: If the new_embeddings parameter is empty or invalid.
+            TypeError: If the new_embeddings parameter is not of type Tensor.
+            ValueError: If the new_embeddings parameter is empty or invalid.
         """
         self.lm_head = new_embeddings
 
@@ -1671,12 +1715,14 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, Seq2SeqLMOutput]
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1745,7 +1791,7 @@ setting and getting output embeddings and resizing final logits bias. The class 
     ):
         """
         Prepare the inputs for generation in the BartForConditionalGeneration class.
-        
+
         Args:
             self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
             decoder_input_ids (torch.Tensor): The input tensor representing the decoder input IDs.
@@ -1757,9 +1803,11 @@ setting and getting output embeddings and resizing final logits bias. The class 
             cross_attn_head_mask (torch.Tensor): Optional. The mask tensor for the cross-attention heads. Default is None.
             use_cache (bool): Optional. Whether to use cache for faster decoding. Default is None.
             encoder_outputs (torch.Tensor): Optional. The tensor representing the encoder outputs. Default is None.
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation. The dictionary has the following keys:
+            dict: A dictionary containing the prepared inputs for generation.
+                The dictionary has the following keys:
+
                 - 'input_ids' (None): Represents the input IDs, which are set to None.
                 - 'encoder_outputs' (torch.Tensor): Represents the encoder outputs.
                 - 'past_key_values' (Tuple[torch.Tensor]): Represents the past key values for generating the output.
@@ -1770,7 +1818,7 @@ setting and getting output embeddings and resizing final logits bias. The class 
                 - 'decoder_head_mask' (torch.Tensor): Represents the mask tensor for the decoder's attention heads.
                 - 'cross_attn_head_mask' (torch.Tensor): Represents the mask tensor for the cross-attention heads.
                 - 'use_cache' (bool): Represents whether to use cache for faster decoding.
-        
+
         Raises:
             None.
         """
@@ -1803,17 +1851,18 @@ setting and getting output embeddings and resizing final logits bias. The class 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
         """
         Prepare decoder input IDs from labels.
-        
-        This method takes in two parameters: self, labels. The 'self' parameter refers to the current instance of the 'BartForConditionalGeneration' class, while the 'labels' parameter is a tensor containing
-the input labels.
-        
+
+        This method takes in two parameters: self, labels.
+        The 'self' parameter refers to the current instance of the 'BartForConditionalGeneration' class,
+        while the 'labels' parameter is a tensor containing the input labels.
+
         Args:
             self (BartForConditionalGeneration): The current instance of the BartForConditionalGeneration class.
             labels (mindspore.Tensor): A tensor containing the input labels.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1823,17 +1872,18 @@ the input labels.
     def _reorder_cache(past_key_values, beam_idx):
         """
         Reorders the cache for the BartForConditionalGeneration model based on the provided beam index.
-        
+
         Args:
             past_key_values (tuple): A tuple containing the past key and value states for each layer of the model.
-                                     The states are used to generate the next token probabilities.
+                The states are used to generate the next token probabilities.
             beam_idx (torch.Tensor): A tensor representing the indices of the beams to reorder the cache.
-        
+
         Returns:
-            None: This method does not return a value but modifies the past_key_values in place by reordering the cache based on the beam index.
-        
+            None: This method does not return a value but modifies the past_key_values in place
+                by reordering the cache based on the beam index.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1848,29 +1898,34 @@ the input labels.
 class BartForSequenceClassification(BartPreTrainedModel):
 
     """
-    The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks. It inherits from the `BartPreTrainedModel` class and includes methods for model
-initialization and sequence classification.
-    
-    This class includes an `__init__` method for initializing the BART model and a `construct` method for constructing the sequence classification outputs. The `construct` method accepts various input and
-output parameters, including input and output tensors, attention masks, labels, and cache usage. It processes the input data through the BART model, computes the classification logits, and calculates the loss
-based on the specified problem type.
-    
-    The class also includes additional methods for handling sequence classification tasks and managing model outputs. The `BartForSequenceClassification` class provides a comprehensive solution for utilizing
-BART models for sequence classification applications.
+    The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks.
+    It inherits from the `BartPreTrainedModel` class and includes methods for model initialization and sequence classification.
+
+    This class includes an `__init__` method for initializing the BART model and a `construct` method for
+    constructing the sequence classification outputs.
+    The `construct` method accepts various input and output parameters, including input and output tensors,
+    attention masks, labels, and cache usage.
+    It processes the input data through the BART model, computes the classification logits, and calculates the loss
+    based on the specified problem type.
+
+    The class also includes additional methods for handling sequence classification tasks and managing model outputs.
+    The `BartForSequenceClassification` class provides a comprehensive solution for utilizing
+    BART models for sequence classification applications.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig, **kwargs):
         """
         Initializes a new instance of BartForSequenceClassification.
-        
+
         Args:
             self: The instance of the class.
-            config (BartConfig): The configuration for the BART model. It contains the model architecture and hyperparameters.
-            
+            config (BartConfig): The configuration for the BART model.
+                It contains the model architecture and hyperparameters.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the provided config is not an instance of BartConfig.
         """
@@ -1905,9 +1960,10 @@ BART models for sequence classification applications.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -1986,18 +2042,20 @@ class BartForQuestionAnswering(BartPreTrainedModel):
 
     """
     This class represents a BART model for question answering tasks. It inherits from the BartPreTrainedModel class.
-    
-    BARTForQuestionAnswering is a fine-tuned version of the BART model, specifically designed for question answering tasks. It takes in input sequences and returns the predicted start and end positions of the
-answer span within the input sequence.
-    
+
+    BARTForQuestionAnswering is a fine-tuned version of the BART model, specifically designed for question answering tasks.
+    It takes in input sequences and returns the predicted start and end positions of the answer span within the input sequence.
+
     The BARTForQuestionAnswering class contains the following methods:
-    
+
     - __init__(self, config): Initializes the BARTForQuestionAnswering model with the provided configuration.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
-    
+    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask,
+    cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
+    decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
+    Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
+
     The construct method takes the following parameters:
-    
+
     - input_ids (mindspore.Tensor): The input token IDs.
     - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor.
     - decoder_input_ids (Optional[mindspore.Tensor]): The decoder input token IDs.
@@ -2014,9 +2072,9 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     - output_attentions (Optional[bool]): Whether to output attentions.
     - output_hidden_states (Optional[bool]): Whether to output hidden states.
     - return_dict (Optional[bool]): Whether to return a Seq2SeqQuestionAnsweringModelOutput object.
-    
+
     The construct method returns a Seq2SeqQuestionAnsweringModelOutput object that contains the following attributes:
-    
+
     - loss (Optional[mindspore.Tensor]): The total loss.
     - start_logits (mindspore.Tensor): The predicted start logits.
     - end_logits (mindspore.Tensor): The predicted end logits.
@@ -2033,14 +2091,14 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     def __init__(self, config):
         """
         Initializes an instance of the 'BartForQuestionAnswering' class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the 'BartConfig' class containing the model configuration.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -2075,14 +2133,15 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
@@ -2157,18 +2216,18 @@ class BartDecoderWrapper(BartPreTrainedModel):
     def __init__(self, config):
         """
         Initialize the BartDecoderWrapper class with the provided configuration.
-        
+
         Args:
             self (object): The instance of the BartDecoderWrapper class.
             config (object): The configuration object containing initialization parameters.
                 This config object is used to set up the BartDecoderWrapper instance.
                 It should include all necessary parameters for configuring the BartDecoderWrapper.
-        
+
         Returns:
-            None. This method initializes the BartDecoderWrapper instance.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
         self.decoder = BartDecoder(config)
@@ -2176,14 +2235,14 @@ class BartDecoderWrapper(BartPreTrainedModel):
     def construct(self, *args, **kwargs):
         """
         Constructs a decoder wrapper instance.
-        
+
         Args:
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
-            
+
         Returns:
-            None: This method does not explicitly return a value.
-        
+            None.
+
         Raises:
             Any exceptions raised by the self.decoder method may propagate to the caller.
         """
@@ -2194,44 +2253,52 @@ class BartForCausalLM(BartPreTrainedModel):
 
     """
     This class represents a Bart model for causal language modeling (LM). It is a subclass of BartPreTrainedModel.
-    
-    BartForCausalLM is designed for generating text in an autoregressive manner, where the model predicts the next word in a sequence given the previous words. It consists of a decoder component that takes
-input_ids and attention_mask as inputs, and produces a sequence of predicted logits. The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask,
-cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
-    
-    The class provides methods for getting and setting the input and output embeddings, as well as getting and setting the decoder component. The construct method is the main method for generating text. It
-takes input_ids, attention_mask, and other optional arguments, and returns the predicted logits, along with other optional outputs such as loss, past_key_values, hidden_states, attentions, and cross_attentions.
-    
-    The prepare_inputs_for_generation method is used to prepare inputs for text generation. It takes input_ids, past_key_values, attention_mask, use_cache, and other optional arguments, and returns a
-dictionary containing the prepared inputs.
-    
+
+    BartForCausalLM is designed for generating text in an autoregressive manner,
+    where the model predicts the next word in a sequence given the previous words.
+    It consists of a decoder component that takes input_ids and attention_mask as inputs,
+    and produces a sequence of predicted logits.
+    The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask,
+    cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states,
+    and return_dict.
+
+    The class provides methods for getting and setting the input and output embeddings,
+    as well as getting and setting the decoder component.
+    The construct method is the main method for generating text. It akes input_ids, attention_mask, and other optional
+    arguments, and returns the predicted logits, along with other optional outputs such as loss,
+    past_key_values, hidden_states, attentions, and cross_attentions.
+
+    The prepare_inputs_for_generation method is used to prepare inputs for text generation. It takes input_ids,
+    past_key_values, attention_mask, use_cache, and other optional arguments, and returns a dictionary containing
+    the prepared inputs.
+
     The _reorder_cache method is a static method that is used to reorder the past_key_values cache during beam search.
-    
-    Example usage:
-    
-    
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-    model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
-    inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-    outputs = model(**inputs)
-    
-    
-    This example demonstrates how to use the BartForCausalLM class for text generation. The model takes input_ids as input and generates predicted logits as output.
+
+    Example:
+        ```python
+        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+        >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> outputs = model(**inputs)
+        ```
+
+    This example demonstrates how to use the BartForCausalLM class for text generation.
+    The model takes input_ids as input and generates predicted logits as output.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes an instance of BartForCausalLM.
-        
+
         Args:
             self: The instance of BartForCausalLM.
             config (dict): The configuration parameters for the model.
                 Must contain the necessary settings for the model initialization.
-                
+
         Returns:
-            None. This method initializes the BartForCausalLM instance with the provided configuration.
-        
+            None.
+
         Raises:
             AttributeError: If the provided configuration is missing required attributes.
             TypeError: If the configuration is not in the expected format.
@@ -2250,15 +2317,15 @@ dictionary containing the prepared inputs.
     def get_input_embeddings(self):
         """
         Method to retrieve the input embeddings from the decoder of a BartForCausalLM model.
-        
+
         Args:
             self: BartForCausalLM - The instance of BartForCausalLM class.
                 This parameter represents the current instance of the BartForCausalLM class.
-        
+
         Returns:
-            None.
-            This method returns the input embeddings from the decoder of the BartForCausalLM model.
-        
+            embed_tokens:
+                This method returns the input embeddings from the decoder of the BartForCausalLM model.
+
         Raises:
             None.
         """
@@ -2267,52 +2334,52 @@ dictionary containing the prepared inputs.
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the BartForCausalLM model.
-        
+
         Args:
             self (BartForCausalLM): The instance of the BartForCausalLM class.
             value (torch.Tensor): The input embeddings to be set for the model.
                 This should be a torch.Tensor representing the new input embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
         """Return the output embeddings of the BartForCausalLM model.
-        
+
         Args:
             self (BartForCausalLM): The instance of the BartForCausalLM class.
-        
+
         Returns:
-            None: The method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
-        
+            None.
+
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings of the `BartForCausalLM` model.
-        
+
         Args:
             self: An instance of the `BartForCausalLM` class.
             new_embeddings (torch.nn.Module): The new embeddings to be set as the output embeddings.
                 This should be an instance of `torch.nn.Module` subclass, which represents the new embeddings
                 to be used as output in the `BartForCausalLM` model. It is expected to have the same size as the
                 existing embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             This method replaces the existing output embeddings in the `BartForCausalLM` model with the provided
             new embeddings. It is useful when fine-tuning the model's output layer or updating the embeddings with
@@ -2323,43 +2390,47 @@ dictionary containing the prepared inputs.
     def set_decoder(self, decoder):
         """
         Sets the decoder for the BartForCausalLM model.
-        
+
         Args:
             self (BartForCausalLM): The instance of the BartForCausalLM class.
             decoder (nn.Module): The decoder module to be set for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-        This method allows the user to set the decoder module for the BartForCausalLM model. The decoder module is responsible for generating the output sequence during the model's forward pass.
-        
-        The `self` parameter refers to the instance of the BartForCausalLM class on which the method is called.
-        
-        The `decoder` parameter is of type `nn.Module` and represents the decoder module to be set for the model. The decoder module should be compatible with the BartForCausalLM model architecture.
-        
-        Note that setting the decoder module will overwrite any previously set decoder module for the model.
-        
+            This method allows the user to set the decoder module for the BartForCausalLM model.
+            The decoder module is responsible for generating the output sequence during the model's forward pass.
+
+            The `self` parameter refers to the instance of the BartForCausalLM class on which the method is called.
+
+            The `decoder` parameter is of type `nn.Module` and represents the decoder module to be set for the model.
+            The decoder module should be compatible with the BartForCausalLM model architecture.
+
+            Note that setting the decoder module will overwrite any previously set decoder module for the model.
+
         Example:
+            ```python
             >>> model = BartForCausalLM()
             >>> decoder = nn.Linear(768, 1024)
             >>> model.set_decoder(decoder)
+            ```
         """
         self.model.decoder = decoder
 
     def get_decoder(self):
         """
         This method returns the decoder component of the model.
-        
+
         Args:
             self: An instance of the BartForCausalLM class.
-        
+
         Returns:
             None
-        
+
         Raises:
             No specific exceptions are raised by this method.
         """
@@ -2448,23 +2519,24 @@ dictionary containing the prepared inputs.
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithCrossAttentions]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, BartForCausalLM
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-        >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
-        >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
-        >>> list(logits.shape) == expected_shape
-        True
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, BartForCausalLM
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+            >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
+            >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> logits = outputs.logits
+            >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
+            >>> list(logits.shape) == expected_shape
+            True
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2511,19 +2583,21 @@ dictionary containing the prepared inputs.
     ):
         """
         Prepare the inputs for generation in the BartForCausalLM class.
-        
+
         This method takes 5 parameters: self, input_ids, past_key_values, attention_mask, use_cache.
-        
+
         Args:
             self: The instance of the BartForCausalLM class.
             input_ids (torch.Tensor): Tensor containing the input ids for the generation.
             past_key_values (tuple): Tuple of past key values for the generation. Default is None.
-            attention_mask (torch.Tensor): Tensor containing the attention mask for the input ids. 
+            attention_mask (torch.Tensor): Tensor containing the attention mask for the input ids.
                 If None, a new attention mask with all ones will be created. Default is None.
             use_cache (bool): Whether or not to use past key values cache. Default is None.
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation.
+            dict:
+                A dictionary containing the prepared inputs for generation.
+
                 - input_ids (torch.Tensor): The modified input ids.
                 - attention_mask (torch.Tensor): The attention mask.
                 - past_key_values (tuple): The past key values.
@@ -2562,7 +2636,8 @@ dictionary containing the prepared inputs.
         Reorders the cache for the BartForCausalLM model based on the specified beam index.
         
         Args:
-            past_key_values (tuple): A tuple containing the past key-value states for each layer of the model. Each element in the tuple represents the past key-value states for a layer.
+            past_key_values (tuple): A tuple containing the past key-value states for each layer of the model.
+                Each element in the tuple represents the past key-value states for a layer.
             beam_idx (torch.Tensor): A 1D tensor containing the indices of the beams to reorder the past states.
         
         Returns:

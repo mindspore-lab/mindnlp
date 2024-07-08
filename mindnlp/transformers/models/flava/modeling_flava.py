@@ -67,15 +67,18 @@ class FlavaModelOutput(ModelOutput):
     `text_projection` layers on `image_embeddings` and `text_embeddings` respectively.
 
     Args:
-        image_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `pixel_values` are present):
+        image_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*,
+            returned when `pixel_values` are present):
             The image embeddings which are basically the pooled output of [`FlavaImageModel`].
         image_output (`BaseModelOutputWithPooling`, *optional*, returned when `pixel_values` are present):
             The output of the [`FlavaImageModel`].
-        text_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids` are present):
+        text_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*,
+            returned when `input_ids` are present):
             The text embeddings which are basically the pooled output of [`FlavaTextModel`].
         text_output (`BaseModelOutputWithPooling`, *optional*, returned when `input_ids` are present):
             The output of the [`FlavaTextModel`].
-        multimodal_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids` and `pixel_values` are present and `skip_multimodal_encoder` is `None` or `False`):
+        multimodal_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*,
+            returned when `input_ids` and `pixel_values` are present and `skip_multimodal_encoder` is `None` or `False`):
             The multimodal embeddings which are basically the pooled output of [`FlavaTextModel`].
         multimodal_output (`BaseModelOutputWithPooling`, returned when `input_ids` and `pixel_values` are present and `skip_multimodal_encoder` is `None` or `False`):
             The output of the [`FlavaMultimodalModel`].
@@ -97,22 +100,29 @@ class FlavaModelOutput(ModelOutput):
 
 @dataclass
 class FlavaLosses(ModelOutput):
-    """Class representing pretraining losses from FLAVA model
+    """
+    Class representing pretraining losses from FLAVA model
 
     Args:
-        mim (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mim_labels` and `pixel_values` are present, `input_ids_masked` is absent and `mim_weight` > 0.:
-            Masked Image Modeling loss as used in BeIT calculated only for unimodal image data.
-        mlm (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mlm_labels` and `input_ids_masked` are present, `pixel_values` is absent and `mlm_weight` > 0.:
-            Masked Language Modeling loss as used in BERT calculated only for unimodal text data.
-        itm (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `itm_labels`, `input_ids_masked`, `pixel_values` are present and `itm_weight` > 0.:
+        mim (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mim_labels` and `pixel_values` are present,
+            `input_ids_masked` is absent and `mim_weight` > 0.): Masked Image Modeling loss as used in BeIT calculated
+            only for unimodal image data.
+        mlm (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mlm_labels` and `input_ids_masked` are
+            present, `pixel_values` is absent and `mlm_weight` > 0.): Masked Language Modeling loss as used in BERT
+            calculated only for unimodal text data.
+        itm (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `itm_labels`, `input_ids_masked`,
+            `pixel_values` are present and `itm_weight` > 0.):
             Image Text Matching (ITM) loss calculated for paired image-text data. Note that ITM loss is calculated on
             masked pairs in FLAVA.
-        global_contrastive (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `input_ids` and `pixel_values` are present and `global_contrastive_weight` > 0.:
+        global_contrastive (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `input_ids` and `pixel_values`
+            are present and `global_contrastive_weight` > 0.):
             Contrastive loss for image-text similarity similar to CLIP but calculated globally for paired image-text
             data. This is calculated on unmasked images and texts.
-        mmm_image (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mim_labels`, `pixel_values` and `input_ids_masked` are present and `mmm_image_weight` > 0.:
+        mmm_image (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mim_labels`, `pixel_values` and
+            `input_ids_masked` are present and `mmm_image_weight` > 0.):
             Masked Multimodal Modeling loss's image component calculated on paired image-text data.
-        mmm_text (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mlm_labels`, `pixel_values` and `input_ids_masked` are present and `mmm_text_weight` > 0.:
+        mmm_text (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `mlm_labels`, `pixel_values` and
+            `input_ids_masked` are present and `mmm_text_weight` > 0.):
             Masked Multimodal Modeling loss's text component calculated on paired image-text data.
     """
 
@@ -147,51 +157,64 @@ class FlavaForPreTrainingOutput(ModelOutput):
         loss_info (`FlavaLosses`):
             Detailed info for FLAVA Pretraining losses. Check `FlavaLosses` class description for the information on
             the keys.
-        image_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `pixel_values` are present):
+        image_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when
+            `pixel_values` are present):
             The image embeddings which are basically the pooled output of [`FlavaImageModel`].
         image_output (`BaseModelOutputWithPooling`, *optional*, returned when `pixel_values` are present):
             The output of the [`FlavaImageModel`].
-        text_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids` are present):
+        text_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when
+            `input_ids` are present):
             The text embeddings which are basically the pooled output of [`FlavaTextModel`].
         text_output (`BaseModelOutputWithPooling`, *optional*, returned when `input_ids` are present):
             The output of the [`FlavaTextModel`].
-        multimodal_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids` and `pixel_values` are present and `skip_unmasked_multimodal_encoder` is `None` or `False`):
+        multimodal_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when
+            `input_ids` and `pixel_values` are present and `skip_unmasked_multimodal_encoder` is `None` or `False`):
             The multimodal embeddings which are basically the pooled output of [`FlavaTextModel`].
-        multimodal_output (`BaseModelOutputWithPooling`, returned when `input_ids` and `pixel_values` are present and `skip_unmasked_multimodal_encoder` is `None` or `False`):
+        multimodal_output (`BaseModelOutputWithPooling`, returned when `input_ids` and `pixel_values` are present and
+            `skip_unmasked_multimodal_encoder` is `None` or `False`):
             The output of the [`FlavaMultimodalModel`].
 
-        image_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `pixel_values` are present):
+        image_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when
+            `pixel_values` are present):
             The image embeddings which are basically the pooled output of [`FlavaImageModel`]. Uses `bool_masked_pos`
             to create masked images.
         image_masked_output (`BaseModelOutputWithPooling`, *optional*, returned when `pixel_values` are present):
             The output of the [`FlavaImageModel`]. Uses `bool_masked_pos` to create masked images.
-        text_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids_masked` are present):
+        text_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when
+            `input_ids_masked` are present):
             The text embeddings which are basically the pooled output of [`FlavaTextModel`].
         text_masked_output (`BaseModelOutputWithPooling`, *optional*, returned when `input_ids_masked` are present):
             The output of the [`FlavaTextModel`].
-        multimodal_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*, returned when `input_ids` and `pixel_values` are present):
+        multimodal_masked_embeddings (`mindspore.Tensor` of shape `(batch_size, output_dim)`, *optional*,
+            returned when `input_ids` and `pixel_values` are present):
             The multimodal embeddings which are basically the pooled output of [`FlavaTextModel`].
-        multimodal_masked_output (`BaseModelOutputWithPooling`, returned when `input_ids_masked` and `pixel_values` are present):
+        multimodal_masked_output (`BaseModelOutputWithPooling`, returned when `input_ids_masked` and `pixel_values`
+            are present):
             The output of the [`FlavaMultimodalModel`].
 
-        mim_logits (`mindspore.Tensor` of shape `(batch_size, num_image_patches, image_vocab_size)` or of shape `(total_masked_patches, image_vocab_size)` , *optional*,
-                 returned when `pixel_values` are present and `input_ids_masked` are not):
-                The logits for MIM unimodal loss. Uses `book_masked_pos` to get masked patches. The flattened output is
-                returned when `bool_masked_pos` has some of the patches masked.
-        mlm_logits (`mindspore.Tensor` of shape `(batch_size, text_seq_length, text_vocab_size)` or of shape `(total_masked_seq_length, text_vocab_size)`, *optional*, 
-                returned when `input_ids_masked` are present and `pixel_values` are not):
-                The logits for MLM unimodal loss. The flattened output is returned when `input_ids_masked` has some of
-                the tokens masked.
-        itm_logits (`mindspore.Tensor` of shape `(batch_size, 2)`, *optional*, returned when `input_ids_masked` and `pixel_values` are present):
-                The logits for ITM loss. Note that ITM loss is calculated on masked pairs in FLAVA.
-        mmm_image_logits (`mindspore.Tensor` of shape `(batch_size, num_image_patches, image_vocab_size)` or of shape`(total_masked_patches, image_vocab_size)`, *optional*, 
-                returned when `pixel_values` and `input_ids_masked` are present):
-                The logits for MMM image multimodal loss. Uses `book_masked_pos` to get masked patches. The flattened
-                output is returned when `bool_masked_pos` has some of the patches masked.
-        mmm_text_logits (`mindspore.Tensor` of shape `(batch_size, text_seq_length, text_vocab_size)` or of shape `(`(total_masked_seq_length, text_vocab_size)`), *optional*, 
-                returned when `pixel_values` and `input_ids_masked` are present):
-                The logits for MMM text multimodal loss. The flattened output is returned when `input_ids_masked` has
-                some of the tokens masked.
+        mim_logits (`mindspore.Tensor` of shape `(batch_size, num_image_patches, image_vocab_size)` or of shape
+            `(total_masked_patches, image_vocab_size)` , *optional*, returned when `pixel_values` are present
+            and `input_ids_masked` are not):
+            The logits for MIM unimodal loss. Uses `book_masked_pos` to get masked patches. The flattened output is
+            returned when `bool_masked_pos` has some of the patches masked.
+        mlm_logits (`mindspore.Tensor` of shape `(batch_size, text_seq_length, text_vocab_size)` or of shape
+            `(total_masked_seq_length, text_vocab_size)`, *optional*, returned when `input_ids_masked` are present
+            and `pixel_values` are not):
+            The logits for MLM unimodal loss. The flattened output is returned when `input_ids_masked` has some of
+            the tokens masked.
+        itm_logits (`mindspore.Tensor` of shape `(batch_size, 2)`, *optional*, returned when `input_ids_masked` and
+            `pixel_values` are present):
+            The logits for ITM loss. Note that ITM loss is calculated on masked pairs in FLAVA.
+        mmm_image_logits (`mindspore.Tensor` of shape `(batch_size, num_image_patches, image_vocab_size)` or of shape
+            `(total_masked_patches, image_vocab_size)`, *optional*, returned when `pixel_values` and `input_ids_masked`
+            are present):
+            The logits for MMM image multimodal loss. Uses `book_masked_pos` to get masked patches. The flattened
+            output is returned when `bool_masked_pos` has some of the patches masked.
+        mmm_text_logits (`mindspore.Tensor` of shape `(batch_size, text_seq_length, text_vocab_size)` or of shape
+            `(`(total_masked_seq_length, text_vocab_size)`), *optional*, returned when `pixel_values` and
+            `input_ids_masked` are present):
+            The logits for MMM text multimodal loss. The flattened output is returned when `input_ids_masked` has
+            some of the tokens masked.
         contrastive_logits_per_image (`mindspore.Tensor` of shape `(image_batch_size, text_batch_size)`):
             The scaled dot product scores between `image_embeddings` and `text_embeddings` but passed through FLAVA's
             `image_projection` and `text_projection` layers respectively. This represents the image-text similarity
@@ -1051,19 +1074,20 @@ class FlavaModel(FlavaPreTrainedModel):
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`FlavaTextModel`].
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, FlavaModel
+            ... 
+            >>> model = FlavaModel.from_pretrained("{0}")
+            >>> processor = AutoProcessor.from_pretrained("{0}")
+            ... 
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="pt"
+            ... )
+            >>> text_features = model.get_text_features(**inputs)
+        ```
+        """.format(_CHECKPOINT_FOR_DOC)
 
-        ```python
-        >>> from transformers import AutoProcessor, FlavaModel
-
-        >>> model = FlavaModel.from_pretrained("{0}")
-        >>> processor = AutoProcessor.from_pretrained("{0}")
-
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="pt"
-        ... )
-        >>> text_features = model.get_text_features(**inputs)
-        ```""".format(_CHECKPOINT_FOR_DOC)
         text_outputs = self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1095,23 +1119,24 @@ class FlavaModel(FlavaPreTrainedModel):
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
             applying the projection layer to the pooled output of [`FlavaImageModel`].
 
-        Examples:
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, FlavaModel
+            ... 
+            >>> model = FlavaModel.from_pretrained("{0}")
+            >>> processor = AutoProcessor.from_pretrained("{0}")
+            ... 
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ... 
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ... 
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """.format(_CHECKPOINT_FOR_DOC)
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, FlavaModel
-
-        >>> model = FlavaModel.from_pretrained("{0}")
-        >>> processor = AutoProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```""".format(_CHECKPOINT_FOR_DOC)
         image_outputs = self.image_model(
             pixel_values=pixel_values,
             bool_masked_pos=bool_masked_pos,
@@ -1144,38 +1169,37 @@ class FlavaModel(FlavaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FlavaOutput]:
         r"""
+
         Returns:
+            `Union[Tuple, FlavaOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, FlavaModel
-
-        >>> model = FlavaModel.from_pretrained("facebook/flava-full")
-        >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="pt", padding=True)
-
-        >>> outputs = model(**inputs)
-
-        >>> image_embeddings = outputs.image_embeddings
-        >>> text_embeddings = outputs.text_embeddings
-        >>> multimodal_embeddings = outputs.multimodal_embeddings
-
-        >>> outputs.image_embeddings.shape
-        torch.Size([1, 197, 768])
-
-        >>> text_embeddings.shape
-        torch.Size([1, 7, 768])
-
-        >>> multimodal_embeddings.shape
-        torch.Size([1, 205, 768])
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, FlavaModel
+            ...
+            >>> model = FlavaModel.from_pretrained("facebook/flava-full")
+            >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="pt", padding=True)
+            ...
+            >>> outputs = model(**inputs)
+            ...
+            >>> image_embeddings = outputs.image_embeddings
+            >>> text_embeddings = outputs.text_embeddings
+            >>> multimodal_embeddings = outputs.multimodal_embeddings
+            ...
+            >>> outputs.image_embeddings.shape
+            torch.Size([1, 197, 768])
+            >>> text_embeddings.shape
+            torch.Size([1, 7, 768])
+            >>> multimodal_embeddings.shape
+            torch.Size([1, 205, 768])
+            ```
         """
 
         return_dict = return_dict if return_dict is not None else self.config.return_dict
@@ -1374,23 +1398,23 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
                 Pixel values. Codebook pixel values can be obtained using [`AutoImageProcessor`] by passing
                 `return_codebook_pixels=True`. See [`FlavaImageProcessor.__call__`] for details.
 
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoImageProcessor, FlavaImageCodebook
-
-        >>> model = FlavaImageCodebook.from_pretrained("{0}")
-        >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
-        >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
-
-        >>> outputs = model.get_codebook_indices(**inputs)
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoImageProcessor, FlavaImageCodebook
+            ... 
+            >>> model = FlavaImageCodebook.from_pretrained("{0}")
+            >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
+            ... 
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ... 
+            >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+            >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
+            ... 
+            >>> outputs = model.get_codebook_indices(**inputs)
+            ```
         """.format(_CHECKPOINT_FOR_CODEBOOK_DOC)
         z_logits = self.blocks(pixel_values)
         return ops.argmax(z_logits, dim=1)
@@ -1406,26 +1430,25 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
                 Pixel values. Codebook pixel values can be obtained using [`AutoImageProcessor`] by passing
                 `return_codebook_pixels=True`. See [`FlavaImageProcessor.__call__`] for details.
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoImageProcessor, FlavaImageCodebook
-
-        >>> model = FlavaImageCodebook.from_pretrained("{0}")
-        >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
-        >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
-
-        >>> outputs = model(**inputs)
-        >>> print(outputs.shape)
-        (1, 196)
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoImageProcessor, FlavaImageCodebook
+            ... 
+            >>> model = FlavaImageCodebook.from_pretrained("{0}")
+            >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
+            ... 
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ... 
+            >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+            >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
+            ... 
+            >>> outputs = model(**inputs)
+            >>> print(outputs.shape)
+            (1, 196)
+            ```
         """.format(_CHECKPOINT_FOR_CODEBOOK_DOC)
         if len(pixel_values.shape) != 4:
             raise ValueError(f"input shape {pixel_values.shape} is not 4d")
@@ -1574,36 +1597,36 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
         return_loss: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], FlavaForPreTrainingOutput]:
         """
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import FlavaForPreTraining, AutoProcessor
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> model = FlavaForPreTraining.from_pretrained("facebook/flava-full")
-        >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
-
-        >>> text = ["a photo of a cat"]
-
-        >>> inputs = processor(
-        ...     images=[image],
-        ...     text=text,
-        ...     return_masks=True,
-        ...     return_codebook_pixels=True,
-        ...     padding=True,
-        ...     max_length=77,
-        ...     return_tensors="pt",
-        ... )
-
-
-        >>> output = model(**inputs)
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import FlavaForPreTraining, AutoProcessor
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> model = FlavaForPreTraining.from_pretrained("facebook/flava-full")
+            >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
+            ...
+            >>> text = ["a photo of a cat"]
+            ...
+            >>> inputs = processor(
+            ...     images=[image],
+            ...     text=text,
+            ...     return_masks=True,
+            ...     return_codebook_pixels=True,
+            ...     padding=True,
+            ...     max_length=77,
+            ...     return_tensors="pt",
+            ... )
+            ...
+            ...
+            >>> output = model(**inputs)
+            ```
 
         Return:
-
+            `Union[Tuple[mindspore.Tensor], FlavaForPreTrainingOutput]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         return_loss = return_loss if return_loss is not None else self.config.return_loss

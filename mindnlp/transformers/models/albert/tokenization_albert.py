@@ -118,10 +118,10 @@ class AlbertTokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                    using forward-filtering-and-backward-sampling algorithm.
 
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
@@ -152,7 +152,7 @@ class AlbertTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initializes an instance of the AlbertTokenizer class.
-        
+
         Args:
             self: The object instance.
             vocab_file (str): The path to the vocabulary file.
@@ -168,10 +168,10 @@ class AlbertTokenizer(PreTrainedTokenizer):
             mask_token (str, optional): The masking token. Default is '[MASK]'.
             sp_model_kwargs (dict, optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -212,13 +212,13 @@ class AlbertTokenizer(PreTrainedTokenizer):
     def vocab_size(self) -> int:
         """
         This method returns the size of the vocabulary used in the AlbertTokenizer.
-        
+
         Args:
             self (AlbertTokenizer): The instance of the AlbertTokenizer class.
-        
+
         Returns:
             int: The size of the vocabulary used in the AlbertTokenizer.
-        
+
         Raises:
             None
         """
@@ -227,15 +227,15 @@ class AlbertTokenizer(PreTrainedTokenizer):
     def get_vocab(self) -> Dict[str, int]:
         """
         Get the vocabulary of the AlbertTokenizer.
-        
+
         Args:
             self: The instance of the AlbertTokenizer class.
                 This parameter is required to access the tokenizer's vocabulary.
-                
+
         Returns:
             Dict[str, int]: A dictionary containing the vocabulary of the AlbertTokenizer where
                 the keys are strings representing tokens and the values are integers representing token IDs.
-                
+
         Raises:
             No specific exceptions are raised by this method.
         """
@@ -246,18 +246,19 @@ class AlbertTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         Method: __getstate__
-        
+
         Description:
-        This method is implemented in the 'AlbertTokenizer' class to retrieve the state of the object for pickling.
-        
+            This method is implemented in the 'AlbertTokenizer' class to retrieve the state of the object for pickling.
+
         Args:
             self: An instance of the 'AlbertTokenizer' class.
-        
+
         Returns:
-            None: This method does not explicitly return a value. However, it modifies the state of the object by setting the 'sp_model' attribute to None.
-        
+            None: This method does not explicitly return a value.
+                However, it modifies the state of the object by setting the 'sp_model' attribute to None.
+
         Raises:
-            N/A: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -266,37 +267,41 @@ class AlbertTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         Sets the internal state of the AlbertTokenizer instance.
-        
+
         Args:
             self (AlbertTokenizer): The instance of the AlbertTokenizer class.
             d (dict): The dictionary containing the state of the instance.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-        This method is called during unpickling or deserialization of an AlbertTokenizer instance. It sets the internal state of the instance by assigning the provided dictionary 'd' to the '__dict__'
-attribute. 
-        
-        If the instance does not have an attribute named 'sp_model_kwargs', it is initialized as an empty dictionary. 
-        
-        Then, a SentencePieceProcessor object is created using the 'sp_model_kwargs' and assigned to the 'sp_model' attribute of the instance. The SentencePieceProcessor object is instantiated with the keyword
-arguments provided through 'self.sp_model_kwargs'.
-        
-        Finally, the SentencePieceProcessor object loads the vocabulary file specified by 'self.vocab_file'.
-        
+            This method is called during unpickling or deserialization of an AlbertTokenizer instance.
+            It sets the internal state of the instance by assigning the provided dictionary 'd' to the '__dict__'
+            attribute.
+
+            If the instance does not have an attribute named 'sp_model_kwargs', it is initialized as an empty dictionary.
+
+            Then, a SentencePieceProcessor object is created using the 'sp_model_kwargs' and assigned to the 'sp_model' attribute of the instance.
+            The SentencePieceProcessor object is instantiated with the keyword arguments provided through 'self.sp_model_kwargs'.
+
+            Finally, the SentencePieceProcessor object loads the vocabulary file specified by 'self.vocab_file'.
+
         Note:
-        - This method is automatically called by the pickle module when unpickling an AlbertTokenizer object.
-        - The '__setstate__' method is used in conjunction with the '__getstate__' method to enable pickling and unpickling of the AlbertTokenizer instances.
-        
+            - This method is automatically called by the pickle module when unpickling an AlbertTokenizer object.
+            - The '__setstate__' method is used in conjunction with the '__getstate__' method to enable pickling
+            and unpickling of the AlbertTokenizer instances.
+
         Example:
-            tokenizer = AlbertTokenizer()
-            state = {'sp_model_kwargs': {'model_type': 'unigram', 'vocab_size': 30000}, 'vocab_file': 'vocab.txt'}
-            tokenizer.__setstate__(state)
-        
+            ```python
+            >>> tokenizer = AlbertTokenizer()
+            >>> state = {'sp_model_kwargs': {'model_type': 'unigram', 'vocab_size': 30000}, 'vocab_file': 'vocab.txt'}
+            >>> tokenizer.__setstate__(state)
+            ```
+
         """
         self.__dict__ = d
 
@@ -310,16 +315,16 @@ arguments provided through 'self.sp_model_kwargs'.
     def preprocess_text(self, inputs):
         """
         Preprocesses the input text by removing spaces, replacing quotation marks, normalizing accents, and converting to lowercase.
-        
+
         Args:
             self (AlbertTokenizer): An instance of the AlbertTokenizer class.
             inputs (str): The input text to be preprocessed.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())

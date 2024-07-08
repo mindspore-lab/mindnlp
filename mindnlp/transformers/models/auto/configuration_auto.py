@@ -57,6 +57,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMConfig"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
+        ("clipseg", "CLIPSegConfig"),
+        ("clipseg_vision_model", "CLIPSegVisionConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("cohere", "CohereConfig"),
@@ -73,12 +75,14 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2Config"),
         ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
+        ("donut-swin", "DonutSwinConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
-        ("focalnet","FocalNetConfig"),
+        ("fnet", "FNetConfig"),
+        ("focalnet", "FocalNetConfig"),
         ("funnel", "FunnelConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
         ("gemma", "GemmaConfig"),
@@ -91,11 +95,13 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("groupvit", "GroupViTConfig"),
         ("hubert", "HubertConfig"),
         ("ibert", "IBertConfig"),
+        ("instructblip", "InstructBlipConfig"),
         ("jetmoe", "JetMoEConfig"),
         ("led", "LEDConfig"),
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("lxmert", "LxmertConfig"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
@@ -105,8 +111,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
-        ("mobilenet_v1","MobileNetV1Config"),
-        ("mobilenet_v2","MobileNetV2Config"),
+        ("mobilenet_v1", "MobileNetV1Config"),
+        ("mobilenet_v2", "MobileNetV2Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
@@ -119,8 +125,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
         ("pegasus", "PegasusConfig"),
+        ("persimmon", "PersimmonConfig"),
         ("phi", "PhiConfig"),
         ("phi3", "Phi3Config"),
+        ("plbart", "PLBartConfig"),
         ("qdqbert", "QDQBertConfig"),
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),
@@ -129,6 +137,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("resnet", "ResNetConfig"),
         ("roberta", "RobertaConfig"),
         ("roc_bert", "RoCBertConfig"),
+        ("rwkv", "RwkvConfig"),
         ("sam", "SamConfig"),
         ("segformer", "SegformerConfig"),
         ("speech-encoder-decoder", "SpeechEncoderDecoderConfig"),
@@ -147,8 +156,12 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
         ("trocr", "TrOCRConfig"),
+        ("upernet", "UPerNetConfig"),
+        ("umt5", "UMT5Config"),
+        ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vilt", "VilTConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
@@ -166,6 +179,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta-xl", "XLMRobertaXLConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),
+        ("xmod", "XmodConfig"),
     ]
 )
 
@@ -423,6 +437,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("clipseg", "CLIPSeg"),
+        ("clipseg_vision_model", "CLIPSegVisionModel"),
         ("code_llama", "CodeLlama"),
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
@@ -451,6 +466,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("dinat", "DiNAT"),
         ("dinov2", "DINOv2"),
         ("distilbert", "DistilBERT"),
+        ("donut", "Donut"),
+        ("donut-swin", "DonutSwin"),
         ("dit", "DiT"),
         ("donut-swin", "DonutSwin"),
         ("dpr", "DPR"),
@@ -620,6 +637,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("umt5", "UMT5"),
         ("unispeech", "UniSpeech"),
         ("unispeech-sat", "UniSpeechSat"),
+        ("univnet", "UnivNet"),
         ("upernet", "UPerNet"),
         ("van", "VAN"),
         ("videomae", "VideoMAE"),
@@ -679,6 +697,7 @@ SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(
         ("kosmos-2", "kosmos2"),
         ("maskformer-swin", "maskformer"),
         ("clip_vision_model", "clip"),
+        ("clipseg_vision_model", "clipseg"),
         ("xclip", "x_clip"),
     ]
 )
@@ -721,14 +740,14 @@ class _LazyConfigMapping(OrderedDict):
         Args:
             self (object): The instance of the _LazyConfigMapping class.
             mapping (dict): A dictionary containing the initial mapping for the configuration.
-                           The keys represent the configuration keys, and the values represent the corresponding values.
-                           This parameter is required and must be of type dict.
+               The keys represent the configuration keys, and the values represent the corresponding values.
+               This parameter is required and must be of type dict.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._mapping = mapping
         self._extra_content = {}
@@ -744,14 +763,18 @@ class _LazyConfigMapping(OrderedDict):
                     self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
                     key (str): The key used to retrieve the corresponding value. It should be a string.
 
-                Returns:
-                    None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
-        performing necessary module imports and attribute retrieval.
+        Returns:
+            None:
+                - If the key is present in the _extra_content, the associated value is returned.
+                - If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+                performing necessary module imports and attribute retrieval.
 
-                Raises:
-                    KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-                    AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
-                    ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
+        Raises:
+            KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
+            AttributeError:
+                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module,
+                an AttributeError is raised.
+            ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """
         if key in self._extra_content:
             return self._extra_content[key]
@@ -798,7 +821,7 @@ class _LazyConfigMapping(OrderedDict):
             list: A list containing the values of the mapping and any extra content in the _LazyConfigMapping class.
 
         Raises:
-            N/A
+            None
         """
         return [self[k] for k in self._mapping.keys()] + list(
             self._extra_content.values()
@@ -830,10 +853,10 @@ class _LazyConfigMapping(OrderedDict):
             self (object): The instance of the '_LazyConfigMapping' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
 
@@ -846,10 +869,10 @@ class _LazyConfigMapping(OrderedDict):
             item: The item to be checked for containment within the object. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return item in self._mapping or item in self._extra_content
 
@@ -885,7 +908,7 @@ class _LazyLoadAllMappings(OrderedDict):
             mapping: A dictionary containing the mapping data to be used by the instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -902,11 +925,11 @@ class _LazyLoadAllMappings(OrderedDict):
             self: _LazyLoadAllMappings - The instance of the _LazyLoadAllMappings class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
-            It does not contain all available model checkpoints. Refer to hf.co/models for that.
+                It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
             return
@@ -935,7 +958,8 @@ class _LazyLoadAllMappings(OrderedDict):
             key: The key for which the associated value needs to be retrieved. Type: Any hashable object.
 
         Returns:
-            None: This method returns the value associated with the specified key. If the key is not found, a KeyError is raised.
+            `_data[key]`: This method returns the value associated with the specified key.
+                If the key is not found, a KeyError is raised.
 
         Raises:
             KeyError: If the specified key is not found in the _LazyLoadAllMappings instance.
@@ -951,10 +975,10 @@ class _LazyLoadAllMappings(OrderedDict):
             self (obj): An instance of the _LazyLoadAllMappings class.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._initialize()
         return self._data.keys()
@@ -969,12 +993,13 @@ class _LazyLoadAllMappings(OrderedDict):
                 It is required to access the internal data and perform necessary operations.
 
         Returns:
-            None.
-            This method does not return any specific value but retrieves and returns the values of the internal data dictionary.
+            None:
+                This method does not return any specific value but retrieves and returns the values of the internal data dictionary.
 
         Raises:
-            No specific exceptions are raised by this method under normal circumstances.
-            However, if there are any issues during the initialization process, unexpected behavior may occur.
+            No specific exceptions:
+                No specific exceptions are raised by this method under normal circumstances,
+                However, if there are any issues during the initialization process, unexpected behavior may occur.
         """
         self._initialize()
         return self._data.values()
@@ -989,8 +1014,8 @@ class _LazyLoadAllMappings(OrderedDict):
                 It must be an instance of the class '_LazyLoadAllMappings'.
 
         Returns:
-            None.
-            This method returns the keys of the data stored in the '_data' attribute after initialization.
+            None:
+                This method returns the keys of the data stored in the '_data' attribute after initialization.
 
         Raises:
             No exceptions are explicitly raised within this method.
@@ -1032,7 +1057,7 @@ class _LazyLoadAllMappings(OrderedDict):
             None: This method returns None if the specified item is found within the data structure, otherwise it returns False.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         self._initialize()
         return item in self._data
@@ -1131,7 +1156,7 @@ def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True
         use_model_types (optional): A boolean indicating whether model types should be used. Defaults to True.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         ValueError: If the input function's docstring does not contain an empty 'List options' section as a placeholder.
@@ -1175,16 +1200,21 @@ class AutoConfig:
         Initialize AutoConfig.
 
         Args:
-            self: The instance of the AutoConfig class. It is automatically passed when the method is called.
-                Purpose: Represents the instance of the AutoConfig class.
-                Restrictions: None.
+            self: The instance of the AutoConfig class.
+                It is automatically passed when the method is called.
+
+                - Purpose: Represents the instance of the AutoConfig class.
+                - Restrictions: None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            EnvironmentError: If the AutoConfig is instantiated directly using the `__init__` method, it raises an EnvironmentError with the message
-            'AutoConfig is designed to be instantiated using the `AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'.
+            EnvironmentError:
+                If the AutoConfig is instantiated directly using the `__init__` method,
+                it raises an EnvironmentError with the message
+                'AutoConfig is designed to be instantiated using the `
+                AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'.
         """
         raise EnvironmentError(
             "AutoConfig is designed to be instantiated "
@@ -1196,16 +1226,20 @@ class AutoConfig:
         """
                 This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
 
-                Args:
-                    cls (class): The class itself, automatically passed as the first parameter.
-                    model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
+        Args:
+            cls (class): The class itself, automatically passed as the first parameter.
+            model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated.
+                It must be a key within the CONFIG_MAPPING dictionary.
 
-                Returns:
-                    None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
+        Returns:
+            None: This method does not return any value directly.
+                It instantiates and returns an instance of the appropriate configuration class based on the model type.
 
-                Raises:
-                    ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
-        lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
+        Raises:
+            ValueError:
+                Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary.
+                The exception message indicates the unrecognized model identifier and lists all valid model identifiers
+                available in the CONFIG_MAPPING dictionary.
         """
         if model_type in CONFIG_MAPPING:
             config_class = CONFIG_MAPPING[model_type]
@@ -1229,14 +1263,14 @@ class AutoConfig:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 Can be either:
 
-                    - A string, the *model id* of a pretrained model configuration hosted inside a model repo on
-                      hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
-                      namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing a configuration file saved using the
-                      [`~PretrainedConfig.save_pretrained`] method, or the [`~PreTrainedModel.save_pretrained`] method,
-                      e.g., `./my_model_directory/`.
-                    - A path or url to a saved configuration JSON *file*, e.g.,
-                      `./my_model_directory/configuration.json`.
+                - A string, the *model id* of a pretrained model configuration hosted inside a model repo on
+                hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
+                - A path to a *directory* containing a configuration file saved using the
+                [`~PretrainedConfig.save_pretrained`] method, or the [`~PreTrainedModel.save_pretrained`] method,
+                e.g., `./my_model_directory/`.
+                - A path or url to a saved configuration JSON *file*, e.g.,
+                `./my_model_directory/configuration.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model configuration should be cached if the
                 standard cache should not be used.
@@ -1255,7 +1289,6 @@ class AutoConfig:
                 identifier allowed by git.
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
                 If `False`, then this function returns just the final configuration object.
-
                 If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
                 dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
                 part of `kwargs` which has not been used to update `config` and is otherwise ignored.
@@ -1268,37 +1301,35 @@ class AutoConfig:
                 values. Behavior concerning key/value pairs whose keys are *not* configuration attributes is controlled
                 by the `return_unused_kwargs` keyword parameter.
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoConfig
-
-        >>> # Download configuration from hf-mirror.com and cache.
-        >>> config = AutoConfig.from_pretrained("bert-base-uncased")
-
-        >>> # Download configuration from hf-mirror.com (user-uploaded) and cache.
-        >>> config = AutoConfig.from_pretrained("dbmdz/bert-base-german-cased")
-
-        >>> # If configuration file is in a directory (e.g., was saved using *save_pretrained('./test/saved_model/')*).
-        >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/")
-
-        >>> # Load a specific configuration file.
-        >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/my_configuration.json")
-
-        >>> # Change some config attributes when loading a pretrained config.
-        >>> config = AutoConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
-        >>> config.output_attentions
-        True
-
-        >>> config, unused_kwargs = AutoConfig.from_pretrained(
-        ...     "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
-        ... )
-        >>> config.output_attentions
-        True
-
-        >>> unused_kwargs
-        {'foo': False}
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoConfig
+            ...
+            >>> # Download configuration from hf-mirror.com and cache.
+            >>> config = AutoConfig.from_pretrained("bert-base-uncased")
+            ...
+            >>> # Download configuration from hf-mirror.com (user-uploaded) and cache.
+            >>> config = AutoConfig.from_pretrained("dbmdz/bert-base-german-cased")
+            ...
+            >>> # If configuration file is in a directory (e.g., was saved using *save_pretrained('./test/saved_model/')*).
+            >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/")
+            ...
+            >>> # Load a specific configuration file.
+            >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/my_configuration.json")
+            ...
+            >>> # Change some config attributes when loading a pretrained config.
+            >>> config = AutoConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
+            >>> config.output_attentions
+            True
+            >>> config, unused_kwargs = AutoConfig.from_pretrained(
+            ...     "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
+            ... )
+            >>> config.output_attentions
+            True
+            >>> unused_kwargs
+            {'foo': False}
+            ```
+        """
         kwargs["name_or_path"] = pretrained_model_name_or_path
 
         config_dict, unused_kwargs = PretrainedConfig.get_config_dict(

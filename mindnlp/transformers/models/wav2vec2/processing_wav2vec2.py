@@ -50,14 +50,16 @@ class Wav2Vec2Processor(ProcessorMixin):
         
         Args:
             self (Wav2Vec2Processor): The current instance of the Wav2Vec2Processor class.
-            feature_extractor (object): The feature extractor used for processing input data. It should be an instance of a feature extraction class.
-            tokenizer (object): The tokenizer used for tokenizing input data. It should be an instance of a tokenizer class.
+            feature_extractor (object): The feature extractor used for processing input data.
+                It should be an instance of a feature extraction class.
+            tokenizer (object): The tokenizer used for tokenizing input data.
+                It should be an instance of a tokenizer class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(feature_extractor, tokenizer)
         self.current_processor = self.feature_extractor
@@ -73,12 +75,13 @@ class Wav2Vec2Processor(ProcessorMixin):
             pretrained_model_name_or_path (str): The name or path of the pre-trained model to load.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             OSError: If an OSError occurs during the loading process.
-            FutureWarning: If the tokenizer is being loaded from a config that does not include a `tokenizer_class` attribute, a FutureWarning is issued. It advises adding a `'tokenizer_class':
-'Wav2Vec2CTCTokenizer'` attribute to either the `config.json` or `tokenizer_config.json` file to suppress the warning.
+            FutureWarning: If the tokenizer is being loaded from a config that does not include a `tokenizer_class`
+                attribute, a FutureWarning is issued. It advises adding a `'tokenizer_class': 'Wav2Vec2CTCTokenizer'`
+                attribute to either the `config.json` or `tokenizer_config.json` file to suppress the warning.
         """
         try:
             return super().from_pretrained(pretrained_model_name_or_path, **kwargs)

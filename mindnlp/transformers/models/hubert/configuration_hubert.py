@@ -150,19 +150,19 @@ class HubertConfig(PretrainedConfig):
             Dimensionality of the projection before token mean-pooling for classification.
 
     Example:
-
-    ```python
-    >>> from transformers import HubertModel, HubertConfig
-
-    >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
-    >>> configuration = HubertConfig()
-
-    >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
-    >>> model = HubertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import HubertModel, HubertConfig
+        ...
+        >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
+        >>> configuration = HubertConfig()
+        ...
+        >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
+        >>> model = HubertModel(configuration)
+        ... 
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "hubert"
 
     def __init__(
@@ -323,6 +323,6 @@ class HubertConfig(PretrainedConfig):
             int: The ratio of inputs to logits calculated as the product of convolutional strides.
         
         Raises:
-            N/A
+            None.
         """
         return functools.reduce(operator.mul, self.conv_stride, 1)

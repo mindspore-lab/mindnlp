@@ -54,12 +54,14 @@ class LayoutLMv2Processor(ProcessorMixin):
         
         Args:
             self (object): The instance of the class.
-            image_processor (object): An object representing the image processor. It can be an instance of a specific image processing class or None. If None, it will default to the value of
-'feature_extractor'.
-            tokenizer (object): An object representing the tokenizer to be used. This should be a valid tokenizer object required for processing the input data.
+            image_processor (object): An object representing the image processor.
+                It can be an instance of a specific image processing class or None.
+                If None, it will default to the value of 'feature_extractor'.
+            tokenizer (object): An object representing the tokenizer to be used.
+                This should be a valid tokenizer object required for processing the input data.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If either 'image_processor' is not provided or if 'tokenizer' is not specified.
@@ -214,7 +216,8 @@ class LayoutLMv2Processor(ProcessorMixin):
             self (LayoutLMv2Processor): The instance of the LayoutLMv2Processor.
             
         Returns:
-            list: A list containing the input names, including 'input_ids', 'bbox', 'token_type_ids', 'attention_mask', and 'image'.
+            list: A list containing the input names, including 'input_ids', 'bbox', 'token_type_ids',
+                'attention_mask', and 'image'.
             
         Raises:
             None.

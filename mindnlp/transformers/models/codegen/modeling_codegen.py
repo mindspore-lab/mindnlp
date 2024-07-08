@@ -63,7 +63,8 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
         dim (int): The dimension of the tensor.
     
     Returns:
-        mindspore.Tensor: A tensor containing sinusoidal positions. The shape of the tensor is (num_pos, dim).
+        mindspore.Tensor:
+            A tensor containing sinusoidal positions. The shape of the tensor is (num_pos, dim).
     
     Raises:
         None.
@@ -81,10 +82,11 @@ def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
     
     Args:
         x (mindspore.Tensor): Input tensor of shape (N, C, H, W) where N is the batch size, C is the number of channels,
-                              H is the height, and W is the width. Must be a 4-dimensional tensor.
+            H is the height, and W is the width. Must be a 4-dimensional tensor.
     
     Returns:
-        mindspore.Tensor: A tensor of the same shape as the input tensor after rotating every two elements along the last dimension.
+        mindspore.Tensor:
+            A tensor of the same shape as the input tensor after rotating every two elements along the last dimension.
     
     Raises:
         NotImplementedError: If the input tensor is not 4-dimensional.
@@ -122,37 +124,41 @@ class CodeGenAttention(nn.Cell):
     ''' 
     Represents an attention mechanism for code generation tasks using the specified configuration.
     
-    This class inherits from the nn.Cell module and implements the attention mechanism for code generation tasks. It includes methods for splitting and merging attention heads, performing attention
-calculations, and constructing the attention mechanism using the specified inputs.
-    
-    The class includes methods for splitting and merging attention heads, performing attention calculations, and constructing the attention mechanism using the specified inputs. It also handles positional
-embeddings and caching for efficient computation.
-    
+    This class inherits from the nn.Cell module and implements the attention mechanism for code generation tasks.
+    It includes methods for splitting and merging attention heads, performing attention calculations, and constructing
+    the attention mechanism using the specified inputs.
+
+    The class includes methods for splitting and merging attention heads, performing attention calculations,
+    and constructing the attention mechanism using the specified inputs.
+    It also handles positional embeddings and caching for efficient computation.
+
     The methods included in the class are:
+
     - __init__(self, config): Initializes the CodeGenAttention class with the specified configuration.
     - _split_heads(self, x, n_head, dim_head, mp_num): Splits the attention heads based on the specified parameters.
     - _merge_heads(self, tensor, num_attention_heads, attn_head_size): Merges the attention heads into the specified shape.
-    - _attn(self, query, key, value, attention_mask=None, head_mask=None): Performs the attention calculation using the query, key, and value tensors, with optional attention and head masks.
-    - construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the specified
-inputs and optional configurations.
-    
-    The CodeGenAttention class provides a comprehensive solution for implementing attention mechanisms in code generation tasks, allowing for efficient computation and flexibility in handling various input
-configurations.
+    - _attn(self, query, key, value, attention_mask=None, head_mask=None):
+        Performs the attention calculation using the query, key, and value tensors, with optional attention and head masks.
+    - construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
+        Constructs the attention mechanism using the specified inputs and optional configurations.
+
+    The CodeGenAttention class provides a comprehensive solution for implementing attention mechanisms in code generation tasks,
+    allowing for efficient computation and flexibility in handling various input configurations.
     '''
     def __init__(self, config):
         """
         Initializes an instance of the CodeGenAttention class.
-        
+
         Args:
             self (CodeGenAttention): The instance of the CodeGenAttention class.
             config: A configuration object that contains various parameters for the attention mechanism.
-            
+
         Returns:
-            None. This method only initializes the instance and does not return any value.
-            
+            None.
+
         Raises:
             ValueError: If the `embed_dim` is not divisible by `num_attention_heads`.
-        
+
         """
         super().__init__()
 
@@ -182,18 +188,18 @@ configurations.
     def _split_heads(self, x, n_head, dim_head, mp_num):
         """
         Splits the input tensor into multiple heads for parallel processing in the CodeGenAttention class.
-        
+
         Args:
             self (CodeGenAttention): An instance of the CodeGenAttention class.
             x (Tensor): The input tensor to be split. It should have a shape of (batch_size, seq_len, hidden_dim).
             n_head (int): The total number of attention heads.
             dim_head (int): The dimension of each attention head.
             mp_num (int): The number of parallel processes.
-        
+
         Returns:
-            reshaped (Tensor): The reshaped tensor after splitting the input tensor into multiple heads. 
-            It has a shape of (batch_size, seq_len, n_head // mp_num, dim_head).
-        
+            reshaped (Tensor): The reshaped tensor after splitting the input tensor into multiple heads.
+                It has a shape of (batch_size, seq_len, n_head // mp_num, dim_head).
+
         Raises:
             None.
         """
@@ -224,7 +230,7 @@ configurations.
     ):
         """
         This method computes the attention mechanism for the CodeGenAttention class.
-        
+
         Args:
             self: The instance of the CodeGenAttention class.
             query (Tensor): The query tensor with shape [batch_size, query_length, hidden_size].
@@ -232,11 +238,12 @@ configurations.
             value (Tensor): The value tensor with shape [batch_size, key_length, hidden_size].
             attention_mask (Tensor, optional): A mask tensor to mask certain connections during attention computation.
             head_mask (Tensor, optional): A mask tensor to mask certain attention heads.
-        
+
         Returns:
-            tuple (Tensor, Tensor): A tuple containing the attention output tensor with shape [batch_size, query_length, hidden_size]
-            and the attention weights tensor with shape [batch_size, query_length, key_length].
-        
+            tuple (Tensor, Tensor): A tuple containing the attention output tensor with shape
+                [batch_size, query_length, hidden_size] and the attention weights tensor with shape
+                [batch_size, query_length, key_length].
+
         Raises:
             ValueError: If the shapes of query, key, or value tensors are incompatible.
             TypeError: If any of the input tensors have incorrect data types.
@@ -288,25 +295,30 @@ configurations.
         Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]],
     ]:
         """
-                Constructs the attention mechanism for code generation.
-        
-                Args:
-                    self: The object itself.
-                    hidden_states (mindspore.Tensor): The hidden states of the input sequence. It is an optional parameter.
-                    layer_past (Tuple[mindspore.Tensor], optional): The past layer's key and value tensors. It is an optional parameter. Defaults to None.
-                    attention_mask (mindspore.Tensor, optional): The attention mask tensor. It is an optional parameter. Defaults to None.
-                    position_ids (mindspore.Tensor, optional): The position IDs tensor. It is an optional parameter. Defaults to None.
-                    head_mask (mindspore.Tensor, optional): The head mask tensor. It is an optional parameter. Defaults to None.
-                    use_cache (bool, optional): Whether to use caching mechanism. It is an optional parameter. Defaults to False.
-                    output_attentions (bool, optional): Whether to output attention weights. It is an optional parameter. Defaults to False.
-        
-                Returns:
-                    Union[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]]]: The output of the attention mechanism. It
-can be a tuple containing attention output and present tensors, or a tuple containing attention output, present tensors, and attention weights.
-        
-                Raises:
-                    None
-                """
+        Constructs the attention mechanism for code generation.
+
+        Args:
+            self: The object itself.
+            hidden_states (mindspore.Tensor): The hidden states of the input sequence. It is an optional parameter.
+            layer_past (Tuple[mindspore.Tensor], optional):
+                The past layer's key and value tensors. It is an optional parameter. Defaults to None.
+            attention_mask (mindspore.Tensor, optional): The attention mask tensor. It is an optional parameter.
+                Defaults to None.
+            position_ids (mindspore.Tensor, optional): The position IDs tensor. It is an optional parameter.
+                Defaults to None.
+            head_mask (mindspore.Tensor, optional): The head mask tensor. It is an optional parameter. Defaults to None.
+            use_cache (bool, optional): Whether to use caching mechanism. It is an optional parameter. Defaults to False.
+            output_attentions (bool, optional): Whether to output attention weights. It is an optional parameter.
+                Defaults to False.
+
+        Returns:
+            Union[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]]]:
+                The output of the attention mechanism. It can be a tuple containing attention output and present tensors,
+                or a tuple containing attention output, present tensors, and attention weights.
+
+        Raises:
+            None
+        """
         qkv = self.qkv_proj(hidden_states)
         mp_num = 4
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
@@ -378,48 +390,53 @@ class CodeGenMLP(nn.Cell):
 
     """
     A class that implements a multi-layer perceptron (MLP) for code generation in machine learning tasks.
-    
-    This class, named 'CodeGenMLP', is a subclass of the 'nn.Cell' class in the MindSpore framework. It is designed to be used in code generation applications within machine learning pipelines.
-    
-    The 'CodeGenMLP' class consists of several components, including fully connected layers, activation functions, and dropout regularization. It takes an input tensor of hidden states and performs a series of
-operations to transform and refine the data.
-    
+
+    This class, named 'CodeGenMLP', is a subclass of the 'nn.Cell' class in the MindSpore framework.
+    It is designed to be used in code generation applications within machine learning pipelines.
+
+    The 'CodeGenMLP' class consists of several components, including fully connected layers, activation functions,
+    and dropout regularization. It takes an input tensor of hidden states and performs a series of operations to
+    transform and refine the data.
+
     Attributes:
-        - fc_in (nn.Dense): A fully connected layer that maps the input tensor to an intermediate size.
-        - fc_out (nn.Dense): A fully connected layer that maps the intermediate tensor to the output size.
-        - act (ACT2FN): An activation function defined in the 'config.activation_function'.
-        - dropout (nn.Dropout): A dropout layer with a dropout probability defined in 'config.resid_pdrop'.
-    
+        fc_in (nn.Dense): A fully connected layer that maps the input tensor to an intermediate size.
+        fc_out (nn.Dense): A fully connected layer that maps the intermediate tensor to the output size.
+        act (ACT2FN): An activation function defined in the 'config.activation_function'.
+        dropout (nn.Dropout): A dropout layer with a dropout probability defined in 'config.resid_pdrop'.
+
     Methods:
-        - __init__(self, intermediate_size, config): Initializes the 'CodeGenMLP' object.
+        __init__(self, intermediate_size, config): Initializes the 'CodeGenMLP' object.
+
             - intermediate_size (int): The size of the intermediate layer in the MLP.
             - config (object): A configuration object containing various settings for the MLP.
-        
-        - construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor: Constructs the forward pass of the MLP.
+
+        construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor: Constructs the forward pass of the MLP.
+
             - hidden_states (mindspore.Tensor): An optional input tensor of hidden states.
-            
-            Returns:
+            - Returns:
                 - mindspore.Tensor: The output tensor after passing through the MLP.
-    
-    Usage:
-        # Create an instance of the 'CodeGenMLP' class
-        mlp = CodeGenMLP(intermediate_size, config)
-        
-        # Pass an input tensor through the MLP
-        output = mlp.construct(hidden_states)
+
+    Example:
+        ```python
+        >>> # Create an instance of the 'CodeGenMLP' class
+        >>> mlp = CodeGenMLP(intermediate_size, config)
+        ...
+        >>> # Pass an input tensor through the MLP
+        >>> output = mlp.construct(hidden_states)
+        ```
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         """
         Initializes an instance of the CodeGenMLP class.
-        
+
         Args:
             self (object): The instance of the class.
             intermediate_size (int): The size of the intermediate layer.
             config (object): The configuration object containing parameters for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the input parameters are not of the expected types.
             ValueError: If the intermediate_size is not a positive integer.
@@ -439,21 +456,23 @@ operations to transform and refine the data.
     def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
         """
         Constructs the forward pass of the CodeGenMLP model.
-        
+
         Args:
             self (CodeGenMLP): An instance of the CodeGenMLP class.
-            hidden_states (Optional[mindspore.Tensor]): The input hidden states tensor. It represents the features of the input data. 
+            hidden_states (Optional[mindspore.Tensor]): The input hidden states tensor.
+                It represents the features of the input data.
                 The shape of the tensor should be compatible with the input layer of the model.
-        
+
         Returns:
-            mindspore.Tensor: The output tensor after applying the forward pass operations. The shape of the tensor will depend on 
-                the architecture of the model.
-        
+            mindspore.Tensor: The output tensor after applying the forward pass operations.
+                The shape of the tensor will depend on the architecture of the model.
+
         Raises:
             None.
-        
+
         Note:
             This method performs the following steps:
+
             1. Applies a fully connected layer to the input hidden states.
             2. Applies an activation function to the output of the previous layer.
             3. Applies another fully connected layer to the output of the activation function.
@@ -471,50 +490,56 @@ operations to transform and refine the data.
 class CodeGenBlock(nn.Cell):
 
     """
-    This class represents a code generation block in a neural network model. It is a subclass of nn.Cell and contains methods for initializing and constructing the block.
-    
+    This class represents a code generation block in a neural network model.
+    It is a subclass of nn.Cell and contains methods for initializing and constructing the block.
+
     Attributes:
         ln_1 (nn.LayerNorm): The layer normalization module applied to the input hidden states.
         attn (CodeGenAttention): The attention module used for generating attention outputs.
         mlp (CodeGenMLP): The multi-layer perceptron module used for feed-forward computation.
-    
+
     Methods:
         __init__(self, config):
             Initializes a CodeGenBlock instance.
-            
+
             Args:
-                config: A configuration object containing the necessary parameters for the block initialization.
-            
+
+            - config: A configuration object containing the necessary parameters for the block initialization.
+
         construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
             Constructs the block by performing attention mechanism, feed-forward computation, and residual addition.
-            
+
             Args:
-                hidden_states (mindspore.Tensor): The input hidden states to the block.
-                layer_past (Tuple[mindspore.Tensor], optional): The previous layer's hidden states. Defaults to None.
-                attention_mask (mindspore.Tensor, optional): The attention mask tensor. Defaults to None.
-                position_ids (mindspore.Tensor, optional): The position IDs tensor. Defaults to None.
-                head_mask (mindspore.Tensor, optional): The head mask tensor. Defaults to None.
-                use_cache (bool, optional): Whether to use cache for storing attention outputs. Defaults to False.
-                output_attentions (bool, optional): Whether to output attention matrices. Defaults to False.
-            
+
+            - hidden_states (mindspore.Tensor): The input hidden states to the block.
+            - layer_past (Tuple[mindspore.Tensor], optional): The previous layer's hidden states. Defaults to None.
+            - attention_mask (mindspore.Tensor, optional): The attention mask tensor. Defaults to None.
+            - position_ids (mindspore.Tensor, optional): The position IDs tensor. Defaults to None.
+            - head_mask (mindspore.Tensor, optional): The head mask tensor. Defaults to None.
+            - use_cache (bool, optional): Whether to use cache for storing attention outputs. Defaults to False.
+            - output_attentions (bool, optional): Whether to output attention matrices. Defaults to False.
+
             Returns:
-                Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-                The constructed block outputs, which include the final hidden states and optionally attention matrices.
+
+            - Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
+            - The constructed block outputs, which include the final hidden states and optionally attention matrices.
     """
     def __init__(self, config):
         """
         Initializes an instance of the CodeGenBlock class.
-        
+
         Args:
             self: The instance of the CodeGenBlock class.
-            config: A configuration object containing parameters for the block.
-                Type: object
-                Purpose: The configuration object to customize the block's behavior.
-                Restrictions: None
-        
+            config:
+                A configuration object containing parameters for the block.
+
+                - Type: object
+                - Purpose: The configuration object to customize the block's behavior.
+                - Restrictions: None
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -534,9 +559,9 @@ class CodeGenBlock(nn.Cell):
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
     ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-        """ 
+        """
         Constructs a CodeGenBlock by processing the input hidden states through attention mechanism and feed forward network.
-        
+
         Args:
             self (CodeGenBlock): The instance of the CodeGenBlock class.
             hidden_states (Optional[mindspore.Tensor]): The input hidden states to be processed.
@@ -546,11 +571,11 @@ class CodeGenBlock(nn.Cell):
             head_mask (Optional[mindspore.Tensor]): Optional mask to prevent attention to certain heads.
             use_cache (Optional[bool]): Flag indicating whether to use cache for faster decoding.
             output_attentions (Optional[bool]): Flag indicating whether to output attentions.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]: 
-            Depending on the use_cache flag, returns the processed hidden states and optionally the intermediate outputs.
-        
+            Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
+                Depending on the use_cache flag, returns the processed hidden states and optionally the intermediate outputs.
+
         Raises:
             None
         """
@@ -611,35 +636,32 @@ class CodeGenPreTrainedModel(PreTrainedModel):
 class CodeGenModel(CodeGenPreTrainedModel):
 
     """
-    The `CodeGenModel` class is a Python class that represents a code generation model. It is a subclass of `CodeGenPreTrainedModel` and provides functionality for constructing, setting and getting input
-embeddings, and generating code outputs.
-    
+    The `CodeGenModel` class is a Python class that represents a code generation model.
+    It is a subclass of `CodeGenPreTrainedModel` and provides functionality for constructing, setting and getting input
+    embeddings, and generating code outputs.
+
     Attributes:
-        - `embed_dim`: An integer representing the embedding dimension.
-        - `vocab_size`: An integer representing the size of the vocabulary.
-        - `wte`: An embedding layer that maps input tokens to their corresponding embeddings.
-        - `drop`: A dropout layer for regularization.
-        - `h`: A list of `CodeGenBlock` instances representing code generation blocks.
-        - `ln_f`: A layer normalization layer.
-        - `rotary_dim`: An integer representing the dimension of the rotary encoding.
-        - `gradient_checkpointing`: A boolean indicating whether gradient checkpointing is enabled.
-    
-    Methods:
-        - `__init__(self, config)`: Initializes the `CodeGenModel` instance.
-        - `get_input_embeddings(self) -> nn.Embedding`: Returns the input embeddings layer.
-        - `set_input_embeddings(self, new_embeddings)`: Sets the input embeddings layer.
-        - `construct(self, input_ids, past_key_values, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple,
-BaseModelOutputWithPast]`: Constructs the code generation model.
-    
-    Note: Please refer to the `CodeGenPreTrainedModel` class for additional inherited attributes and methods.
-    
+        `embed_dim`: An integer representing the embedding dimension.
+        `vocab_size`: An integer representing the size of the vocabulary.
+        `wte`: An embedding layer that maps input tokens to their corresponding embeddings.
+        `drop`: A dropout layer for regularization.
+        `h`: A list of `CodeGenBlock` instances representing code generation blocks.
+        `ln_f`: A layer normalization layer.
+        `rotary_dim`: An integer representing the dimension of the rotary encoding.
+        `gradient_checkpointing`: A boolean indicating whether gradient checkpointing is enabled.
+
+    Note:
+        Please refer to the `CodeGenPreTrainedModel` class for additional inherited attributes and methods.
+
     """
     def __init__(self, config):
         """Initializes an instance of the CodeGenModel class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object of the configuration class containing the following attributes:
+            config:
+                An object of the configuration class containing the following attributes:
+
                 - n_embd (int): The embedding dimension.
                 - vocab_size (int): The size of the vocabulary.
                 - embd_pdrop (float): The dropout probability for the embeddings.
@@ -649,10 +671,10 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
                 - n_ctx (int): The context length.
                 - num_attention_heads (int): The number of attention heads.
             The config object is used to initialize various attributes of the CodeGenModel instance.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -673,14 +695,15 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
 
     def get_input_embeddings(self):
         """
-        This method is part of the CodeGenModel class and is named get_input_embeddings. It takes 1 parameter, self, which refers to the instance of the class.
-        
+        This method is part of the CodeGenModel class and is named get_input_embeddings.
+        It takes 1 parameter, self, which refers to the instance of the class.
+
         Args:
             self (CodeGenModel): The instance of the CodeGenModel class.
-        
+
         Returns:
-            None: This method returns a value of type None.
-        
+            None.
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -689,16 +712,16 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings for the CodeGenModel.
-        
+
         Args:
             self (CodeGenModel): The instance of the CodeGenModel class.
             new_embeddings: The new embeddings to be set. This argument could be of any type.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.wte = new_embeddings
 
@@ -718,7 +741,7 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         Constructs the CodeGenModel.
-        
+
         Args:
             self (CodeGenModel): The instance of the CodeGenModel class.
             input_ids (Optional[mindspore.Tensor]): The input IDs of the model. Default is None.
@@ -732,10 +755,10 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
             output_attentions (Optional[bool]): Whether to output attentions. Default is None.
             output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
             return_dict (Optional[bool]): Whether to return the result as a dictionary. Default is None.
-        
+
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The constructed model output. 
-        
+            Union[Tuple, BaseModelOutputWithPast]: The constructed model output.
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
             ValueError: If neither input_ids nor inputs_embeds are specified.
@@ -869,35 +892,33 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
     """
     This class represents a code generation model for causal language modeling (LM) using a transformer-based architecture.
     It inherits from the CodeGenPreTrainedModel class.
-    
+
     Attributes:
-        - transformer (CodeGenModel): The transformer model for code generation.
-        - lm_head (nn.Dense): The dense layer for predicting the next token in the language modeling task.
-    
+        transformer (CodeGenModel): The transformer model for code generation.
+        lm_head (nn.Dense): The dense layer for predicting the next token in the language modeling task.
+
     Methods:
-        - __init__(self, config): Initializes the CodeGenForCausalLM instance.
-        - get_output_embeddings(self): Returns the output embeddings of the LM head.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the LM head.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs): Prepares the input tensors for generation.
-        - construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None, position_ids=None, 
-                    head_mask=None, inputs_embeds=None, labels=None, use_cache=None, output_attentions=None, 
-                    output_hidden_states=None, return_dict=None): Constructs the output of the model for a given set of inputs.
-        - _reorder_cache(past_key_values, beam_idx): Reorders the cache of past key values for beam search or beam sampling.
-    
+        __init__: Initializes the CodeGenForCausalLM instance.
+        get_output_embeddings: Returns the output embeddings of the LM head.
+        set_output_embeddings: Sets the output embeddings of the LM head.
+        prepare_inputs_for_generation: Prepares the input tensors for generation.
+        construct: Constructs the output of the model for a given set of inputs.
+        _reorder_cache: Reorders the cache of past key values for beam search or beam sampling.
+
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes an instance of the CodeGenForCausalLM class.
-        
+
         Args:
             self: The instance of the CodeGenForCausalLM class.
             config: An object containing configuration parameters for the model.
-        
+
         Returns:
-            None. This method initializes the transformer and lm_head attributes of the instance.
-        
+            None.
+
         Raises:
             This method does not explicitly raise any exceptions.
         """
@@ -911,33 +932,33 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
     def get_output_embeddings(self):
         """
         This method 'get_output_embeddings' in the class 'CodeGenForCausalLM' retrieves the output embeddings from the model's head.
-        
+
         Args:
             self: The instance of the class 'CodeGenForCausalLM' itself.
-            
+
         Returns:
-            None: This method returns the output embeddings represented by 'self.lm_head', which is of type 'None'.
-        
+            lm_head: This method returns the output embeddings represented by 'self.lm_head', which is of type 'None'.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the CodeGenForCausalLM.
-        
+
         Args:
             self (CodeGenForCausalLM): The instance of the CodeGenForCausalLM class.
             new_embeddings: The new embeddings to be set as the output embeddings.
                 It should be of the same type as the current embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             This method replaces the current output embeddings of the CodeGenForCausalLM instance
             with the provided new embeddings. The new embeddings should have the same type as the
@@ -948,22 +969,24 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (CodeGenForCausalLM): The instance of the CodeGenForCausalLM class.
             input_ids (tensor): The input tensor containing token IDs for the model.
             past_key_values (tuple or None): Tuple of past key values used for fast decoding.
                 Defaults to None.
-            
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation with the following keys:
+            dict:
+                A dictionary containing the prepared inputs for generation with the following keys:
+
                 - 'input_ids': The trimmed input tensor ready for generation.
                 - 'past_key_values': The past_key_values parameter passed to the method.
                 - 'use_cache': Boolean flag indicating whether to use caching for faster decoding.
                 - 'position_ids': Tensor containing positional IDs for the input tokens.
                 - 'attention_mask': Tensor containing attention mask for the input.
                 - 'token_type_ids': Tensor containing token type IDs if available.
-        
+
         Raises:
             None.
         """
@@ -1018,10 +1041,11 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

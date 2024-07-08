@@ -76,7 +76,8 @@ class MptAttention(nn.Cell):
         
         Args:
             self: The object instance.
-            config (MptConfig): An object of type MptConfig that contains the configuration parameters for the MptAttention.
+            config (MptConfig):
+                An object of type MptConfig that contains the configuration parameters for the MptAttention.
             
         Returns:
             None
@@ -85,26 +86,35 @@ class MptAttention(nn.Cell):
             None
         
         Description:
-        This method is used to initialize the MptAttention class. It sets various attributes of the class instance based on the provided configuration.
-        
-        The 'self' parameter refers to the object instance itself. It is automatically passed when calling the method.
-        
-        The 'config' parameter is an instance of the MptConfig class which contains the following attributes:
-        - hidden_size (int): The size of the hidden state.
-        - n_heads (int): The number of attention heads.
-        - max_seq_length (int): The maximum sequence length.
-        - attn_config (AttnConfig): An object of type AttnConfig that contains attention configuration parameters.
-            - softmax_scale (float): The scale factor for the softmax function. If not provided, it is set to 1 / sqrt(hidden_size / n_heads).
-            - attn_pdrop (float): The dropout probability for attention weights.
-            
-        The method performs the following steps:
-        1. Calls the __init__ method of the parent class using the 'super()' function.
-        2. Sets the 'hidden_size', 'n_heads', 'max_seq_length', and 'head_dim' attributes based on the values from the 'config' parameter.
-        3. Sets the 'softmax_scale' attribute based on the 'softmax_scale' attribute of the 'attn_config' attribute from the 'config' parameter. If not provided, it is calculated as 1 / sqrt(hidden_size /
-n_heads).
-        4. Sets the 'attn_dropout_p' attribute based on the 'attn_pdrop' attribute of the 'attn_config' attribute from the 'config' parameter.
-        5. Initializes the 'Wqkv' attribute as a dense layer with input size 'hidden_size' and output size '3 * hidden_size', with no bias.
-        6. Initializes the 'out_proj' attribute as a dense layer with input size 'hidden_size' and output size 'hidden_size', with no bias.
+            This method is used to initialize the MptAttention class. It sets various attributes of the class instance
+            based on the provided configuration.
+
+            The 'self' parameter refers to the object instance itself. It is automatically passed when calling the method.
+
+            The 'config' parameter is an instance of the MptConfig class which contains the following attributes:
+
+            - hidden_size (int): The size of the hidden state.
+            - n_heads (int): The number of attention heads.
+            - max_seq_length (int): The maximum sequence length.
+            - attn_config (AttnConfig): An object of type AttnConfig that contains attention configuration parameters.
+
+                - softmax_scale (float): The scale factor for the softmax function.
+                If not provided, it is set to 1 / sqrt(hidden_size / n_heads).
+                - attn_pdrop (float): The dropout probability for attention weights.
+
+            The method performs the following steps:
+
+            1. Calls the __init__ method of the parent class using the 'super()' function.
+            2. Sets the 'hidden_size', 'n_heads', 'max_seq_length', and 'head_dim' attributes based on the values
+            from the 'config' parameter.
+            3. Sets the 'softmax_scale' attribute based on the 'softmax_scale' attribute of the 'attn_config' attribute
+            from the 'config' parameter. If not provided, it is calculated as 1 / sqrt(hidden_size / n_heads).
+            4. Sets the 'attn_dropout_p' attribute based on the 'attn_pdrop' attribute of the 'attn_config' attribute
+            from the 'config' parameter.
+            5. Initializes the 'Wqkv' attribute as a dense layer with input size 'hidden_size' and output size
+            '3 * hidden_size', with no bias.
+            6. Initializes the 'out_proj' attribute as a dense layer with input size 'hidden_size' and output size
+            'hidden_size', with no bias.
         """
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -128,18 +138,23 @@ n_heads).
     ):
         """
         Constructs the attention mechanism.
-        
+
         Args:
             self (MptAttention): The instance of the MptAttention class.
-            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, seq_length, hidden_size) representing the hidden states.
-            position_bias (mindspore.Tensor): The input tensor of shape (batch_size, seq_length, seq_length) representing the position bias.
-            past_key_value (Optional[Tuple[mindspore.Tensor]]): The optional tuple of past key-value states. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): The optional input tensor of shape (batch_size, seq_length) representing the attention mask. Default is None.
-        
+            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, seq_length, hidden_size)
+                representing the hidden states.
+            position_bias (mindspore.Tensor): The input tensor of shape (batch_size, seq_length, seq_length)
+                representing the position bias.
+            past_key_value (Optional[Tuple[mindspore.Tensor]]): The optional tuple of past key-value states.
+                Default is None.
+            attention_mask (Optional[mindspore.Tensor]): The optional input tensor of shape (batch_size, seq_length)
+                representing the attention mask. Default is None.
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, Tuple[mindspore.Tensor]]: A tuple containing the attention output tensor of shape (batch_size, seq_length, hidden_size), the attention weights tensor of
-shape (batch_size, num_heads, seq_length, seq_length), and the updated past key-value states tuple.
-        
+            Tuple[mindspore.Tensor, mindspore.Tensor, Tuple[mindspore.Tensor]]: A tuple containing the attention
+                output tensor of shape (batch_size, seq_length, hidden_size), the attention weights tensor of
+                shape (batch_size, num_heads, seq_length, seq_length), and the updated past key-value states tuple.
+
         Raises:
             ValueError: If the position_bias tensor does not have 3 dimensions.
         """
@@ -193,28 +208,31 @@ class MptMLP(nn.Cell):
 
     """
     Class representing a Multi-Layer Perceptron (MLP) for Mpt models.
-    
-    This class defines the architecture of a Multi-Layer Perceptron for Mpt models. It consists of an up projection layer, activation function (GELU), down projection layer, hidden dropout layer, and a
-construct method to process hidden states and residuals.
-    
+
+    This class defines the architecture of a Multi-Layer Perceptron for Mpt models.
+    It consists of an up projection layer, activation function (GELU), down projection layer, hidden dropout layer,
+    and a construct method to process hidden states and residuals.
+
     Inherits from nn.Cell.
     """
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of the MptMLP class.
-        
+
         Args:
             self: The instance of the class.
             config (MptConfig): An object of type MptConfig containing configuration parameters.
                 The config parameter is used to specify the hidden size for the MLP model.
                 It is expected to have the following attributes:
+
                 - hidden_size: An integer specifying the size of the hidden layer.
                 - attn_config: An object containing attention configuration parameters.
+
                     - attn_pdrop: A float specifying the dropout probability for attention.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -229,15 +247,15 @@ construct method to process hidden states and residuals.
     def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a multi-layer perception (MLP) module.
-        
+
         Args:
             self (MptMLP): An instance of the MptMLP class.
             hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, hidden_size).
             residual (mindspore.Tensor): The residual tensor of shape (batch_size, hidden_size).
-        
+
         Returns:
             mindspore.Tensor: The output tensor of shape (batch_size, hidden_size).
-        
+
         Raises:
             TypeError: If the input hidden_states or residual is not a mindspore.Tensor.
             ValueError: If the shapes of hidden_states and residual do not match.
@@ -255,34 +273,34 @@ construct method to process hidden states and residuals.
 class MptBlock(nn.Cell):
 
     """
-    MptBlock represents a block within a Multi-Head Transformer model. This block consists of layers for self-attention and feed-forward networks. Inherits from nn.Cell.
-    
+    MptBlock represents a block within a Multi-Head Transformer model. This block consists of layers for
+    self-attention and feed-forward networks. Inherits from nn.Cell.
+
     Attributes:
-    - config: MptConfig object containing configuration parameters for the block.
-    
+        config: MptConfig object containing configuration parameters for the block.
+
     Methods:
-    - __init__(self, config: MptConfig): Initializes the MptBlock with the provided configuration.
-    - construct(self, hidden_states: mindspore.Tensor, position_bias: mindspore.Tensor, attention_mask: mindspore.Tensor, layer_past: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: bool
-= False, output_attentions: bool = False): Constructs the block by applying self-attention and feed-forward operations on the input hidden states.
-    
-    Usage:
-    
-    config = MptConfig(...)
-    block = MptBlock(config)
-    outputs = block.construct(hidden_states, position_bias, attention_mask)
-    
+        __init__: Initializes the MptBlock with the provided configuration.
+        construct: Constructs the block by applying self-attention and feed-forward operations on the input hidden states.
+
+    Example:
+        ```python
+        >>> config = MptConfig(...)
+        >>> block = MptBlock(config)
+        >>> outputs = block.construct(hidden_states, position_bias, attention_mask)
+        ```
     """
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of the MptBlock class.
-        
+
         Args:
             self: The object itself.
             config (MptConfig): An instance of the MptConfig class representing the configuration settings.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -316,23 +334,26 @@ class MptBlock(nn.Cell):
     ):
         """
         This method constructs a multi-head self-attention block within the MptBlock class.
-        
+
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
-        - position_bias (mindspore.Tensor): The tensor containing positional bias information.
-        - attention_mask (mindspore.Tensor): The tensor used for masking the attention scores.
-        - layer_past (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]): A tuple containing the past key and value tensors, default is None.
-        - use_cache (bool): A boolean flag indicating whether to use caching, default is False.
-        - output_attentions (bool): A boolean flag indicating whether to output attention weights, default is False.
-        
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+            position_bias (mindspore.Tensor): The tensor containing positional bias information.
+            attention_mask (mindspore.Tensor): The tensor used for masking the attention scores.
+            layer_past (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]):
+                A tuple containing the past key and value tensors, default is None.
+            use_cache (bool): A boolean flag indicating whether to use caching, default is False.
+            output_attentions (bool): A boolean flag indicating whether to output attention weights, default is False.
+
         Returns:
-        - tuple: A tuple containing the output tensor of the multi-head self-attention block.
-          If 'use_cache' is True, the tuple also includes the past key and value tensors.
-          If 'output_attentions' is True, the tuple additionally includes the attention weights tensor.
-        
+            tuple:
+                A tuple containing the output tensor of the multi-head self-attention block.
+
+                - If 'use_cache' is True, the tuple also includes the past key and value tensors.
+                - If 'output_attentions' is True, the tuple additionally includes the attention weights tensor.
+
         Raises:
-        - None
+            None
         """
         # hidden_states: [batch_size, seq_length, hidden_size]
         # Layer norm at the beginning of the transformer layer.
@@ -371,19 +392,23 @@ class MptBlock(nn.Cell):
 class MptPreTrainedModel(PreTrainedModel):
 
     """
-    MptPreTrainedModel is a Python class representing a pre-trained model for Mpt (MindSpore Transformer) models. 
-    It provides methods for initializing weights of different types of neural network cells and converting the cache to the format expected by Mpt.
-    
-    The class includes an __init__ method for initializing the model, an _init_weights method for weight initialization of different cell types, 
-    and a static method _convert_to_mpt_cache for converting the cache format to be compatible with Mpt.
-    
-    The _init_weights method initializes weights based on the type of neural network cell, such as nn.Dense, nn.Embedding, and nn.LayerNorm. 
+    MptPreTrainedModel is a Python class representing a pre-trained model for Mpt (MindSpore Transformer) models.
+    It provides methods for initializing weights of different types of neural network cells and converting the cache
+    to the format expected by Mpt.
+
+    The class includes an __init__ method for initializing the model, an _init_weights method for weight initialization
+    of different cell types, and a static method _convert_to_mpt_cache for converting the cache format to be compatible
+    with Mpt.
+
+    The _init_weights method initializes weights based on the type of neural network cell, such as nn.Dense,
+    nn.Embedding, and nn.LayerNorm.
     The method sets the weights and biases of the cells according to specific initializations.
-    
-    The _convert_to_mpt_cache static method takes a past_key_value tuple and converts it to the format expected by Mpt, reshaping the tensors 
-    to match the batch size, number of heads, head dimension, and sequence length.
-    
-    Note: This class inherits from PreTrainedModel.
+
+    The _convert_to_mpt_cache static method takes a past_key_value tuple and converts it to the format expected by Mpt,
+    reshaping the tensors to match the batch size, number of heads, head dimension, and sequence length.
+
+    Note:
+        This class inherits from PreTrainedModel.
     """
     config_class = MptConfig
     base_model_prefix = "transformer"
@@ -394,21 +419,20 @@ class MptPreTrainedModel(PreTrainedModel):
     def __init__(self, *inputs, **kwargs):
         """
         Initializes a new instance of the MptPreTrainedModel class.
-        
+
         Args:
-            self: The object itself.
-                Type: MptPreTrainedModel
-                Purpose: Represents the current instance of the MptPreTrainedModel class.
-                Restrictions: None
-        
+            self:
+                The object itself.
+
+                - Type: MptPreTrainedModel
+                - Purpose: Represents the current instance of the MptPreTrainedModel class.
+                - Restrictions: None
+
         Returns:
-            None
-                Type: None
-                Purpose: This method does not return any value.
-        
+            None.
+
         Raises:
-            None
-                This method does not raise any exceptions.
+            None.
         """
         super().__init__(*inputs, **kwargs)
 
@@ -454,28 +478,30 @@ class MptPreTrainedModel(PreTrainedModel):
 class MptModel(MptPreTrainedModel):
 
     """
-    This class represents a modified pre-trained transformer model (MptModel) for natural language processing tasks. 
-    It inherits from MptPreTrainedModel and includes methods for initializing the model, handling input embeddings, 
-    constructing the model with various optional parameters, and building the multi-head positional tensor alibi. 
-    The model consists of multiple MptBlocks organized in a sequence. It provides functionality for processing input 
-    data, managing past key values, applying attention masks, and computing hidden states. Additionally, the model supports 
-    gradient checkpointing for efficient training. The MptModel class encapsulates the core functionality required for 
+    This class represents a modified pre-trained transformer model (MptModel) for natural language processing tasks.
+    It inherits from MptPreTrainedModel and includes methods for initializing the model, handling input embeddings,
+    constructing the model with various optional parameters, and building the multi-head positional tensor alibi.
+    The model consists of multiple MptBlocks organized in a sequence. It provides functionality for processing input
+    data, managing past key values, applying attention masks, and computing hidden states. Additionally, the model supports
+    gradient checkpointing for efficient training. The MptModel class encapsulates the core functionality required for
     performing transformer-based operations on text data.
     """
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of MptModel.
-        
+
         Args:
             self: The object instance itself.
-            config (MptConfig): An instance of MptConfig containing the configuration parameters for the model.
+            config (MptConfig):
+                An instance of MptConfig containing the configuration parameters for the model.
+
                 - Type: MptConfig
                 - Purpose: Specifies the configuration parameters for the model.
                 - Restrictions: Must be an instance of MptConfig.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -503,31 +529,31 @@ class MptModel(MptPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method is part of the MptModel class and is used to retrieve the input embeddings.
-        
+
         Args:
             self: An instance of the MptModel class.
-        
+
         Returns:
             None: This method returns None, as it simply retrieves the input embeddings without any additional processing.
-        
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.wte
 
     def build_mpt_alibi_tensor(self, num_heads, sequence_length, alibi_bias_max=8):
         """
         This method builds a multi-head attention (MPT) alibi tensor.
-        
+
         Args:
             self (MptModel): The instance of the MptModel class.
             num_heads (int): The number of attention heads to be used in the tensor.
             sequence_length (int): The length of the input sequence.
             alibi_bias_max (int, optional): The maximum value for the alibi bias. Defaults to 8.
-        
+
         Returns:
-            None: This method does not return a value.
-        
+            None.
+
         Raises:
             ValueError: If num_heads or sequence_length is not a positive integer.
             TypeError: If num_heads, sequence_length, or alibi_bias_max is not of type int.
@@ -537,16 +563,16 @@ class MptModel(MptPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
         """
         Sets the input embeddings for the MptModel.
-        
+
         Args:
             self (MptModel): The instance of the MptModel class.
             new_embeddings (mindspore.Tensor): The new embeddings to be set as input.
-            
+
         Returns:
-            None: This method does not return any value.
-            
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.wte = new_embeddings
 
@@ -563,28 +589,36 @@ class MptModel(MptPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
         """
         Constructs the MptModel.
-        
+
         Args:
             self: The MptModel instance.
-            input_ids (Optional[mindspore.Tensor]): The input tensor of shape (batch_size, seq_length) containing the input IDs.
-            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): The past key values tensor of shape (batch_size, past_seq_length, hidden_size) containing the past key values.
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, seq_length) containing the attention mask values.
-            inputs_embeds (Optional[mindspore.Tensor]): The inputs embeddings tensor of shape (batch_size, seq_length, hidden_size) containing the input embeddings.
+            input_ids (Optional[mindspore.Tensor]):
+                The input tensor of shape (batch_size, seq_length) containing the input IDs.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]):
+                The past key values tensor of shape (batch_size, past_seq_length, hidden_size) containing
+                the past key values.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, seq_length)
+                containing the attention mask values.
+            inputs_embeds (Optional[mindspore.Tensor]): The inputs embeddings tensor of shape
+                (batch_size, seq_length, hidden_size) containing the input embeddings.
             use_cache (Optional[bool]): Flag indicating whether to use cache. Default is None.
             output_attentions (Optional[bool]): Flag indicating whether to output attentions. Default is None.
             output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states. Default is None.
             return_dict (Optional[bool]): Flag indicating whether to return a dictionary. Default is None.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]: A tuple containing the hidden states, presents, all hidden states, and all self attentions. The hidden states tensor
-has shape (batch_size, seq_length, hidden_size). The presents tensor has shape (batch_size, past_seq_length + seq_length, hidden_size). The all hidden states tensor is a tuple of hidden states tensors at each
-layer. The all self attentions tensor is a tuple of self attention tensors at each layer.
-        
+            Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
+                A tuple containing the hidden states, presents, all hidden states, and all self attentions.
+                The hidden states tensor has shape (batch_size, seq_length, hidden_size). The presents tensor has shape
+                (batch_size, past_seq_length + seq_length, hidden_size). The all hidden states tensor is a tuple of
+                hidden states tensors at each layer. The all self attentions tensor is a tuple of self attention tensors
+                at each layer.
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified simultaneously.
             ValueError: If neither input_ids nor inputs_embeds are specified.
             Warning: If use_cache is set to True and gradient checkpointing is enabled, as they are incompatible.
-        
+
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -690,39 +724,44 @@ layer. The all self attentions tensor is a tuple of self attention tensors at ea
 class MptForCausalLM(MptPreTrainedModel):
 
     """
-    This class represents a model for Causal Language Modeling based on the Mpt architecture. It provides methods for preparing inputs, generating outputs, and reordering cache for beam search. 
-    
-    The class includes methods such as initializing the model, getting and setting output embeddings, preparing inputs for generation, constructing the model, and reordering cache for beam search. 
-    
-    The 'MptForCausalLM' class inherits from 'MptPreTrainedModel' and utilizes a transformer model along with specific configurations for language modeling tasks. 
-    
+    This class represents a model for Causal Language Modeling based on the Mpt architecture.
+    It provides methods for preparing inputs, generating outputs, and reordering cache for beam search.
+
+    The class includes methods such as initializing the model, getting and setting output embeddings, preparing inputs
+    for generation, constructing the model, and reordering cache for beam search.
+
+    The 'MptForCausalLM' class inherits from 'MptPreTrainedModel' and utilizes a transformer model along with
+    specific configurations for language modeling tasks.
+
     Key methods:
-    - __init__(self, config: MptConfig): Initialize the model with the provided configuration.
-    - get_output_embeddings(self): Get the output embeddings of the model.
-    - set_output_embeddings(self, new_embeddings: mindspore.Tensor): Set new output embeddings for the model.
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, use_cache, **kwargs): Prepare inputs for text generation.
-    - construct(self, input_ids, past_key_values, attention_mask, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Construct the model for language modeling.
-    - _reorder_cache(self, past, beam_idx): Reorder the cache for beam search operations.
-    
-    The 'MptForCausalLM' class is designed to facilitate language modeling tasks with a focus on generating coherent text sequences in a causal manner.
+
+    - __init__: Initialize the model with the provided configuration.
+    - get_output_embeddings: Get the output embeddings of the model.
+    - set_output_embeddings: Set new output embeddings for the model.
+    - prepare_inputs_for_generation: Prepare inputs for text generation.
+    - construct: Construct the model for language modeling.
+    - _reorder_cache: Reorder the cache for beam search operations.
+
+    The 'MptForCausalLM' class is designed to facilitate language modeling tasks with a focus on generating coherent
+    text sequences in a causal manner.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of the MptForCausalLM class.
-        
+
         Args:
             self: The instance of the MptForCausalLM class.
             config (MptConfig): An instance of the MptConfig class containing configuration parameters.
                 This parameter is required for initializing various components within the MptForCausalLM instance.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type MptConfig.
-            - ValueError: If any required configuration parameter is missing or invalid.
+            TypeError: If the config parameter is not of type MptConfig.
+            ValueError: If any required configuration parameter is missing or invalid.
         """
         super().__init__(config)
         self.transformer = MptModel(config)
@@ -734,42 +773,47 @@ class MptForCausalLM(MptPreTrainedModel):
     def get_output_embeddings(self):
         """
         Returns the output embeddings for the MptForCausalLM model.
-        
+
         Args:
             self: An instance of the MptForCausalLM class.
-        
+
         Returns:
-            None. The method returns the output embeddings which are stored in the `lm_head` attribute of the MptForCausalLM instance.
-        
+            embeddings: The output embeddings which are stored in the `lm_head` attribute of the MptForCausalLM instance.
+
         Raises:
             None.
-        
-        This method retrieves and returns the output embeddings of the MptForCausalLM model. The output embeddings are stored in the `lm_head` attribute of the instance. The `lm_head` attribute represents the
-final layer of the language model, responsible for generating the output predictions.
-        
-        Note that the output embeddings are specific to the MptForCausalLM model and are derived from the language model's internal representation. The embeddings capture the semantic meaning and contextual
-information of the input text, enabling downstream tasks such as text generation, completion, or classification.
-        
-        Example usage:
-        
-        model = MptForCausalLM()
-        output_embeddings = model.get_output_embeddings()
-        
+
+        This method retrieves and returns the output embeddings of the MptForCausalLM model.
+        The output embeddings are stored in the `lm_head` attribute of the instance.
+        The `lm_head` attribute represents the final layer of the language model, responsible for generating the
+        output predictions.
+
+        Note that the output embeddings are specific to the MptForCausalLM model and are derived from the language
+        model's internal representation. The embeddings capture the semantic meaning and contextual information of the
+        input text, enabling downstream tasks such as text generation, completion, or classification.
+
+        Example:
+            ```python
+            >>> model = MptForCausalLM()
+            >>> output_embeddings = model.get_output_embeddings()
+            ```
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
         """
         Method to set new output embeddings for the language model.
-        
+
         Args:
             self (MptForCausalLM): The instance of the MptForCausalLM class.
             new_embeddings (mindspore.Tensor): The new embeddings to be set as the output embeddings for the language model.
                 It should be a Tensor object containing the embeddings to be used for the output layer.
-        
+
         Returns:
-            None. This method updates the 'lm_head' attribute of the MptForCausalLM instance with the new embeddings provided.
-        
+            None:
+                This method updates the 'lm_head' attribute of the MptForCausalLM instance with the new embeddings
+                provided.
+
         Raises:
             None.
         """
@@ -786,19 +830,23 @@ information of the input text, enabling downstream tasks such as text generation
     ) -> dict:
         """
         Prepares inputs for generation in the MptForCausalLM class.
-        
+
         Args:
             self: The object instance.
             input_ids (mindspore.Tensor): The input tensor containing the tokenized input sequence.
-            past_key_values (Optional[mindspore.Tensor]): The tensor containing the past key values for auto-regressive generation. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): The tensor specifying which tokens should be attended to. Default is None.
-            inputs_embeds (Optional[mindspore.Tensor]): The tensor containing the embeddings of the input sequence. Default is None.
+            past_key_values (Optional[mindspore.Tensor]): The tensor containing the past key values for
+                auto-regressive generation. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): The tensor specifying which tokens should be attended to.
+                Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]): The tensor containing the embeddings of the input sequence.
+                Default is None.
             use_cache (Optional[bool]): Specifies whether to use cache for faster generation. Default is None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            dict: A dictionary containing the prepared model inputs, including 'input_ids', 'inputs_embeds', 'past_key_values', 'use_cache', and 'attention_mask'.
-        
+            dict: A dictionary containing the prepared model inputs, including 'input_ids', 'inputs_embeds',
+                'past_key_values', 'use_cache', and 'attention_mask'.
+
         Raises:
             None.
         """
@@ -843,10 +891,11 @@ information of the input text, enabling downstream tasks such as text generation
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -913,43 +962,46 @@ class MptForSequenceClassification(MptPreTrainedModel):
 
     """
     This class represents a sequence classification model based on the MptPreTrainedModel architecture.
-    
-    The MptForSequenceClassification class is a subclass of MptPreTrainedModel and is designed for sequence classification tasks. It includes methods for initializing the model, constructing the model, and
-generating sequence classification outputs.
-    
+
+    The MptForSequenceClassification class is a subclass of MptPreTrainedModel and is designed for sequence 
+    classification tasks. It includes methods for initializing the model, constructing the model, and
+    generating sequence classification outputs.
+
     Attributes:
-        - num_labels (int): The number of labels for the sequence classification task.
-        - transformer (MptModel): The transformer model used for sequence encoding.
-        - score (nn.Dense): The linear layer for generating logits from the hidden states.
-        
+        num_labels (int): The number of labels for the sequence classification task.
+        transformer (MptModel): The transformer model used for sequence encoding.
+        score (nn.Dense): The linear layer for generating logits from the hidden states.
+
     Methods:
-        - __init__(self, config: MptConfig): Initializes the MptForSequenceClassification instance with a configuration object.
-        - construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] =
-None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states:
-Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutputWithPast]: Constructs the sequence classification model and returns the classification
-outputs.
-    
-    The MptForSequenceClassification class inherits from the MptPreTrainedModel class and extends its functionality specifically for sequence classification tasks. It utilizes a transformer model for encoding
-the input sequences and a linear layer for generating logits from the hidden states. The class provides a method for constructing the model and returning the classification outputs.
-    
-    Note: This class assumes that the input sequences are tokenized and encoded as input_ids, and the labels are provided for computing the sequence classification/regression loss. The number of labels should
-be in the range of [0, config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed using Mean-Square loss. If config.num_labels > 1, a classification loss is computed using Cross-Entropy.
+        __init__: Initializes the MptForSequenceClassification instance with a configuration object.
+        construct: Constructs the sequence classification model and returns the classification outputs.
+
+    The MptForSequenceClassification class inherits from the MptPreTrainedModel class and extends its functionality 
+    specifically for sequence classification tasks. It utilizes a transformer model for encoding the input sequences 
+    and a linear layer for generating logits from the hidden states. The class provides a method for constructing the 
+    model and returning the classification outputs.
+
+    Note:
+        This class assumes that the input sequences are tokenized and encoded as input_ids, and the labels are 
+        provided for computing the sequence classification/regression loss. The number of labels should be in the range 
+        of [0, config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed using Mean-Square loss. 
+        If config.num_labels > 1, a classification loss is computed using Cross-Entropy.
     """
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of MptForSequenceClassification.
-        
+
         Args:
             self: The instance of the class.
             config (MptConfig): An instance of MptConfig containing configuration parameters.
                 It specifies the configuration settings for the model.
                 Must be of type MptConfig.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -972,10 +1024,11 @@ be in the range of [0, config.num_labels - 1]. If config.num_labels == 1, a regr
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1051,51 +1104,57 @@ be in the range of [0, config.num_labels - 1]. If config.num_labels == 1, a regr
 class MptForTokenClassification(MptPreTrainedModel):
 
     """
-    MptForTokenClassification represents a model for token classification tasks, inheriting from MptPreTrainedModel. It includes methods for initializing the model and constructing the forward pass for token
-classification.
-    
-    The __init__ method initializes the model parameters and components such as the transformer and classifier layers, with optional dropout specified in the config.
-    
-    The construct method processes the input data through the transformer, applies dropout, computes logits using the classifier, calculates loss if labels are provided, and returns the output in the specified
-format.
-    
+    MptForTokenClassification represents a model for token classification tasks, inheriting from MptPreTrainedModel.
+    It includes methods for initializing the model and constructing the forward pass for token classification.
+
+    The __init__ method initializes the model parameters and components such as the transformer and classifier layers,
+    with optional dropout specified in the config.
+
+    The construct method processes the input data through the transformer, applies dropout, computes logits using the
+    classifier, calculates loss if labels are provided, and returns the output in the specified format.
+
     Parameters:
-        - config (MptConfig): Configuration object containing model settings.
-        - input_ids (Optional[mindspore.Tensor]): Input token IDs.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): Past key values for attention mechanisms.
-        - attention_mask (Optional[mindspore.Tensor]): Mask for attention scores.
-        - inputs_embeds (Optional[mindspore.Tensor]): Embedded input tokens.
-        - labels (Optional[mindspore.Tensor]): Target labels for classification/regression.
-        - use_cache (Optional[bool]): Flag for using cache in the transformer.
-        - output_attentions (Optional[bool]): Flag for outputting attentions.
-        - output_hidden_states (Optional[bool]): Flag for outputting hidden states.
-        - return_dict (Optional[bool]): Flag for returning output as a dictionary.
-    
+        config (MptConfig): Configuration object containing model settings.
+        input_ids (Optional[mindspore.Tensor]): Input token IDs.
+        past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]):
+            Past key values for attention mechanisms.
+        attention_mask (Optional[mindspore.Tensor]): Mask for attention scores.
+        inputs_embeds (Optional[mindspore.Tensor]): Embedded input tokens.
+        labels (Optional[mindspore.Tensor]): Target labels for classification/regression.
+        use_cache (Optional[bool]): Flag for using cache in the transformer.
+        output_attentions (Optional[bool]): Flag for outputting attentions.
+        output_hidden_states (Optional[bool]): Flag for outputting hidden states.
+        return_dict (Optional[bool]): Flag for returning output as a dictionary.
+
     Returns:
-        - Union[Tuple[mindspore.Tensor], TokenClassifierOutput]: Tuple containing the loss and output based on return format.
-    
+        Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+            Tuple containing the loss and output based on return format.
+
     Note:
         - Labels should be indices in [0, ..., config.num_labels - 1].
         - For single label regression, config.num_labels should be 1.
         - For multiple labels classification, config.num_labels > 1.
         - Cross-entropy loss is computed for classification tasks.
-    
+
     For detailed information on methods and attributes, please refer to the method implementations in the class.
     """
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of the MptForTokenClassification class.
-        
+
         Args:
             self: The instance of the MptForTokenClassification class.
-            config (MptConfig): An object of type MptConfig containing configuration parameters for the model.
+            config (MptConfig):
+                An object of type MptConfig containing configuration parameters for the model.
+
                 - num_labels (int): The number of labels for token classification.
                 - classifier_dropout (float, optional): The dropout probability for the classifier layer.
                 - hidden_dropout (float, optional): The dropout probability for hidden layers.
-                
+
         Returns:
-            None. This method initializes the MptForTokenClassification instance with the provided configuration.
-        
+            None:
+                This method initializes the MptForTokenClassification instance with the provided configuration.
+
         Raises:
             None.
         """
@@ -1129,10 +1188,11 @@ format.
         **deprecated_arguments,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1173,14 +1233,18 @@ format.
 class MptForQuestionAnswering(MptPreTrainedModel):
 
     """
-    MptForQuestionAnswering is a class representing a model for question answering. It inherits from MptPreTrainedModel and provides methods for constructing a question answering model.
-    
-    The class includes an initializer method that takes a 'config' parameter and initializes the transformer and qa_outputs attributes. It also provides a 'construct' method for constructing the question
-answering model, which takes input_ids, attention_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, and return_dict as optional parameters and returns a
-QuestionAnsweringModelOutput.
-    
-    The 'construct' method computes the start and end positions for the labelled span, computes the token classification loss, and returns the total loss along with start_logits, end_logits, hidden_states, and
-attentions if return_dict is False. If return_dict is True, it returns a QuestionAnsweringModelOutput containing the loss, start_logits, end_logits, hidden_states, and attentions.
+    MptForQuestionAnswering is a class representing a model for question answering. It inherits from MptPreTrainedModel
+    and provides methods for constructing a question answering model.
+
+    The class includes an initializer method that takes a 'config' parameter and initializes the transformer and
+    qa_outputs attributes. It also provides a 'construct' method for constructing the question answering model,
+    which takes input_ids, attention_mask, inputs_embeds, start_positions, end_positions, output_attentions,
+    output_hidden_states, and return_dict as optional parameters and returns a QuestionAnsweringModelOutput.
+
+    The 'construct' method computes the start and end positions for the labelled span, computes the token classification
+    loss, and returns the total loss along with start_logits, end_logits, hidden_states, and attentions if return_dict
+    is False. If return_dict is True, it returns a QuestionAnsweringModelOutput containing the loss, start_logits,
+    end_logits, hidden_states, and attentions.
     
     """
     def __init__(self, config):
@@ -1192,7 +1256,7 @@ attentions if return_dict is False. If return_dict is True, it returns a Questio
             config: A dictionary containing configuration parameters for the model.
         
         Returns:
-            None: This method does not return a value.
+            None.
         
         Raises:
             None
@@ -1216,14 +1280,15 @@ attentions if return_dict is False. If return_dict is True, it returns a Questio
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

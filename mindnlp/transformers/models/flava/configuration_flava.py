@@ -71,19 +71,19 @@ class FlavaImageConfig(PretrainedConfig):
             Image Modeling) loss for FLAVA.
 
     Example:
-
-    ```python
-    >>> from transformers import FlavaImageConfig, FlavaImageModel
-
-    >>> # Initializing a FlavaImageModel with  style configuration
-    >>> configuration = FlavaImageConfig()
-
-    >>> # Initializing a FlavaImageModel model (with random weights) from the style configuration
-    >>> model = FlavaImageModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import FlavaImageConfig, FlavaImageModel
+        ...
+        >>> # Initializing a FlavaImageModel with  style configuration
+        >>> configuration = FlavaImageConfig()
+        ...
+        >>> # Initializing a FlavaImageModel model (with random weights) from the style configuration
+        >>> model = FlavaImageModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "flava_image_model"
 
@@ -228,19 +228,19 @@ class FlavaTextConfig(PretrainedConfig):
             Whether to add a bias to the queries, keys and values.
 
     Example:
-
-    ```python
-    >>> from transformers import FlavaTextConfig, FlavaTextModel
-
-    >>> # Initializing a FlavaTextModel with  style configuration
-    >>> configuration = FlavaTextConfig()
-
-    >>> # Initializing a FlavaTextModel model (with random weights) from the style configuration
-    >>> model = FlavaTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import FlavaTextConfig, FlavaTextModel
+        ...
+        >>> # Initializing a FlavaTextModel with  style configuration
+        >>> configuration = FlavaTextConfig()
+        ...
+        >>> # Initializing a FlavaTextModel model (with random weights) from the style configuration
+        >>> model = FlavaTextModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "flava_text_model"
 
@@ -366,19 +366,19 @@ class FlavaMultimodalConfig(PretrainedConfig):
 
 
     Example:
-
-    ```python
-    >>> from transformers import FlavaMultimodalConfig, FlavaMultimodalModel
-
-    >>> # Initializing a FlavaMultimodalModel with  style configuration
-    >>> configuration = FlavaMultimodalConfig()
-
-    >>> # Initializing a FlavaMultimodalModel model (with random weights) from the style configuration
-    >>> model = FlavaMultimodalModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import FlavaMultimodalConfig, FlavaMultimodalModel
+        ...
+        >>> # Initializing a FlavaMultimodalModel with  style configuration
+        >>> configuration = FlavaMultimodalConfig()
+        ...
+        >>> # Initializing a FlavaMultimodalModel model (with random weights) from the style configuration
+        >>> model = FlavaMultimodalModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "flava_multimodal_model"
 
@@ -458,8 +458,6 @@ class FlavaMultimodalConfig(PretrainedConfig):
 
 
 class FlavaImageCodebookConfig(PretrainedConfig):
-    model_type = "flava_image_codebook"
-
     r"""
     [`FlavaImageCodebookConfig`] is the configuration class to store the configuration of a [`FlavaImageCodebook`]. It
     is used to instantiate an FLAVA model according to the specified arguments, defining the model architecture.
@@ -489,19 +487,19 @@ class FlavaImageCodebookConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
-
-    ```python
-    >>> from transformers import FlavaImageCodebookConfig, FlavaImageCodebook
-
-    >>> # Initializing a FlavaImageCodebook with style configuration
-    >>> configuration = FlavaImageCodebookConfig()
-
-    >>> # Initializing a FlavaImageCodebook model (with random weights) from the style configuration
-    >>> model = FlavaImageCodebook(configuration)
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        ```python
+        >>> from transformers import FlavaImageCodebookConfig, FlavaImageCodebook
+        ...
+        >>> # Initializing a FlavaImageCodebook with style configuration
+        >>> configuration = FlavaImageCodebookConfig()
+        ...
+        >>> # Initializing a FlavaImageCodebook model (with random weights) from the style configuration
+        >>> model = FlavaImageCodebook(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
+    model_type="flava_image_codebook"
 
     def __init__(
         self,
@@ -622,21 +620,20 @@ class FlavaConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
-
-    ```python
-    >>> from transformers import FlavaConfig, FlavaModel, FlavaForPreTraining
-
-    >>> # Initializing a FlavaConfig with style configuration
-    >>> configuration = FlavaConfig()
-
-    >>> # Initializing a FlavaModel and FlavaForPreTraining model (with random weights) from the style configuration
-    >>> model = FlavaModel(configuration)
-    >>> model_pre = FlavaForPreTraining(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    >>> configuration_pre = model_pre.config
-    ```
+        ```python
+        >>> from transformers import FlavaConfig, FlavaModel, FlavaForPreTraining
+        ...
+        >>> # Initializing a FlavaConfig with style configuration
+        >>> configuration = FlavaConfig()
+        ...
+        >>> # Initializing a FlavaModel and FlavaForPreTraining model (with random weights) from the style configuration
+        >>> model = FlavaModel(configuration)
+        >>> model_pre = FlavaForPreTraining(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        >>> configuration_pre = model_pre.config
+        ```
     """
 
     model_type = "flava"

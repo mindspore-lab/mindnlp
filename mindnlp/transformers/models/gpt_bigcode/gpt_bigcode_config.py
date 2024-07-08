@@ -89,10 +89,10 @@ class GPTBigCodeConfig(PretrainedConfig):
             multi_query (bool, optional): Whether to use multi-query attention. Default is True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.vocab_size = vocab_size
         self.n_positions = n_positions

@@ -52,25 +52,25 @@ class VipLlavaConfig(PretrainedConfig):
             The list of layers to select the vision features from.
 
     Example:
-
-    ```python
-    >>> from transformers import VipLlavaForConditionalGeneration, VipLlavaConfig, CLIPVisionConfig, LlamaConfig
-
-    >>> # Initializing a CLIP-vision config
-    >>> vision_config = CLIPVisionConfig()
-
-    >>> # Initializing a Llama config
-    >>> text_config = LlamaConfig()
-
-    >>> # Initializing a VipLlava vipllava-7b style configuration
-    >>> configuration = VipLlavaConfig(vision_config, text_config)
-
-    >>> # Initializing a model from the vipllava-7b style configuration
-    >>> model = VipLlavaForConditionalGeneration(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import VipLlavaForConditionalGeneration, VipLlavaConfig, CLIPVisionConfig, LlamaConfig
+        ...
+        >>> # Initializing a CLIP-vision config
+        >>> vision_config = CLIPVisionConfig()
+        ...
+        >>> # Initializing a Llama config
+        >>> text_config = LlamaConfig()
+        ...
+        >>> # Initializing a VipLlava vipllava-7b style configuration
+        >>> configuration = VipLlavaConfig(vision_config, text_config)
+        ...
+        >>> # Initializing a model from the vipllava-7b style configuration
+        >>> model = VipLlavaForConditionalGeneration(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+        """
     model_type = "vipllava"
     is_composition = False
 
@@ -87,23 +87,28 @@ class VipLlavaConfig(PretrainedConfig):
     ):
         '''
         Initialize the VipLlavaConfig with the provided configuration parameters.
-        
+
         Args:
-        - self: The instance of the class.
-        - vision_config (dict, optional): The configuration for the vision model. Defaults to None.
-        - text_config (dict, optional): The configuration for the text model. Defaults to None.
-        - ignore_index (int, optional): The index to ignore during training. Defaults to -100.
-        - image_token_index (int, optional): The index for image tokens. Defaults to 32000.
-        - projector_hidden_act (str, optional): The activation function for the projector hidden layer. Defaults to 'gelu'.
-        - projector_layernorm_eps (float, optional): The epsilon value for layer normalization in the projector. Defaults to 1e-05.
-        - vision_feature_layers (list of int, optional): The list of layers to extract features from in the vision model. Defaults to [-2, -5, -8, -11, 6].
-        
+            self: The instance of the class.
+            vision_config (dict, optional): The configuration for the vision model. Defaults to None.
+            text_config (dict, optional): The configuration for the text model. Defaults to None.
+            ignore_index (int, optional): The index to ignore during training. Defaults to -100.
+            image_token_index (int, optional): The index for image tokens. Defaults to 32000.
+            projector_hidden_act (str, optional): The activation function for the projector hidden layer.
+                Defaults to 'gelu'.
+            projector_layernorm_eps (float, optional): The epsilon value for layer normalization in the projector.
+                Defaults to 1e-05.
+            vision_feature_layers (list of int, optional): The list of layers to extract features from in the vision model.
+                Defaults to [-2, -5, -8, -11, 6].
+
         Returns:
-        None. This method initializes the VipLlavaConfig instance with the provided parameters.
-        
+            None.
+
         Raises:
-        FutureWarning: If 'vocab_size' is provided in kwargs, it will issue a warning about deprecation and removal in future versions.
-        Warning: If 'vocab_size' attribute is accessed, it will issue a warning about deprecation and recommendation to use 'text_config.vocab_size' instead.
+            FutureWarning: If 'vocab_size' is provided in kwargs, it will issue a warning about deprecation and removal
+                in future versions.
+            Warning: If 'vocab_size' attribute is accessed, it will issue a warning about deprecation and recommendation
+                to use 'text_config.vocab_size' instead.
         '''
         self.ignore_index = ignore_index
         self.image_token_index = image_token_index

@@ -58,20 +58,20 @@ class CTRLConfig(PretrainedConfig):
             Whether or not the model should return the last key/values attentions (not used by all models).
 
 
-    Examples:
-
-    ```python
-    >>> from transformers import CTRLConfig, CTRLModel
-
-    >>> # Initializing a CTRL configuration
-    >>> configuration = CTRLConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = CTRLModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import CTRLConfig, CTRLModel
+        ...
+        >>> # Initializing a CTRL configuration
+        >>> configuration = CTRLConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = CTRLModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "ctrl"
     keys_to_ignore_at_inference = ["past_key_values"]

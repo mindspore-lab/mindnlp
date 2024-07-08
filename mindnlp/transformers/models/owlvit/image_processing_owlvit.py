@@ -68,6 +68,7 @@ def box_area(boxes):
         boxes (`torch.FloatTensor` of shape `(number_of_boxes, 4)`):
             Boxes for which the area will be computed. They are expected to be in (x1, y1, x2, y2) format with `0 <= x1
             < x2` and `0 <= y1 < y2`.
+
     Returns:
         `torch.FloatTensor`: a tensor containing the area for each box.
     """
@@ -113,7 +114,7 @@ class OwlViTImageProcessor(BaseImageProcessor):
         do_center_crop (`bool`, *optional*, defaults to `False`):
             Whether to crop the input at the center. If the input size is smaller than `crop_size` along any edge, the
             image is padded with 0's and then center cropped.
-        crop_size (`int`, *optional*, defaults to {"height": 768, "width": 768}):
+        crop_size (`int`, *optional*, defaults to {"height" -- 768, "width" -- 768}):
             The size to use for center cropping the image. Only has an effect if `do_center_crop` is set to `True`.
         do_rescale (`bool`, *optional*, defaults to `True`):
             Whether to rescale the input by a certain factor.
@@ -279,11 +280,13 @@ class OwlViTImageProcessor(BaseImageProcessor):
             data_format (`str` or `ChannelDimension`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`str` or `ChannelDimension`, *optional*):
                 The channel dimension format for the input image. If unset, is inferred from the input image. Can be
                 one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
         """
@@ -342,6 +345,7 @@ class OwlViTImageProcessor(BaseImageProcessor):
                 set to `True`.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
+
                 - Unset: Return a list of `np.ndarray`.
                 - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
                 - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
@@ -349,12 +353,14 @@ class OwlViTImageProcessor(BaseImageProcessor):
                 - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: defaults to the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -451,9 +457,10 @@ class OwlViTImageProcessor(BaseImageProcessor):
                 Tensor containing the size (h, w) of each image of the batch. For evaluation, this must be the original
                 image size (before any data augmentation). For visualization, this should be the image size after data
                 augment, but before padding.
+
         Returns:
             `List[Dict]`: A list of dictionaries, each dictionary containing the scores, labels and boxes for an image
-            in the batch as predicted by the model.
+                in the batch as predicted by the model.
         """
         # TODO: (amy) add support for other frameworks
         warnings.warn(
@@ -503,9 +510,10 @@ class OwlViTImageProcessor(BaseImageProcessor):
             target_sizes (`torch.Tensor` or `List[Tuple[int, int]]`, *optional*):
                 Tensor of shape `(batch_size, 2)` or list of tuples (`Tuple[int, int]`) containing the target size
                 `(height, width)` of each image in the batch. If unset, predictions will not be resized.
+
         Returns:
             `List[Dict]`: A list of dictionaries, each dictionary containing the scores, labels and boxes for an image
-            in the batch as predicted by the model.
+                in the batch as predicted by the model.
         """
         # TODO: (amy) add support for other frameworks
         logits, boxes = outputs.logits, outputs.pred_boxes
@@ -563,8 +571,8 @@ class OwlViTImageProcessor(BaseImageProcessor):
 
         Returns:
             `List[Dict]`: A list of dictionaries, each dictionary containing the scores, labels and boxes for an image
-            in the batch as predicted by the model. All labels are set to None as
-            `OwlViTForObjectDetection.image_guided_detection` perform one-shot object detection.
+                in the batch as predicted by the model. All labels are set to None as
+                `OwlViTForObjectDetection.image_guided_detection` perform one-shot object detection.
         """
         logits, target_boxes = outputs.logits, outputs.target_pred_boxes
 

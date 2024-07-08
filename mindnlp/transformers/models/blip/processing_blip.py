@@ -47,16 +47,20 @@ class BlipProcessor(ProcessorMixin):
         
         Args:
             self: The BlipProcessor instance itself.
-            image_processor: An object representing the image processor used for processing images.
-                Type: object
-                Purpose: It processes the input images.
-            tokenizer: An object representing the tokenizer used for tokenization.
-                Type: object
-                Purpose: It tokenizes the input data.
-                Restrictions: The 'return_token_type_ids' attribute of the tokenizer should be set to False.
+            image_processor:
+                An object representing the image processor used for processing images.
+
+                - Type: object
+                - Purpose: It processes the input images.
+            tokenizer:
+                An object representing the tokenizer used for tokenization.
+
+                - Type: object
+                - Purpose: It tokenizes the input data.
+                - Restrictions: The 'return_token_type_ids' attribute of the tokenizer should be set to False.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -164,7 +168,8 @@ class BlipProcessor(ProcessorMixin):
     @property
     def model_input_names(self):
         """
-        This method, model_input_names, in the BlipProcessor class, retrieves the unique model input names from the tokenizer and image processor.
+        This method, model_input_names, in the BlipProcessor class, retrieves the unique model input names from
+        the tokenizer and image processor.
         
         Args:
             self (BlipProcessor): The instance of the BlipProcessor class.
@@ -172,7 +177,8 @@ class BlipProcessor(ProcessorMixin):
         
         Returns:
             list: A list of unique model input names derived from the tokenizer and image processor.
-                The list does not contain any duplicate names and is ordered as per the appearance in the combined tokenizer and image processor input names.
+                The list does not contain any duplicate names and is ordered as per the appearance in the
+                combined tokenizer and image processor input names.
         
         Raises:
             None

@@ -85,19 +85,19 @@ class DebertaConfig(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     Example:
-
-    ```python
-    >>> from transformers import DebertaConfig, DebertaModel
-
-    >>> # Initializing a DeBERTa microsoft/deberta-base style configuration
-    >>> configuration = DebertaConfig()
-
-    >>> # Initializing a model (with random weights) from the microsoft/deberta-base style configuration
-    >>> model = DebertaModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import DebertaConfig, DebertaModel
+        ...
+        >>> # Initializing a DeBERTa microsoft/deberta-base style configuration
+        >>> configuration = DebertaConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the microsoft/deberta-base style configuration
+        >>> model = DebertaModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "deberta"
 
     def __init__(
@@ -125,34 +125,34 @@ class DebertaConfig(PretrainedConfig):
     ):
         """
         Initialize a DebertaConfig object.
-        
+
         Args:
-        - self: The object instance.
-        - vocab_size (int, optional): The size of the vocabulary. Default is 50265.
-        - hidden_size (int, optional): The size of the hidden layers. Default is 768.
-        - num_hidden_layers (int, optional): The number of hidden layers. Default is 12.
-        - num_attention_heads (int, optional): The number of attention heads. Default is 12.
-        - intermediate_size (int, optional): The size of the intermediate layers. Default is 3072.
-        - hidden_act (str, optional): The activation function for hidden layers. Default is 'gelu'.
-        - hidden_dropout_prob (float, optional): The dropout probability for hidden layers. Default is 0.1.
-        - attention_probs_dropout_prob (float, optional): The dropout probability for attention probabilities. Default is 0.1.
-        - max_position_embeddings (int, optional): The maximum position embeddings. Default is 512.
-        - type_vocab_size (int, optional): The size of the type vocabulary. Default is 0.
-        - initializer_range (float, optional): The range for parameter initialization. Default is 0.02.
-        - layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-07.
-        - relative_attention (bool, optional): Whether to use relative attention. Default is False.
-        - max_relative_positions (int, optional): The maximum relative positions for relative attention. Default is -1.
-        - pad_token_id (int, optional): The token ID for padding. Default is 0.
-        - position_biased_input (bool, optional): Whether to use position-biased input. Default is True.
-        - pos_att_type (str or list of str, optional): The type of positional attention. Default is None.
-        - pooler_dropout (float, optional): The dropout probability for the pooler layer. Default is 0.
-        - pooler_hidden_act (str, optional): The activation function for the pooler layer. Default is 'gelu'.
-        
+            self: The object instance.
+            vocab_size (int, optional): The size of the vocabulary. Default is 50265.
+            hidden_size (int, optional): The size of the hidden layers. Default is 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 12.
+            num_attention_heads (int, optional): The number of attention heads. Default is 12.
+            intermediate_size (int, optional): The size of the intermediate layers. Default is 3072.
+            hidden_act (str, optional): The activation function for hidden layers. Default is 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for hidden layers. Default is 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for attention probabilities. Default is 0.1.
+            max_position_embeddings (int, optional): The maximum position embeddings. Default is 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Default is 0.
+            initializer_range (float, optional): The range for parameter initialization. Default is 0.02.
+            layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-07.
+            relative_attention (bool, optional): Whether to use relative attention. Default is False.
+            max_relative_positions (int, optional): The maximum relative positions for relative attention. Default is -1.
+            pad_token_id (int, optional): The token ID for padding. Default is 0.
+            position_biased_input (bool, optional): Whether to use position-biased input. Default is True.
+            pos_att_type (str or list of str, optional): The type of positional attention. Default is None.
+            pooler_dropout (float, optional): The dropout probability for the pooler layer. Default is 0.
+            pooler_hidden_act (str, optional): The activation function for the pooler layer. Default is 'gelu'.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None specified.
+            None.
         """
         super().__init__(**kwargs)
 
