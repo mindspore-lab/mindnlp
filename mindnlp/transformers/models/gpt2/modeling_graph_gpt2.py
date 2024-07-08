@@ -54,7 +54,7 @@ class GPT2Attention(nn.Cell):
             layer_idx (int or None): Index of the layer.
         
         Returns:
-            None. This method initializes the attributes and parameters of the GPT2Attention class.
+            None.
         
         Raises:
             ValueError: Raised if the `embed_dim` is not divisible by `num_heads`.
@@ -123,30 +123,30 @@ class GPT2Attention(nn.Cell):
         Method _attn in the class GPT2Attention.
         
         Args:
-        - self: GPT2Attention object
-            The instance of the GPT2Attention class.
-        - query: Tensor
-            The input query tensor.
-        - key: Tensor
-            The input key tensor.
-        - value: Tensor
-            The input value tensor.
-        - attention_mask: Tensor or None
-            Optional tensor for masking attention scores.
-        - head_mask: Tensor or None
-            Optional tensor for applying head-level mask.
-        
+            self: GPT2Attention object
+                The instance of the GPT2Attention class.
+            query: Tensor
+                The input query tensor.
+            key: Tensor
+                The input key tensor.
+            value: Tensor
+                The input value tensor.
+            attention_mask: Tensor or None
+                Optional tensor for masking attention scores.
+            head_mask: Tensor or None
+                Optional tensor for applying head-level mask.
+
         Returns:
-        - Tuple (Tensor, Tensor)
-            Tuple containing the attention output tensor and the attention weights tensor.
-        
+            Tuple (Tensor, Tensor):
+                Tuple containing the attention output tensor and the attention weights tensor.
+
         Raises:
-        - ValueError
-            If the input tensors have incompatible shapes.
-        - TypeError
-            If any of the input tensors have incorrect data types.
-        - RuntimeError
-            If an error occurs during the attention calculation process.
+            ValueError:
+                If the input tensors have incompatible shapes.
+            TypeError:
+                If any of the input tensors have incorrect data types.
+            RuntimeError:
+                If an error occurs during the attention calculation process.
         """
         attn_weights = self.matmul(query, key.swapaxes(-1, -2))
 
@@ -185,24 +185,34 @@ class GPT2Attention(nn.Cell):
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
-        This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and reordering operations on the provided query, key, and value tensors to compute the attention
-weights and output. The method takes the following parameters:
-        
+        This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and
+        reordering operations on the provided query, key, and value tensors to compute the attention weights and output.
+        The method takes the following parameters:
+
         Args:
-        - self: The instance of the class.
-        - query: A tensor representing the query input with shape (batch_size, num_heads, query_sequence_length, hidden_size).
-        - key: A tensor representing the key input with shape (batch_size, num_heads, key_sequence_length, hidden_size).
-        - value: A tensor representing the value input with shape (batch_size, num_heads, key_sequence_length, hidden_size).
-        - attention_mask: An optional tensor with the same shape as attn_weights, used to mask the attention scores.
-        - head_mask: An optional tensor with shape (num_heads,) or (num_layers, num_heads) used to mask the attention scores in the multi-head attention mechanism.
-        
+            self: The instance of the class.
+            query: A tensor representing the query input with shape
+                (batch_size, num_heads, query_sequence_length, hidden_size).
+            key: A tensor representing the key input with shape
+                (batch_size, num_heads, key_sequence_length, hidden_size).
+            value: A tensor representing the value input with shape
+                (batch_size, num_heads, key_sequence_length, hidden_size).
+            attention_mask: An optional tensor with the same shape as attn_weights, used to mask the attention scores.
+            head_mask: An optional tensor with shape (num_heads,) or (num_layers, num_heads) used to mask the
+                attention scores in the multi-head attention mechanism.
+
         Returns:
-        This method returns two output tensors:
-        - attn_output: A tensor representing the output of the attention mechanism with shape (batch_size, num_heads, query_sequence_length, hidden_size).
-        - attn_weights: A tensor representing the attention weights computed during the attention mechanism with shape (batch_size * num_heads, query_sequence_length, key_sequence_length).
-        
+            Tuple[Tensor]:
+                This method returns two output tensors:
+
+                - attn_output: A tensor representing the output of the attention mechanism with shape
+                (batch_size, num_heads, query_sequence_length, hidden_size).
+                - attn_weights: A tensor representing the attention weights computed during the attention mechanism
+                with shape (batch_size * num_heads, query_sequence_length, key_sequence_length).
+
         Raises:
-        - RuntimeError: If the upcasting operation fails, and the attn_weights tensor does not have the required dtype mindspore.float32.
+            RuntimeError: If the upcasting operation fails, and the attn_weights tensor does not have the required
+                dtype mindspore.float32.
         """
         # Use `mindspore.baddbmm` (a bit more efficient w/ alpha param for scaling -- from Megatron-LM)
         bsz, num_heads, q_seq_len, _ = query.shape
@@ -272,23 +282,24 @@ weights and output. The method takes the following parameters:
             use_cache: Optional[bool] = False,
     ):
         """
-        This method 'construct' is a part of the 'GPT2Attention' class and is responsible for constructing the attention mechanism with various parameters.
-        
+        This method 'construct' is a part of the 'GPT2Attention' class and is responsible for constructing the
+        attention mechanism with various parameters.
+
         Args:
-        - self: The instance of the class.
-        - hidden_states (Tuple[Tensor]): Tuple of tensors representing the hidden states.
-        - layer_past (Optional[Tuple[Tensor]]): Optional tuple of tensors representing past layer states.
-        - attention_mask (Optional[Tensor]): Optional tensor representing attention mask.
-        - head_mask (Optional[Tensor]): Optional tensor representing head mask.
-        - encoder_hidden_states (Optional[Tensor]): Optional tensor representing encoder hidden states.
-        - encoder_attention_mask (Optional[Tensor]): Optional tensor representing encoder attention mask.
-        - use_cache (Optional[bool]): Optional boolean indicating whether to use cache or not.
-        
+            self: The instance of the class.
+            hidden_states (Tuple[Tensor]): Tuple of tensors representing the hidden states.
+            layer_past (Optional[Tuple[Tensor]]): Optional tuple of tensors representing past layer states.
+            attention_mask (Optional[Tensor]): Optional tensor representing attention mask.
+            head_mask (Optional[Tensor]): Optional tensor representing head mask.
+            encoder_hidden_states (Optional[Tensor]): Optional tensor representing encoder hidden states.
+            encoder_attention_mask (Optional[Tensor]): Optional tensor representing encoder attention mask.
+            use_cache (Optional[bool]): Optional boolean indicating whether to use cache or not.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - ValueError: Raised if 'encoder_hidden_states' is not None and 'q_attn' weights are not defined.
+            ValueError: Raised if 'encoder_hidden_states' is not None and 'q_attn' weights are not defined.
         """
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn"):
@@ -340,15 +351,15 @@ class GPT2MLP(nn.Cell):
     def __init__(self, intermediate_size, config):
         """
         Initializes an instance of the GPT2MLP class.
-        
+
         Args:
             self: The object itself.
             intermediate_size (int): The size of the intermediate layer.
             config (object): The configuration object.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
             None.
         """
@@ -362,16 +373,16 @@ class GPT2MLP(nn.Cell):
     def construct(self, hidden_states: Tuple[Tensor]):
         """
         Constructs the hidden states in the GPT2MLP class.
-        
+
         Args:
             self: An instance of the GPT2MLP class.
             hidden_states (Tuple[Tensor]): A tuple of tensors representing the hidden states.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
@@ -387,21 +398,25 @@ class GPT2Block(nn.Cell):
     def __init__(self, config, layer_idx=None):
         """
         Initializes a GPT2Block object.
-        
+
         Args:
             self: The instance of the GPT2Block class.
-            config: An object containing configuration settings for the GPT2Block.
-                Type: Any
-                Purpose: Specifies the configuration settings for the GPT2Block.
-                
-            layer_idx: An integer representing the index of the layer.
-                Type: int or None
-                Purpose: Specifies the index of the layer. If None, the default value is used.
-                Restrictions: Must be an integer or None.
-        
+            config:
+                An object containing configuration settings for the GPT2Block.
+
+                - Type: Any
+                - Purpose: Specifies the configuration settings for the GPT2Block.
+
+            layer_idx:
+                An integer representing the index of the layer.
+
+                - Type: int or None
+                - Purpose: Specifies the index of the layer. If None, the default value is used.
+                - Restrictions: Must be an integer or None.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -431,7 +446,7 @@ class GPT2Block(nn.Cell):
     ):
         """
         Constructs a GPT2Block.
-        
+
         Args:
             self: The GPT2Block instance.
             hidden_states (Tuple[Tensor]): The hidden states.
@@ -441,15 +456,17 @@ class GPT2Block(nn.Cell):
             encoder_hidden_states (Optional[Tensor]): The hidden states of the encoder. Default is None.
             encoder_attention_mask (Optional[Tensor]): The attention mask of the encoder. Default is None.
             use_cache (Optional[bool]): Whether to use cache or not. Default is False.
-        
+
         Returns:
             Tuple[Tensor]: The outputs of the GPT2Block.
-        
+
         Raises:
-            ValueError: If `encoder_hidden_states` are passed, and the GPT2Block is not instantiated with cross-attention layers by setting `config.add_cross_attention=True`.
-        
+            ValueError: If `encoder_hidden_states` are passed, and the GPT2Block is not instantiated with cross-attention
+                layers by setting `config.add_cross_attention=True`.
+
         Note:
-            The method updates the hidden states and applies attention mechanisms and feed-forward networks to the input states. It also handles cross-attention if `encoder_hidden_states` are provided.
+            The method updates the hidden states and applies attention mechanisms and feed-forward networks to the
+            input states. It also handles cross-attention if `encoder_hidden_states` are provided.
         """
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -576,10 +593,13 @@ class GPT2Model(GPT2PreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the GPT2Model class.
-        
+
         Args:
             self: The GPT2Model instance.
-            config: An object containing the configuration settings for the model. It should include the following attributes:
+            config:
+                An object containing the configuration settings for the model.
+                It should include the following attributes:
+
                 - hidden_size (int): The dimensionality of the model's hidden states.
                 - vocab_size (int): The size of the vocabulary.
                 - max_position_embeddings (int): The maximum length of input sequences.
@@ -590,10 +610,10 @@ class GPT2Model(GPT2PreTrainedModel):
                 - output_attentions (bool): Whether to output attention tensors.
                 - output_hidden_states (bool): Whether to output hidden states.
                 - use_cache (bool): Whether to use the cache mechanism.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -651,22 +671,30 @@ class GPT2Model(GPT2PreTrainedModel):
     ):
         """
         Constructs the GPT2Model.
-        
+
         Args:
             self (GPT2Model): The instance of the GPT2Model class.
             input_ids (Tensor): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
             past_key_values (Optional[Tuple[Tuple[Tensor]]]): The optional tuple of past key values. Defaults to None.
-            attention_mask (Optional[Tensor]): The optional attention mask tensor of shape (batch_size, sequence_length). Defaults to None.
-            token_type_ids (Optional[Tensor]): The optional token type IDs tensor of shape (batch_size, sequence_length). Defaults to None.
-            position_ids (Optional[Tensor]): The optional position IDs tensor of shape (batch_size, sequence_length). Defaults to None.
+            attention_mask (Optional[Tensor]): The optional attention mask tensor of shape (batch_size, sequence_length).
+                Defaults to None.
+            token_type_ids (Optional[Tensor]): The optional token type IDs tensor of shape (batch_size, sequence_length).
+                Defaults to None.
+            position_ids (Optional[Tensor]): The optional position IDs tensor of shape (batch_size, sequence_length).
+                Defaults to None.
             head_mask (Optional[Tensor]): The optional head mask tensor. Defaults to None.
-            inputs_embeds (Optional[Tensor]): The optional input embeddings tensor of shape (batch_size, sequence_length, hidden_size). Defaults to None.
-            encoder_hidden_states (Optional[Tensor]): The optional encoder hidden states tensor of shape (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask (Optional[Tensor]): The optional encoder attention mask tensor of shape (batch_size, encoder_sequence_length). Defaults to None.
-        
+            inputs_embeds (Optional[Tensor]):
+                The optional input embeddings tensor of shape (batch_size, sequence_length, hidden_size). Defaults to None.
+            encoder_hidden_states (Optional[Tensor]):
+                The optional encoder hidden states tensor of shape (batch_size, encoder_sequence_length, hidden_size).
+                Defaults to None.
+            encoder_attention_mask (Optional[Tensor]):
+                The optional encoder attention mask tensor of shape (batch_size, encoder_sequence_length).
+                Defaults to None.
+
         Returns:
             outputs (None): This method does not return any value.
-        
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are provided.
             ValueError: If neither input_ids nor inputs_embeds are provided.
@@ -781,14 +809,14 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     def __init__(self, config, **kwargs):
         """
         Initializes a GPT2LMHeadModel instance.
-        
+
         Args:
             self (GPT2LMHeadModel): The GPT2LMHeadModel instance itself.
             config (object): The configuration object containing settings for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the 'config' parameter is not provided or is of an incorrect type.
             ValueError: If 'ignore_index' cannot be popped from kwargs or if an invalid value is provided.
@@ -860,26 +888,28 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             labels: Optional[Tensor] = None,
     ):
         """
-        This method 'construct' is defined within the 'GPT2LMHeadModel' class and is responsible for processing input data through a transformer model and generating relevant outputs.
-        
+        This method 'construct' is defined within the 'GPT2LMHeadModel' class and is responsible for processing
+        input data through a transformer model and generating relevant outputs.
+
         Args:
-        - self: Represents the instance of the class.
-        - input_ids (Tensor): The input tensor containing token IDs for the model.
-        - past_key_values (Optional[Tuple[Tuple[Tensor]]]): A tuple of past key values for fast decoding.
-        - attention_mask (Optional[Tensor]): An optional attention mask tensor to mask padded tokens.
-        - token_type_ids (Optional[Tensor]): An optional tensor specifying token types for the input.
-        - position_ids (Optional[Tensor]): An optional tensor specifying position ids of tokens.
-        - head_mask (Optional[Tensor]): An optional tensor for masking specific heads in the attention layers.
-        - inputs_embeds (Optional[Tensor]): An optional tensor representing input embeddings.
-        - encoder_hidden_states (Optional[Tensor]): An optional tensor containing hidden states from an encoder.
-        - encoder_attention_mask (Optional[Tensor]): An optional attention mask for the encoder.
-        - labels (Optional[Tensor]): An optional tensor containing labels for the model training.
-        
+            self: Represents the instance of the class.
+            input_ids (Tensor): The input tensor containing token IDs for the model.
+            past_key_values (Optional[Tuple[Tuple[Tensor]]]): A tuple of past key values for fast decoding.
+            attention_mask (Optional[Tensor]): An optional attention mask tensor to mask padded tokens.
+            token_type_ids (Optional[Tensor]): An optional tensor specifying token types for the input.
+            position_ids (Optional[Tensor]): An optional tensor specifying position ids of tokens.
+            head_mask (Optional[Tensor]): An optional tensor for masking specific heads in the attention layers.
+            inputs_embeds (Optional[Tensor]): An optional tensor representing input embeddings.
+            encoder_hidden_states (Optional[Tensor]): An optional tensor containing hidden states from an encoder.
+            encoder_attention_mask (Optional[Tensor]): An optional attention mask for the encoder.
+            labels (Optional[Tensor]): An optional tensor containing labels for the model training.
+
         Returns:
-        - output: A tuple containing the language model logits, and additional transformer outputs. If a loss is calculated, it will be included in the output tuple.
-        
+            output: A tuple containing the language model logits, and additional transformer outputs.
+                If a loss is calculated, it will be included in the output tuple.
+
         Raises:
-        - None
+            None
         """
         transformer_outputs = self.transformer(
             input_ids,
@@ -930,14 +960,14 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
 
     def __init__(self, config):
         """Initializes a new instance of the GPT2DoubleHeadsModel class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the GPT2Config class containing the configuration parameters for the model.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -997,25 +1027,46 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
                   position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None):
         """
         Constructs the GPT2DoubleHeadsModel.
-        
+
         Args:
             self (GPT2DoubleHeadsModel): The instance of the GPT2DoubleHeadsModel class.
             input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the token indices.
-            past_key_values (Tuple[torch.Tensor], optional): The optional tuple of length `num_layers` containing the past key value states for the transformer. Defaults to None.
-            attention_mask (torch.Tensor, optional): The optional attention mask tensor of shape (batch_size, sequence_length) containing the mask for padded tokens. Defaults to None.
-            token_type_ids (torch.Tensor, optional): The optional token type ids tensor of shape (batch_size, sequence_length) containing the token type ids. Defaults to None.
-            position_ids (torch.Tensor, optional): The optional position ids tensor of shape (batch_size, sequence_length) containing the position indices. Defaults to None.
-            head_mask (torch.Tensor, optional): The optional head mask tensor of shape (num_heads,) or (num_layers, num_heads) containing the mask for the transformer heads. Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The optional input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing the input embeddings. Defaults to None.
-            mc_token_ids (torch.Tensor, optional): The optional multiple choice token ids tensor of shape (batch_size, num_choices) containing the token indices for multiple choice questions. Defaults to None.
-            labels (torch.Tensor, optional): The optional labels tensor of shape (batch_size, sequence_length) containing the token labels for language modeling. Defaults to None.
-            mc_labels (torch.Tensor, optional): The optional multiple choice labels tensor of shape (batch_size,) containing the labels for multiple choice classification. Defaults to None.
-        
+            past_key_values (Tuple[torch.Tensor], optional):
+                The optional tuple of length `num_layers` containing the past key value states for the transformer.
+                Defaults to None.
+            attention_mask (torch.Tensor, optional):
+                The optional attention mask tensor of shape (batch_size, sequence_length)
+                containing the mask for padded tokens. Defaults to None.
+            token_type_ids (torch.Tensor, optional):
+                The optional token type ids tensor of shape (batch_size, sequence_length) containing the token type ids.
+                Defaults to None.
+            position_ids (torch.Tensor, optional):
+                The optional position ids tensor of shape (batch_size, sequence_length) containing the position indices.
+                Defaults to None.
+            head_mask (torch.Tensor, optional):
+                The optional head mask tensor of shape (num_heads,) or (num_layers, num_heads) containing the mask for
+                the transformer heads. Defaults to None.
+            inputs_embeds (torch.Tensor, optional):
+                The optional input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing
+                the input embeddings. Defaults to None.
+            mc_token_ids (torch.Tensor, optional):
+                The optional multiple choice token ids tensor of shape (batch_size, num_choices) containing the token
+                indices for multiple choice questions. Defaults to None.
+            labels (torch.Tensor, optional):
+                The optional labels tensor of shape (batch_size, sequence_length) containing the token labels for
+                language modeling. Defaults to None.
+            mc_labels (torch.Tensor, optional):
+                The optional multiple choice labels tensor of shape (batch_size,) containing the labels for multiple
+                choice classification. Defaults to None.
+
         Returns:
-            Tuple[torch.Tensor]: A tuple containing the output logits for language modeling (`lm_logits`), the output logits for multiple choice classification (`mc_logits`), and the transformer outputs
-(`transformer_outputs`). The `lm_logits` tensor has shape (batch_size, sequence_length, vocab_size), the `mc_logits` tensor has shape (batch_size,), and the `transformer_outputs` is a tuple containing the
-hidden states of the transformer.
-        
+            Tuple[torch.Tensor]:
+                A tuple containing the output logits for language modeling (`lm_logits`), the output logits for
+                multiple choice classification (`mc_logits`), and the transformer outputs (`transformer_outputs`).
+                The `lm_logits` tensor has shape (batch_size, sequence_length, vocab_size), the `mc_logits` tensor has
+                shape (batch_size,), and the `transformer_outputs` is a tuple containing the hidden states of the
+                transformer.
+
         Raises:
             None.
         """
@@ -1053,20 +1104,25 @@ hidden states of the transformer.
     @staticmethod
     def _reorder_cache(past, beam_idx):
         '''
-        This method '_reorder_cache' belongs to the class 'GPT2DoubleHeadsModel' and is used to reorder the cache based on the provided beam index.
-        
+        This method '_reorder_cache' belongs to the class 'GPT2DoubleHeadsModel' and is used to reorder the cache based
+        on the provided beam index.
+
         Args:
-        - past (tuple): A tuple containing the past states of the model. Each element in the tuple represents the past states for a specific layer. The past states are used for generating the next sequence of
-tokens.
-        - beam_idx (torch.Tensor): A tensor containing the indices that specify the new order in which the past states should be reordered. It is expected to be on the same device as the past states.
-        
+            past (tuple): A tuple containing the past states of the model.
+                Each element in the tuple represents the past states for a specific layer.
+                The past states are used for generating the next sequence of tokens.
+            beam_idx (torch.Tensor):
+                A tensor containing the indices that specify the new order in which the past states should be reordered.
+                It is expected to be on the same device as the past states.
+
         Returns:
-        None. This method returns None as the reordered cache is directly updated within the method.
-        
+            None: This method returns None as the reordered cache is directly updated within the method.
+
         Raises:
-        - TypeError: If the input parameters are not of the expected types.
-        - IndexError: If the beam index is out of range or invalid.
-        - RuntimeError: If there are any runtime issues with reordering the cache or if the device of the beam index does not match the device of the past states.
+            TypeError: If the input parameters are not of the expected types.
+            IndexError: If the beam index is out of range or invalid.
+            RuntimeError: If there are any runtime issues with reordering the cache or if the device of the beam index
+                does not match the device of the past states.
         '''
         return tuple(
             tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past)
@@ -1081,16 +1137,17 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPT2ForSequenceClassification class.
-        
+
         Args:
             self (object): The instance of the GPT2ForSequenceClassification class.
             config (object): The configuration object containing settings for the model.
                 It should have the following attributes:
-                    - num_labels (int): The number of labels for classification.
-            
+
+                - num_labels (int): The number of labels for classification.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1115,24 +1172,24 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     ):
         """
         Method 'construct' in the class 'GPT2ForSequenceClassification'.
-        
+
         Args:
-        - self: The instance of the class.
-        - input_ids (Tensor): The input tensor IDs representing the input sequence.
-        - past_key_values (Optional[Tuple[Tuple[Tensor]]]): Optional past key values for the transformer.
-        - attention_mask (Optional[Tensor]): Optional tensor for masking out tokens.
-        - token_type_ids (Optional[Tensor]): Optional tensor for token type IDs.
-        - position_ids (Optional[Tensor]): Optional tensor for position IDs.
-        - head_mask (Optional[Tensor]): Optional tensor for masking out heads.
-        - inputs_embeds (Optional[Tensor]): Optional tensor for input embeddings.
-        - labels (Optional[Tensor]): Optional tensor for target labels.
-        
+            self: The instance of the class.
+            input_ids (Tensor): The input tensor IDs representing the input sequence.
+            past_key_values (Optional[Tuple[Tuple[Tensor]]]): Optional past key values for the transformer.
+            attention_mask (Optional[Tensor]): Optional tensor for masking out tokens.
+            token_type_ids (Optional[Tensor]): Optional tensor for token type IDs.
+            position_ids (Optional[Tensor]): Optional tensor for position IDs.
+            head_mask (Optional[Tensor]): Optional tensor for masking out heads.
+            inputs_embeds (Optional[Tensor]): Optional tensor for input embeddings.
+            labels (Optional[Tensor]): Optional tensor for target labels.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - AssertionError: Raised if batch size is greater than 1 and no padding token is defined.
-        - Warning: Raised if padding tokens are not detected in 'inputs_embeds', which may lead to unexpected results.
+            AssertionError: Raised if batch size is greater than 1 and no padding token is defined.
+            Warning: Raised if padding tokens are not detected in 'inputs_embeds', which may lead to unexpected results.
         """
         transformer_outputs = self.transformer(
             input_ids,
@@ -1201,10 +1258,12 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the GPT2ForTokenClassification class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the GPT2Config class containing the model configuration settings.
+            config:
+                An instance of the GPT2Config class containing the model configuration settings.
+
                 - Type: GPT2Config
                 - Purpose: Specifies the configuration parameters for the GPT-2 model.
                 - Restrictions: None
@@ -1237,8 +1296,11 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
         Args:
             self (object): The instance of the class.
             input_ids (Tensor, optional): The input token IDs. Default is None.
-            past_key_values (tuple, optional): Tuple of length 2 containing tensors of past key and value states for fast autoregressive decoding. Default is None.
-            attention_mask (Tensor, optional): Mask to avoid performing attention on padding token indices. Default is None.
+            past_key_values (tuple, optional):
+                Tuple of length 2 containing tensors of past key and value states for fast autoregressive decoding.
+                Default is None.
+            attention_mask (Tensor, optional): Mask to avoid performing attention on padding token indices.
+                Default is None.
             token_type_ids (Tensor, optional): Segment token indices to differentiate two sequences. Default is None.
             position_ids (Tensor, optional): Indices of positions in the input sequences. Default is None.
             head_mask (Tensor, optional): Mask to nullify selected heads of the self-attention modules. Default is None.

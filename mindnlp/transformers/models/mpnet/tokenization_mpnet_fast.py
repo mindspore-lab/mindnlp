@@ -131,27 +131,27 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         Initializes an instance of the MPNetTokenizerFast class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
-        - tokenizer_file (str, optional): The path to the tokenizer file. Defaults to None.
-        - do_lower_case (bool, optional): Indicates whether the text should be lowercased. Defaults to True.
-        - bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
-        - eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
-        - sep_token (str, optional): The separator token. Defaults to '</s>'.
-        - cls_token (str, optional): The classification token. Defaults to '<s>'.
-        - unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
-        - pad_token (str, optional): The padding token. Defaults to '<pad>'.
-        - mask_token (str, optional): The masking token. Defaults to '<mask>'.
-        - tokenize_chinese_chars (bool, optional): Indicates whether to tokenize Chinese characters. Defaults to True.
-        - strip_accents (str, optional): The type of accents to strip. Defaults to None.
-        
+            self: The instance of the class.
+            vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
+            tokenizer_file (str, optional): The path to the tokenizer file. Defaults to None.
+            do_lower_case (bool, optional): Indicates whether the text should be lowercased. Defaults to True.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            sep_token (str, optional): The separator token. Defaults to '</s>'.
+            cls_token (str, optional): The classification token. Defaults to '<s>'.
+            unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            mask_token (str, optional): The masking token. Defaults to '<mask>'.
+            tokenize_chinese_chars (bool, optional): Indicates whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str, optional): The type of accents to strip. Defaults to None.
+
         Returns:
-        None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - ValueError: If the provided vocab_file or tokenizer_file is invalid or inaccessible.
-        - TypeError: If the provided parameters are of incorrect type.
-        - OSError: If there is an issue with file access or manipulation.
+            ValueError: If the provided vocab_file or tokenizer_file is invalid or inaccessible.
+            TypeError: If the provided parameters are of incorrect type.
+            OSError: If there is an issue with file access or manipulation.
         """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
@@ -228,7 +228,7 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
             token_ids_1 (list, optional): The list of token IDs representing additional input tokens. Defaults to None.
         
         Returns:
-            None. Returns the modified list of token IDs with special tokens added based on the input parameters.
+            list: Returns the modified list of token IDs with special tokens added based on the input parameters.
         
         Raises:
             None.

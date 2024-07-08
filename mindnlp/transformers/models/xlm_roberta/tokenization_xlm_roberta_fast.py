@@ -152,15 +152,18 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         
         Args:
             self: The instance of the class.
-            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use the default vocabulary.
-            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use the default tokenizer.
+            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use the
+                default vocabulary.
+            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use the
+                default tokenizer.
             bos_token (str): The beginning of sentence token. Defaults to '<s>'.
             eos_token (str): The end of sentence token. Defaults to '</s>'.
             sep_token (str): The separator token. Defaults to '</s>'.
             cls_token (str): The classification token. Defaults to '<s>'.
             unk_token (str): The unknown token. Defaults to '<unk>'.
             pad_token (str): The padding token. Defaults to '<pad>'.
-            mask_token (str or AddedToken): The mask token. Defaults to '<mask>'. If a str is provided, it will be converted to an AddedToken instance with lstrip=True and rstrip=False.
+            mask_token (str or AddedToken): The mask token. Defaults to '<mask>'. If a str is provided,
+                it will be converted to an AddedToken instance with lstrip=True and rstrip=False.
             **kwargs: Additional keyword arguments.
         
         Returns:
@@ -267,7 +270,8 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow
+                tokenizer.
             FileNotFoundError: If the save_directory does not exist.
         """
         if not self.can_save_slow_tokenizer:

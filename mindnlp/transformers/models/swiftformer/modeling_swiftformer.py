@@ -483,7 +483,8 @@ class SwiftFormerEncoder(nn.Cell):
 
 
 class SwiftFormerPreTrainedModel(PreTrainedModel):
-    """default_image_processor
+    """
+    default_image_processor
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
@@ -520,8 +521,6 @@ class SwiftFormerPreTrainedModel(PreTrainedModel):
 
 
 SWIFTFORMER_START_DOCSTRING = r"""
-    
-
     Parameters:
         config ([`SwiftFormerConfig`]): Model configuration class with all the parameters of the model.
             Initializing with a config file does not load the weights associated with the model, only the
@@ -621,10 +620,11 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutputWithNoAttention]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict

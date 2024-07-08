@@ -53,15 +53,18 @@ class ProcessorMixin:
         This method initializes an instance of the ProcessorMixin class.
         
         Args:
-        - self (ProcessorMixin): The instance of the ProcessorMixin class.
-          
+            self (ProcessorMixin): The instance of the ProcessorMixin class.
+
         Returns:
-        None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the
-processor.
-        - ValueError: Raised if the number of arguments provided does not match the required number of attributes for the processor, or if the type of the argument does not match the expected class type.
+            TypeError: Raised if an unexpected keyword argument is provided,
+                if multiple values are provided for a single argument,
+                or if the arguments provided do not match the required attributes of the processor.
+            ValueError: Raised if the number of arguments provided does not match
+                the required number of attributes for the processor,
+                or if the type of the argument does not match the expected class type.
         """
         # Sanitize args and kwargs
         for key in kwargs:
@@ -98,13 +101,15 @@ processor.
     def __repr__(self):
         """
         Method '__repr__' in the class 'ProcessorMixin' generates a string representation of the object.
-        
+
         Args:
             self: ProcessorMixin instance. Represents the object for which the string representation is being generated.
-        
+
         Returns:
-            str: A formatted string representation of the object containing its class name and attributes. Returns None if there are no attributes to represent.
-        
+            str:
+                A formatted string representation of the object containing its class name and attributes.
+                Returns None if there are no attributes to represent.
+
         Raises:
             None.
         """
@@ -245,10 +250,10 @@ processor.
             pretrained_model_name_or_path (str): The name or path of the pre-trained model.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         args = []
         for attribute_name in cls.attributes:
@@ -275,7 +280,8 @@ processor.
             self (ProcessorMixin): The instance of the ProcessorMixin class.
             
         Returns:
-            None: Returns the model input names from the first attribute of the ProcessorMixin instance if available, otherwise returns None.
+            None: Returns the model input names from the first attribute of the ProcessorMixin instance if available,
+                otherwise returns None.
             
         Raises:
             None.

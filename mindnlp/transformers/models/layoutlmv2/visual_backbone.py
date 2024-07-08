@@ -34,7 +34,8 @@ import numpy as np
 class ShapeSpec:
 
     """
-    The ShapeSpec class represents a specification for a shape, providing details and parameters for creating and manipulating shapes.
+    The ShapeSpec class represents a specification for a shape, providing details and parameters
+    for creating and manipulating shapes.
     
     This class inherits from [insert name of the parent class here].
     
@@ -56,39 +57,44 @@ class Conv2d(nn.Conv2d):
     This class represents a custom convolutional layer for 2-dimensional data, inheriting from the nn.Conv2d class.
     
     Attributes:
-    - norm: A normalization function applied to the output of the convolutional layer. If None, no normalization is applied.
-    - activation: An activation function applied to the output of the normalization step. If None, no activation is applied.
-    
+        norm: A normalization function applied to the output of the convolutional layer.
+            If None, no normalization is applied.
+        activation: An activation function applied to the output of the normalization step.
+            If None, no activation is applied.
+
     Methods:
-    - __init__(self, *args, **kwargs): Initializes the Conv2d object with optional normalization and activation parameters.
-    - construct(self, x): Applies the convolutional operation to the input tensor x, followed by optional normalization and activation.
-    
+        __init__(self, *args, **kwargs): Initializes the Conv2d object with optional normalization and activation parameters.
+        construct(self, x): Applies the convolutional operation to the input tensor x,
+            followed by optional normalization and activation.
+
     """
     def __init__(self, *args, **kwargs):
         """
         Initializes an instance of the Conv2d class.
-        
+
         Args:
             self: The instance of the Conv2d class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method initializes an instance of the Conv2d class. It takes the following optional keyword arguments:
-        - norm: Specifies the normalization method to be applied. Default is None.
-        - activation: Specifies the activation function to be applied. Default is None.
-        
-        The method first extracts the 'norm' and 'activation' keyword arguments using the pop() method from the kwargs dictionary.
-        Next, it calls the __init__() method of the parent class using the super() function, passing all the arguments and keyword arguments (*args, **kwargs).
-        After that, it assigns the 'norm' and 'activation' values to the instance variables self.norm and self.activation respectively.
-        
+            This method initializes an instance of the Conv2d class. It takes the following optional keyword arguments:
+
+            - norm: Specifies the normalization method to be applied. Default is None.
+            - activation: Specifies the activation function to be applied. Default is None.
+
+        The method first extracts the 'norm' and 'activation' keyword arguments using the pop() method from the kwargs
+        dictionary. Next, it calls the __init__() method of the parent class using the super() function, passing all
+        the arguments and keyword arguments (*args, **kwargs). After that, it assigns the 'norm' and 'activation' values
+        to the instance variables self.norm and self.activation respectively.
+
         Note:
-        - The 'norm' parameter should be of type 'None' or any valid normalization method.
-        - The 'activation' parameter should be of type 'None' or any valid activation function.
+            - The 'norm' parameter should be of type 'None' or any valid normalization method.
+            - The 'activation' parameter should be of type 'None' or any valid activation function.
         """
         norm = kwargs.pop("norm", None)
         activation = kwargs.pop("activation", None)
@@ -100,14 +106,14 @@ class Conv2d(nn.Conv2d):
     def construct(self, x):
         """
         Construct method in the Conv2d class.
-        
+
         Args:
             self (object): Instance of the Conv2d class.
             x (object): Input data to be processed.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -153,14 +159,14 @@ class BasicStem(nn.Cell):
     def construct(self, x):
         """
         Constructs a basic stem block by applying convolution, ReLU activation, and max pooling operations.
-        
+
         Args:
             self (object): Instance of the BasicStem class.
             x (tensor): Input tensor to be processed by the basic stem block.
-        
+
         Returns:
-            None. The method modifies the input tensor 'x' in place.
-        
+            None: The method modifies the input tensor 'x' in place.
+
         Raises:
             None.
         """
@@ -227,14 +233,14 @@ class BasicBlock(nn.Cell):
     def construct(self, x):
         """
         Constructs a basic block by performing convolutional operations and element-wise addition with shortcut connection.
-        
+
         Args:
             self (object): The instance of the BasicBlock class.
             x (tensor): The input tensor to be processed by the basic block.
-        
+
         Returns:
             tensor: The output tensor after passing through the basic block operations.
-        
+
         Raises:
             None.
         """
@@ -339,14 +345,14 @@ class BottleneckBlock(nn.Cell):
     def construct(self, x):
         """
         Constructs a bottleneck block for the BottleneckBlock class.
-        
+
         Args:
             self (BottleneckBlock): An instance of the BottleneckBlock class.
             x (tensor): The input tensor.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -461,13 +467,14 @@ class ResNet(nn.Cell):
     def output_shape(self):
         """
         Method to calculate the output shape of the ResNet model.
-        
+
         Args:
             self (ResNet): The instance of the ResNet class.
-            
+
         Returns:
-            None: This method does not return any value explicitly, but it updates the internal state of the ResNet instance.
-        
+            None: This method does not return any value explicitly,
+                but it updates the internal state of the ResNet instance.
+
         Raises:
             None.
         """
@@ -499,14 +506,15 @@ class ResNet(nn.Cell):
         Returns:
             list[CNNBlockBase]: a list of block module.
 
-        Examples:
-        ::
-            stage = ResNet.make_stage(
-                BottleneckBlock, 3, in_channels=16, out_channels=64,
-                bottleneck_channels=16, num_groups=1,
-                stride_per_block=[2, 1, 1],
-                dilations_per_block=[1, 1, 2]
-            )
+        Example:
+            ```python
+            >>> stage = ResNet.make_stage(
+            >>>     BottleneckBlock, 3, in_channels=16, out_channels=64,
+            >>>     bottleneck_channels=16, num_groups=1,
+            >>>     stride_per_block=[2, 1, 1],
+            >>>     dilations_per_block=[1, 1, 2]
+            >>> )
+            ```
 
         Usually, layers that produce the same feature map spatial size are defined as one
         "stage" (in :paper:`FPN`). Under such definition, ``stride_per_block[1:]`` should
@@ -589,9 +597,11 @@ class ResNet(nn.Cell):
 def build_resnet_backbone(cfg):
     """
     Builds a ResNet backbone network based on the provided configuration.
-    
+
     Args:
-        cfg (object): The configuration object containing the following attributes:
+        cfg (object):
+            The configuration object containing the following attributes:
+
             - MODEL.RESNETS.STEM_IN_CHANNELS (int): The number of input channels for the stem block.
             - MODEL.RESNETS.STEM_OUT_CHANNELS (int): The number of output channels for the stem block.
             - MODEL.RESNETS.NORM (str): The normalization method to be used in the backbone.
@@ -602,10 +612,10 @@ def build_resnet_backbone(cfg):
             - MODEL.RESNETS.RES2_OUT_CHANNELS (int): The number of output channels for the res2 block.
             - MODEL.RESNETS.STRIDE_IN_1X1 (bool): Whether to apply stride in the 1x1 convolution in each bottleneck block.
             - MODEL.RESNETS.RES5_DILATION (int): The dilation value for the res5 block. Must be 1 or 2.
-    
+
     Returns:
         None
-    
+
     Raises:
         AssertionError: If the value of 'res5_dilation' attribute is not 1 or 2.
         AssertionError: If 'out_channels' is not 64 for the ResNet18 or ResNet34 models.
@@ -675,10 +685,10 @@ def build_resnet_backbone(cfg):
 
 def read_config():
     """Reads the visual_backbone.yaml configuration file and returns its contents as a dictionary.
-    
+
     Returns:
         None.
-    
+
     Raises:
         FileNotFoundError: If the visual_backbone.yaml file does not exist in the current directory.
         yaml.YAMLError: If there is an error loading the YAML data from the file.
@@ -693,19 +703,22 @@ def read_config():
 def build_resnet_fpn_backbone(cfg):
     """
     Builds a ResNet-FPN backbone based on the provided configuration.
-    
+
     Args:
         cfg (object): The configuration object containing the model parameters.
-    
+
     Returns:
         object: The constructed FPN backbone.
-    
+
     Raises:
         None.
-    
-    This function builds a ResNet-FPN backbone using the specified configuration. It first constructs the bottom-up ResNet backbone using the provided configuration. Then, it retrieves the required input
-features and output channels from the configuration. Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels, normalization method, top block, and fuse type
-specified in the configuration. The constructed FPN backbone is returned as the result.
+
+    This function builds a ResNet-FPN backbone using the specified configuration.
+    It first constructs the bottom-up ResNet backbone using the provided configuration.
+    Then, it retrieves the required input features and output channels from the configuration.
+    Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels,
+    normalization method, top block, and fuse type specified in the configuration.
+    The constructed FPN backbone is returned as the result.
     """
     bottom_up = build_resnet_backbone(cfg)
     in_features = cfg.MODEL.FPN.IN_FEATURES
@@ -724,34 +737,36 @@ specified in the configuration. The constructed FPN backbone is returned as the 
 class LastLevelMaxPool(nn.Cell):
 
     """
-    The LastLevelMaxPool class represents a neural network cell that performs max pooling on input data. 
+    The LastLevelMaxPool class represents a neural network cell that performs max pooling on input data.
     This class inherits from nn.Cell and implements the functionality to construct the max pooling operation on input data.
-    
+
     Attributes:
         num_levels (int): The number of levels in the max pooling operation. Default value is 1.
         in_feature (str): The input feature for the max pooling operation. Default value is 'p5'.
-    
+
     Methods:
         construct(x): Constructs the max pooling operation on the input data x and returns the result.
-    
-    Example Usage:
-        # Create an instance of LastLevelMaxPool
-        last_level_max_pool = LastLevelMaxPool()
-        # Perform max pooling on input data
-        result = last_level_max_pool.construct(input_data)
+
+    Example:
+        ```python
+        >>> # Create an instance of LastLevelMaxPool
+        >>> last_level_max_pool = LastLevelMaxPool()
+        >>> # Perform max pooling on input data
+        >>> result = last_level_max_pool.construct(input_data)
+        ```
     """
     def __init__(self):
         """
         Initializes an instance of the LastLevelMaxPool class.
-        
+
         Args:
             self: The instance of the LastLevelMaxPool class being initialized.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.num_levels = 1
@@ -759,46 +774,50 @@ class LastLevelMaxPool(nn.Cell):
 
     def construct(self, x):
         """
-            Constructs the last level max pooling operation on the input tensor.
-        
-            Args:
-                self: An instance of the LastLevelMaxPool class.
-                x (Tensor): The input tensor to be max pooled.
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        Constructs the last level max pooling operation on the input tensor.
+
+        Args:
+            self: An instance of the LastLevelMaxPool class.
+            x (Tensor): The input tensor to be max pooled.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         return [ops.max_pool2d(x, kernel_size=1, stride=2, padding=0)]
 
 
 class FPN(nn.Cell):
 
     """
-    This class represents a Feature Pyramid Network (FPN) implemented as a neural network module in MindSpore. FPN is a commonly used architecture in computer vision tasks, especially in object detection.
-    
+    This class represents a Feature Pyramid Network (FPN) implemented as a neural network module in MindSpore.
+    FPN is a commonly used architecture in computer vision tasks, especially in object detection.
+
     The FPN class inherits from the nn.Cell class, which is the base class for all neural network modules in MindSpore.
-    
+
     Attributes:
         bottom_up (nn.Cell): The bottom-up network that extracts features from the input data.
         in_features (tuple): The names of the input features used by the FPN.
         out_features (list): The names of the output features produced by the FPN.
-        out_feature_channels (dict): A dictionary mapping the names of the output features to their corresponding channel dimensions.
-        out_feature_strides (dict): A dictionary mapping the names of the output features to their corresponding stride values.
+        out_feature_channels (dict): A dictionary mapping the names of the output features to
+            their corresponding channel dimensions.
+        out_feature_strides (dict): A dictionary mapping the names of the output features to
+            their corresponding stride values.
         size_divisibility (int): The size divisibility of the FPN's output features.
         padding_constraints (dict): A dictionary specifying the padding constraints for the FPN.
         square_pad (int): The size of the square padding applied to the FPN's output features.
         fuse_type (str): The type of fusion operation used when combining features.
-    
+
     Methods:
-        __init__(bottom_up, in_features, out_channels, norm='', top_block=None, fuse_type='sum', square_pad=0):
+        __init__:
             Initializes the FPN module with the provided parameters.
-        output_shape():
+        output_shape:
             Returns a dictionary containing the output shape specifications for each output feature.
-        construct(x):
-            Constructs the FPN network by passing the input data through the bottom-up network and performing lateral connections and fusion operations to generate the output features.
+        construct:
+            Constructs the FPN network by passing the input data through the bottom-up network and
+            performing lateral connections and fusion operations to generate the output features.
     """
     def __init__(self,
                  bottom_up,
@@ -810,9 +829,9 @@ class FPN(nn.Cell):
                  square_pad=0):
         """
         __init__
-        
+
         Initializes the FPN (Feature Pyramid Network) module.
-        
+
         Args:
             self: FPN instance
                 The FPN instance to initialize.
@@ -830,17 +849,16 @@ class FPN(nn.Cell):
                 The type of fusion to be used for combining feature maps. Default is 'sum'.
             square_pad: int, optional
                 The amount of padding to be applied to the feature maps. Default is 0.
-        
+
         Returns:
-            None
-            This method does not return any value.
-        
+            None.
+
         Raises:
-            AssertionError
+            AssertionError:
                 If the input features are not properly specified.
-            AttributeError
+            AttributeError:
                 If the attributes of the FPN instance cannot be set.
-            ValueError
+            ValueError:
                 If the specified padding mode is invalid.
         """
         super(FPN, self).__init__()
@@ -886,15 +904,15 @@ class FPN(nn.Cell):
     def size_divisibility(self):
         """
         Returns the size divisibility of the object.
-        
+
         Args:
             self (FPN): The FPN instance itself.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self._size_divisibility
 
@@ -902,30 +920,30 @@ class FPN(nn.Cell):
     def padding_constraints(self):
         """
         Returns the padding constraints for the FPN class.
-        
+
         Args:
             self (FPN): An instance of the FPN class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return {"square_size": self._square_pad}
 
     def output_shape(self):
         """
         Returns the output shape of the Feature Pyramid Network (FPN) for each feature level.
-        
+
         Args:
             self (FPN): The instance of the FPN class.
-        
+
         Returns:
-            None: This method does not have a return value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return {
             name: ShapeSpec(
@@ -937,23 +955,25 @@ class FPN(nn.Cell):
     def construct(self, x):
         """
         Constructs the Feature Pyramid Network (FPN) based on the provided input.
-        
+
         Args:
             self: An instance of the FPN class.
             x: The input tensor of shape (batch_size, channels, height, width).
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         This method constructs the FPN by performing the following steps:
+
         1. Extracts the bottom-up features using the 'bottom_up' function.
         2. Initializes an empty list 'results' to store the intermediate results.
         3. Retrieves the bottom-up feature corresponding to the last specified input feature.
         4. Applies the first lateral convolution to the bottom-up feature and appends the result to 'results'.
         5. Iterates over the remaining lateral and output convolutions.
+
             a. Retrieves the input feature for the current convolution from the 'bottom_up_features'.
             b. Resizes the previous feature map using nearest neighbor interpolation.
             c. Applies the lateral convolution to the input feature.
@@ -961,6 +981,7 @@ class FPN(nn.Cell):
             e. If the fusion type is 'avg', averages the resulting features.
             f. Inserts the output of the current convolution at the beginning of 'results'.
         6. If a 'top_block' is specified:
+
             a. Checks if the 'top_block.in_feature' is present in 'bottom_up_features'.
             b. If present, retrieves the corresponding feature; otherwise, retrieves it from 'results' using the index.
             c. Applies the 'top_block' to the 'top_block_in_feature' after converting it to 'ms.float16' datatype.

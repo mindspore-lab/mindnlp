@@ -54,7 +54,7 @@ class MistralConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 8):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `8`.
@@ -85,18 +85,20 @@ class MistralConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import MistralModel, MistralConfig
-
-    >>> # Initializing a Mistral 7B style configuration
-    >>> configuration = MistralConfig()
-
-    >>> # Initializing a model from the Mistral 7B style configuration
-    >>> model = MistralModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import MistralModel, MistralConfig
+        ...
+        >>> # Initializing a Mistral 7B style configuration
+        >>> configuration = MistralConfig()
+        ...
+        >>> # Initializing a model from the Mistral 7B style configuration
+        >>> model = MistralModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "mistral"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -122,7 +124,8 @@ class MistralConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-        """Initializes a MistralConfig object.
+        """
+        Initializes a MistralConfig object.
         
         Args:
             vocab_size (int): The size of the vocabulary. Defaults to 32000.

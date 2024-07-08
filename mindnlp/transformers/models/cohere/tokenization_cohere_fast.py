@@ -52,13 +52,14 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
 
     This uses notably ByteFallback and NFC normalization.
 
-    ```python
-    >>> from transformers import AutoTokenizer
-
-    >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
-    >>> tokenizer.encode("Hello this is a test")
-    [5, 28339, 2075, 1801, 1671, 3282]
-    ```
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
+        >>> tokenizer.encode("Hello this is a test")
+        [5, 28339, 2075, 1801, 1671, 3282]
+        ```
 
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
@@ -235,15 +236,21 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
         for user, assitant and system messages respectively.
 
         The output should look something like:
-        <|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ preamble }}<|END_OF_TURN_TOKEN|><BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ How are you? }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>{{ I am doing well! }}<|END_OF_TURN_TOKEN|>
+
+        ```<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ preamble }}<|END_OF_TURN_TOKEN|><BOS_TOKEN><|START_OF_TURN_TOKEN|>
+        <|USER_TOKEN|>{{ How are you? }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
+        {{ I am doing well! }}<|END_OF_TURN_TOKEN|>```
 
         Use add_generation_prompt to add a prompt for the model to generate a response:
-        >>> from transformers import AutoTokenizer
-        >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
-        >>> messages = [{"role": "user", "content": "Hello, how are you?"}]
-        >>> tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        '<BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Hello, how are you?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>'
 
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer
+            >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
+            >>> messages = [{"role": "user", "content": "Hello, how are you?"}]
+            >>> tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            '<BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Hello, how are you?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>'
+            ```
         """
         default_template = (
             "{{ bos_token }}"
@@ -431,19 +438,20 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
             conversation (Union[List[Dict[str, str]], "Conversation"]): A Conversation object or list of dicts
                 with "role" and "content" keys, representing the chat history so far.
             tools (List[Dict]): a list of tools to render into the prompt for the model to choose from.
-                See an example at the bottom of the docstring.
-                The format should be:
-                   * name (str): The name of the tool to be called. Valid names contain only the characters a-z,
-                        A-Z, 0-9, _ and must not begin with a digit.
-                   * description (str): The description of what the tool does, the model uses the description to
-                        choose when and how to call the function.
-                   * parameter_definitions (List[Dict]): The input parameters of the tool. Accepts a dictionary
-                        where the key is the name of the parameter and the value is the parameter spec.
-                        Valid parameter names contain only the characters a-z, A-Z, 0-9, _ and must not begin with a digit.
-                        Parameter specs are as follows:
-                       * description (str): The description of the parameter.
-                       * type (str): the type of the parameter - most effective for python builtin data types, such as 'str', 'bool'
-                       * required: boolean: Denotes whether the parameter is always present (required) or not. Defaults to not required.
+                See an example at the bottom of the docstring. The format should be:
+
+                - name (str): The name of the tool to be called. Valid names contain only the characters a-z,
+                A-Z, 0-9, _ and must not begin with a digit.
+                - description (str): The description of what the tool does, the model uses the description to
+                choose when and how to call the function.
+                - parameter_definitions (List[Dict]): The input parameters of the tool. Accepts a dictionary
+                where the key is the name of the parameter and the value is the parameter spec.
+                Valid parameter names contain only the characters a-z, A-Z, 0-9, _ and must not begin with a digit.
+                Parameter specs are as follows:
+
+                    - description (str): The description of the parameter.
+                    - type (str): the type of the parameter - most effective for python builtin data types, such as 'str', 'bool'
+                    - required: boolean: Denotes whether the parameter is always present (required) or not. Defaults to not required.
             add_generation_prompt (bool, *optional*): Whether to end the prompt with the token(s) that indicate
                 the start of an assistant message. This is useful when you want to generate a response from the model.
                 Note that this argument will be passed to the chat template, and so it must be supported in the
@@ -460,102 +468,109 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Has no effect if tokenize is `False`. Acceptable
                 values are:
+
                 - `'tf'`: Return TensorFlow `tf.Tensor` objects.
                 - `'pt'`: Return PyTorch `torch.Tensor` objects.
                 - `'np'`: Return NumPy `np.ndarray` objects.
                 - `'jax'`: Return JAX `jnp.ndarray` objects.
             return_dict (`bool`, *optional*, defaults to `False`):
                 Whether to return a dictionary with named outputs. Has no effect if tokenize is `False`.
-            **tokenizer_kwargs: Additional kwargs to pass to the tokenizer.
+            **tokenizer_kwargs:
+                Additional kwargs to pass to the tokenizer.
 
         Returns:
-            `str`: A rendered prompt string.
-            or if tokenize=True:
-            `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
-            output is ready to pass to the model, either directly or via methods like `generate()`.
+            Conditional return:
 
-        Examples:
+                - `str`: A rendered prompt string.
+                - if tokenize=True:
+                `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
+                output is ready to pass to the model, either directly or via methods like `generate()`.
 
-        ```python
-        >> tokenizer = CohereTokenizerFast.from_pretrained("CohereForAI/c4ai-command-r-v01")
-        >> tools = [
-            {
-                "name": "internet_search",
-                "description": "Returns a list of relevant document snippets for a textual query retrieved from the internet",
-                "parameter_definitions": {
-                    "query": {
-                        "description": "Query to search the internet with",
-                        "type": "str",
-                        "required": True
+        Example:
+            ```python
+            >>> tokenizer = CohereTokenizerFast.from_pretrained("CohereForAI/c4ai-command-r-v01")
+            >>> tools = [
+            ...     {
+            ...         "name": "internet_search",
+            ...         "description": "Returns a list of relevant document snippets for a textual query retrieved from the internet",
+            ...         "parameter_definitions": {
+            ...             "query": {
+            ...                 "description": "Query to search the internet with",
+            ...                 "type": "str",
+            ...                 "required": True
+            ...             }
+            ...         }
+            ...     },
+            ...     {
+            ...         "name': "directly_answer",
+            ...         "description": "Calls a standard (un-augmented) AI chatbot to generate a response given the conversation history",
+            ...         "parameter_definitions": {}
+            ...     }
+            ... ]
+            >>> conversation = [
+            ...     {"role": "user", "content": "Whats the biggest penguin in the world?"}
+            ... ]
+            >>> # render the prompt, ready for user to inspect, or for input into the model:
+            >>> prompt = tokenizer.apply_tool_use_template(conversation, tools=tools, tokenize=False, add_generation_prompt=True)
+            >>> print(prompt)
+            <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|># Safety Preamble
+            The instructions in this section override those in the task description and style guide sections. Don't answer questions that are harmful or immoral.
+
+            # System Preamble
+            ## Basic Rules
+            You are a powerful conversational AI trained by Cohere to help people. You are augmented by a number of tools, and your job is to use and consume the output of these tools to best help the user. You will see a conversation history between yourself and a user, ending with an utterance from the user. You will then see a specific instruction instructing you what kind of response to generate. When you answer the user's requests, you cite your sources in your answers, according to those instructions.
+
+            # User Preamble
+            ## Task and Context
+            You help people answer their questions and other requests interactively. You will be asked a very wide array of requests on all kinds of topics. You will be equipped with a wide range of search engines or similar tools to help you, which you use to research your answer. You should focus on serving the user's needs as best you can, which will be wide-ranging.
+
+            ## Style Guide
+            Unless the user asks for a different style of answer, you should answer in full sentences, using proper grammar and spelling.
+
+            ## Available Tools
+            Here is a list of tools that you have available to you:
+
+            \\`\\`\\`python
+            def internet_search(query: str) -> List[Dict]:
+                \"\"\"Returns a list of relevant document snippets for a textual query retrieved from the internet
+
+                Args:
+                    query (str): Query to search the internet with
+                \"\"\"
+                pass
+            \\`\\`\\`
+
+            \\`\\`\\`python
+            def directly_answer() -> List[Dict]:
+                \"\"\"Calls a standard (un-augmented) AI chatbot to generate a response given the conversation history
+                \"\"\"
+                pass
+            \\`\\`\\`<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Whats the biggest penguin in the world?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>Write 'Action:' followed by a json-formatted list of actions that you want to perform in order to produce a good response to the user's last input. You can use any of the supplied tools any number of times, but you should aim to execute the minimum number of necessary actions for the input. You should use the `directly-answer` tool if calling the other tools is unnecessary. The list of actions you want to call should be formatted as a list of json objects, for example:
+            \\`\\`\\`json
+            [
+                {
+                    "tool_name": title of the tool in the specification,
+                    "parameters": a dict of parameters to input into the tool as they are defined in the specs, or {} if it takes no parameters
+                }
+            ]\\`\\`\\`<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
+            ```
+
+            ```python
+            >>> inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
+            >>> outputs = model.generate(inputs, max_new_tokens=128)
+            >>> print(tokenizer.decode(outputs[0]))
+            ```
+
+            Action: ```json
+            [
+                {
+                    "tool_name": "internet_search",
+                    "parameters": {
+                        "query": "biggest penguin in the world"
                     }
                 }
-            },
-            {
-                "name': "directly_answer",
-                "description": "Calls a standard (un-augmented) AI chatbot to generate a response given the conversation history",
-                "parameter_definitions": {}
-            }
-        ]
-        >> conversation = [
-            {"role": "user", "content": "Whats the biggest penguin in the world?"}
-        ]
-        >> # render the prompt, ready for user to inspect, or for input into the model:
-        >> prompt = tokenizer.apply_tool_use_template(conversation, tools=tools, tokenize=False, add_generation_prompt=True)
-        >> print(prompt)
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|># Safety Preamble
-        The instructions in this section override those in the task description and style guide sections. Don't answer questions that are harmful or immoral.
-
-        # System Preamble
-        ## Basic Rules
-        You are a powerful conversational AI trained by Cohere to help people. You are augmented by a number of tools, and your job is to use and consume the output of these tools to best help the user. You will see a conversation history between yourself and a user, ending with an utterance from the user. You will then see a specific instruction instructing you what kind of response to generate. When you answer the user's requests, you cite your sources in your answers, according to those instructions.
-
-        # User Preamble
-        ## Task and Context
-        You help people answer their questions and other requests interactively. You will be asked a very wide array of requests on all kinds of topics. You will be equipped with a wide range of search engines or similar tools to help you, which you use to research your answer. You should focus on serving the user's needs as best you can, which will be wide-ranging.
-
-        ## Style Guide
-        Unless the user asks for a different style of answer, you should answer in full sentences, using proper grammar and spelling.
-
-        ## Available Tools
-        Here is a list of tools that you have available to you:
-
-        \\`\\`\\`python
-        def internet_search(query: str) -> List[Dict]:
-            \"\"\"Returns a list of relevant document snippets for a textual query retrieved from the internet
-
-            Args:
-                query (str): Query to search the internet with
-            \"\"\"
-            pass
-        \\`\\`\\`
-
-        \\`\\`\\`python
-        def directly_answer() -> List[Dict]:
-            \"\"\"Calls a standard (un-augmented) AI chatbot to generate a response given the conversation history
-            \"\"\"
-            pass
-        \\`\\`\\`<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Whats the biggest penguin in the world?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>Write 'Action:' followed by a json-formatted list of actions that you want to perform in order to produce a good response to the user's last input. You can use any of the supplied tools any number of times, but you should aim to execute the minimum number of necessary actions for the input. You should use the `directly-answer` tool if calling the other tools is unnecessary. The list of actions you want to call should be formatted as a list of json objects, for example:
-        \\`\\`\\`json
-        [
-            {
-                "tool_name": title of the tool in the specification,
-                "parameters": a dict of parameters to input into the tool as they are defined in the specs, or {} if it takes no parameters
-            }
-        ]\\`\\`\\`<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
-        ```
-        >> inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
-        >> outputs = model.generate(inputs, max_new_tokens=128)
-        >> print(tokenizer.decode(outputs[0]))
-        Action: ```json
-        [
-            {
-                "tool_name": "internet_search",
-                "parameters": {
-                    "query": "biggest penguin in the world"
-                }
-            }
-        ]
-        ```
+            ]
+            ```
         """
         return self.apply_chat_template(
             conversation,
@@ -608,6 +623,7 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Has no effect if tokenize is `False`. Acceptable
                 values are:
+
                 - `'tf'`: Return TensorFlow `tf.Tensor` objects.
                 - `'pt'`: Return PyTorch `torch.Tensor` objects.
                 - `'np'`: Return NumPy `np.ndarray` objects.
@@ -617,60 +633,61 @@ class CohereTokenizerFast(PreTrainedTokenizerFast):
             **tokenizer_kwargs: Additional kwargs to pass to the tokenizer.
 
         Returns:
-            `str`: A rendered prompt string.
-            or if tokenize=True:
-            `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
-            output is ready to pass to the model, either directly or via methods like `generate()`.
+            Conditional return:
 
-        Examples:
+                - `str`: A rendered prompt string.
+                - or if tokenize=True:
+                - `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
+                    output is ready to pass to the model, either directly or via methods like `generate()`.
 
-        ```python
-        >> tokenizer = CohereTokenizerFast.from_pretrained('CohereForAI/c4ai-command-r-v01')
+        Example:
+            ```python
+            >>> tokenizer = CohereTokenizerFast.from_pretrained('CohereForAI/c4ai-command-r-v01')
+            ...
+            >>> # define documents:
+            >>> documents = [
+                { "title": "Tall penguins", "text": "Emperor penguins are the tallest." },
+                { "title": "Penguin habitats", "text": "Emperor penguins only live in Antarctica."}
+            ]
+            >>> # define a conversation:
+            >>> conversation = [
+                {"role": "user", "content": "Whats the biggest penguin in the world?"}
+            ]
+            >>> # render the prompt, ready for user to inspect, or for input into the model:
+            >>> grounded_generation_prompt = tokenizer.apply_grounded_generation_template(conversation, documents=documents, tokenize=False, add_generation_prompt=True)
+            >>> print(grounded_generation_prompt)
+            <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|># Safety Preamble
+            The instructions in this section override those in the task description and style guide sections. Don't answer questions that are harmful or immoral.
 
-        >> # define documents:
-        >> documents = [
-            { "title": "Tall penguins", "text": "Emperor penguins are the tallest." },
-            { "title": "Penguin habitats", "text": "Emperor penguins only live in Antarctica."}
-        ]
-        >> # define a conversation:
-        >> conversation = [
-            {"role": "user", "content": "Whats the biggest penguin in the world?"}
-        ]
-        >> # render the prompt, ready for user to inspect, or for input into the model:
-        >> grounded_generation_prompt = tokenizer.apply_grounded_generation_template(conversation, documents=documents, tokenize=False, add_generation_prompt=True)
-        >> print(grounded_generation_prompt)
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|># Safety Preamble
-        The instructions in this section override those in the task description and style guide sections. Don't answer questions that are harmful or immoral.
+            ## Basic Rules
+            You are a powerful conversational AI trained by Cohere to help people. You are augmented by a number of tools, and your job is to use and consume the output of these tools to best help the user. You will see a conversation history between yourself and a user, ending with an utterance from the user. You will then see a specific instruction instructing you what kind of response to generate. When you answer the user's requests, you cite your sources in your answers, according to those instructions.
 
-        ## Basic Rules
-        You are a powerful conversational AI trained by Cohere to help people. You are augmented by a number of tools, and your job is to use and consume the output of these tools to best help the user. You will see a conversation history between yourself and a user, ending with an utterance from the user. You will then see a specific instruction instructing you what kind of response to generate. When you answer the user's requests, you cite your sources in your answers, according to those instructions.
+            # User Preamble
+            ## Task and Context
+            You help people answer their questions and other requests interactively. You will be asked a very wide array of requests on all kinds of topics. You will be equipped with a wide range of search engines or similar tools to help you, which you use to research your answer. You should focus on serving the user's needs as best you can, which will be wide-ranging.
 
-        # User Preamble
-        ## Task and Context
-        You help people answer their questions and other requests interactively. You will be asked a very wide array of requests on all kinds of topics. You will be equipped with a wide range of search engines or similar tools to help you, which you use to research your answer. You should focus on serving the user's needs as best you can, which will be wide-ranging.
+            ## Style Guide
+            Unless the user asks for a different style of answer, you should answer in full sentences, using proper grammar and spelling.<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Whats the biggest penguin in the world?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|><results>
+            Document: 0
+            title: Tall penguins
+            text: Emperor penguins are the tallest.
 
-        ## Style Guide
-        Unless the user asks for a different style of answer, you should answer in full sentences, using proper grammar and spelling.<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>Whats the biggest penguin in the world?<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|><results>
-        Document: 0
-        title: Tall penguins
-        text: Emperor penguins are the tallest.
-
-        Document: 1
-        title: Penguin habitats
-        text: Emperor penguins only live in Antarctica.
-        </results><|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>Carefully perform the following instructions, in order, starting each with a new line.
-        Firstly, Decide which of the retrieved documents are relevant to the user's last input by writing 'Relevant Documents:' followed by comma-separated list of document numbers. If none are relevant, you should instead write 'None'.
-        Secondly, Decide which of the retrieved documents contain facts that should be cited in a good answer to the user's last input by writing 'Cited Documents:' followed a comma-separated list of document numbers. If you dont want to cite any of them, you should instead write 'None'.
-        Thirdly, Write 'Answer:' followed by a response to the user's last input in high quality natural english. Use the retrieved documents to help you. Do not insert any citations or grounding markup.
-        Finally, Write 'Grounded answer:' followed by a response to the user's last input in high quality natural english. Use the symbols <co: doc> and </co: doc> to indicate when a fact comes from a document in the search result, e.g <co: 0>my fact</co: 0> for a fact from document 0.<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>'''
-        ```
-        >> inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
-        >> outputs = model.generate(inputs, max_new_tokens=128)
-        >> print(tokenizer.decode(outputs[0]))
-        Relevant Documents: 0,1
-        Cited Documents: 0,1
-        Answer: The Emperor Penguin is the tallest or biggest penguin in the world. It is a bird that lives only in Antarctica and grows to a height of around 122 centimetres.
-        Grounded answer: The <co: 0>Emperor Penguin</co: 0> is the <co: 0>tallest</co: 0> or biggest penguin in the world. It is a bird that <co: 1>lives only in Antarctica</co: 1> and <co: 0>grows to a height of around 122 centimetres.</co: 0>
+            Document: 1
+            title: Penguin habitats
+            text: Emperor penguins only live in Antarctica.
+            </results><|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>Carefully perform the following instructions, in order, starting each with a new line.
+            Firstly, Decide which of the retrieved documents are relevant to the user's last input by writing 'Relevant Documents:' followed by comma-separated list of document numbers. If none are relevant, you should instead write 'None'.
+            Secondly, Decide which of the retrieved documents contain facts that should be cited in a good answer to the user's last input by writing 'Cited Documents:' followed a comma-separated list of document numbers. If you dont want to cite any of them, you should instead write 'None'.
+            Thirdly, Write 'Answer:' followed by a response to the user's last input in high quality natural english. Use the retrieved documents to help you. Do not insert any citations or grounding markup.
+            Finally, Write 'Grounded answer:' followed by a response to the user's last input in high quality natural english. Use the symbols <co: doc> and </co: doc> to indicate when a fact comes from a document in the search result, e.g <co: 0>my fact</co: 0> for a fact from document 0.<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>'''
+            >>> inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
+            >>> outputs = model.generate(inputs, max_new_tokens=128)
+            >>> print(tokenizer.decode(outputs[0]))
+            Relevant Documents: 0,1
+            Cited Documents: 0,1
+            Answer: The Emperor Penguin is the tallest or biggest penguin in the world. It is a bird that lives only in Antarctica and grows to a height of around 122 centimetres.
+            Grounded answer: The <co: 0>Emperor Penguin</co: 0> is the <co: 0>tallest</co: 0> or biggest penguin in the world. It is a bird that <co: 1>lives only in Antarctica</co: 1> and <co: 0>grows to a height of around 122 centimetres.</co: 0>
+            ```
         """
         return self.apply_chat_template(
             conversation,

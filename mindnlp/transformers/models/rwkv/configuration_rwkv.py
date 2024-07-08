@@ -78,19 +78,19 @@ class RwkvConfig(PretrainedConfig):
 
 
     Example:
-
-    ```python
-    >>> from transformers import RwkvConfig, RwkvModel
-
-    >>> # Initializing a Rwkv configuration
-    >>> configuration = RwkvConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = RwkvModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import RwkvConfig, RwkvModel
+        ...
+        >>> # Initializing a Rwkv configuration
+        >>> configuration = RwkvConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = RwkvModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "rwkv"
     attribute_map = {"max_position_embeddings": "context_length"}
     pretrained_config_archive_map = RWKV_PRETRAINED_CONFIG_ARCHIVE_MAP
@@ -113,28 +113,31 @@ class RwkvConfig(PretrainedConfig):
     ):
         """
         Initializes an instance of RwkvConfig.
-        
+
         Args:
             self: The instance itself.
             vocab_size (int): The size of the vocabulary. Default is 50277.
             context_length (int): The length of the context. Default is 1024.
             hidden_size (int): The size of the hidden layers. Default is 4096.
             num_hidden_layers (int): The number of hidden layers. Default is 32.
-            attention_hidden_size (int, optional): The size of the attention hidden layer. Defaults to hidden_size if not provided.
-            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 4 times hidden_size if not provided.
+            attention_hidden_size (int, optional): The size of the attention hidden layer.
+                Defaults to hidden_size if not provided.
+            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 4 times hidden_size
+                if not provided.
             layer_norm_epsilon (float): The epsilon value for layer normalization. Default is 1e-05.
             bos_token_id (int): The beginning of sentence token id. Default is 0.
             eos_token_id (int): The end of sentence token id. Default is 0.
             rescale_every (int): The frequency of rescaling. Default is 6.
             tie_word_embeddings (bool): Whether to tie word embeddings. Default is False.
             use_cache (bool): Whether to use cache. Default is True.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the provided vocab_size, context_length, hidden_size, num_hidden_layers, attention_hidden_size, intermediate_size, layer_norm_epsilon, bos_token_id, eos_token_id, or rescale_every is
-not a positive integer.
+            ValueError: If the provided vocab_size, context_length, hidden_size, num_hidden_layers,
+                attention_hidden_size, intermediate_size, layer_norm_epsilon, bos_token_id, eos_token_id,
+                or rescale_every is not a positive integer.
             TypeError: If any of the provided parameters has an unexpected type.
         """
         self.vocab_size = vocab_size

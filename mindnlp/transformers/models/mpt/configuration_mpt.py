@@ -28,23 +28,24 @@ class DeprecatedList(list):
     """
     Represents a list class that issues a warning about deprecated features when accessed.
     
-    This class inherits from the built-in list class and overrides the __getitem__ method to issue a warning message when accessing elements. The warning message alerts users that archive maps are deprecated
-and will be removed in version v4.40.0 as they are no longer relevant. It also provides a recommendation for an alternative method to retrieve all checkpoints for a given architecture using the
-`huggingface_hub` library with the `list_models` method.
+    This class inherits from the built-in list class and overrides the __getitem__ method to issue a warning message
+    when accessing elements. The warning message alerts users that archive maps are deprecated and will be removed in
+    version v4.40.0 as they are no longer relevant. It also provides a recommendation for an alternative method to
+    retrieve all checkpoints for a given architecture using the `huggingface_hub` library with the `list_models` method.
     """
     def __getitem__(self, item):
         """
         Get an item from the DeprecatedList object.
-        
+
         Args:
             self (DeprecatedList): The instance of the DeprecatedList class.
             item (Any): The key to retrieve an item from the DeprecatedList.
-        
+
         Returns:
-            None: This method always returns None.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         logger.warning_once(
             "Archive maps are deprecated and will be removed in version v4.40.0 as they are no longer relevant. "
@@ -121,8 +122,9 @@ class MptAttentionConfig(PretrainedConfig):
         alibi_bias_max=8,
         **kwargs,
     ):
-        """Initializes a new instance of the MptAttentionConfig class.
-        
+        """
+        Initializes a new instance of the MptAttentionConfig class.
+
         Args:
             self: The instance of the class.
             attn_type (str): The type of attention. Must be either 'multihead_attention' or 'multiquery_attention'.
@@ -136,13 +138,13 @@ class MptAttentionConfig(PretrainedConfig):
             alibi (bool): Indicates if alibi bias is used. Default is True.
             alibi_bias_max: Not specified.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If 'attn_type' is not either 'multihead_attention' or 'multiquery_attention'.
-        
+
         """
         super().__init__()
         self.attn_type = attn_type
@@ -165,14 +167,15 @@ class MptAttentionConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs) -> "PretrainedConfig":
         """
         Instantiates a new instance of the MptAttentionConfig class from a pre-trained model.
-        
+
         Args:
             cls: The class object that the method was called on.
-            pretrained_model_name_or_path (str): The name or path of the pre-trained model to load. 
-        
+            pretrained_model_name_or_path (str): The name or path of the pre-trained model to load.
+
         Returns:
-            PretrainedConfig: An instance of the PretrainedConfig class instantiated with the configuration of the pre-trained model.
-        
+            PretrainedConfig:
+                An instance of the PretrainedConfig class instantiated with the configuration of the pre-trained model.
+
         Raises:
             None.
         """
@@ -249,19 +252,18 @@ class MptConfig(PretrainedConfig):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
 
     Example:
-
-    ```python
-    >>> from transformers import MptConfig, MptModel
-
-    >>> # Initializing a Mpt configuration
-    >>> configuration = MptConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = MptModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        ```python
+        >>> from transformers import MptConfig, MptModel
+        ...
+        >>> # Initializing a Mpt configuration
+        >>> configuration = MptConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = MptModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "mpt"
     attribute_map = {
@@ -319,7 +321,7 @@ class MptConfig(PretrainedConfig):
             initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

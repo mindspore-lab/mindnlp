@@ -49,16 +49,16 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
     Same with GPT2Tokenizer, this tokenizer has been trained to treat spaces like parts of the tokens so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import Qwen2TokenizerFast
-
-    >>> tokenizer = Qwen2TokenizerFast.from_pretrained("Qwen/Qwen-tokenizer")
-    >>> tokenizer("Hello world")["input_ids"]
-    [9707, 1879]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [21927, 1879]
-    ```
+    Example:
+        ```python
+        >>> from transformers import Qwen2TokenizerFast
+        ...
+        >>> tokenizer = Qwen2TokenizerFast.from_pretrained("Qwen/Qwen-tokenizer")
+        >>> tokenizer("Hello world")["input_ids"]
+        [9707, 1879]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [21927, 1879]
+        ```
     This is expected.
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
@@ -113,16 +113,20 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
             pad_token (str or AddedToken, optional): The padding token. Default is 'endoftext'.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
         
         Note:
-            - The bos_token, eos_token, unk_token, and pad_token parameters can be either a string or an instance of the AddedToken class.
-            - If any of the bos_token, eos_token, unk_token, or pad_token parameters are provided as strings, they will be converted to AddedToken instances with default properties.
-            - The vocab_file, merges_file, and tokenizer_file parameters are used to load the respective files for the tokenizer.
-            - The unk_token, bos_token, eos_token, and pad_token parameters are used to set the respective tokens in the tokenizer.
+            - The bos_token, eos_token, unk_token, and pad_token parameters can be either a string or an instance of
+            the AddedToken class.
+            - If any of the bos_token, eos_token, unk_token, or pad_token parameters are provided as strings,
+            they will be converted to AddedToken instances with default properties.
+            - The vocab_file, merges_file, and tokenizer_file parameters are used to load the respective files
+            for the tokenizer.
+            - The unk_token, bos_token, eos_token, and pad_token parameters are used to set the respective tokens
+            in the tokenizer.
             - Additional keyword arguments can be provided and will be passed to the base class constructor.
         """
         # We need to at least pass vocab_file and merges_file to base class

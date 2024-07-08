@@ -122,7 +122,7 @@ class MPNetEmbeddings(nn.Cell):
             inputs_embeds (torch.Tensor, optional): The input tensor representing embeddings. Defaults to None.
         
         Returns:
-            None: The method returns the constructed embeddings of input data.
+            embeddings: The method returns the constructed embeddings of input data.
         
         Raises:
             ValueError: If both 'input_ids' and 'inputs_embeds' are None.
@@ -181,18 +181,20 @@ class MPNetSelfAttention(nn.Cell):
         
         Args:
             self: The instance of the MPNetSelfAttention class.
-            config (object): An object containing configuration parameters for the self-attention mechanism.
+            config (object):
+                An object containing configuration parameters for the self-attention mechanism.
+
                 - hidden_size (int): The size of the hidden layers.
                 - num_attention_heads (int): The number of attention heads.
                 - embedding_size (int): The size of the embeddings.
                 - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads or if the 'embedding_size' attribute
-                is not present in the config object.
+            ValueError: If the hidden size is not a multiple of the number of attention heads or if the 'embedding_size'
+                attribute is not present in the config object.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -231,22 +233,27 @@ class MPNetSelfAttention(nn.Cell):
     ):
         """
         This method constructs self-attention mechanism for MPNetSelfAttention.
-        
+
         Args:
-        - self: The instance of the class.
-        - hidden_states: Tensor containing the input hidden states. Shape: (batch_size, sequence_length, hidden_size).
-        - attention_mask: Optional tensor to mask out attention scores. Shape: (batch_size, sequence_length, sequence_length).
-        - head_mask: Optional tensor to mask out attention heads. Shape: (num_attention_heads, sequence_length, sequence_length).
-        - position_bias: Optional tensor containing positional bias. Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
-        - output_attentions: Boolean indicating whether to output attention probabilities.
-        
+            self: The instance of the class.
+            hidden_states: Tensor containing the input hidden states. Shape: (batch_size, sequence_length, hidden_size).
+            attention_mask: Optional tensor to mask out attention scores.
+                Shape: (batch_size, sequence_length, sequence_length).
+            head_mask: Optional tensor to mask out attention heads.
+                Shape: (num_attention_heads, sequence_length, sequence_length).
+            position_bias: Optional tensor containing positional bias.
+                Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
+            output_attentions: Boolean indicating whether to output attention probabilities.
+
         Returns:
-        - Tuple containing output tensor 'o' and attention probabilities tensor. If output_attentions is False, returns tuple with only 'o'.
-        
+            Tuple:
+                Tuple containing output tensor 'o' and attention probabilities tensor.
+                    If output_attentions is False, returns tuple with only 'o'.
+
         Raises:
-        - ValueError: If the dimensions of input tensors are incompatible for matrix operations.
-        - TypeError: If the input parameters are not of expected types.
-        - RuntimeError: If any runtime error occurs during the execution of the method.
+            ValueError: If the dimensions of input tensors are incompatible for matrix operations.
+            TypeError: If the input parameters are not of expected types.
+            RuntimeError: If any runtime error occurs during the execution of the method.
         """
         q = self.q(hidden_states)
         k = self.k(hidden_states)
@@ -294,16 +301,16 @@ class MPNetAttention(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetAttention class.
-        
+
         Args:
             self: The instance of the MPNetAttention class.
             config: A configuration object containing the settings for the MPNetAttention.
-        
+
         Returns:
-            None. This method initializes the MPNetAttention instance with the provided configuration settings.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.attn = MPNetSelfAttention(config)
@@ -340,20 +347,23 @@ class MPNetAttention(nn.Cell):
     ):
         """
         Constructs the attention layer for the MPNetAttention class.
-        
+
         Args:
             self (MPNetAttention): An instance of the MPNetAttention class.
             hidden_states (Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[Tensor]): A tensor of shape (batch_size, sequence_length) indicating which tokens should be attended to and which ones should be ignored. Defaults to None.
-            head_mask (Optional[Tensor]): A tensor of shape (num_heads,) representing the mask to be applied to the attention scores of each head. Defaults to None.
-            position_bias (Optional[Tensor]): A tensor of shape (num_heads, sequence_length, sequence_length) representing the position bias to be added to the attention scores. Defaults to None.
+            attention_mask (Optional[Tensor]): A tensor of shape (batch_size, sequence_length)
+                indicating which tokens should be attended to and which ones should be ignored. Defaults to None.
+            head_mask (Optional[Tensor]): A tensor of shape (num_heads,) representing the mask to be applied to the
+                attention scores of each head. Defaults to None.
+            position_bias (Optional[Tensor]): A tensor of shape (num_heads, sequence_length, sequence_length)
+                representing the position bias to be added to the attention scores. Defaults to None.
             output_attentions (bool): Whether to output the attention scores. Defaults to False.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention
-layer.
-        
+            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape
+                (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention layer.
+
         Raises:
             None.
         """
@@ -374,20 +384,22 @@ class MPNetIntermediate(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetIntermediate class.
-        
+
         Args:
             self: The instance of the MPNetIntermediate class.
-            config: An object containing configuration parameters for the MPNetIntermediate instance.
-                Type: Any
-                Purpose: Contains configuration settings for the MPNetIntermediate instance.
-                Restrictions: None
-        
+            config:
+                An object containing configuration parameters for the MPNetIntermediate instance.
+
+                - Type: Any
+                - Purpose: Contains configuration settings for the MPNetIntermediate instance.
+                - Restrictions: None
+
         Returns:
             None
-        
+
         Raises:
-            - TypeError: If the config parameter is not provided.
-            - ValueError: If the hidden activation function specified in the config is not supported.
+            TypeError: If the config parameter is not provided.
+            ValueError: If the hidden activation function specified in the config is not supported.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -399,14 +411,16 @@ class MPNetIntermediate(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the intermediate layer of the MPNet model.
-        
+
         Args:
             self (MPNetIntermediate): The instance of the MPNetIntermediate class.
-            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) representing the hidden states.
-        
+            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size)
+                representing the hidden states.
+
         Returns:
-            mindspore.Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size) containing the processed hidden states.
-        
+            mindspore.Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size) containing
+                the processed hidden states.
+
         Raises:
             TypeError: If the input 'hidden_states' is not a mindspore.Tensor.
             ValueError: If the shape of 'hidden_states' is not (batch_size, sequence_length, hidden_size).
@@ -421,20 +435,22 @@ class MPNetOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetOutput class.
-        
+
         Args:
             self: The instance of the MPNetOutput class.
-            config: An object containing configuration parameters.
+            config:
+                An object containing configuration parameters.
+
                 - Type: Any
                 - Purpose: The configuration object specifying model settings.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config parameter does not contain the required attributes.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config parameter does not contain the required attributes.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -444,7 +460,7 @@ class MPNetOutput(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the MPNetOutput.
-        
+
         Args:
             self (MPNetOutput): An instance of the MPNetOutput class.
             hidden_states (mindspore.Tensor): A tensor containing the hidden states.
@@ -453,13 +469,13 @@ class MPNetOutput(nn.Cell):
             input_tensor (mindspore.Tensor): A tensor containing the input states.
                 This tensor is added to the hidden states after the linear transformation and dropout.
                 The shape of this tensor should be compatible with the hidden states tensor.
-        
+
         Returns:
             mindspore.Tensor: A tensor representing the constructed MPNetOutput.
                 The shape of the tensor is the same as the hidden_states tensor.
                 The constructed MPNetOutput is obtained by applying the dense layer, dropout, and LayerNorm operations
                 to the hidden states and adding the input tensor.
-        
+
         Raises:
             None.
         """
@@ -474,17 +490,17 @@ class MPNetLayer(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetLayer class.
-        
+
         Args:
             self (MPNetLayer): The instance of the MPNetLayer class.
             config (object): The configuration object used to initialize the MPNetLayer.
                 This object contains the settings and parameters required for the MPNetLayer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.attention = MPNetAttention(config)
@@ -502,18 +518,20 @@ class MPNetLayer(nn.Cell):
     ):
         """
         Constructs an MPNetLayer.
-        
+
         Args:
             self (object): The object instance.
             hidden_states (tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
             attention_mask (tensor, optional): The attention mask of shape (batch_size, sequence_length). Defaults to None.
             head_mask (tensor, optional): The head mask of shape (num_heads). Defaults to None.
-            position_bias (tensor, optional): The position bias of shape (num_heads, sequence_length, sequence_length). Defaults to None.
+            position_bias (tensor, optional): The position bias of shape (num_heads, sequence_length, sequence_length).
+                Defaults to None.
             output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-        
+
         Returns:
-            tuple: A tuple containing layer_output of shape (batch_size, sequence_length, hidden_size) and additional optional outputs.
-        
+            tuple: A tuple containing layer_output of shape (batch_size, sequence_length, hidden_size) and
+                additional optional outputs.
+
         Raises:
             ValueError: If the input dimensions are invalid or incompatible.
             TypeError: If the input types are incorrect.
@@ -540,17 +558,19 @@ class MPNetEncoder(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetEncoder class.
-        
+
         Args:
             self: The current object instance.
-            config (object): The configuration object containing the settings for the MPNetEncoder.
+            config (object):
+                The configuration object containing the settings for the MPNetEncoder.
+
                 - Type: object
                 - Purpose: Specifies the configuration settings for the MPNetEncoder.
                 - Restrictions: None
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -572,22 +592,25 @@ class MPNetEncoder(nn.Cell):
     ):
         """
         Construct method in the MPNetEncoder class.
-        
+
         Args:
             self: The instance of the MPNetEncoder class.
             hidden_states (mindspore.Tensor): The input hidden states to be processed by the encoder.
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying which positions should be attended to. Defaults to None.
-            head_mask (Optional[mindspore.Tensor]): An optional tensor specifying which heads to mask out. Defaults to None.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying which positions
+                should be attended to. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): An optional tensor specifying which heads to mask out.
+                Defaults to None.
             output_attentions (bool): A flag indicating whether to output the attention weights. Defaults to False.
-            output_hidden_states (bool): A flag indicating whether to output hidden states for all layers. Defaults to False.
+            output_hidden_states (bool): A flag indicating whether to output hidden states for all layers.
+                Defaults to False.
             return_dict (bool): A flag indicating whether to return the outputs as a dictionary. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If the input parameters are not within the expected ranges.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If the input parameters are not within the expected ranges.
         """
         position_bias = self.compute_position_bias(hidden_states)
         all_hidden_states = () if output_hidden_states else None
@@ -627,10 +650,10 @@ class MPNetEncoder(nn.Cell):
 
         Args:
             x (torch.Tensor): Input tensor of shape (batch_size, sequence_length, hidden_size).
-            position_ids (torch.Tensor, optional): Tensor containing position indices. If provided, 
-                the position indices are used to compute relative positions; otherwise, indices 
+            position_ids (torch.Tensor, optional): Tensor containing position indices. If provided,
+                the position indices are used to compute relative positions; otherwise, indices
                 are generated based on the input tensor's sequence length. Defaults to None.
-            num_buckets (int, optional): Number of buckets for relative position encoding. 
+            num_buckets (int, optional): Number of buckets for relative position encoding.
                 Defaults to 32.
 
         Returns:
@@ -690,17 +713,17 @@ class MPNetPooler(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetPooler class.
-        
+
         Args:
             self (MPNetPooler): The current instance of the MPNetPooler class.
             config (object): The configuration object containing parameters for initializing the MPNetPooler.
                 The config object should have a 'hidden_size' attribute indicating the size of the hidden layer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -709,15 +732,18 @@ class MPNetPooler(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs a pooled output from the hidden states of the MPNet model.
-        
+
         Args:
             self: The instance of the MPNetPooler class.
-            hidden_states (mindspore.Tensor): A tensor containing the hidden states of the MPNet model. It is expected to have a shape of (batch_size, sequence_length, hidden_size), where batch_size is the
-batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the hidden state.
-        
+            hidden_states (mindspore.Tensor): A tensor containing the hidden states of the MPNet model.
+                It is expected to have a shape of (batch_size, sequence_length, hidden_size), where batch_size is the
+                batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the
+                hidden state.
+
         Returns:
-            mindspore.Tensor: The pooled output tensor generated from the hidden states. It has a shape of (batch_size, hidden_size).
-        
+            mindspore.Tensor: The pooled output tensor generated from the hidden states.
+                It has a shape of (batch_size, hidden_size).
+
         Raises:
             None.
         """
@@ -734,15 +760,15 @@ class MPNetModel(MPNetPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the MPNetModel class.
-        
+
         Args:
             self: The instance of the class.
             config (dict): A dictionary containing the configuration parameters for the model.
             add_pooling_layer (bool): A flag indicating whether to include a pooling layer in the model. Defaults to True.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -759,32 +785,32 @@ class MPNetModel(MPNetPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings from the MPNetModel.
-        
+
         Args:
             self: An instance of the MPNetModel class.
-        
+
         Returns:
-            None. The method returns the input embeddings from the MPNetModel.
-        
+            None: The method returns the input embeddings from the MPNetModel.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
         """
         Method to set the input embeddings in the MPNetModel class.
-        
+
         Args:
             self (MPNetModel): The instance of the MPNetModel class.
             value: The input value representing the embeddings to be set for the model.
                 It should be compatible with the expected format for word embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -810,31 +836,41 @@ class MPNetModel(MPNetPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
         """
         Constructs the MPNet model.
-        
+
         Args:
             self (MPNetModel): The instance of the MPNetModel class.
             input_ids (Optional[mindspore.Tensor]): The input tensor containing the indices of input sequence tokens.
-            attention_mask (Optional[mindspore.Tensor]): The optional attention mask tensor specifying which tokens should be attended to.
-            position_ids (Optional[mindspore.Tensor]): The optional input tensor containing the position indices of each input token.
-            head_mask (Optional[mindspore.Tensor]): The optional tensor specifying which heads should be masked in the self-attention layers.
-            inputs_embeds (Optional[mindspore.Tensor]): The optional input tensor containing the embeddings of each input token.
+            attention_mask (Optional[mindspore.Tensor]): The optional attention mask tensor specifying which tokens
+                should be attended to.
+            position_ids (Optional[mindspore.Tensor]): The optional input tensor containing the position indices
+                of each input token.
+            head_mask (Optional[mindspore.Tensor]): The optional tensor specifying which heads should be masked in
+                the self-attention layers.
+            inputs_embeds (Optional[mindspore.Tensor]): The optional input tensor containing the embeddings of
+                each input token.
             output_attentions (Optional[bool]): Whether to return the attentions.
             output_hidden_states (Optional[bool]): Whether to return the hidden states.
             return_dict (Optional[bool]): Whether to return the output as a dictionary.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]: The output of the MPNet model. If `return_dict` is `False`, a tuple containing the following elements is returned:
-                - sequence_output (mindspore.Tensor): The output tensor of the encoder.
-                - pooled_output (mindspore.Tensor): The pooled output tensor.
-                - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
-                - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
-                
-            If `return_dict` is `True`, an instance of BaseModelOutputWithPooling is returned, which contains the following attributes:
-                - last_hidden_state (mindspore.Tensor): The output tensor of the encoder.
-                - pooler_output (mindspore.Tensor): The pooled output tensor.
-                - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
-                - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
-        
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
+                The output of the MPNet model.
+
+                - If `return_dict` is `False`, a tuple containing the following elements is returned:
+
+                    - sequence_output (mindspore.Tensor): The output tensor of the encoder.
+                    - pooled_output (mindspore.Tensor): The pooled output tensor.
+                    - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
+                    - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
+
+                - If `return_dict` is `True`, an instance of BaseModelOutputWithPooling is returned,
+                which contains the following attributes:
+
+                    - last_hidden_state (mindspore.Tensor): The output tensor of the encoder.
+                    - pooler_output (mindspore.Tensor): The pooled output tensor.
+                    - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
+                    - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
+
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are provided simultaneously.
             ValueError: If neither `input_ids` nor `inputs_embeds` are provided.
@@ -891,16 +927,16 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetForMaskedLM class.
-        
+
         Args:
             self: The object itself.
             config (MPNetConfig): The configuration object that defines the model architecture and hyperparameters.
-        
+
         Returns:
             None
-        
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -913,14 +949,14 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
     def get_output_embeddings(self):
         """
         Retrieve the output embeddings from the decoder of the language model head.
-        
+
         Args:
             self (MPNetForMaskedLM): An instance of the MPNetForMaskedLM class.
                 Represents the model for Masked Language Modeling.
-        
+
         Returns:
-            None. The method returns the output embeddings from the decoder of the language model head.
-        
+            None: The method returns the output embeddings from the decoder of the language model head.
+
         Raises:
             None.
         """
@@ -929,16 +965,16 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings for MPNetForMaskedLM model.
-        
+
         Args:
             self (MPNetForMaskedLM): The instance of the MPNetForMaskedLM class.
             new_embeddings (torch.nn.Module): The new embeddings to be set as the output embeddings for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -955,10 +991,11 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -997,17 +1034,19 @@ class MPNetLMHead(nn.Cell):
     def __init__(self, config):
         """
         This method initializes an instance of the MPNetLMHead class.
-        
+
         Args:
             self: The instance of the MPNetLMHead class.
-            config: An object containing configuration parameters for the MPNetLMHead model.
-                    Type: Config object
-                    Purpose: Specifies the configuration settings for the MPNetLMHead model.
-                    Restrictions: Must be a valid configuration object.
-        
+            config:
+                An object containing configuration parameters for the MPNetLMHead model.
+
+                - Type: Config object
+                - Purpose: Specifies the configuration settings for the MPNetLMHead model.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If the configuration object is invalid or missing required parameters.
             TypeError: If the configuration object is not of the expected type.
@@ -1025,16 +1064,16 @@ class MPNetLMHead(nn.Cell):
     def construct(self, features, **kwargs):
         """
         This method constructs the output by processing the input features through various layers.
-        
+
         Args:
             self (MPNetLMHead): Instance of the MPNetLMHead class.
             features (tensor): Input features to be processed. Expected to be a tensor data type.
-        
+
         Returns:
             None: This method returns None after processing the input features through the defined layers.
-        
+
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         x = self.dense(features)
         x = gelu(x)
@@ -1051,15 +1090,15 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of MPNetForSequenceClassification.
-        
+
         Args:
             self (object): The instance of the class.
             config (object): The configuration object containing settings for the model initialization.
                 Must contain the attribute 'num_labels' specifying the number of labels for classification.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the 'config' object does not have the 'num_labels' attribute.
         """
@@ -1085,10 +1124,11 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1143,14 +1183,14 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetForMultipleChoice class.
-        
+
         Args:
             self (MPNetForMultipleChoice): An instance of the MPNetForMultipleChoice class.
             config (object): The configuration object for the MPNetModel.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1176,10 +1216,11 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -1230,14 +1271,14 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the MPNetForTokenClassification class.
-        
+
         Args:
             self: An instance of the MPNetForTokenClassification class.
             config: An instance of the MPNetConfig class containing the configuration parameters for the model.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -1264,8 +1305,9 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1306,20 +1348,22 @@ class MPNetClassificationHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MPNetClassificationHead class.
-        
+
         Args:
             self: The instance of the class itself.
-            config: An object containing configuration parameters for the head, including:
+            config:
+                An object containing configuration parameters for the head, including:
+
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
                 - num_labels (int): The number of output labels.
-        
+
         Returns:
-            None. This method initializes the dense, dropout, and output projection layers within the MPNetClassificationHead instance.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided config parameter is not of the expected type.
-            - ValueError: If any of the configuration parameters are invalid or missing.
+            TypeError: If the provided config parameter is not of the expected type.
+            ValueError: If any of the configuration parameters are invalid or missing.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1329,14 +1373,15 @@ class MPNetClassificationHead(nn.Cell):
     def construct(self, features, **kwargs):
         """
         Constructs the MPNetClassificationHead by performing a series of operations on the input features.
-        
+
         Args:
             self: The instance of the MPNetClassificationHead class.
-            features (Tensor): The input features to be processed. It should be a tensor of shape (batch_size, sequence_length, num_features).
-        
+            features (Tensor): The input features to be processed.
+                It should be a tensor of shape (batch_size, sequence_length, num_features).
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1354,20 +1399,22 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
     def __init__(self, config):
         """
         Initialize the MPNetForQuestionAnswering class.
-        
+
         Args:
             self (object): The instance of the MPNetForQuestionAnswering class.
-            config (object): An object containing configuration settings for the model.
+            config (object):
+                An object containing configuration settings for the model.
+
                 - Type: Custom class object
                 - Purpose: Specifies the configuration parameters for the model initialization.
                 - Restrictions: Must contain the 'num_labels' attribute.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            - AttributeError: If the 'config' object does not have the 'num_labels' attribute.
-            - TypeError: If the 'config' parameter is not of the expected type.
+            AttributeError: If the 'config' object does not have the 'num_labels' attribute.
+            TypeError: If the 'config' parameter is not of the expected type.
         """
         super().__init__(config)
 
@@ -1392,14 +1439,15 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

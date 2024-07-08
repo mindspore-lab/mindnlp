@@ -43,7 +43,7 @@ class Conv1D(nn.Cell):
             n_in (int): The number of input channels for the convolution operation.
         
         Returns:
-            None. This method initializes the Conv1D object with the provided parameters.
+            None.
         
         Raises:
             None.
@@ -64,11 +64,11 @@ class Conv1D(nn.Cell):
                 Should have a shape of (batch_size, sequence_length, input_channels).
                 
         Returns:
-            None. The method modifies the input tensor x in place by performing the convolution operation.
+            None: The method modifies the input tensor x in place by performing the convolution operation.
         
         Raises:
-            - ValueError: If the shape of the input tensor x is not as expected for a 1D convolution operation.
-            - RuntimeError: If there are any runtime issues during the convolution operation.
+            ValueError: If the shape of the input tensor x is not as expected for a 1D convolution operation.
+            RuntimeError: If there are any runtime issues during the convolution operation.
         """
         size_out = x.shape[:-1] + (self.n_out,)
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
@@ -135,10 +135,12 @@ def prune_linear_layer(layer, index, axis=0):
     """
     Prune a linear layer to keep only entries in index.
     Used to remove heads.
+
     Args:
         layer (`mindspore.nn.Dense`): The layer to prune.
         index (`mindspore.Tensor[int64]`): The indices to keep in the layer.
         axis (`int`, *optional*, defaults to 0): The dimension on which to keep the indices.
+
     Returns:
         `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
     """
@@ -167,6 +169,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
     `chunk_axis`. It then applies a layer `forward_fn` to each chunk independently to save memory.
     If the `forward_fn` is independent across the `chunk_dim` this function will yield the same result as directly
     applying `forward_fn` to `input_tensors`.
+
     Args:
         forward_fn (`Callable[..., mindspore.Tensor]`):
             The forward function of the model.
@@ -176,6 +179,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
             The dimension over which the `input_tensors` should be chunked.
         input_tensors (`Tuple[mindspore.Tensor]`):
             The input tensors of `forward_fn` which will be chunked
+
     Returns:
         `mindspore.Tensor`: A tensor with the same shape as the `forward_fn` would have given if applied`.
     """

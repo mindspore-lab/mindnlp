@@ -67,9 +67,11 @@ class MambaConfig(PretrainedConfig):
         initializer_range (`float`, *optional*, defaults to 0.1):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
         residual_in_fp32 (`bool`, *optional*, defaults to `True`):
-            Whether or not residuals should be in `float32`. If set to `False` residuals will keep the same `dtype` as the rest of the model
+            Whether or not residuals should be in `float32`. If set to `False` residuals will keep the same `dtype`
+            as the rest of the model
         time_step_rank (`Union[int,str]`, *optional*, defaults to `"auto"`):
-            Rank of the the discretization projection matrix. `"auto"` means that it will default to `math.ceil(self.hidden_size / 16)`
+            Rank of the the discretization projection matrix. `"auto"` means that it will default to
+            `math.ceil(self.hidden_size / 16)`
         time_step_scale (`float`, *optional*, defaults to 1.0):
             Scale used used to scale `dt_proj.bias`.
         time_step_min (`float`, *optional*, defaults to 0.001):
@@ -87,19 +89,19 @@ class MambaConfig(PretrainedConfig):
 
 
     Example:
-
-    ```python
-    >>> from transformers import MambaConfig, MambaModel
-
-    >>> # Initializing a Mamba configuration
-    >>> configuration = MambaConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = MambaModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import MambaConfig, MambaModel
+        ...
+        >>> # Initializing a Mamba configuration
+        >>> configuration = MambaConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = MambaModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "mamba"
 
     def __init__(
@@ -159,7 +161,7 @@ class MambaConfig(PretrainedConfig):
             use_cache (bool, optional): Whether to use cache. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

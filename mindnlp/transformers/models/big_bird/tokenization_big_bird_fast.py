@@ -314,7 +314,8 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
         Args:
             self (BigBirdTokenizerFast): An instance of the BigBirdTokenizerFast class.
             save_directory (str): The directory where the vocabulary will be saved.
-            filename_prefix (Optional[str], optional): A prefix to be added to the filename of the saved vocabulary. Defaults to None.
+            filename_prefix (Optional[str], optional): A prefix to be added to the filename of the saved vocabulary.
+                Defaults to None.
         
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.

@@ -51,11 +51,12 @@ class CLIPProcessor(ProcessorMixin):
             tokenizer (object): A tokenizer object used for tokenizing text inputs.
         
         Returns:
-            None. This method initializes a CLIPProcessor object.
+            None.
         
         Raises:
             ValueError: If either `image_processor` or `tokenizer` is not specified.
-            FutureWarning: If the deprecated argument `feature_extractor` is used, a warning is issued recommending to use `image_processor` instead.
+            FutureWarning: If the deprecated argument `feature_extractor` is used,
+                a warning is issued recommending to use `image_processor` instead.
         """
         feature_extractor = None
         if "feature_extractor" in kwargs:
@@ -103,11 +104,11 @@ class CLIPProcessor(ProcessorMixin):
         Returns:
             [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
 
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-              `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-              `None`).
-            - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                `None`).
+                - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")
@@ -143,14 +144,15 @@ class CLIPProcessor(ProcessorMixin):
     @property
     def model_input_names(self):
         """
-        This method, 'model_input_names', is a property of the 'CLIPProcessor' class. It returns a list of unique model input names derived from the tokenizer and image processor model input names.
-        
+        This method, 'model_input_names', is a property of the 'CLIPProcessor' class.
+        It returns a list of unique model input names derived from the tokenizer and image processor model input names.
+
         Args:
             self: An instance of the 'CLIPProcessor' class.
-        
+
         Returns:
             The method returns a list of unique model input names derived from the tokenizer and image processor model input names.
-        
+
         Raises:
             No exceptions are explicitly raised by this method.
         """
@@ -162,24 +164,27 @@ class CLIPProcessor(ProcessorMixin):
     def feature_extractor_class(self):
         """
         This method returns the image processor class used for extracting features in the CLIPProcessor class.
-        
+
         Args:
             self: An instance of the CLIPProcessor class.
-        
+
         Returns:
             None
-        
+
         Raises:
-            FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use
-`image_processor_class` instead.
-        
+            FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that
+                `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use
+                `image_processor_class` instead.
+
         Note:
             The returned image processor class is responsible for extracting features from images in the CLIPProcessor.
-        
+
         Example:
+            ```python
             >>> clip_processor = CLIPProcessor()
             >>> clip_processor.feature_extractor_class
             <class 'image_processor.ImageProcessor'>
+            ```
         """
         warnings.warn(
             "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
@@ -196,7 +201,7 @@ class CLIPProcessor(ProcessorMixin):
             self: An instance of the CLIPProcessor class.
         
         Returns:
-            None. This method returns None.
+            None.
         
         Raises:
             FutureWarning: This method raises a FutureWarning to alert users that it is deprecated and will be removed in v5.

@@ -86,20 +86,20 @@ class AltCLIPTextConfig(PretrainedConfig):
         project_dim (`int`, *optional*, defaults to 768):
             The dimentions of the teacher model before the mapping layer.
 
-    Examples:
-
-    ```python
-    >>> from transformers import AltCLIPTextModel, AltCLIPTextConfig
-
-    >>> # Initializing a AltCLIPTextConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPTextConfig()
-
-    >>> # Initializing a AltCLIPTextModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import AltCLIPTextModel, AltCLIPTextConfig
+        ...
+        >>> # Initializing a AltCLIPTextConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPTextConfig()
+        ...
+        >>> # Initializing a AltCLIPTextModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPTextModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "altclip_text_model"
 
     def __init__(
@@ -127,7 +127,7 @@ class AltCLIPTextConfig(PretrainedConfig):
     ):
         """
         Initializes an instance of the AltCLIPTextConfig class.
-        
+
         Args:
             vocab_size (int): The size of the vocabulary. Default is 250002.
             hidden_size (int): The size of the hidden layers. Default is 1024.
@@ -148,10 +148,10 @@ class AltCLIPTextConfig(PretrainedConfig):
             position_embedding_type (str): The type of position embedding. Default is 'absolute'.
             use_cache (bool): Whether to use cache. Default is True.
             project_dim (int): The dimension for project. Default is 768.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -185,7 +185,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         hidden_size (`int`, *optional*, defaults to 768):
             Dimensionality of the encoder layers and the pooler layer.
@@ -217,19 +216,19 @@ class AltCLIPVisionConfig(PretrainedConfig):
             testing).
 
     Example:
-
-    ```python
-    >>> from transformers import AltCLIPVisionConfig, AltCLIPVisionModel
-
-    >>> # Initializing a AltCLIPVisionConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPVisionConfig()
-
-    >>> # Initializing a AltCLIPVisionModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import AltCLIPVisionConfig, AltCLIPVisionModel
+        ...
+        >>> # Initializing a AltCLIPVisionConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPVisionConfig()
+        ...
+        >>> # Initializing a AltCLIPVisionModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPVisionModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "altclip_vision_model"
 
     def __init__(
@@ -251,7 +250,7 @@ class AltCLIPVisionConfig(PretrainedConfig):
     ):
         """
         Initializes an instance of the AltCLIPVisionConfig class.
-        
+
         Args:
             self (AltCLIPVisionConfig): The instance of the class itself.
             hidden_size (int, optional): The size of the hidden layer.
@@ -267,10 +266,10 @@ class AltCLIPVisionConfig(PretrainedConfig):
             attention_dropout (float, optional): The dropout rate for attention.
             initializer_range (float, optional): The range for weight initialization.
             initializer_factor (float, optional): The factor for weight initialization.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -294,14 +293,16 @@ class AltCLIPVisionConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         This method creates an instance of the AltCLIPVisionConfig class from a pretrained model.
-        
+
         Args:
             cls (object): The class object. It represents the AltCLIPVisionConfig class.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model. It can be a string or a valid path.
-        
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+                It can be a string or a valid path.
+
         Returns:
-            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. It contains the configuration details for the pretrained model.
-        
+            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the
+                pretrained model. It contains the configuration details for the pretrained model.
+
         Raises:
             None
         """
@@ -343,27 +344,27 @@ class AltCLIPConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
-
-    ```python
-    >>> from transformers import AltCLIPConfig, AltCLIPModel
-
-    >>> # Initializing a AltCLIPConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPConfig()
-
-    >>> # Initializing a AltCLIPModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-
-    >>> # We can also initialize a AltCLIPConfig from a AltCLIPTextConfig and a AltCLIPVisionConfig
-
-    >>> # Initializing a AltCLIPText and AltCLIPVision configuration
-    >>> config_text = AltCLIPTextConfig()
-    >>> config_vision = AltCLIPVisionConfig()
-
-    >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
-    ```"""
+        ```python
+        >>> from transformers import AltCLIPConfig, AltCLIPModel
+        ...
+        >>> # Initializing a AltCLIPConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPConfig()
+        ...
+        >>> # Initializing a AltCLIPModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ...
+        >>> # We can also initialize a AltCLIPConfig from a AltCLIPTextConfig and a AltCLIPVisionConfig
+        ...
+        >>> # Initializing a AltCLIPText and AltCLIPVision configuration
+        >>> config_text = AltCLIPTextConfig()
+        >>> config_vision = AltCLIPVisionConfig()
+        ...
+        >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
+        ```
+    """
     model_type = "altclip"
 
     def __init__(

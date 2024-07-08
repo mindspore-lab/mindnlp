@@ -82,19 +82,19 @@ class BloomConfig(PretrainedConfig):
             resolved in the future once the main model has been fine-tuned with TP_rank=1.
 
     Example:
-
-    ```python
-    >>> from transformers import BloomConfig, BloomModel
-
-    >>> # Initializing a Bloom configuration
-    >>> configuration = BloomConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = BloomModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BloomConfig, BloomModel
+        ...
+        >>> # Initializing a Bloom configuration
+        >>> configuration = BloomConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = BloomModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bloom"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -142,7 +142,7 @@ class BloomConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. The method does not return a value.
+            None.
         
         Raises:
             None.

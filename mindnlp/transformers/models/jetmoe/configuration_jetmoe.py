@@ -32,7 +32,6 @@ class JetMoEConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         vocab_size (`int`, *optional*, defaults to 32000):
             Vocabulary size of the JetMoE model. Defines the number of different tokens that can be represented by the
@@ -70,18 +69,20 @@ class JetMoEConfig(PretrainedConfig):
         initializer_range (`float`, *optional*, defaults to 0.01):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
 
-    ```python
-    >>> from transformers import JetMoEModel, JetMoEConfig
-
-    >>> # Initializing a JetMoE 4B style configuration
-    >>> configuration = JetMoEConfig()
-
-    >>> # Initializing a model from the JetMoE 4B style configuration
-    >>> model = JetMoEModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import JetMoEModel, JetMoEConfig
+        ...
+        >>> # Initializing a JetMoE 4B style configuration
+        >>> configuration = JetMoEConfig()
+        ...
+        >>> # Initializing a model from the JetMoE 4B style configuration
+        >>> model = JetMoEModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "jetmoe"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -138,7 +139,7 @@ class JetMoEConfig(PretrainedConfig):
             initializer_range (float, optional): The range for weight initialization. Defaults to 0.01.
         
         Returns:
-            None. The method sets the configuration parameters for the JetMoEConfig instance.
+            None.
         
         Raises:
             None.

@@ -45,10 +45,10 @@ class MLP(nn.Cell):
             config (object): An object containing configuration settings for the MLP.
             
         Returns:
-            None. This method initializes the MLP instance with the provided parameters.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         n_embd = config.n_embd
@@ -76,19 +76,24 @@ class MLP(nn.Cell):
         Description:
             This method takes an input tensor 'x' and applies the forward pass of the MLP.
             It performs the following steps:
+
             1. Applies the activation function to the linearly transformed input tensor using the 'c_fc' layer.
             2. Passes the result through the 'c_proj' layer to obtain the final output.
             3. Applies dropout to the output tensor to prevent overfitting.
-        
+
             The forward pass of the MLP is defined as:
-            h = self.act(self.c_fc(x))
-            h2 = self.c_proj(h)
-            return self.dropout(h2)
-        
+                ```python
+                >>> h = self.act(self.c_fc(x))
+                >>> h2 = self.c_proj(h)
+                >>> return self.dropout(h2)
+                ```
+
         Example:
-            mlp = MLP()
-            input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
-            mlp.construct(input_tensor)
+            ```python
+            >>> mlp = MLP()
+            >>> input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
+            >>> mlp.construct(input_tensor)
+            ```
         """
         h = self.act(self.c_fc(x))
         h2 = self.c_proj(h)
@@ -102,20 +107,20 @@ class Attention(nn.Cell):
     def __init__(self, nx, n_positions, config, scale=False):
         """
         Initializes an instance of the Attention class.
-        
+
         Args:
             self: The instance of the class.
             nx (int): The number of input units.
             n_positions (int): The number of positions to attend.
             config: The configuration object.
             scale (bool): Indicates whether to scale the attention scores. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If `nx` is not divisible by `config.n_head`.
-        
+
         """
         super().__init__()
         n_state = nx  # in Attention: n_state=768 (nx=n_embd)
@@ -158,7 +163,7 @@ class Attention(nn.Cell):
     def _attn(self, q, k, v, attention_mask=None, head_mask=None):
         """
         Method _attn in the Attention class.
-        
+
         Args:
             self: Attention object. Instance of the Attention class.
             q: torch.Tensor. Query tensor.
@@ -166,10 +171,11 @@ class Attention(nn.Cell):
             v: torch.Tensor. Value tensor.
             attention_mask: torch.Tensor, optional. Mask tensor for attention scores.
             head_mask: torch.Tensor, optional. Mask tensor for heads.
-        
+
         Returns:
-            None. The method does not explicitly return any value, but it modifies the internal state of the Attention object.
-        
+            None: The method does not explicitly return any value, but it modifies the internal state of the Attention
+                object.
+
         Raises:
             None specified.
         """
@@ -210,16 +216,16 @@ class Attention(nn.Cell):
     def construct(self, x, attention_mask=None, head_mask=None):
         """
         Constructs the attention mechanism in the Attention class.
-        
+
         Args:
             self (object): The instance of the class.
             x (tensor): The input tensor to the attention mechanism.
             attention_mask (tensor, optional): An optional attention mask tensor.
             head_mask (tensor, optional): An optional head mask tensor.
-        
+
         Returns:
             tuple: A tuple containing the output tensors of the attention mechanism.
-        
+
         Raises:
             ValueError: If the dimensions of the input tensors are incompatible.
             TypeError: If the input tensors are not of the expected type.
@@ -248,16 +254,16 @@ class Block(nn.Cell):
     def __init__(self, n_positions, config, scale=False):
         """
         Initializes a new instance of the Block class.
-        
+
         Args:
             self: The instance of the class.
             n_positions (int): The number of positions.
             config: The config object.
             scale (bool, optional): Indicates whether to scale the attention weights. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -271,16 +277,16 @@ class Block(nn.Cell):
     def construct(self, x, attention_mask=None, head_mask=None):
         """
         Construct a block by applying attention, normalization, and multi-layer perceptron operations on the input tensor.
-        
+
         Args:
             self (Block): An instance of the Block class.
             x (torch.Tensor): The input tensor to be processed by the block.
             attention_mask (torch.Tensor, optional): An optional tensor used for masking the attention scores. Default is None.
             head_mask (torch.Tensor, optional): An optional tensor used for masking individual attention heads. Default is None.
-        
+
         Returns:
             tuple: A tuple containing the processed tensor and any additional outputs from the attention layer.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -331,10 +337,12 @@ class GPTModel(GPTPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a GPTModel instance with the specified configuration.
-        
+
         Args:
             self (GPTModel): The GPTModel instance to be initialized.
-            config (dict): A dictionary containing configuration parameters for the GPTModel.
+            config (dict):
+                A dictionary containing configuration parameters for the GPTModel.
+
                 - vocab_size (int): The size of the vocabulary.
                 - n_embd (int): The dimension of the token embeddings.
                 - n_positions (int): The maximum number of positions for positional embeddings.
@@ -342,10 +350,10 @@ class GPTModel(GPTPreTrainedModel):
                 - n_layer (int): The number of layers in the model.
                 - output_attentions (bool): Whether to output attention weights.
                 - output_hidden_states (bool): Whether to output hidden states.
-        
+
         Returns:
-            None. The method initializes the GPTModel instance with the provided configuration.
-        
+            None.
+
         Raises:
             None.
         """
@@ -391,23 +399,24 @@ class GPTModel(GPTPreTrainedModel):
     ):
         """
         This method constructs the GPT model based on the provided input parameters.
-        
+
         Args:
-        - self: The instance of the class.
-        - input_ids (optional): A tensor containing the input token IDs. Default is None.
-        - attention_mask (optional): A tensor specifying the attention mask. Default is None.
-        - token_type_ids (optional): A tensor containing the token type IDs. Default is None.
-        - position_ids (optional): A tensor specifying the position IDs. Default is None.
-        - head_mask (optional): A tensor representing the head mask. Default is None.
-        - inputs_embeds (optional): A tensor containing the input embeddings. Default is None.
-        
+            self: The instance of the class.
+            input_ids (optional): A tensor containing the input token IDs. Default is None.
+            attention_mask (optional): A tensor specifying the attention mask. Default is None.
+            token_type_ids (optional): A tensor containing the token type IDs. Default is None.
+            position_ids (optional): A tensor specifying the position IDs. Default is None.
+            head_mask (optional): A tensor representing the head mask. Default is None.
+            inputs_embeds (optional): A tensor containing the input embeddings. Default is None.
+
         Returns:
-        - hidden_states: A tensor representing the final hidden states of the model.
-        - all_hidden_states: A tuple containing all hidden states from intermediate layers.
-        - all_attentions: A tuple containing all attention weights from intermediate layers.
-        
+            hidden_states: A tensor representing the final hidden states of the model.
+            all_hidden_states: A tuple containing all hidden states from intermediate layers.
+            all_attentions: A tuple containing all attention weights from intermediate layers.
+
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously, if neither input_ids nor inputs_embeds are specified, or for other specific conditions within the method.
+            ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously,
+                if neither input_ids nor inputs_embeds are specified, or for other specific conditions within the method.
         """
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
@@ -472,18 +481,20 @@ class GPTLMHeadModel(GPTPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the GPTLMHeadModel class.
-        
+
         Args:
             self: The instance of the class.
-            config (obj): The configuration object containing various settings for the model.
+            config (obj):
+                The configuration object containing various settings for the model.
+
                 - This parameter is required.
                 - Type: Custom object.
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -516,26 +527,43 @@ class GPTLMHeadModel(GPTPreTrainedModel):
     ):
         """
         Constructs the GPTLMHeadModel.
-        
+
         Args:
             self (GPTLMHeadModel): The instance of the GPTLMHeadModel class.
-            input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length) containing the input IDs. Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) containing the attention mask. Defaults to None.
-            token_type_ids (torch.Tensor, optional): The token type IDs tensor of shape (batch_size, sequence_length) containing the token type IDs. Defaults to None.
-            position_ids (torch.Tensor, optional): The position IDs tensor of shape (batch_size, sequence_length) containing the position IDs. Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_heads, sequence_length, sequence_length) containing the head mask. Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing the input embeddings. Defaults to None.
-            labels (torch.Tensor, optional): The labels tensor of shape (batch_size, sequence_length) containing the labels. Defaults to None.
-        
+            input_ids (torch.Tensor, optional):
+                The input tensor of shape (batch_size, sequence_length) containing the input IDs. Defaults to None.
+            attention_mask (torch.Tensor, optional):
+                The attention mask tensor of shape (batch_size, sequence_length) containing the attention mask.
+                Defaults to None.
+            token_type_ids (torch.Tensor, optional):
+                The token type IDs tensor of shape (batch_size, sequence_length) containing the token type IDs.
+                Defaults to None.
+            position_ids (torch.Tensor, optional):
+                The position IDs tensor of shape (batch_size, sequence_length) containing the position IDs.
+                Defaults to None.
+            head_mask (torch.Tensor, optional):
+                The head mask tensor of shape (num_heads, sequence_length, sequence_length) containing the head mask.
+                Defaults to None.
+            inputs_embeds (torch.Tensor, optional):
+                The input embeddings tensor of shape (batch_size, sequence_length, hidden_size)
+                containing the input embeddings. Defaults to None.
+            labels (torch.Tensor, optional):
+                The labels tensor of shape (batch_size, sequence_length) containing the labels. Defaults to None.
+
         Returns:
-            tuple: A tuple containing the following elements:
-                - lm_logits (torch.Tensor): The logits tensor of shape (batch_size, sequence_length, vocab_size) representing the language model predictions.
+            tuple:
+                A tuple containing the following elements:
+
+                - lm_logits (torch.Tensor): The logits tensor of shape (batch_size, sequence_length, vocab_size)
+                representing the language model predictions.
                 - transformer_outputs (tuple): A tuple containing the transformer outputs.
-                    - last_hidden_state (torch.Tensor): The last hidden state of shape (batch_size, sequence_length, hidden_size) from the transformer.
+
+                    - last_hidden_state (torch.Tensor):
+                    The last hidden state of shape (batch_size, sequence_length, hidden_size) from the transformer.
                     - past_key_values (tuple, optional): A tuple containing the past key values.
                     - hidden_states (tuple, optional): A tuple containing the hidden states.
                     - attentions (tuple, optional): A tuple containing the attentions.
-        
+
         Raises:
             None.
         """
@@ -573,14 +601,14 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
     """
     def __init__(self, config):
         """Initializes a GPTDoubleHeadsModel instance.
-        
+
         Args:
             self: The GPTDoubleHeadsModel instance.
             config: An instance of the GPTConfig class that holds the configuration parameters.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -618,29 +646,41 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
     ):
         """
         Constructs the GPTDoubleHeadsModel.
-        
+
         Args:
             self (GPTDoubleHeadsModel): The instance of the GPTDoubleHeadsModel class.
-            input_ids (Tensor, optional): The input tensor of shape ``(batch_size, sequence_length)``. It contains the token indices. Defaults to None.
-            attention_mask (Tensor, optional): The attention mask tensor of shape ``(batch_size, sequence_length)``. It is used to specify which tokens should be attended to and which should not. Defaults to
-None.
-            token_type_ids (Tensor, optional): The token type tensor of shape ``(batch_size, sequence_length)``. It is used to indicate the token types (e.g., sentence A and sentence B) in the input sequence.
-Defaults to None.
-            position_ids (Tensor, optional): The position indices tensor of shape ``(batch_size, sequence_length)``. It is used to specify the position of each token in the input sequence. Defaults to None.
-            head_mask (Tensor, optional): The head mask tensor of shape ``(num_layers, num_heads)``. It is used to mask certain heads of the attention modules. Defaults to None.
-            inputs_embeds (Tensor, optional): The input embeddings tensor of shape ``(batch_size, sequence_length, hidden_size)``. It contains the embeddings of the input sequence instead of using
-``input_ids``. Defaults to None.
-            mc_token_ids (Tensor, optional): The multiple-choice token indices tensor of shape ``(batch_size, num_choices)``. It contains the token indices for the multiple-choice inputs. Defaults to None.
-            labels (Tensor, optional): The labels tensor of shape ``(batch_size, sequence_length)``. It contains the token indices to predict in the language modeling task. Defaults to None.
-            mc_labels (Tensor, optional): The multiple-choice labels tensor of shape ``(batch_size,)``. It contains the indices of the correct multiple-choice answers. Defaults to None.
-        
+            input_ids (Tensor, optional): The input tensor of shape ``(batch_size, sequence_length)``.
+                It contains the token indices. Defaults to None.
+            attention_mask (Tensor, optional): The attention mask tensor of shape ``(batch_size, sequence_length)``.
+                It is used to specify which tokens should be attended to and which should not. Defaults to None.
+            token_type_ids (Tensor, optional): The token type tensor of shape ``(batch_size, sequence_length)``.
+                It is used to indicate the token types (e.g., sentence A and sentence B) in the input sequence.
+                Defaults to None.
+            position_ids (Tensor, optional): The position indices tensor of shape ``(batch_size, sequence_length)``.
+                It is used to specify the position of each token in the input sequence. Defaults to None.
+            head_mask (Tensor, optional): The head mask tensor of shape ``(num_layers, num_heads)``.
+                It is used to mask certain heads of the attention modules. Defaults to None.
+            inputs_embeds (Tensor, optional): The input embeddings tensor of shape
+                ``(batch_size, sequence_length, hidden_size)``. It contains the embeddings of the input sequence
+                instead of using ``input_ids``. Defaults to None.
+            mc_token_ids (Tensor, optional): The multiple-choice token indices tensor of shape
+                ``(batch_size, num_choices)``. It contains the token indices for the multiple-choice inputs.
+                Defaults to None.
+            labels (Tensor, optional): The labels tensor of shape ``(batch_size, sequence_length)``.
+                It contains the token indices to predict in the language modeling task. Defaults to None.
+            mc_labels (Tensor, optional): The multiple-choice labels tensor of shape ``(batch_size,)``.
+                It contains the indices of the correct multiple-choice answers. Defaults to None.
+
         Returns:
-            output (Tuple): A tuple containing the following elements:
-                - lm_logits (Tensor): The language modeling logits tensor of shape ``(batch_size, sequence_length, config.vocab_size)``.
+            output (Tuple):
+                A tuple containing the following elements:
+
+                - lm_logits (Tensor): The language modeling logits tensor of shape
+                ``(batch_size, sequence_length, config.vocab_size)``.
                 - mc_logits (Tensor): The multiple-choice logits tensor of shape ``(batch_size, num_choices)``.
                 - hidden_states (Tuple): A tuple of hidden states from the transformer.
                 - attentions (Tuple): A tuple of attention weights from the transformer.
-        
+
         Raises:
             None.
         """
@@ -685,22 +725,25 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTForSequenceClassification class.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration settings for the model.
+            config (object):
+                An object containing configuration settings for the model.
+
                 - Type: dict
                 - Purpose: Contains the necessary parameters for configuring the model.
                 - Restrictions: Must include the following keys:
+
                     - num_labels: The number of labels for classification.
                     - pad_token_id: The token ID used for padding sequences.
                     - problem_type: The type of problem to solve (optional).
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - None. This method does not raise any exceptions.
+            None. This method does not raise any exceptions.
         """
         super().__init__(config)
         self.config = config
@@ -734,11 +777,12 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         labels = None,
     ):
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in
-            `[0, ...,config.num_labels - 1]`.
-            If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in
+                `[0, ...,config.num_labels - 1]`.
+                If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         transformer_outputs = self.transformer(
             input_ids,

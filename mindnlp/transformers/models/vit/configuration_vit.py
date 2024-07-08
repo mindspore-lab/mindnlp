@@ -66,19 +66,19 @@ class ViTConfig(PretrainedConfig):
            Factor to increase the spatial resolution by in the decoder head for masked image modeling.
 
     Example:
-
-    ```python
-    >>> from mindnlp.transformers import ViTConfig, ViTModel
-
-    >>> # Initializing a ViT vit-base-patch16-224 style configuration
-    >>> configuration = ViTConfig()
-
-    >>> # Initializing a model (with random weights) from the vit-base-patch16-224 style configuration
-    >>> model = ViTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from mindnlp.transformers import ViTConfig, ViTModel
+        ...
+        >>> # Initializing a ViT vit-base-patch16-224 style configuration
+        >>> configuration = ViTConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the vit-base-patch16-224 style configuration
+        >>> model = ViTModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "vit"
 

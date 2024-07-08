@@ -770,10 +770,11 @@ class MobileViTForImageClassification(MobileViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutputWithNoAttention]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss). If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss). If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -951,34 +952,36 @@ class MobileViTForSemanticSegmentation(MobileViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, SemanticSegmenterOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, height, width)`, *optional*):
-            Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, height, width)`, *optional*):
+                Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
 
         Returns:
+            `Union[tuple, SemanticSegmenterOutput]`
 
-        Examples:
-
-        ```python
-        >>> import requests
-        >>> import torch
-        >>> from PIL import Image
-        >>> from transformers import AutoImageProcessor, MobileViTForSemanticSegmentation
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("apple/deeplabv3-mobilevit-small")
-        >>> model = MobileViTForSemanticSegmentation.from_pretrained("apple/deeplabv3-mobilevit-small")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-
-        >>> with torch.no_grad():
-        ...     outputs = model(**inputs)
-
-        >>> # logits are of shape (batch_size, num_labels, height, width)
-        >>> logits = outputs.logits
-        ```"""
+        Example:
+            ```python
+            >>> import requests
+            >>> import torch
+            >>> from PIL import Image
+            >>> from transformers import AutoImageProcessor, MobileViTForSemanticSegmentation
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> image_processor = AutoImageProcessor.from_pretrained("apple/deeplabv3-mobilevit-small")
+            >>> model = MobileViTForSemanticSegmentation.from_pretrained("apple/deeplabv3-mobilevit-small")
+            ...
+            >>> inputs = image_processor(images=image, return_tensors="pt")
+            ...
+            >>> with torch.no_grad():
+            ...     outputs = model(**inputs)
+            ...
+            >>> # logits are of shape (batch_size, num_labels, height, width)
+            >>> logits = outputs.logits
+            ```
+        """
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )

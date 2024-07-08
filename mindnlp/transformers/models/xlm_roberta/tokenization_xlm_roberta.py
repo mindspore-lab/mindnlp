@@ -115,13 +115,12 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
-
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            BPE-dropout.
 
     Attributes:
         sp_model (`SentencePieceProcessor`):
@@ -147,26 +146,27 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initialize XLMRobertaTokenizer class.
-        
+
         Args:
-        - self: The instance of the XLMRobertaTokenizer class.
-        - vocab_file (str): Path to the vocabulary file.
-        - bos_token (str, optional): Beginning of sentence token (default: '<s>').
-        - eos_token (str, optional): End of sentence token (default: '</s>').
-        - sep_token (str, optional): Separator token (default: '</s>').
-        - cls_token (str, optional): Classification token (default: '<s>').
-        - unk_token (str, optional): Token for unknown words (default: '<unk>').
-        - pad_token (str, optional): Padding token (default: '<pad>').
-        - mask_token (str, optional): Mask token (default: '<mask>').
-        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePiece model (default: None).
-        
+            self: The instance of the XLMRobertaTokenizer class.
+            vocab_file (str): Path to the vocabulary file.
+            bos_token (str, optional): Beginning of sentence token (default: '<s>').
+            eos_token (str, optional): End of sentence token (default: '</s>').
+            sep_token (str, optional): Separator token (default: '</s>').
+            cls_token (str, optional): Classification token (default: '<s>').
+            unk_token (str, optional): Token for unknown words (default: '<unk>').
+            pad_token (str, optional): Padding token (default: '<pad>').
+            mask_token (str, optional): Mask token (default: '<mask>').
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePiece model
+                (default: None).
+
         Returns:
-        None. This method initializes the XLMRobertaTokenizer instance.
-        
+            None.
+
         Raises:
-        - TypeError: If mask_token is not a string.
-        - FileNotFoundError: If the vocab_file path is invalid or the file is not found.
-        - RuntimeError: If there is an issue loading the SentencePiece model.
+            TypeError: If mask_token is not a string.
+            FileNotFoundError: If the vocab_file path is invalid or the file is not found.
+            RuntimeError: If there is an issue loading the SentencePiece model.
         """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, special=True) if isinstance(mask_token, str) else mask_token
@@ -207,16 +207,18 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         Returns the state of the XLMRobertaTokenizer object for serialization.
-        
+
         Args:
             self: The XLMRobertaTokenizer object itself.
-        
+
         Returns:
-            None. The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary. The state includes a copy of the object's attributes stored in '__dict__' with some modifications.
-The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized model prototype obtained from 'self.sp_model.serialized_model_proto()'.
-        
+            state: The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary.
+                The state includes a copy of the object's attributes stored in '__dict__' with some modifications.
+                The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized
+                model prototype obtained from 'self.sp_model.serialized_model_proto()'.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -226,21 +228,21 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
     def __setstate__(self, d):
         """
         __setstate__
-        
+
         This method is used to set the state of the XLMRobertaTokenizer object based on the provided dictionary 'd'.
-        
+
         Args:
             self (XLMRobertaTokenizer): The instance of the XLMRobertaTokenizer class.
             d (dict): A dictionary containing the state information to be set for the XLMRobertaTokenizer.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided 'd' is not a valid dictionary.
-            - AttributeError: If the 'sp_model_kwargs' attribute is not found in the instance.
-            - ValueError: If the 'sp_model_proto' is not valid or cannot be loaded.
-            - Other exceptions: Any other exceptions raised during the execution of the method.
+            TypeError: If the provided 'd' is not a valid dictionary.
+            AttributeError: If the 'sp_model_kwargs' attribute is not found in the instance.
+            ValueError: If the 'sp_model_proto' is not valid or cannot be loaded.
+            Other exceptions: Any other exceptions raised during the execution of the method.
         """
         self.__dict__ = d
 
@@ -331,13 +333,14 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
     def vocab_size(self):
         """
         Returns the size of the vocabulary used by the XLMRobertaTokenizer.
-        
+
         Args:
             self (XLMRobertaTokenizer): The instance of the XLMRobertaTokenizer class.
-        
+
         Returns:
-            int: The size of the vocabulary used by the tokenizer. This value is calculated by adding the length of the sp_model attribute, the fairseq_offset attribute, and 1.
-        
+            int: The size of the vocabulary used by the tokenizer. This value is calculated by adding the length of
+                the sp_model attribute, the fairseq_offset attribute, and 1.
+
         Raises:
             None.
         """
@@ -346,15 +349,15 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
     def get_vocab(self):
         """
         Method to retrieve the vocabulary mapping from token indices to tokens in the XLMRobertaTokenizer class.
-        
+
         Args:
             self (XLMRobertaTokenizer): The instance of the XLMRobertaTokenizer class.
                 It represents the tokenizer object.
-                
+
         Returns:
             dict: A dictionary containing the vocabulary mapping from token indices to tokens.
                 The keys are the token indices and the values are the corresponding tokens.
-                
+
         Raises:
             None.
         """
@@ -365,19 +368,20 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
     def _tokenize(self, text: str) -> List[str]:
         """
         Tokenizes the given text into a list of strings using the XLMRobertaTokenizer.
-        
+
         Args:
             self: An instance of the XLMRobertaTokenizer class.
             text (str): The input text to be tokenized.
-        
+
         Returns:
             List[str]: A list of strings representing the tokenized text.
-        
+
         Raises:
             None.
-        
-        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input. It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned
-as a list of strings.
+
+        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input.
+        It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned
+        as a list of strings.
         """
         # TODO check if the t5/llama PR also applies here
         return self.sp_model.encode(text, out_type=str)

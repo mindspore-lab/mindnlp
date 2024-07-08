@@ -81,7 +81,8 @@ class TinyBertSelfAttention(nn.Cell):
             None.
         
         Raises:
-            ValueError: If the hidden size specified in the configuration is not a multiple of the number of attention heads.
+            ValueError: If the hidden size specified in the configuration is not a multiple of the number of
+                attention heads.
         
         """
         super().__init__()
@@ -173,10 +174,10 @@ class TinyBertAttention(nn.Cell):
                 This parameter is required for configuring the attention mechanism.
                 
         Returns:
-            None. This method initializes the TinyBertSelfAttention and TinyBertSelfOutput components within the TinyBertAttention instance.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
 
@@ -213,16 +214,18 @@ class TinyBertSelfOutput(nn.Cell):
         
         Args:
             self (object): The instance of the TinyBertSelfOutput class.
-            config (object): An object containing configuration parameters for the model.
+            config (object):
+                An object containing configuration parameters for the model.
+
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                
+
         Returns:
-            None. This method initializes the TinyBertSelfOutput class and does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the configuration parameters are missing or incorrect.
-            - TypeError: If the provided configuration is not of the expected type.
+            ValueError: If the configuration parameters are missing or incorrect.
+            TypeError: If the provided configuration is not of the expected type.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -232,7 +235,7 @@ class TinyBertSelfOutput(nn.Cell):
     def construct(self, hidden_states, input_tensor):
         """
         Constructs the output of the TinyBertSelf layer.
-        
+
         Args:
             self (TinyBertSelfOutput): An instance of the TinyBertSelfOutput class.
             hidden_states (torch.Tensor): A tensor representing the hidden states.
@@ -241,13 +244,13 @@ class TinyBertSelfOutput(nn.Cell):
             input_tensor (torch.Tensor): A tensor representing the input tensor.
                 The shape of the tensor is (batch_size, sequence_length, hidden_size).
                 It serves as the residual connection for the hidden states.
-        
+
         Returns:
             torch.Tensor: A tensor representing the output of the TinyBertSelf layer.
-            The shape of the tensor is (batch_size, sequence_length, hidden_size).
-        
+                The shape of the tensor is (batch_size, sequence_length, hidden_size).
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -262,22 +265,26 @@ class TinyBertIntermediate(nn.Cell):
     def __init__(self, config, intermediate_size=-1):
         """
         This method initializes a TinyBertIntermediate instance.
-        
+
         Args:
             self: The instance of the TinyBertIntermediate class.
-            config: An object that holds the configuration settings for the TinyBertIntermediate model.
-                    Type: object
-                    Purpose: Specifies the configuration settings for the model.
-                    Restrictions: None
-        
-            intermediate_size: An optional integer representing the intermediate size.
-                    Type: int
-                    Purpose: Specifies the size of the intermediate layer.
-                    Restrictions: Must be a non-negative integer. If not provided, the default value is -1.
-        
+            config:
+                An object that holds the configuration settings for the TinyBertIntermediate model.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the model.
+                - Restrictions: None
+
+            intermediate_size:
+                An optional integer representing the intermediate size.
+
+                - Type: int
+                - Purpose: Specifies the size of the intermediate layer.
+                - Restrictions: Must be a non-negative integer. If not provided, the default value is -1.
+
         Returns:
-            None. The method initializes the TinyBertIntermediate instance.
-        
+            None.
+
         Raises:
             TypeError: If the provided 'config' parameter is not of type 'object'.
             ValueError: If the 'intermediate_size' parameter is provided and is a negative integer.
@@ -296,15 +303,15 @@ class TinyBertIntermediate(nn.Cell):
     def construct(self, hidden_states):
         """
         This method constructs the intermediate layer of a TinyBERT model.
-        
+
         Args:
             self (object): The instance of the TinyBertIntermediate class.
             hidden_states (tensor): The input hidden states to be processed by the method.
                 Should be a tensor representing the hidden states of the model.
-                
+
         Returns:
-            None. The processed hidden states are returned as the output of the method.
-        
+            hidden_states: The processed hidden states are returned as the output of the method.
+
         Raises:
             None.
         """
@@ -320,15 +327,15 @@ class TinyBertOutput(nn.Cell):
     def __init__(self, config, intermediate_size=-1):
         """
         Initializes an instance of the TinyBertOutput class.
-        
+
         Args:
             self (TinyBertOutput): The instance of the class.
             config: A configuration object containing various parameters.
             intermediate_size (int, optional): The size of the intermediate layer. Defaults to -1.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -344,23 +351,28 @@ class TinyBertOutput(nn.Cell):
     def construct(self, hidden_states, input_tensor):
         """
         Method 'construct' in the class 'TinyBertOutput'.
-        
+
         Args:
             self (object): Instance of the 'TinyBertOutput' class.
-            hidden_states (object): The hidden states to be processed.
-                Type: Tensor
-                Purpose: Represents the hidden states that need to be transformed.
-                Restrictions: Should be a valid tensor object.
-            input_tensor (object): The input tensor to be combined with the hidden states.
-                Type: Tensor
-                Purpose: Represents the input tensor to be added to the hidden states.
-                Restrictions: Should be a valid tensor object.
-        
+            hidden_states (object):
+                The hidden states to be processed.
+
+                - Type: Tensor
+                - Purpose: Represents the hidden states that need to be transformed.
+                - Restrictions: Should be a valid tensor object.
+            input_tensor (object):
+                The input tensor to be combined with the hidden states.
+
+                - Type: Tensor
+                - Purpose: Represents the input tensor to be added to the hidden states.
+                - Restrictions: Should be a valid tensor object.
+
         Returns:
-            None: The method does not explicitly return any value. The transformation is applied to 'hidden_states' in-place.
-        
+            None:
+                The transformation is applied to 'hidden_states' in-place.
+
         Raises:
-            None
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -375,14 +387,15 @@ class TinyBertLayer(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertLayer class.
-        
+
         Args:
             self: The object itself.
-            config: An instance of the configuration class that holds various hyperparameters and settings for the TinyBertLayer.
-        
+            config: An instance of the configuration class that holds various hyperparameters and settings
+                for the TinyBertLayer.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -394,20 +407,25 @@ class TinyBertLayer(nn.Cell):
     def construct(self, hidden_states, attention_mask):
         """
         Constructs a TinyBertLayer by applying attention mechanism and generating layer output.
-        
+
         Args:
             self (object): The instance of the TinyBertLayer class.
-            hidden_states (object): The input hidden states for the layer, typically a tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (object): The attention mask for the input hidden states, typically a tensor of shape (batch_size, 1, sequence_length, sequence_length) with 0s for padding tokens and 1s for
-non-padding tokens.
-        
+            hidden_states (object): The input hidden states for the layer, typically a tensor of shape
+                (batch_size, sequence_length, hidden_size).
+            attention_mask (object): The attention mask for the input hidden states, typically a tensor of shape
+                (batch_size, 1, sequence_length, sequence_length) with 0s for padding tokens and 1s for non-padding
+                tokens.
+
         Returns:
-            tuple: A tuple containing the layer output (typically a tensor of shape (batch_size, sequence_length, hidden_size)) and the attention scores (layer_att) generated during the attention computation.
-        
+            tuple: A tuple containing the layer output (typically a tensor of shape
+                (batch_size, sequence_length, hidden_size)) and the attention scores (layer_att) generated during
+                the attention computation.
+
         Raises:
-            - ValueError: If the shape of the hidden_states or attention_mask is not compatible with the expected input shapes.
-            - TypeError: If the input data types are not compatible with the expected types.
-            - RuntimeError: If there is an issue during the computation of attention or output layers.
+            ValueError: If the shape of the hidden_states or attention_mask is not compatible with the expected
+                input shapes.
+            TypeError: If the input data types are not compatible with the expected types.
+            RuntimeError: If there is an issue during the computation of attention or output layers.
         """
         attention_output, layer_att = self.attention(
             hidden_states, attention_mask)
@@ -424,17 +442,18 @@ class TinyBertEncoder(nn.Cell):
     def __init__(self, config):
         """
         Initializes a TinyBertEncoder object with the given configuration.
-        
+
         Args:
             self (TinyBertEncoder): The instance of the TinyBertEncoder class.
             config (object): The configuration object containing parameters for the TinyBertEncoder.
                 This object must have the following attributes:
+
                 - num_hidden_layers (int): The number of hidden layers for the encoder.
                 - Other attributes required by the TinyBertLayer constructor.
-        
+
         Returns:
-            None. This method initializes the TinyBertEncoder object.
-        
+            None.
+
         Raises:
             None.
         """
@@ -445,19 +464,21 @@ class TinyBertEncoder(nn.Cell):
     def construct(self, hidden_states, attention_mask):
         """
         Method 'construct' in the class 'TinyBertEncoder'.
-        
+
         Args:
-        - self (object): The instance of the 'TinyBertEncoder' class.
-        - hidden_states (object): The hidden states to be processed by the encoder.
-        - attention_mask (object): The attention mask to apply during encoding.
-        
+            self (object): The instance of the 'TinyBertEncoder' class.
+            hidden_states (object): The hidden states to be processed by the encoder.
+            attention_mask (object): The attention mask to apply during encoding.
+
         Returns:
-        - Tuple: Two lists containing the encoder layers and their respective attentions.
-          - List: 'all_encoder_layers' - List of all encoder layers processed during encoding.
-          - List: 'all_encoder_atts' - List of attention values for each encoder layer.
-        
+            Tuple:
+                Two lists containing the encoder layers and their respective attentions.
+
+                - List: 'all_encoder_layers' - List of all encoder layers processed during encoding.
+                - List: 'all_encoder_atts' - List of attention values for each encoder layer.
+
         Raises:
-        None.
+            None.
         """
         all_encoder_layers = []
         all_encoder_atts = []
@@ -478,15 +499,17 @@ class TinyBertPooler(nn.Cell):
     def __init__(self, config):
         """
         Initialize the TinyBertPooler class.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration settings.
+            config (object):
+                An object containing configuration settings.
+
                 - hidden_size (int): The size of the hidden layer.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -498,14 +521,15 @@ class TinyBertPooler(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the TinyBertPooler by calculating the pooled output from the given hidden states.
-        
+
         Args:
             self (TinyBertPooler): An instance of the TinyBertPooler class.
             hidden_states (List[Tensor]): A list of hidden states from the TinyBERT model. Each hidden state is a tensor.
-            
+
         Returns:
-            Tensor: The pooled output tensor obtained after processing the hidden states through dense layers and activation function.
-        
+            Tensor: The pooled output tensor obtained after processing the hidden states through dense layers and
+                activation function.
+
         Raises:
             TypeError: If the input hidden_states is not a list of tensors.
             ValueError: If the hidden_states list is empty or does not contain valid tensors.
@@ -528,21 +552,24 @@ class TinyBertPredictionHeadTransform(nn.Cell):
     def __init__(self, config):
         """
         Initializes a TinyBertPredictionHeadTransform object.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration parameters for the TinyBertPredictionHeadTransform.
+            config (object):
+                An object containing configuration parameters for the TinyBertPredictionHeadTransform.
+
                 - hidden_size (int): The size of the hidden layer.
-                - hidden_act (str or function): The activation function to be used for the hidden layer. If it's a string, it should correspond to a key in ACT2FN dictionary.
+                - hidden_act (str or function): The activation function to be used for the hidden layer.
+                If it's a string, it should correspond to a key in ACT2FN dictionary.
                 - epsilon (float): A small value added to the variance in LayerNorm to prevent division by zero.
-        
+
         Returns:
-            None. This method initializes the TinyBertPredictionHeadTransform object with the specified configuration parameters.
-        
+            None.
+
         Raises:
-            - TypeError: If the config.hidden_act is not a string or a function.
-            - ValueError: If the config.hidden_act string does not correspond to a valid key in ACT2FN dictionary.
-            - ValueError: If the config.hidden_size is not an integer value.
+            TypeError: If the config.hidden_act is not a string or a function.
+            ValueError: If the config.hidden_act string does not correspond to a valid key in ACT2FN dictionary.
+            ValueError: If the config.hidden_size is not an integer value.
         """
         super().__init__()
         # Need to unty it when we separate the dimensions of hidden and emb
@@ -556,18 +583,19 @@ class TinyBertPredictionHeadTransform(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the TinyBertPredictionHeadTransform.
-        
-        This method takes in the hidden states and performs a series of transformations to predict the next token in the sequence.
-        
+
+        This method takes in the hidden states and performs a series of transformations to predict the next token
+        in the sequence.
+
         Args:
             self (TinyBertPredictionHeadTransform): An instance of the TinyBertPredictionHeadTransform class.
             hidden_states (tensor): The hidden states obtained from the previous layer.
-            
+
         Returns:
-            None: This method does not return any value.
-            
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -582,17 +610,18 @@ class TinyBertLMPredictionHead(nn.Cell):
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes the TinyBertLMPredictionHead.
-        
+
         Args:
             self: The object itself.
             config: A dictionary containing configuration parameters for the TinyBertPredictionHeadTransform.
             bert_model_embedding_weights: A tensor representing the weights of the BERT model's embedding layer.
-        
+
         Returns:
-            None. This method initializes the TinyBertLMPredictionHead and does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the provided `config` is not a dictionary or if `bert_model_embedding_weights` is not a tensor.
+            ValueError: If the provided `config` is not a dictionary or if `bert_model_embedding_weights`
+                is not a tensor.
             RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__()
@@ -610,15 +639,15 @@ class TinyBertLMPredictionHead(nn.Cell):
     def construct(self, hidden_states):
         """
         Method to construct the prediction head for TinyBERT LM.
-        
+
         Args:
             self (object): Instance of the TinyBertLMPredictionHead class.
             hidden_states (tensor): Hidden states obtained from the TinyBERT model.
                 The tensor should have the shape [batch_size, sequence_length, hidden_size].
-                
+
         Returns:
-            None. This method modifies the hidden_states in place to construct the LM prediction head.
-            
+            None: This method modifies the hidden_states in place to construct the LM prediction head.
+
         Raises:
             None.
         """
@@ -634,15 +663,17 @@ class TinyBertOnlyMLMHead(nn.Cell):
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes an instance of the TinyBertOnlyMLMHead class.
-        
+
         Args:
             self: The object instance.
-            config: A configuration object containing the model's hyperparameters and settings. This parameter is of type 'config' and is required.
-            bert_model_embedding_weights: The pre-trained BERT model's embedding weights. This parameter is of type 'Tensor' and is required.
-        
+            config: A configuration object containing the model's hyperparameters and settings.
+                This parameter is of type 'config' and is required.
+            bert_model_embedding_weights: The pre-trained BERT model's embedding weights.
+                This parameter is of type 'Tensor' and is required.
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -652,17 +683,18 @@ class TinyBertOnlyMLMHead(nn.Cell):
 
     def construct(self, sequence_output):
         """
-        This method constructs the prediction scores based on the provided sequence output for the TinyBertOnlyMLMHead class.
-        
+        This method constructs the prediction scores based on the provided sequence output for the
+        TinyBertOnlyMLMHead class.
+
         Args:
             self (object): The instance of the TinyBertOnlyMLMHead class.
-            sequence_output (tensor): The output tensor representing the sequence to be used for prediction scores calculation. 
-                It should be of type tensor and must contain the sequence information for prediction.
-        
+            sequence_output (tensor): The output tensor representing the sequence to be used for prediction scores
+                calculation. It should be of type tensor and must contain the sequence information for prediction.
+
         Returns:
             prediction_scores (tensor): The prediction scores tensor calculated based on the provided sequence_output.
                 It represents the scores for predicting the masked words in the input sequence.
-        
+
         Raises:
             No specific exceptions are raised by this method.
         """
@@ -677,14 +709,15 @@ class TinyBertOnlyNSPHead(nn.Cell):
     def __init__(self, config):
         """
         Initializes the TinyBertOnlyNSPHead class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing the configuration settings for the TinyBertOnlyNSPHead. It must have the attribute 'hidden_size' to specify the size of the hidden layer. 
-        
+            config: An object containing the configuration settings for the TinyBertOnlyNSPHead.
+                It must have the attribute 'hidden_size' to specify the size of the hidden layer.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -694,19 +727,20 @@ class TinyBertOnlyNSPHead(nn.Cell):
     def construct(self, pooled_output):
         """
         Method: construct
-        
+
         Description:
-        This method calculates the sequence relationship score using the provided pooled_output.
-        
+            This method calculates the sequence relationship score using the provided pooled_output.
+
         Args:
-        - self: (object) The instance of the class TinyBertOnlyNSPHead.
-        - pooled_output: (object) The pooled output from the TinyBERT model.
-        
+            self: (object) The instance of the class TinyBertOnlyNSPHead.
+            pooled_output: (object) The pooled output from the TinyBERT model.
+
         Returns:
-        - seq_relationship_score: (object) The calculated sequence relationship score based on the provided pooled_output.
-        
+            seq_relationship_score: (object) The calculated sequence relationship score based on the
+                provided pooled_output.
+
         Raises:
-        - None
+            None
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -719,15 +753,15 @@ class TinyBertPreTrainingHeads(nn.Cell):
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes the TinyBertPreTrainingHeads class.
-        
+
         Args:
             self (object): The instance of the class.
             config (object): Configuration object containing settings for the model.
             bert_model_embedding_weights (ndarray): The weights for the BERT model's embeddings.
-        
+
         Returns:
-            None. This method initializes the TinyBertPreTrainingHeads class.
-        
+            None.
+
         Raises:
             ValueError: If the config parameter is not provided or is of incorrect type.
             ValueError: If the bert_model_embedding_weights parameter is not provided or is not a numpy array.
@@ -740,17 +774,23 @@ class TinyBertPreTrainingHeads(nn.Cell):
     def construct(self, sequence_output, pooled_output):
         """
         This method constructs prediction scores and sequence relationship scores for pre-training heads in TinyBert.
-        
+
         Args:
             self (object): The instance of the TinyBertPreTrainingHeads class.
-            sequence_output (object): The output sequence from the TinyBert model, representing the contextualized representations of tokens.
-            pooled_output (object): The output at the pooled layer of the TinyBert model, representing the aggregated representation of the entire input sequence.
-        
+            sequence_output (object): The output sequence from the TinyBert model,
+                representing the contextualized representations of tokens.
+            pooled_output (object): The output at the pooled layer of the TinyBert model,
+                representing the aggregated representation of the entire input sequence.
+
         Returns:
-            tuple: A tuple containing the prediction scores and sequence relationship score. 
-            - prediction_scores (object): The prediction scores for the pre-training task based on the sequence_output.
-            - seq_relationship_score (object): The sequence relationship score for the pre-training task based on the pooled_output.
-        
+            tuple:
+                A tuple containing the prediction scores and sequence relationship score.
+
+                - prediction_scores (object): The prediction scores for the pre-training task based on the
+                sequence_output.
+                - seq_relationship_score (object): The sequence relationship score for the pre-training task based on
+                the pooled_output.
+
         Raises:
             None
         """
@@ -770,18 +810,18 @@ class TinyBertPreTrainedModel(PreTrainedModel):
     def __init__(self, config):
         """
         Initializes a TinyBertPreTrainedModel instance.
-        
+
         Args:
             self: The instance of the TinyBertPreTrainedModel class.
-            config (TinyBertConfig): An instance of the TinyBertConfig class that holds the configuration settings for the model.
-                                    It should be an instance of TinyBertConfig.
-            
+            config (TinyBertConfig): An instance of the TinyBertConfig class that holds the configuration settings
+                for the model. It should be an instance of TinyBertConfig.
+
         Returns:
-            None. This method initializes the TinyBertPreTrainedModel instance with the provided configuration.
-        
+            None: This method initializes the TinyBertPreTrainedModel instance with the provided configuration.
+
         Raises:
             ValueError: If the config parameter is not an instance of TinyBertConfig, a ValueError is raised
-                        with a message specifying the requirement for config to be an instance of TinyBertConfig.
+                with a message specifying the requirement for config to be an instance of TinyBertConfig.
         """
         super().__init__(config)
         if not isinstance(config, TinyBertConfig):
@@ -849,20 +889,22 @@ class TinyBertModel(TinyBertPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertModel class.
-        
+
         Args:
             self: The instance of the TinyBertModel class.
-            config: A dictionary containing configuration parameters for the model.
+            config:
+                A dictionary containing configuration parameters for the model.
+
                 - Type: dict
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be a valid dictionary object.
-        
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            - ValueError: If the provided 'config' parameter is not a valid dictionary.
-            - TypeError: If any of the required components fail to initialize properly.
+            ValueError: If the provided 'config' parameter is not a valid dictionary.
+            TypeError: If any of the required components fail to initialize properly.
         """
         super().__init__(config)
         self.embeddings = TinyBertEmbeddings(config)
@@ -914,20 +956,21 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
     """
     BERT model with pre-training heads.
     This module comprises the BERT model followed by the two pre-training heads:
-        - the masked language modeling head, and
-        - the next sentence classification head.
+
+    - the masked language modeling head, and
+    - the next sentence classification head.
     """
     def __init__(self, config):
         """
         Initialize the TinyBertForPreTraining class.
-        
+
         Args:
             self (object): The instance of the TinyBertForPreTraining class.
             config (object): The configuration object containing parameters for model initialization.
-            
+
         Returns:
-            None. This method initializes the TinyBertForPreTraining class with the provided configuration.
-        
+            None.
+
         Raises:
             None.
         """
@@ -969,15 +1012,15 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
     def __init__(self, config, fit_size=768):
         """
         Initialize a TinyBertFitForPreTraining object.
-        
+
         Args:
             self (object): The instance of the class.
             config (object): The configuration object for the model.
             fit_size (int, optional): The size to fit the dense layer to. Default is 768.
-        
+
         Returns:
-            None. This method initializes the TinyBertFitForPreTraining object.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1008,14 +1051,14 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertForMaskedLM class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the configuration class, containing various hyperparameters and settings for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1057,10 +1100,12 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
     def __init__(self, config):
         """
         Initializes the TinyBertForNextSentencePrediction class.
-        
+
         Args:
             self: An instance of the TinyBertForNextSentencePrediction class.
-            config: A configuration object containing various hyperparameters and settings for the model.
+            config:
+                A configuration object containing various hyperparameters and settings for the model.
+
                 - Type: Any valid configuration object
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be a valid configuration object.
@@ -1101,16 +1146,17 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
         
         Args:
             self: The instance of the class.
-            config: A configuration object containing various settings and hyperparameters for the model. It is of type 'Config'.
+            config: A configuration object containing various settings and hyperparameters for the model.
+                It is of type 'Config'.
             num_labels: An integer representing the number of labels for sentence pair classification.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - AttributeError: If the 'config' parameter is missing required attributes.
-            - ValueError: If the 'num_labels' parameter is not a positive integer.
-            - TypeError: If the 'config' parameter is not of type 'Config'.
+            AttributeError: If the 'config' parameter is missing required attributes.
+            ValueError: If the 'num_labels' parameter is not a positive integer.
+            TypeError: If the 'config' parameter is not of type 'Config'.
         """
         super().__init__(config)
         self.num_labels = num_labels
@@ -1155,7 +1201,7 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
             fit_size (int, optional): The size of the hidden layer for fitting. Default is 768.
         
         Returns:
-            None. This method initializes the TinyBertForSequenceClassification instance.
+            None.
         
         Raises:
             TypeError: If the provided 'config' is not of the expected type.

@@ -390,15 +390,15 @@ GPTJ_INPUTS_DOCSTRING = r"""
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
         token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
-            1]`:
-
+                1]`:
+                
             - 0 corresponds to a *sentence A* token,
             - 1 corresponds to a *sentence B* token.
 
@@ -410,7 +410,7 @@ GPTJ_INPUTS_DOCSTRING = r"""
             [What are position IDs?](../glossary#position-ids)
         head_mask (`mindspore.Tensor` of shape `(num_attention_heads,)` or `(n_layer, num_attention_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
@@ -439,41 +439,39 @@ PARALLELIZE_DOCSTRING = r"""
             automatically mapped to the first device (for esoteric reasons). That means that the first device should
             have fewer attention modules mapped to it than other devices. For reference, the GPT-J models have the
             following number of attention modules:
-
+            
                 - gpt-j-6B: 28
 
     Example:
-
-    ```python
-    # Here is an example of a device map on a machine with 4 GPUs using gpt-j-6B, which has a total of 28 attention modules:
-    model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-    device_map = {
-        0: [0, 1, 2, 3, 4, 5, 6],
-        1: [7, 8, 9, 10, 11, 12, 13],
-        2: [14, 15, 16, 17, 18, 19, 20],
-        3: [21, 22, 23, 24, 25, 26, 27],
-    }
-    model.parallelize(device_map)
-    ```
+        ```python
+        >>> # Here is an example of a device map on a machine with 4 GPUs using gpt-j-6B, which has a total of 28 attention modules:
+        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
+        >>> device_map = {
+        >>>     0: [0, 1, 2, 3, 4, 5, 6],
+        >>>     1: [7, 8, 9, 10, 11, 12, 13],
+        >>>     2: [14, 15, 16, 17, 18, 19, 20],
+        >>>     3: [21, 22, 23, 24, 25, 26, 27],
+        >>> }
+        >>> model.parallelize(device_map)
+        ```
 """
 
 DEPARALLELIZE_DOCSTRING = r"""
     Moves the model to CPU from a model parallel state.
 
     Example:
-
-    ```python
-    # On a 4 GPU machine with gpt-j-6B:
-    model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-    device_map = {
-        0: [0, 1, 2, 3, 4, 5, 6],
-        1: [7, 8, 9, 10, 11, 12, 13],
-        2: [14, 15, 16, 17, 18, 19, 20],
-        3: [21, 22, 23, 24, 25, 26, 27],
-    }
-    model.parallelize(device_map)  # Splits the model across several devices
-    model.deparallelize()  # Put the model back on cpu and cleans memory by calling torch.cuda.empty_cache()
-    ```
+        ```python
+        >>> # On a 4 GPU machine with gpt-j-6B:
+        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
+        >>> device_map = {
+        >>>     0: [0, 1, 2, 3, 4, 5, 6],
+        >>>     1: [7, 8, 9, 10, 11, 12, 13],
+        >>>     2: [14, 15, 16, 17, 18, 19, 20],
+        >>>     3: [21, 22, 23, 24, 25, 26, 27],
+        >>> }
+        >>> model.parallelize(device_map)  # Splits the model across several devices
+        >>> model.deparallelize()  # Put the model back on cpu and cleans memory by calling torch.cuda.empty_cache()
+        ```
 """
 
 
@@ -735,10 +733,11 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -830,10 +829,11 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -937,14 +937,15 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

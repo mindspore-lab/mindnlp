@@ -103,7 +103,7 @@ class SegGptImageProcessor(BaseImageProcessor):
         do_resize (`bool`, *optional*, defaults to `True`):
             Whether to resize the image's (height, width) dimensions to the specified `(size["height"],
             size["width"])`. Can be overridden by the `do_resize` parameter in the `preprocess` method.
-        size (`dict`, *optional*, defaults to `{"height": 448, "width": 448}`):
+        size (`dict`, *optional*, defaults to `{"height" -- 448, "width" -- 448}`):
             Size of the output image after resizing. Can be overridden by the `size` parameter in the `preprocess`
             method.
         resample (`PILImageResampling`, *optional*, defaults to `Resampling.BICUBIC`):
@@ -186,6 +186,7 @@ class SegGptImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
 
@@ -217,12 +218,14 @@ class SegGptImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -288,6 +291,7 @@ class SegGptImageProcessor(BaseImageProcessor):
                 Image standard deviation to use if `do_normalize` is set to `True`.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
+
                 - Unset: Return a list of `np.ndarray`.
                 - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
                 - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
@@ -295,12 +299,14 @@ class SegGptImageProcessor(BaseImageProcessor):
                 - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -428,11 +434,12 @@ class SegGptImageProcessor(BaseImageProcessor):
                 passing in images with pixel values between 0 and 1, set `do_rescale=False`.
             prompt_masks (`ImageInput`):
                 Prompt mask from prompt image to _preprocess that specify prompt_masks value in the preprocessed output.
-                Can either be in the format of segmentation maps (no channels) or RGB images. If in the format of
-                RGB images, `do_convert_rgb` should be set to `False`. If in the format of segmentation maps, `num_labels`
-                specifying `num_labels` is recommended to build a palette to map the prompt mask from a single channel to
-                a 3 channel RGB. If `num_labels` is not specified, the prompt mask will be duplicated across the channel
-                dimension.
+                Can either be in the format of segmentation maps (no channels) or RGB images.
+
+                - If in the format of RGB images, `do_convert_rgb` should be set to `False`.
+                - If in the format of segmentation maps, `num_labels` specifying `num_labels` is recommended to build a
+                palette to map the prompt mask from a single channel to a 3 channel RGB.
+                - If `num_labels` is not specified, the prompt mask will be duplicated across the channel dimension.
             do_resize (`bool`, *optional*, defaults to `self.do_resize`):
                 Whether to resize the image.
             size (`Dict[str, int]`, *optional*, defaults to `self.size`):
@@ -463,6 +470,7 @@ class SegGptImageProcessor(BaseImageProcessor):
                 across the channel dimension.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
+
                 - Unset: Return a list of `np.ndarray`.
                 - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
                 - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
@@ -470,12 +478,14 @@ class SegGptImageProcessor(BaseImageProcessor):
                 - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -567,8 +577,8 @@ class SegGptImageProcessor(BaseImageProcessor):
                 indices. This value should be the same used when preprocessing inputs.
         Returns:
             semantic_segmentation: `List[torch.Tensor]` of length `batch_size`, where each item is a semantic
-            segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
-            specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
+                segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
+                specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
         """
         requires_backends(self, ["mindspore"])
         # batch_size x num_channels x 2*height x width

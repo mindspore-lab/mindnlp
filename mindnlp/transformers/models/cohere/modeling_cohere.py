@@ -103,7 +103,6 @@ class CohereRotaryEmbedding(nn.Cell):
         sin = emb.sin()
         return cos, sin
 
-
 def rotate_half(x):
     # Split and rotate
     x1 = x[..., ::2]
@@ -111,9 +110,9 @@ def rotate_half(x):
     rot_x = ops.stack([-x2, x1], axis=-1).flatten(start_dim=-2)
     return rot_x
 
-
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+    """
+    Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -129,6 +128,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -574,6 +574,7 @@ class CohereModel(CoherePreTrainedModel):
             if sequence_length != 1:
                 causal_mask = ops.triu(causal_mask, diagonal=1)
             causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+
             causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
             if attention_mask is not None:
                 causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
@@ -649,23 +650,24 @@ class CohereForCausalLM(CoherePreTrainedModel):
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple, CausalLMOutputWithPast]`
 
         Example:
-
-        ```python
-        >> from transformers import AutoTokenizer, CohereForCausalLM
-
-        >> model = CohereForCausalLM.from_pretrained("CohereForAI/c4ai-command-r-v01")
-        >> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
-
-        >> prompt = "Hey, are you conscious? Can you talk to me?"
-        >> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >> # Generate
-        >> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, CohereForCausalLM
+            ...
+            >>> model = CohereForCausalLM.from_pretrained("CohereForAI/c4ai-command-r-v01")
+            >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
+            ...
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            ...
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

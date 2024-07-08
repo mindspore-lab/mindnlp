@@ -43,35 +43,40 @@ GPTPangu_PRETRAINED_MODEL_ARCHIVE_LIST = [
 class GPTPanguAttention(nn.Cell):
 
     """
-    Represents the GPTPanguAttention class, which inherits from nn.Cell. This class contains methods for attention mechanism used in GPT (Generative Pre-trained Transformer) models.
+    Represents the GPTPanguAttention class, which inherits from nn.Cell.
+    This class contains methods for attention mechanism used in GPT (Generative Pre-trained Transformer) models.
     
     Methods:
-        - __init__(config): Initializes the GPTPanguAttention instance with the given configuration.
-        - _attn(query, key, value, attention_mask=None, head_mask=None): Computes the attention mechanism using the query, key, and value tensors, with optional attention and head masks.
-        - _split_heads(tensor, num_heads, attn_head_size): Splits the hidden_size dimension of the given tensor into attn_head_size and num_heads.
-        - _merge_heads(tensor, num_heads, attn_head_size): Merges attn_head_size dimension and num_attn_heads dimension into hidden_size.
-        - construct(hidden_states, layer_past=None, attention_mask=None, head_mask=None, custom_query=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the provided
-hidden_states and optional past layers, masks, custom query, cache usage, and attention output flag.
+        __init__: Initializes the GPTPanguAttention instance with the given configuration.
+        _attn: Computes the attention mechanism using the query, key, and value tensors, with optional attention and
+            head masks.
+        _split_heads: Splits the hidden_size dimension of the given tensor into attn_head_size and num_heads.
+        _merge_heads: Merges attn_head_size dimension and num_attn_heads dimension into hidden_size.
+        construct: Constructs the attention mechanism using the provided hidden_states and optional past layers, masks,
+            custom query, cache usage, and attention output flag.
     """
     def __init__(self, config):
         """
         Initializes the GPTPanguAttention class.
-        
+
         Args:
             self (object): The instance of the class itself.
-            config (object): An object containing configuration parameters for the attention mechanism.
+            config (object):
+                An object containing configuration parameters for the attention mechanism.
+
                 - max_position_embeddings (int): The maximum number of positions for positional embeddings.
                 - hidden_size (int): The dimension of the hidden state.
                 - num_heads (int): The number of attention heads.
                 - scale_attn_weights (bool): A flag indicating whether to scale the attention weights.
                 - attn_pdrop (float): The dropout probability for attention weights.
                 - resid_pdrop (float): The dropout probability for residual connections.
-        
+
         Returns:
-            None. This method initializes the GPTPanguAttention class and does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the embed_dim is not divisible by num_heads, an exception is raised with a detailed error message.
+            ValueError: If the embed_dim is not divisible by num_heads, an exception is raised with a
+                detailed error message.
         """
         super().__init__()
 
@@ -100,11 +105,11 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        ''' 
+        '''
         Method _attn in the GPTPanguAttention class.
-        
+
         This method calculates the attention weights and applies the attention mechanism to the input values.
-        
+
         Args:
             self: GPTPanguAttention instance.
                 The instance of the GPTPanguAttention class.
@@ -118,13 +123,14 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
                 Mask tensor for the attention scores. If provided, it should have the same shape as attn_weights.
             head_mask: tensor, optional
                 Mask tensor for the attention heads. If provided, it should have the same shape as attn_weights.
-        
+
         Returns:
             attn_output: tensor
-                The output tensor after applying the attention mechanism. It has the same shape as the input value tensor.
+                The output tensor after applying the attention mechanism.
+                It has the same shape as the input value tensor.
             attn_weights: tensor
                 The attention weights representing the importance of each element in the input sequence.
-        
+
         Raises:
             ValueError: If the dimensions of query, key, or value are not compatible for matrix multiplication.
             TypeError: If any of the input tensors are not of type tensor.
@@ -186,22 +192,28 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
     ):
         """
         Constructs the attention mechanism used in the GPTPangu model.
-        
+
         Args:
             self (GPTPanguAttention): An instance of the GPTPanguAttention class.
             hidden_states (tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
             layer_past (tuple, optional): A tuple containing the past key and value tensors. Defaults to None.
-            attention_mask (tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). Defaults to None.
-            head_mask (tensor, optional): The head mask tensor of shape (num_heads, sequence_length, sequence_length). Defaults to None.
-            custom_query (tensor, optional): The custom query tensor of shape (batch_size, sequence_length, hidden_size). Defaults to None.
+            attention_mask (tensor, optional): The attention mask tensor of shape (batch_size, sequence_length).
+                Defaults to None.
+            head_mask (tensor, optional): The head mask tensor of shape (num_heads, sequence_length, sequence_length).
+                Defaults to None.
+            custom_query (tensor, optional): The custom query tensor of shape (batch_size, sequence_length, hidden_size).
+                Defaults to None.
             use_cache (bool, optional): Whether to use the past key and value tensors. Defaults to False.
             output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
-        
+
         Returns:
-            tuple: A tuple containing the attention output tensor and the present key-value tuple.
+            tuple:
+                A tuple containing the attention output tensor and the present key-value tuple:
+
                 - attn_output (tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
-                - present (tuple): A tuple containing the present key and value tensors of shape (batch_size, num_heads, sequence_length, head_dim).
-        
+                - present (tuple): A tuple containing the present key and value tensors of shape
+                (batch_size, num_heads, sequence_length, head_dim).
+
         Raises:
             None.
         """
@@ -239,40 +251,45 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
 class GPTPanguMLP(nn.Cell):
 
     """
-    GPTPanguMLP represents a multi-layer perceptron (MLP) used in the GPT-Pangu model for processing intermediate hidden states.
-    
-    This class inherits from nn.Cell and contains methods for initializing the MLP layers and processing hidden states through a feedforward neural network.
-    
+    GPTPanguMLP represents a multi-layer perceptron (MLP) used in the GPT-Pangu model for processing intermediate
+    hidden states.
+
+    This class inherits from nn.Cell and contains methods for initializing the MLP layers and processing hidden states
+    through a feedforward neural network.
+
     Attributes:
         c_fc (nn.Dense): Fully connected layer to transform input hidden states.
         c_proj (nn.Dense): Fully connected layer to project intermediate hidden states back to original embed dimension.
         act (ACT2FN[config.activation_function]): Activation function applied to hidden states.
         dropout (nn.Dropout): Dropout layer to add regularization to the model.
-    
+
     Methods:
-        __init__(self, intermediate_size, config): Initializes the GPTPanguMLP with specified intermediate size and configuration parameters.
-        
-        construct(self, hidden_states): Processes the input 'hidden_states' through the MLP layers and returns the processed hidden states.
-    
+        __init__: Initializes the GPTPanguMLP with specified intermediate size and configuration parameters.
+
+        construct: Processes the input 'hidden_states' through the MLP layers and returns the processed hidden states.
+
     Example:
-        intermediate_size = 512
-        config = Configuration(hidden_size=768, activation_function='gelu', resid_pdrop=0.1)
-        mlp = GPTPanguMLP(intermediate_size, config)
-        output = mlp.construct(hidden_states)
-    
+        ```python
+        >>> intermediate_size = 512
+        >>> config = Configuration(hidden_size=768, activation_function='gelu', resid_pdrop=0.1)
+        >>> mlp = GPTPanguMLP(intermediate_size, config)
+        >>> output = mlp.construct(hidden_states)
+        ```
+
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * hidden_size
         """
         Initializes the GPTPanguMLP class.
-        
+
         Args:
             self: The object instance.
             intermediate_size (int): The size of the intermediate layer.
-            config (object): The configuration object containing hidden_size, activation_function, and resid_pdrop attributes.
-        
+            config (object): The configuration object containing hidden_size, activation_function,
+                and resid_pdrop attributes.
+
         Returns:
-            None. This method initializes the GPTPanguMLP class and does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -286,16 +303,16 @@ class GPTPanguMLP(nn.Cell):
     def construct(self, hidden_states):
         """
         This method constructs the hidden states by applying a series of transformations.
-        
+
         Args:
             self (GPTPanguMLP): The instance of the GPTPanguMLP class.
             hidden_states (tensor): The input hidden states to be processed.
-        
+
         Returns:
             None: This method does not return any value explicitly, as the processed hidden states are modified in place.
-        
+
         Raises:
-            N/A
+            None.
         """
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
@@ -308,42 +325,45 @@ class GPTPanguBlock(nn.Cell):
 
     """
     This class represents a block of the GPTPangu model, containing layers for attention and feed-forward processing.
-    
+
     Parameters:
-    - config: An object containing configuration settings for the GPTPanguBlock.
-    
+        config: An object containing configuration settings for the GPTPanguBlock.
+
     Attributes:
-    - ln_1: Layer normalization module for the first layer.
-    - attn: GPTPanguAttention module for attention processing.
-    - ln_2: Layer normalization module for the second layer.
-    - mlp: GPTPanguMLP module for feed-forward processing.
-    
+        ln_1: Layer normalization module for the first layer.
+        attn: GPTPanguAttention module for attention processing.
+        ln_2: Layer normalization module for the second layer.
+        mlp: GPTPanguMLP module for feed-forward processing.
+
     Methods:
-    - __init__(self, config): Initializes the GPTPanguBlock with the given configuration settings.
-    - construct(self, hidden_states, layer_past=None, attention_mask=None, head_mask=None, custom_query=None, use_cache=False, output_attentions=False): 
-        Constructs the block by processing the input hidden_states through attention and feed-forward layers.
-    
+        __init__: Initializes the GPTPanguBlock with the given configuration settings.
+        construct:
+            Constructs the block by processing the input hidden_states through attention and feed-forward layers.
+
     Returns:
-    - outputs: A tuple containing the final hidden states after processing.
-    
+        outputs:
+            A tuple containing the final hidden states after processing.
+
     Inherits from:
-    - nn.Cell
+        nn.Cell
     """
     def __init__(self, config):
         """
         Initialize a GPTPanguBlock instance with the provided configuration.
-        
+
         Args:
             self (GPTPanguBlock): The instance of the GPTPanguBlock class.
-            config (GPTPanguConfig): The configuration object containing parameters for the block.
+            config (GPTPanguConfig):
+                The configuration object containing parameters for the block.
+
                 - hidden_size (int): The size of the hidden layers.
                 - intermediate_size (int, optional): The size of the intermediate layers. Defaults to None.
-                    If not provided, it is set to 4 times the hidden size.
+                If not provided, it is set to 4 times the hidden size.
                 - layer_norm_epsilon (float): The epsilon value for layer normalization.
-        
+
         Returns:
-            None. This method initializes the GPTPanguBlock instance with the specified configuration parameters.
-        
+            None.
+
         Raises:
             None.
         """
@@ -368,24 +388,37 @@ class GPTPanguBlock(nn.Cell):
     ):
         """
         Constructs the GPTPanguBlock.
-        
+
         Args:
             self: The instance of the class.
             hidden_states (torch.Tensor): The input hidden states of shape `(batch_size, sequence_length, hidden_size)`.
-            layer_past (Tuple[torch.Tensor], optional): The cached past hidden states of shape `(batch_size, num_heads, sequence_length, hidden_size)`. Default is `None`.
-            attention_mask (torch.Tensor, optional): The attention mask of shape `(batch_size, num_heads, sequence_length, sequence_length)`. Default is `None`.
+            layer_past (Tuple[torch.Tensor], optional):
+                The cached past hidden states of shape `(batch_size, num_heads, sequence_length, hidden_size)`.
+                Default is `None`.
+            attention_mask (torch.Tensor, optional):
+                The attention mask of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
+                Default is `None`.
             head_mask (torch.Tensor, optional): The head mask of shape `(num_heads,)`. Default is `None`.
-            custom_query (torch.Tensor, optional): The custom query tensor of shape `(batch_size, num_heads, sequence_length, hidden_size)`. Default is `None`.
+            custom_query (torch.Tensor, optional):
+                The custom query tensor of shape `(batch_size, num_heads, sequence_length, hidden_size)`.
+                Default is `None`.
             use_cache (bool, optional): Whether to use the cache for the hidden states. Default is `False`.
             output_attentions (bool, optional): Whether to output attentions probabilities. Default is `False`.
-        
+
         Returns:
-            Tuple[torch.Tensor]: A tuple containing the following:
-                - hidden_states (torch.Tensor): The output hidden states of shape `(batch_size, sequence_length, hidden_size)`.
-                - layer_past (Tuple[torch.Tensor]): The updated cached past hidden states of shape `(batch_size, num_heads, sequence_length, hidden_size)`.
-                - attention_weights (List[torch.Tensor], optional): The attention weights of shape `(num_layers, num_heads, sequence_length, sequence_length)`, only if `output_attentions=True`.
-                - other_outputs (List[torch.Tensor], optional): Other intermediate outputs, only if `output_attentions=True`.
-        
+            Tuple[torch.Tensor]:
+                A tuple containing the following:
+
+                - hidden_states (torch.Tensor):
+                The output hidden states of shape `(batch_size, sequence_length, hidden_size)`.
+                - layer_past (Tuple[torch.Tensor]):
+                The updated cached past hidden states of shape `(batch_size, num_heads, sequence_length, hidden_size)`.
+                - attention_weights (List[torch.Tensor], optional):
+                The attention weights of shape `(num_layers, num_heads, sequence_length, sequence_length)`,
+                only if `output_attentions=True`.
+                - other_outputs (List[torch.Tensor], optional):
+                Other intermediate outputs, only if `output_attentions=True`.
+
         Raises:
             None.
         """
@@ -464,10 +497,11 @@ class GPTPanguPreTrainedModel(PreTrainedModel):
 class GPTPanguModel(GPTPanguPreTrainedModel):
 
     """GPTPanguModel
-    
-    This class represents a GPT-Pangu model, which is a variant of the GPT (Generative Pre-trained Transformer) model. It is designed for pre-training and fine-tuning on large-scale Chinese text data. The
-GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
-    
+
+    This class represents a GPT-Pangu model, which is a variant of the GPT (Generative Pre-trained Transformer) model.
+    It is designed for pre-training and fine-tuning on large-scale Chinese text data. The GPTPanguModel class inherits
+    from the GPTPanguPreTrainedModel class.
+
     Attributes:
         embed_dim (int): The dimensionality of the embedding layer.
         wte (nn.Embedding): The word/token embedding layer.
@@ -481,19 +515,21 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
     def __init__(self, config):
         """
         Initializes a new instance of the GPTPanguModel class.
-        
+
         Args:
             self: The instance of the GPTPanguModel class.
-            config: A configuration object that contains the settings for the model.
+            config:
+                A configuration object that contains the settings for the model.
+
                 - Type: object
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
@@ -514,33 +550,33 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
     def get_input_embeddings(self):
         """
         Method to retrieve input embeddings from the GPTPanguModel.
-        
+
         Args:
             self: GPTPanguModel instance. The object instance of the GPTPanguModel class.
-            
+
         Returns:
-            None. The method returns the input embeddings for further processing in the model.
-        
+           The input embeddings for further processing in the model.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.wte
 
     def set_input_embeddings(self, new_embeddings):
         """
         Set the input embeddings for the GPTPanguModel.
-        
+
         Args:
             self (GPTPanguModel): The instance of the GPTPanguModel class.
             new_embeddings: The new input embeddings to be set for the model.
                 It should be a tensor or array representing the embeddings.
-                
+
         Returns:
-            None. This method updates the input embeddings of the model in-place.
-        
+            None: This method updates the input embeddings of the model in-place.
+
         Raises:
-            - TypeError: If the new_embeddings parameter is not of the correct type.
-            - ValueError: If the new_embeddings parameter is empty or invalid.
+            TypeError: If the new_embeddings parameter is not of the correct type.
+            ValueError: If the new_embeddings parameter is empty or invalid.
         """
         self.wte = new_embeddings
 
@@ -560,26 +596,33 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
     ):
         """
         Constructs the GPTPanguModel.
-        
+
         Args:
             self (GPTPanguModel): The object instance.
-            input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length). It represents the input token IDs. Defaults to None.
-            past_key_values (tuple, optional): The tuple of past key values. Each element in the tuple is a tensor of shape (batch_size, num_heads, sequence_length, hidden_size//num_heads). Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). It indicates which tokens should be attended to and which ones should not. Defaults to
-None.
-            token_type_ids (torch.Tensor, optional): The token type IDs tensor of shape (batch_size, sequence_length). It represents the token type embeddings. Defaults to None.
-            position_ids (torch.Tensor, optional): The position IDs tensor of shape (batch_size, sequence_length). It represents the position embeddings. Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads). It specifies which heads should be masked for each layer. Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size). It represents the input embeddings directly instead of using input_ids.
-Defaults to None.
+            input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length).
+                It represents the input token IDs. Defaults to None.
+            past_key_values (tuple, optional): The tuple of past key values.
+                Each element in the tuple is a tensor of shape (batch_size, num_heads, sequence_length,
+                hidden_size//num_heads). Defaults to None.
+            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length).
+                It indicates which tokens should be attended to and which ones should not. Defaults to None.
+            token_type_ids (torch.Tensor, optional): The token type IDs tensor of shape (batch_size, sequence_length).
+                It represents the token type embeddings. Defaults to None.
+            position_ids (torch.Tensor, optional): The position IDs tensor of shape (batch_size, sequence_length).
+                It represents the position embeddings. Defaults to None.
+            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads).
+                It specifies which heads should be masked for each layer. Defaults to None.
+            inputs_embeds (torch.Tensor, optional):
+                The input embeddings tensor of shape (batch_size, sequence_length, hidden_size).
+                It represents the input embeddings directly instead of using input_ids. Defaults to None.
             use_cache (bool, optional): Whether to use cache for faster decoding. Defaults to None.
             output_attentions (bool, optional): Whether to output attention weights. Defaults to None.
             output_hidden_states (bool, optional): Whether to output hidden states. Defaults to None.
             return_dict (bool, optional): Whether to use a dictionary as the return type. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are provided simultaneously.
             ValueError: If neither input_ids nor inputs_embeds are provided.
@@ -709,34 +752,40 @@ Defaults to None.
 class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
 
     """
-    The GPTPanguForCausalLM class represents a Pangu model for causal language modeling. It inherits from the GPTPanguPreTrainedModel class.
-    
-    This class includes methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and generating outputs based on input data. Additionally, it provides a
-method for re-ordering the past key values cache when using beam search or beam sampling.
-    
-    The __init__ method initializes the model with a given configuration and sets up the transformer and lm_head layers. The get_output_embeddings and set_output_embeddings methods deal with accessing and
-modifying the output embeddings for the model. The prepare_inputs_for_generation method prepares input data for generation, considering past key values, attention mask, position ids, and token type ids. The
-construct method constructs outputs based on input data, including handling labels for language modeling and computing loss.
-    
-    The _reorder_cache method is a static method used to re-order the past_key_values cache when beam search or beam sample methods are called, ensuring correct alignment with the beam index at each generation
-step.
+    The GPTPanguForCausalLM class represents a Pangu model for causal language modeling.
+    It inherits from the GPTPanguPreTrainedModel class.
+
+    This class includes methods for initializing the model, getting and setting output embeddings,
+    preparing inputs for generation, and generating outputs based on input data. Additionally, it provides a method
+    for re-ordering the past key values cache when using beam search or beam sampling.
+
+    The __init__ method initializes the model with a given configuration and sets up the transformer and lm_head layers.
+    The get_output_embeddings and set_output_embeddings methods deal with accessing and  modifying the output embeddings
+    for the model. The prepare_inputs_for_generation method prepares input data for generation, considering past key
+    values, attention mask, position ids, and token type ids. The construct method constructs outputs based on input data,
+    including handling labels for language modeling and computing loss.
+
+    The _reorder_cache method is a static method used to re-order the past_key_values cache when beam search or beam
+    sample methods are called, ensuring correct alignment with the beam index at each generation step.
     """
     def __init__(self, config):
         """
         Initializes an instance of the GPTPanguForCausalLM class.
-        
+
         Args:
             self: The instance of the class.
-            config: A configuration object containing settings for the model.
-                Type: object
-                Purpose: Specifies the configuration settings for the model.
-                Restrictions: Must be a valid configuration object compatible with the model.
-        
+            config:
+                A configuration object containing settings for the model.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the model.
+                - Restrictions: Must be a valid configuration object compatible with the model.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - N/A
+            None.
         """
         super().__init__(config)
         self.transformer = GPTPanguModel(config)
@@ -748,29 +797,29 @@ step.
     def get_output_embeddings(self):
         """
         This method returns the output embeddings of the GPTPanguForCausalLM model.
-        
+
         Args:
             self: The instance of the GPTPanguForCausalLM class.
-        
+
         Returns:
-            None: This method returns the output embeddings of the model.
-        
+            lm_head: This method returns the output embeddings of the model.
+
         Raises:
-            None
+            None.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the GPTPanguForCausalLM model.
-        
+
         Args:
             self (GPTPanguForCausalLM): The instance of the GPTPanguForCausalLM class.
-            new_embeddings (torch.nn.Module): The new embeddings to set as the output embeddings. 
-        
+            new_embeddings (torch.nn.Module): The new embeddings to set as the output embeddings.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -779,21 +828,23 @@ step.
     def prepare_inputs_for_generation(self, input_ids, past=None, **kwargs):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (GPTPanguForCausalLM): The instance of the GPTPanguForCausalLM class.
             input_ids (torch.Tensor): The input tensor of token indices representing the sequence.
             past (tuple, optional): The past key values used for fast decoding.
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation with the following keys:
+            dict:
+                A dictionary containing the prepared inputs for generation with the following keys:
+
                 - 'input_ids' (torch.Tensor): The modified input tensor.
                 - 'past_key_values' (tuple): The past key values.
                 - 'use_cache' (bool): The flag indicating whether to use cache.
                 - 'position_ids' (torch.Tensor): The modified position indices tensor.
                 - 'attention_mask' (torch.Tensor): The attention mask tensor.
                 - 'token_type_ids' (torch.Tensor): The modified token type indices tensor.
-        
+
         Raises:
             None.
         """
@@ -840,10 +891,11 @@ step.
         return_dict=None,
     ):
         r"""
-        labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            ``labels = input_ids`` Indices are selected in ``[-100, 0, ..., config.vocab_size]`` All labels set to
-            ``-100`` are ignored (masked), the loss is only computed for labels in ``[0, ..., config.vocab_size]``
+        Args:
+            labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                ``labels = input_ids`` Indices are selected in ``[-100, 0, ..., config.vocab_size]`` All labels set to
+                ``-100`` are ignored (masked), the loss is only computed for labels in ``[0, ..., config.vocab_size]``
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

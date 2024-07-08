@@ -78,19 +78,19 @@ class BlenderbotConfig(PretrainedConfig):
             `eos_token_id`.
 
     Example:
-
-    ```python
-    >>> from transformers import BlenderbotConfig, BlenderbotModel
-
-    >>> # Initializing a Blenderbot facebook/blenderbot-3B style configuration
-    >>> configuration = BlenderbotConfig()
-
-    >>> # Initializing a model (with random weights) from the facebook/blenderbot-3B style configuration
-    >>> model = BlenderbotModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BlenderbotConfig, BlenderbotModel
+        ... 
+        >>> # Initializing a Blenderbot facebook/blenderbot-3B style configuration
+        >>> configuration = BlenderbotConfig()
+        ... 
+        >>> # Initializing a model (with random weights) from the facebook/blenderbot-3B style configuration
+        >>> model = BlenderbotModel(configuration)
+        ... 
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blenderbot"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -124,7 +124,8 @@ class BlenderbotConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
-        """Initialize a BlenderbotConfig instance.
+        """
+        Initialize a BlenderbotConfig instance.
         
         Args:
             vocab_size (int, optional): The size of the vocabulary. Defaults to 8008.
@@ -154,10 +155,10 @@ class BlenderbotConfig(PretrainedConfig):
             forced_eos_token_id (int, optional): The token id for the forced end of sequence. Defaults to 2.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None
         """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

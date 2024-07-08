@@ -30,6 +30,7 @@ class JambaConfig(PretrainedConfig):
     [ai21labs/jamba-small](https://huggingface.co/ai21labs/Jamba-v0.1)
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
     Args:
         vocab_size (`int`, *optional*, defaults to 65536):
             Vocabulary size of the Jamba model. Defines the number of different tokens that can be represented by the
@@ -48,7 +49,7 @@ class JambaConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 8):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1`, the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `8`.
@@ -109,11 +110,13 @@ class JambaConfig(PretrainedConfig):
         mamba_expand (`int`, *optional*, defaults to 2):
             Expanding factor (relative to hidden_size) used to determine the mamba intermediate size
         mamba_dt_rank (`Union[int,str]`, *optional*, defaults to `"auto"`):
-            Rank of the the mamba discretization projection matrix. `"auto"` means that it will default to `math.ceil(self.hidden_size / 16)`
+            Rank of the the mamba discretization projection matrix.
+            `"auto"` means that it will default to `math.ceil(self.hidden_size / 16)`
         mamba_conv_bias (`bool`, *optional*, defaults to `True`):
             Flag indicating whether or not to use bias in the convolution layer of the mamba mixer block.
         mamba_proj_bias (`bool`, *optional*, defaults to `False`):
-            Flag indicating whether or not to use bias in the input and output projections (["in_proj", "out_proj"]) of the mamba mixer block
+            Flag indicating whether or not to use bias in the input and output projections
+            (["in_proj", "out_proj"]) of the mamba mixer block
         mamba_inner_layernorms (`bool`, *optional*, defaults to `True`):
             Flag indicating whether or not to apply layernorms to internal mamba activations
     """
@@ -174,7 +177,8 @@ class JambaConfig(PretrainedConfig):
             initializer_range (float, optional): The range for weight initialization. Default is 0.02.
             rms_norm_eps (float, optional): The epsilon value for RMS normalization. Default is 1e-06.
             use_cache (bool, optional): Whether to use cache for attention layers. Default is True.
-            calc_logits_for_entire_prompt (bool, optional): Whether to calculate logits for the entire prompt. Default is False.
+            calc_logits_for_entire_prompt (bool, optional): Whether to calculate logits for the entire prompt.
+                Default is False.
             output_router_logits (bool, optional): Whether to output router logits. Default is False.
             router_aux_loss_coef (float, optional): The coefficient for the router auxiliary loss. Default is 0.001.
             pad_token_id (int, optional): The token ID for padding. Default is 0.

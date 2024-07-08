@@ -62,19 +62,19 @@ class GPTJConfig(PretrainedConfig):
             Whether or not the model should return the last key/values attentions (not used by all models).
 
     Example:
-
-    ```python
-    >>> from transformers import GPTJModel, GPTJConfig
-
-    >>> # Initializing a GPT-J 6B configuration
-    >>> configuration = GPTJConfig()
-
-    >>> # Initializing a model from the configuration
-    >>> model = GPTJModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import GPTJModel, GPTJConfig
+        >>>
+        >>> # Initializing a GPT-J 6B configuration
+        >>> configuration = GPTJConfig()
+        >>>
+        >>> # Initializing a model from the configuration
+        >>> model = GPTJModel(configuration)
+        >>>
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "gptj"
     attribute_map = {

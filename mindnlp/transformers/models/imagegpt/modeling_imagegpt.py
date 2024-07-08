@@ -596,30 +596,32 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, ImageGPTModel
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
-        >>> model = ImageGPTModel.from_pretrained("openai/imagegpt-small")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, ImageGPTModel
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
+            >>> model = ImageGPTModel.from_pretrained("openai/imagegpt-small")
+            ...
+            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
 
         if "pixel_values" in kwargs:
             warnings.warn(
@@ -872,48 +874,50 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple, CausalLMOutputWithCrossAttentions]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, ImageGPTForCausalImageModeling
-        >>> import torch
-        >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
-        >>> model = ImageGPTForCausalImageModeling.from_pretrained("openai/imagegpt-small")
-        >>> device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        >>> model.to(device)  # doctest: +IGNORE_RESULT
-
-        >>> # unconditional generation of 8 images
-        >>> batch_size = 4
-        >>> context = torch.full((batch_size, 1), model.config.vocab_size - 1)  # initialize with SOS token
-        >>> context = context.to(device)
-        >>> output = model.generate(
-        ...     input_ids=context, max_length=model.config.n_positions + 1, temperature=1.0, do_sample=True, top_k=40
-        ... )
-
-        >>> clusters = image_processor.clusters
-        >>> height = image_processor.size["height"]
-        >>> width = image_processor.size["width"]
-
-        >>> samples = output[:, 1:].cpu().detach().numpy()
-        >>> samples_img = [
-        ...     np.reshape(np.rint(127.5 * (clusters[s] + 1.0)), [height, width, 3]).astype(np.uint8) for s in samples
-        ... ]  # convert color cluster tokens back to pixels
-        >>> f, axes = plt.subplots(1, batch_size, dpi=300)
-
-        >>> for img, ax in zip(samples_img, axes):  # doctest: +IGNORE_RESULT
-        ...     ax.axis("off")
-        ...     ax.imshow(img)
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, ImageGPTForCausalImageModeling
+            >>> import torch
+            >>> import matplotlib.pyplot as plt
+            >>> import numpy as np
+            ...
+            >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
+            >>> model = ImageGPTForCausalImageModeling.from_pretrained("openai/imagegpt-small")
+            >>> device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            >>> model.to(device)  # doctest: +IGNORE_RESULT
+            ...
+            >>> # unconditional generation of 8 images
+            >>> batch_size = 4
+            >>> context = torch.full((batch_size, 1), model.config.vocab_size - 1)  # initialize with SOS token
+            >>> context = context.to(device)
+            >>> output = model.generate(
+            ...     input_ids=context, max_length=model.config.n_positions + 1, temperature=1.0, do_sample=True, top_k=40
+            ... )
+            ...
+            >>> clusters = image_processor.clusters
+            >>> height = image_processor.size["height"]
+            >>> width = image_processor.size["width"]
+            ...
+            >>> samples = output[:, 1:].cpu().detach().numpy()
+            >>> samples_img = [
+            ...     np.reshape(np.rint(127.5 * (clusters[s] + 1.0)), [height, width, 3]).astype(np.uint8) for s in samples
+            ... ]  # convert color cluster tokens back to pixels
+            >>> f, axes = plt.subplots(1, batch_size, dpi=300)
+            ...
+            >>> for img, ax in zip(samples_img, axes):  # doctest: +IGNORE_RESULT
+            ...     ax.axis("off")
+            ...     ax.imshow(img)
+            ```
+        """
 
         if "pixel_values" in kwargs:
             warnings.warn(
@@ -1017,30 +1021,32 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            `Union[Tuple, SequenceClassifierOutputWithPast]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, ImageGPTForImageClassification
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
-        >>> model = ImageGPTForImageClassification.from_pretrained("openai/imagegpt-small")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> logits = outputs.logits
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, ImageGPTForImageClassification
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
+            >>> model = ImageGPTForImageClassification.from_pretrained("openai/imagegpt-small")
+            ...
+            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> logits = outputs.logits
+            ```
+        """
 
         if "pixel_values" in kwargs:
             warnings.warn(

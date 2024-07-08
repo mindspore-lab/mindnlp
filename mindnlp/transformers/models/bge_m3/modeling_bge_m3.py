@@ -37,7 +37,8 @@ class BgeM3ModelOutput(ModelOutput):
     """
     Represents the output of a BGE M3 model. 
     
-    This class inherits from the ModelOutput class and provides specific functionality for handling outputs from BGE M3 models.
+    This class inherits from the ModelOutput class and provides specific functionality for handling outputs
+    from BGE M3 models.
     """
     last_hidden_state: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
@@ -53,23 +54,25 @@ class BgeM3ModelOutput(ModelOutput):
 class BgeM3Model(XLMRobertaPreTrainedModel):
 
     """
-    The BgeM3Model class represents a model that extends XLMRobertaPreTrainedModel. It includes methods for dense embedding, sparse embedding, Colbert embedding, and processing token weights and Colbert
-vectors. The construct method processes input tensors to generate various outputs including last hidden state, dense output, pooler output, Colbert output, sparse output, hidden states, past key values,
-attentions, and cross attentions. 
+    The BgeM3Model class represents a model that extends XLMRobertaPreTrainedModel.
+    It includes methods for dense embedding, sparse embedding, Colbert embedding, and processing token weights
+    and Colbert vectors.
+    The construct method processes input tensors to generate various outputs including last hidden state, dense output,
+    pooler output, Colbert output, sparse output, hidden states, past key values, attentions, and cross attentions.
     """
     config_class = BgeM3Config
 
     def __init__(self, config: BgeM3Config):
         """
             Initializes a new instance of the BgeM3Model class.
-        
+
             Args:
                 self: The current BgeM3Model instance.
                 config (BgeM3Config): The configuration object for BgeM3Model.
-        
+
             Returns:
                 None
-        
+
             Raises:
                 None
             """
@@ -87,16 +90,18 @@ attentions, and cross attentions.
     # Copied from FlagEmbedding
     def dense_embedding(self, hidden_state, mask):
         """
-        This method calculates the dense embedding based on the provided hidden state and mask, using the specified sentence pooling method.
-        
+        This method calculates the dense embedding based on the provided hidden state and mask,
+        using the specified sentence pooling method.
+
         Args:
             self (object): The instance of the BgeM3Model class.
             hidden_state (tensor): The hidden state tensor representing the input sequence.
-            mask (tensor): The mask tensor indicating the presence of valid elements in the input sequence. Its shape should be compatible with hidden_state.
-        
+            mask (tensor): The mask tensor indicating the presence of valid elements in the input sequence.
+                Its shape should be compatible with hidden_state.
+
         Returns:
             None: This method does not return a value, as the dense embedding is directly computed and returned.
-        
+
         Raises:
             ValueError: If the sentence pooling method specified is not supported or recognized.
             RuntimeError: If there are issues with the tensor operations or calculations within the method.
@@ -112,19 +117,19 @@ attentions, and cross attentions.
     def sparse_embedding(self, hidden_state, input_ids, return_embedding: bool = False):
         """
         Sparse Embedding
-        
+
         This method computes the sparse embedding for a given hidden state and input IDs.
-        
+
         Args:
             self (BgeM3Model): The instance of the BgeM3Model class.
             hidden_state: The hidden state tensor.
             input_ids: The input IDs tensor.
-            return_embedding (bool, optional): Whether to return the sparse embedding or token weights. 
+            return_embedding (bool, optional): Whether to return the sparse embedding or token weights.
                 Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -149,18 +154,18 @@ attentions, and cross attentions.
     def colbert_embedding(self, last_hidden_state, mask):
         """
         Embeds the last hidden state of the BgeM3Model using the Colbert method.
-        
+
         Args:
             self (BgeM3Model): The instance of the BgeM3Model class.
             last_hidden_state (torch.Tensor): The last hidden state of the model.
                 Shape: (batch_size, sequence_length, hidden_size)
             mask (torch.Tensor): The mask specifying the valid positions in the last_hidden_state tensor.
                 Shape: (batch_size, sequence_length)
-        
+
         Returns:
             torch.Tensor: The embedded Colbert vectors.
                 Shape: (batch_size, sequence_length-1, hidden_size)
-        
+
         Raises:
             None
         """
@@ -172,21 +177,23 @@ attentions, and cross attentions.
     def _process_token_weights(self, token_weights, input_ids, mask):
         """
         Process the token weights for the BgeM3Model.
-        
+
         Args:
             self (BgeM3Model): An instance of the BgeM3Model class.
             token_weights (Tensor): A tensor containing the weights of each token.
             input_ids (Tensor): A tensor containing the input IDs.
             mask (Tensor): A tensor containing the mask.
-        
+
         Returns:
-            list[defaultdict]: A list of dictionaries, where each dictionary contains the maximum weight for each unique ID.
-        
+            list[defaultdict]:
+                A list of dictionaries, where each dictionary contains the maximum weight for each unique ID.
+
         Raises:
             None.
-        
-        This method processes the given token weights by removing unused tokens and filtering out invalid indices. It then computes the maximum weight for each unique ID and stores the results in a list of
-dictionaries. The resulting list is returned as the output of this method.
+
+        This method processes the given token weights by removing unused tokens and filtering out invalid indices.
+        It then computes the maximum weight for each unique ID and stores the results in a list of dictionaries.
+        The resulting list is returned as the output of this method.
         """
         token_weights = token_weights.squeeze(-1)
         # conver to dict
@@ -223,18 +230,18 @@ dictionaries. The resulting list is returned as the output of this method.
     def _process_colbert_vecs(self, colbert_vecs, tokens_num) -> List[mindspore.Tensor]:
         '''
         This method processes the Colbert vectors to extract a subset of vectors based on the tokens number.
-        
+
         Args:
             self (BgeM3Model): The instance of the BgeM3Model class.
             colbert_vecs (Union[mindspore.Tensor, List[mindspore.Tensor]]): The Colbert vectors to be processed.
             tokens_num (List[int]): The list containing the number of tokens for each vector in colbert_vecs.
-        
+
         Returns:
             List[mindspore.Tensor]: A list of processed vectors.
-        
+
         Raises:
-            - ValueError: If the length of colbert_vecs and tokens_num does not match.
-            - IndexError: If the tokens_num contains an index that is out of range for colbert_vecs.
+            ValueError: If the length of colbert_vecs and tokens_num does not match.
+            IndexError: If the tokens_num contains an index that is out of range for colbert_vecs.
         '''
         # delte the vectors of padding tokens
         vecs = []
@@ -261,50 +268,103 @@ dictionaries. The resulting list is returned as the output of this method.
     ) -> Union[Tuple[mindspore.Tensor], BgeM3ModelOutput]:
         """
         Constructs the BgeM3Model.
-        
+
         Args:
             self: The instance of the class.
-            input_ids (Optional[mindspore.Tensor]): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, sequence_length) containing attention masks for the input IDs.
-            token_type_ids (Optional[mindspore.Tensor]): The token type IDs tensor of shape (batch_size, sequence_length) containing the token type IDs for the input IDs.
-            position_ids (Optional[mindspore.Tensor]): The position IDs tensor of shape (batch_size, sequence_length) containing the position IDs for the input IDs.
-            head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape (num_heads,) or (num_layers, num_heads) containing the head mask for the transformer encoder.
-            inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing the embeddings for the input IDs.
-            encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, encoder_sequence_length, hidden_size) containing the hidden states of the encoder.
-            encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, encoder_sequence_length) containing attention masks for the encoder hidden states.
-            past_key_values (Optional[List[mindspore.Tensor]]): The list of past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value
-states for the transformer decoder.
+            input_ids (Optional[mindspore.Tensor]):
+                The input tensor of shape (batch_size, sequence_length) containing the input IDs.
+            attention_mask (Optional[mindspore.Tensor]):
+                The attention mask tensor of shape (batch_size, sequence_length) containing attention masks
+                for the input IDs.
+            token_type_ids (Optional[mindspore.Tensor]):
+                The token type IDs tensor of shape (batch_size, sequence_length) containing the token type IDs
+                for the input IDs.
+            position_ids (Optional[mindspore.Tensor]):
+                The position IDs tensor of shape (batch_size, sequence_length) containing the position IDs
+                for the input IDs.
+            head_mask (Optional[mindspore.Tensor]):
+                The head mask tensor of shape (num_heads,) or (num_layers, num_heads) containing the head mask
+                for the transformer encoder.
+            inputs_embeds (Optional[mindspore.Tensor]):
+                The input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing
+                the embeddings for the input IDs.
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                The encoder hidden states tensor of shape (batch_size, encoder_sequence_length, hidden_size)
+                containing the hidden states of the encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]):
+                The encoder attention mask tensor of shape (batch_size, encoder_sequence_length) containing
+                attention masks for the encoder hidden states.
+            past_key_values (Optional[List[mindspore.Tensor]]):
+                The list of past key value tensors of shape (2, batch_size, num_heads, sequence_length,
+                hidden_size//num_heads) containing the past key value states for the transformer decoder.
             use_cache (Optional[bool]): Whether to use cache for the transformer decoder.
             output_attentions (Optional[bool]): Whether to output attentions.
             output_hidden_states (Optional[bool]): Whether to output hidden states.
             return_dict (Optional[bool]): Whether to return a dictionary instead of a tuple.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor], BgeM3ModelOutput]: If `return_dict` is set to False, returns a tuple containing the following elements:
-                last_hidden_state (mindspore.Tensor): The last hidden state tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the transformer.
-                pooler_output (mindspore.Tensor): The pooler output tensor of shape (batch_size, hidden_size) containing the pooler output of the transformer.
-                dense_output (mindspore.Tensor): The dense embedding output tensor of shape (batch_size, sequence_length, dense_size) containing the dense embeddings.
-                colbert_output (mindspore.Tensor): The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size) containing the Colbert embeddings.
-                sparse_output (mindspore.Tensor): The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size) containing the sparse embeddings.
-                hidden_states (Tuple[mindspore.Tensor]): The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size) containing the hidden states of the transformer.
-                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the
-transformer decoder.
-                attentions (Tuple[mindspore.Tensor]): The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length) containing the attentions of the transformer.
-                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions
-of the transformer.
-        
-            BgeM3ModelOutput: If `return_dict` is set to True, returns an instance of the BgeM3ModelOutput class containing the following elements:
-                last_hidden_state (mindspore.Tensor): The last hidden state tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the transformer.
-                dense_output (mindspore.Tensor): The dense embedding output tensor of shape (batch_size, sequence_length, dense_size) containing the dense embeddings.
-                pooler_output (mindspore.Tensor): The pooler output tensor of shape (batch_size, hidden_size) containing the pooler output of the transformer.
-                colbert_output (mindspore.Tensor): The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size) containing the Colbert embeddings.
-                sparse_output (mindspore.Tensor): The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size) containing the sparse embeddings.
-                hidden_states (Tuple[mindspore.Tensor]): The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size) containing the hidden states of the transformer.
-                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the
-transformer decoder.
-                attentions (Tuple[mindspore.Tensor]): The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length) containing the attentions of the transformer.
-                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions
-of the transformer.
+            Union[Tuple[mindspore.Tensor], BgeM3ModelOutput]:
+                If `return_dict` is set to False, returns a tuple containing the following elements:
+
+                - last_hidden_state (mindspore.Tensor):
+                The last hidden state tensor of shape (batch_size, sequence_length, hidden_size)
+                containing the last hidden state of the transformer.
+                - pooler_output (mindspore.Tensor):
+                The pooler output tensor of shape (batch_size, hidden_size) containing the pooler output of
+                the transformer.
+                - dense_output (mindspore.Tensor):
+                The dense embedding output tensor of shape (batch_size, sequence_length, dense_size) containing
+                the dense embeddings.
+                - colbert_output (mindspore.Tensor):
+                The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size) containing
+                the Colbert embeddings.
+                - sparse_output (mindspore.Tensor):
+                The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size) containing
+                the sparse embeddings.
+                - hidden_states (Tuple[mindspore.Tensor]):
+                The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size) containing
+                the hidden states of the transformer.
+                - past_key_values (Tuple[mindspore.Tensor]):
+                The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads)
+                containing the past key value states for the transformer decoder.
+                - attentions (Tuple[mindspore.Tensor]):
+                The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length)
+                containing the attentions of the transformer.
+                - cross_attentions (Tuple[mindspore.Tensor]):
+                The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length)
+                containing the cross attentions of the transformer.
+
+            BgeM3ModelOutput:
+                If `return_dict` is set to True, returns an instance of the BgeM3ModelOutput class containing the
+                following elements:
+
+                - last_hidden_state (mindspore.Tensor):
+                The last hidden state tensor of shape (batch_size, sequence_length, hidden_size)
+                containing the last hidden state of the transformer.
+                - dense_output (mindspore.Tensor):
+                The dense embedding output tensor of shape (batch_size, sequence_length, dense_size)
+                containing the dense embeddings.
+                - pooler_output (mindspore.Tensor):
+                The pooler output tensor of shape (batch_size, hidden_size)
+                containing the pooler output of the transformer.
+                - colbert_output (mindspore.Tensor):
+                The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size)
+                containing the Colbert embeddings.
+                - sparse_output (mindspore.Tensor):
+                The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size)
+                containing the sparse embeddings.
+                - hidden_states (Tuple[mindspore.Tensor]):
+                The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size)
+                containing the hidden states of the transformer.
+                - past_key_values (Tuple[mindspore.Tensor]):
+                The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads)
+                containing the past key value states for the transformer decoder.
+                - attentions (Tuple[mindspore.Tensor]):
+                The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length)
+                containing the attentions of the transformer.
+                - cross_attentions (Tuple[mindspore.Tensor]):
+                The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length)
+                containing the cross attentions of the transformer.
         
         Raises:
             None.

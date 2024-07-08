@@ -348,8 +348,9 @@ class BarkGenerationConfig(GenerationConfig):
     """
     Class that represents a generation configuration for BarkModel.
     
-    This class is used to generate speeches with a nested BarkGenerationConfig, which includes BarkSemanticGenerationConfig, BarkCoarseGenerationConfig, and BarkFineGenerationConfig. It inherits from
-GenerationConfig and allows control over the model generation.
+    This class is used to generate speeches with a nested BarkGenerationConfig, which includes
+    BarkSemanticGenerationConfig, BarkCoarseGenerationConfig, and BarkFineGenerationConfig.
+    It inherits from GenerationConfig and allows control over the model generation.
     
     Attributes:
         semantic_config (BarkSemanticGenerationConfig): Semantic generation configuration.

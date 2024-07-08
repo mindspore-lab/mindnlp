@@ -37,7 +37,6 @@ class ErnieMConfig(PretrainedConfig):
     with the defaults will yield a similar configuration to that of the `Ernie-M`
     [susnato/ernie-m-base_pytorch](https://hf-mirror.com/susnato/ernie-m-base_pytorch) architecture.
 
-
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
@@ -124,7 +123,7 @@ class ErnieMConfig(PretrainedConfig):
             act_dropout (float): The dropout rate for the activation function. Default is 0.0.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

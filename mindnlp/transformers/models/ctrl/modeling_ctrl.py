@@ -316,27 +316,29 @@ class CTRLModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]:
         r"""
+
         Returns:
+            `Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, CTRLModel
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-        >>> model = CTRLModel.from_pretrained("Salesforce/ctrl")
-
-        >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-
-        >>> outputs = model(**inputs)
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        >>> list(last_hidden_states.shape)
-        [1, 5, 1280]
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, CTRLModel
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+            >>> model = CTRLModel.from_pretrained("Salesforce/ctrl")
+            ...
+            >>> # CTRL was trained with control codes as the first token
+            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+            ...
+            >>> outputs = model(**inputs)
+            ...
+            >>> last_hidden_states = outputs.last_hidden_state
+            >>> list(last_hidden_states.shape)
+            [1, 5, 1280]
+            ```
+        """
         output_attentions = (
             output_attentions
             if output_attentions is not None
@@ -521,38 +523,38 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]`
 
         Example:
-
-        ```python
-        >>> import torch
-        >>> from transformers import AutoTokenizer, CTRLLMHeadModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-        >>> model = CTRLLMHeadModel.from_pretrained("Salesforce/ctrl")
-
-        >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="pt")
-        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-
-        >>> sequence_ids = model.generate(inputs["input_ids"])
-        >>> sequences = tokenizer.batch_decode(sequence_ids)
-        >>> sequences
-        ['Wikipedia The llama is a member of the family Bovidae. It is native to the Andes of Peru,']
-
-        >>> outputs = model(**inputs, labels=inputs["input_ids"])
-        >>> round(outputs.loss.item(), 2)
-        9.21
-
-        >>> list(outputs.logits.shape)
-        [1, 5, 246534]
-        ```"""
+            ```python
+            >>> import torch
+            >>> from transformers import AutoTokenizer, CTRLLMHeadModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+            >>> model = CTRLLMHeadModel.from_pretrained("Salesforce/ctrl")
+            ...
+            >>> # CTRL was trained with control codes as the first token
+            >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="pt")
+            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+            ...
+            >>> sequence_ids = model.generate(inputs["input_ids"])
+            >>> sequences = tokenizer.batch_decode(sequence_ids)
+            >>> sequences
+            ['Wikipedia The llama is a member of the family Bovidae. It is native to the Andes of Peru,']
+            >>> outputs = model(**inputs, labels=inputs["input_ids"])
+            >>> round(outputs.loss.item(), 2)
+            9.21
+            >>> list(outputs.logits.shape)
+            [1, 5, 246534]
+            ```
+        """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )
@@ -638,83 +640,84 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`
 
         Example of single-label classification:
+            ```python
+            >>> import torch
+            >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl")
+            ...
+            >>> # CTRL was trained with control codes as the first token
+            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+            ...
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
+            ...
+            >>> predicted_class_id = logits.argmax().item()
+            >>> model.config.id2label[predicted_class_id]
+            'LABEL_0'
+            ```
 
-        ```python
-        >>> import torch
-        >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
+            ```python
+            >>> import torch
+            ...
+            >>> torch.manual_seed(42)  # doctest: +IGNORE_RESULT
+            >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
+            >>> num_labels = len(model.config.id2label)
+            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
+            ...
+            >>> labels = torch.tensor(1)
+            >>> loss = model(**inputs, labels=labels).loss
+            >>> round(loss.item(), 2)
+            0.93
+            ```
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl")
+        Example:
+            ```python
+            >>> import torch
+            >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+            >>> model = CTRLForSequenceClassification.from_pretrained(
+            ...     "Salesforce/ctrl", problem_type="multi_label_classification"
+            ... )
+            ...
+            >>> # CTRL was trained with control codes as the first token
+            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+            ...
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
+            ...
+            >>> predicted_class_id = logits.argmax().item()
+            >>> model.config.id2label[predicted_class_id]
+            'LABEL_0'
+            ```
 
-        >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
-
-        >>> predicted_class_id = logits.argmax().item()
-        >>> model.config.id2label[predicted_class_id]
-        'LABEL_0'
-        ```
-
-        ```python
-        >>> import torch
-
-        >>> torch.manual_seed(42)  # doctest: +IGNORE_RESULT
-        >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
-        >>> num_labels = len(model.config.id2label)
-        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
-
-        >>> labels = torch.tensor(1)
-        >>> loss = model(**inputs, labels=labels).loss
-        >>> round(loss.item(), 2)
-        0.93
-        ```
-
-        Example of multi-label classification:
-
-        ```python
-        >>> import torch
-        >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-        >>> model = CTRLForSequenceClassification.from_pretrained(
-        ...     "Salesforce/ctrl", problem_type="multi_label_classification"
-        ... )
-
-        >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
-
-        >>> predicted_class_id = logits.argmax().item()
-        >>> model.config.id2label[predicted_class_id]
-        'LABEL_0'
-        ```
-
-        ```python
-        >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
-        >>> num_labels = len(model.config.id2label)
-        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
-
-        >>> num_labels = len(model.config.id2label)
-        >>> labels = torch.nn.functional.one_hot(torch.tensor([predicted_class_id]), num_classes=num_labels).to(
-        ...     torch.float
-        ... )
-        >>> loss = model(**inputs, labels=labels).loss
-        >>> loss.backward()  # doctest: +IGNORE_RESULT
-        ```"""
+            ```python
+            >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
+            >>> num_labels = len(model.config.id2label)
+            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
+            ...
+            >>> num_labels = len(model.config.id2label)
+            >>> labels = torch.nn.functional.one_hot(torch.tensor([predicted_class_id]), num_classes=num_labels).to(
+            ...     torch.float
+            ... )
+            >>> loss = model(**inputs, labels=labels).loss
+            >>> loss.backward()  # doctest: +IGNORE_RESULT
+            ```
+        """
 
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict

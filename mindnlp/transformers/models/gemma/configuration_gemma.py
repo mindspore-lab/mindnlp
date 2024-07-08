@@ -51,7 +51,7 @@ class GemmaConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 16):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1 the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
@@ -84,18 +84,20 @@ class GemmaConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import GemmaModel, GemmaConfig
-
-    >>> # Initializing a Gemma gemma-7b style configuration
-    >>> configuration = GemmaConfig()
-
-    >>> # Initializing a model from the gemma-7b style configuration
-    >>> model = GemmaModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import GemmaModel, GemmaConfig
+        ...
+        >>> # Initializing a Gemma gemma-7b style configuration
+        >>> configuration = GemmaConfig()
+        ...
+        >>> # Initializing a model from the gemma-7b style configuration
+        >>> model = GemmaModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "gemma"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -148,7 +150,7 @@ class GemmaConfig(PretrainedConfig):
             attention_dropout (float, optional): The dropout rate for attention. Defaults to 0.0.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If any of the input parameters is invalid.

@@ -79,19 +79,19 @@ class DecisionTransformerConfig(PretrainedConfig):
             dot-product/softmax to float() when training with mixed precision.
 
     Example:
-
-    ```python
-    >>> from transformers import DecisionTransformerConfig, DecisionTransformerModel
-
-    >>> # Initializing a DecisionTransformer configuration
-    >>> configuration = DecisionTransformerConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = DecisionTransformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import DecisionTransformerConfig, DecisionTransformerModel
+        ...
+        >>> # Initializing a DecisionTransformer configuration
+        >>> configuration = DecisionTransformerConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = DecisionTransformerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "decision_transformer"
     keys_to_ignore_at_inference = ["past_key_values"]

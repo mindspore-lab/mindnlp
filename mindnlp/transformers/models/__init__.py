@@ -51,6 +51,7 @@ from . import (
     canine,
     clap,
     clip,
+    clipseg,
     codegen,
     cohere,
     cogvlm,
@@ -69,6 +70,7 @@ from . import (
     detr,
     deit,
     distilbert,
+    donut,
     dpr,
     efficientnet,
     efficientformer,
@@ -99,6 +101,7 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    instructblip,
     ibert,
     jetmoe,
     layoutlm,
@@ -114,6 +117,7 @@ from . import (
     marian,
     mask2former,
     mbart,
+    mbart50,
     mctct,
     megatron_bert,
     minicpm,
@@ -125,10 +129,12 @@ from . import (
     mobilevit,
     mpnet,
     mpt,
+    mluke,
     musicgen,
     musicgen_melody,
     mvp,
     nezha,
+    nougat,
     nystromformer,
     olmo,
     oneformer,
@@ -136,8 +142,10 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    persimmon,
     phi,
     phi3,
+    plbart,
     poolformer,
     pop2piano,
     qdqbert,
@@ -172,6 +180,8 @@ from . import (
     timesformer,
     tinybert,
     upernet,
+    umt5,
+    univnet,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -179,6 +189,7 @@ from . import (
     visual_bert,
     vit,
     vit_hybrid,
+    vit_mae,
     vit_msn,
     vitdet,
     wav2vec2,
@@ -192,6 +203,7 @@ from . import (
     xlm_roberta,
     xlm_roberta_xl,
     xlnet,
+    vilt,
 )
 
 from .owlv2 import *
@@ -228,6 +240,7 @@ from .camembert import *
 from .canine import *
 from .clap import *
 from .clip import *
+from .clipseg import *
 from .codegen import *
 from .cohere import *
 from .cogvlm import *
@@ -246,6 +259,7 @@ from .decision_transformer import *
 from .detr import *
 from .deit import *
 from .distilbert import *
+from .donut import *
 from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
@@ -277,6 +291,7 @@ from .groupvit import *
 from .ibert import *
 from .hubert import *
 from .imagegpt import *
+from .instructblip import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
@@ -291,6 +306,7 @@ from .mamba import *
 from .marian import *
 from .mask2former import *
 from .mbart import *
+from .mbart50 import *
 from .mctct import *
 from .megatron_bert import *
 from .minicpm import *
@@ -301,11 +317,13 @@ from .mobilenet_v1 import *
 from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
+from .mluke import *
 from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nougat import *
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -313,8 +331,10 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .plbart import *
 from .poolformer import *
 from .pop2piano import *
 from .qdqbert import *
@@ -349,13 +369,16 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .upernet import *
+from .univnet import *
 from .videomae import *
+from .vilt import *
 from .vipllava import *
 from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
 from .vit_hybrid import *
+from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
 from .whisper import *
@@ -369,6 +392,7 @@ from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
 from .xlnet import *
+from .umt5 import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -404,6 +428,7 @@ __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
+__all__.extend(clipseg.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
@@ -421,6 +446,7 @@ __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
@@ -451,6 +477,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
@@ -467,11 +494,13 @@ __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
+__all__.extend(mbart50.__all__)
 __all__.extend(mctct.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
+__all__.extend(mluke.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilenet_v2.__all__)
@@ -482,6 +511,7 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -489,8 +519,10 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
@@ -525,13 +557,16 @@ __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
+__all__.extend(vilt.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(vit_hybrid.__all__)
+__all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
@@ -545,3 +580,4 @@ __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
+__all__.extend(umt5.__all__)

@@ -73,20 +73,20 @@ class XLMRobertaXLConfig(PretrainedConfig):
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
 
-    Examples:
-
-    ```python
-    >>> from transformers import XLMRobertaXLConfig, XLMRobertaXLModel
-
-    >>> # Initializing a XLM_ROBERTA_XL google-bert/bert-base-uncased style configuration
-    >>> configuration = XLMRobertaXLConfig()
-
-    >>> # Initializing a model (with random weights) from the google-bert/bert-base-uncased style configuration
-    >>> model = XLMRobertaXLModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import XLMRobertaXLConfig, XLMRobertaXLModel
+        ...
+        >>> # Initializing a XLM_ROBERTA_XL google-bert/bert-base-uncased style configuration
+        >>> configuration = XLMRobertaXLConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the google-bert/bert-base-uncased style configuration
+        >>> model = XLMRobertaXLModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "xlm-roberta-xl"
 

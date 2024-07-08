@@ -82,7 +82,7 @@ class BertConfig(PretrainedConfig):
             classifier_dropout (float): The dropout probability for the classifier layer. Defaults to None.
         
         Returns:
-            None. This method initializes the BertConfig object with the specified parameters.
+            None.
         
         Raises:
             ValueError: If any of the input parameters are invalid or out of range.

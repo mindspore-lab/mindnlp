@@ -100,19 +100,19 @@ class LayoutLMv2Config(PretrainedConfig):
             for details regarding default values.
 
     Example:
-
-    ```python
-    >>> from transformers import LayoutLMv2Config, LayoutLMv2Model
-
-    >>> # Initializing a LayoutLMv2 microsoft/layoutlmv2-base-uncased style configuration
-    >>> configuration = LayoutLMv2Config()
-
-    >>> # Initializing a model (with random weights) from the microsoft/layoutlmv2-base-uncased style configuration
-    >>> model = LayoutLMv2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import LayoutLMv2Config, LayoutLMv2Model
+        ...
+        >>> # Initializing a LayoutLMv2 microsoft/layoutlmv2-base-uncased style configuration
+        >>> configuration = LayoutLMv2Config()
+        ...
+        >>> # Initializing a model (with random weights) from the microsoft/layoutlmv2-base-uncased style configuration
+        >>> model = LayoutLMv2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "layoutlmv2"
 
     def __init__(
@@ -148,7 +148,7 @@ class LayoutLMv2Config(PretrainedConfig):
     ):
         """
         Initializes a LayoutLMv2Config object with the specified parameters.
-        
+
         Args:
             vocab_size (int): The size of the vocabulary.
             hidden_size (int): The hidden size for the model.
@@ -177,10 +177,10 @@ class LayoutLMv2Config(PretrainedConfig):
             has_visual_segment_embedding (bool): Flag indicating if visual segment embedding is used.
             use_visual_backbone (bool): Flag indicating if visual backbone is used.
             detectron2_config_args (dict): Additional arguments for the Detectron2 configuration.
-        
+
         Returns:
-            None. This method initializes the LayoutLMv2Config object with the provided parameters.
-        
+            None.
+
         Raises:
             None.
         """
@@ -220,8 +220,9 @@ class LayoutLMv2Config(PretrainedConfig):
     @classmethod
     def get_default_detectron2_config(cls):
         '''
-        This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of
-interest (ROI) heads, and other parameters.
+        This method returns a dictionary containing the default configuration for the Detectron2 model.
+        The configuration includes various settings related to the model's architecture, backbone, region of
+        interest (ROI) heads, and other parameters.
         
         Args:
             cls (class): The class object.
@@ -269,7 +270,7 @@ interest (ROI) heads, and other parameters.
             self: The instance of the LayoutLMv2Config class.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

@@ -46,16 +46,18 @@ class MSConvBertEmbeddings(nn.Cell):
         
         Args:
             self: The instance of the MSConvBertEmbeddings class.
-            config: An object containing configuration parameters for the embeddings.
+            config:
+                An object containing configuration parameters for the embeddings.
+
                 - Type: Custom configuration object.
                 - Purpose: Specifies various settings for initializing embeddings.
                 - Restrictions: Must be properly configured with required parameters.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.word_embeddings = nn.Embedding(
@@ -86,15 +88,15 @@ class MSConvBertEmbeddings(nn.Cell):
     ) -> ms.Tensor:
         '''
         Construct embeddings for the MSConvBert model.
-        
+
         Args:
             self (MSConvBertEmbeddings): The instance of the MSConvBertEmbeddings class.
             input_ids (Optional[ms.Tensor]): A 2D tensor containing the input token IDs. Default is None.
             token_type_ids (Optional[ms.Tensor]): A 2D tensor containing the token type IDs. Default is None.
-        
+
         Returns:
             ms.Tensor: A 3D tensor representing the constructed embeddings.
-        
+
         Raises:
             TypeError: If the input_ids or token_type_ids are not of type ms.Tensor.
             ValueError: If the sequence length derived from input_ids.shape is not valid.
@@ -164,17 +166,17 @@ class SeparableConv1D(nn.Cell):
     def __init__(self, config, input_filters, output_filters, kernel_size):
         """
         Initializes a separable 1D convolutional layer.
-        
+
         Args:
             self: The instance of the class.
             config: The configuration object containing initialization parameters.
             input_filters (int): The number of input filters.
             output_filters (int): The number of output filters.
             kernel_size (int): The size of the convolutional kernel.
-        
+
         Returns:
-            None. This method initializes the separable 1D convolutional layer.
-        
+            None.
+
         Raises:
             ValueError: If input_filters or output_filters is not a positive integer.
             ValueError: If kernel_size is not a positive odd integer.
@@ -212,18 +214,19 @@ class SeparableConv1D(nn.Cell):
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         """
         Method to construct a separable 1D convolution operation on the given hidden states.
-        
+
         Args:
             self (SeparableConv1D): An instance of the SeparableConv1D class.
             hidden_states (ms.Tensor): The input hidden states tensor on which the separable convolution is applied.
                 Must be a Tensor of shape compatible with the convolution operation.
-        
+
         Returns:
-            ms.Tensor: Returns a Tensor representing the output of the separable convolution operation on the input hidden states.
-        
+            ms.Tensor:
+                Returns a Tensor representing the output of the separable convolution operation on the input hidden states.
+
         Raises:
-            - ValueError: If the hidden_states parameter is not a valid Tensor object.
-            - RuntimeError: If any runtime error occurs during the execution of the convolution operation.
+            ValueError: If the hidden_states parameter is not a valid Tensor object.
+            RuntimeError: If any runtime error occurs during the execution of the convolution operation.
         """
         x = self.depthwise(hidden_states)
         x = self.pointwise(x)
@@ -237,21 +240,24 @@ class MSConvBertSelfAttention(nn.Cell):
     """
     def __init__(self, config):
         """Initialize the MSConvBertSelfAttention class.
-        
+
         Args:
             self: The instance of the MSConvBertSelfAttention class.
-            config: An object containing configuration parameters for the self-attention mechanism. It should have the following attributes:
+            config: An object containing configuration parameters for the self-attention mechanism.
+                It should have the following attributes:
+
                 - hidden_size (int): The size of the hidden state.
                 - num_attention_heads (int): The number of attention heads.
                 - head_ratio (int): The ratio to reduce the number of attention heads.
                 - conv_kernel_size (int): The size of the convolutional kernel.
-                - embedding_size (optional, int): The size of the embedding. If not provided, the hidden_size should be divisible by num_attention_heads.
-        
+                - embedding_size (optional, int): The size of the embedding.
+                If not provided, the hidden_size should be divisible by num_attention_heads.
+
         Returns:
-            None. This method initializes the MSConvBertSelfAttention instance with the provided configuration.
-        
+            None.
+
         Raises:
-            ValueError: 
+            ValueError:
                 - If the hidden size is not a multiple of the number of attention heads and the config does not have the attribute 'embedding_size'.
                 - If the hidden_size is not divisible by num_attention_heads.
         """
@@ -316,19 +322,18 @@ class MSConvBertSelfAttention(nn.Cell):
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
         """
         Constructs the self-attention mechanism for the MSConvBert model.
-        
+
         Args:
             self (MSConvBertSelfAttention): An instance of the MSConvBertSelfAttention class.
             hidden_states (ms.Tensor): The input hidden states of shape [batch_size, sequence_length, hidden_size].
             attention_mask (Optional[ms.Tensor]): An optional attention mask of shape [batch_size, sequence_length] with
                 0s in positions corresponding to padding tokens and 1s elsewhere. Defaults to None.
-        
+
         Returns:
-            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the context layer and an optional attention mask.
-                - context_layer: The output context layer of shape [batch_size, sequence_length, hidden_size].
-                - attention_mask: An optional attention mask of shape [batch_size, sequence_length] with 0s in positions
-                    corresponding to padding tokens and 1s elsewhere. This is returned only if attention_mask is not None.
-        
+            context_layer: The output context layer of shape [batch_size, sequence_length, hidden_size].
+            attention_mask: An optional attention mask of shape [batch_size, sequence_length] with 0s in positions
+                corresponding to padding tokens and 1s elsewhere. This is returned only if attention_mask is not None.
+
         Raises:
             None.
         """
@@ -420,17 +425,19 @@ class MSConvBertSelfOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertSelfOutput class.
-        
+
         Args:
             self (MSConvBertSelfOutput): The current instance of the MSConvBertSelfOutput class.
-            config: An object containing the configuration parameters for the MSConvBertSelfOutput class.
+            config:
+                An object containing the configuration parameters for the MSConvBertSelfOutput class.
+
                 - hidden_size (int): The size of the hidden state.
                 - layer_norm_eps (float): The epsilon value used in layer normalization.
                 - hidden_dropout_prob (float): The dropout probability for the hidden state.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -443,15 +450,15 @@ class MSConvBertSelfOutput(nn.Cell):
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         '''
         This method constructs the self output for the MSConvBert model.
-        
+
         Args:
             self (MSConvBertSelfOutput): The instance of the MSConvBertSelfOutput class.
             hidden_states (ms.Tensor): The hidden states tensor representing the output of the model's self-attention mechanism.
             input_tensor (ms.Tensor): The input tensor representing the input to the self output layer.
-        
+
         Returns:
             ms.Tensor: A tensor representing the constructed self output.
-        
+
         Raises:
             None.
         '''
@@ -469,16 +476,16 @@ class MSConvBertAttention(nn.Cell):
     def __init__(self, config):
         """
         Initializes a new instance of the MSConvBertAttention class.
-        
+
         Args:
             self: The instance of the class.
             config: The configuration object that contains the settings for the attention module.
                 This parameter is of type 'config' and is used to initialize the attention module and output module.
                 The config object must have the necessary attributes required by the MSConvBertSelfAttention and MSConvBertSelfOutput classes.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -520,15 +527,15 @@ class MSConvBertAttention(nn.Cell):
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
         """
         Constructs the attention mechanism for the MSConvBert model.
-        
+
         Args:
             self (MSConvBertAttention): The instance of the MSConvBertAttention class.
             hidden_states (ms.Tensor): The input hidden states to be used for attention computation.
             attention_mask (Optional[ms.Tensor]): An optional tensor representing the attention mask. Defaults to None.
-        
+
         Returns:
             Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the attention output tensor and an optional tensor.
-        
+
         Raises:
             None.
         """
@@ -549,17 +556,19 @@ class MSConvBertIntermediate(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertIntermediate class.
-        
+
         Args:
             self: The instance of the class.
-            config (object): An object containing configuration settings.
+            config (object):
+                An object containing configuration settings.
+
                 - Type: Any object.
                 - Purpose: Configuration settings for the intermediate layer.
                 - Restrictions: Must contain 'hidden_size' and 'intermediate_size' attributes.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             KeyError: If the 'hidden_act' attribute in the config object does not match any key in ACT2FN dictionary.
         """
@@ -570,14 +579,14 @@ class MSConvBertIntermediate(nn.Cell):
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         """
         Constructs the intermediate layer for MSConvBert model.
-        
+
         Args:
             self: Instance of the MSConvBertIntermediate class.
             hidden_states (ms.Tensor): Input tensor representing the hidden states from the previous layer.
-        
+
         Returns:
             ms.Tensor: Transformed tensor after passing through the intermediate layer.
-        
+
         Raises:
             None.
         """
@@ -593,24 +602,26 @@ class MSConvBertOutput(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertOutput class.
-        
+
         Args:
             self (MSConvBertOutput): The instance of the MSConvBertOutput class.
             config (object): The configuration object containing parameters for initialization.
                 This object should have the following attributes:
-                    - intermediate_size (int): The size of the intermediate layer.
-                    - hidden_size (int): The size of the hidden layer.
-                    - layer_norm_eps (float): The epsilon value for LayerNorm.
-                    - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-            
+
+                - intermediate_size (int): The size of the intermediate layer.
+                - hidden_size (int): The size of the hidden layer.
+                - layer_norm_eps (float): The epsilon value for LayerNorm.
+                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not provided or is not of the expected type.
-            - ValueError: If any of the required attributes (intermediate_size, hidden_size, layer_norm_eps, hidden_dropout_prob) are missing in the config object.
-            - ValueError: If the values of hidden_size or intermediate_size are not valid integers.
-            - ValueError: If the values of layer_norm_eps or hidden_dropout_prob are not valid floats.
+            TypeError: If the config parameter is not provided or is not of the expected type.
+            ValueError: If any of the required attributes (intermediate_size, hidden_size, layer_norm_eps,
+                hidden_dropout_prob) are missing in the config object.
+            ValueError: If the values of hidden_size or intermediate_size are not valid integers.
+            ValueError: If the values of layer_norm_eps or hidden_dropout_prob are not valid floats.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -620,23 +631,24 @@ class MSConvBertOutput(nn.Cell):
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         """
-        The 'construct' method in the 'MSConvBertOutput' class constructs a tensor output based on the provided hidden states and input tensor.
-        
+        The 'construct' method in the 'MSConvBertOutput' class constructs a tensor output based on the provided
+        hidden states and input tensor.
+
         Args:
             self (MSConvBertOutput): The instance of the MSConvBertOutput class.
             hidden_states (ms.Tensor): The hidden states tensor to be processed.
                 This tensor should represent the internal states of the model.
             input_tensor (ms.Tensor): The input tensor to be combined with the processed hidden states.
                 This tensor should contain the input data to be integrated into the output.
-        
+
         Returns:
             ms.Tensor: A tensor representing the output constructed based on the hidden states and input tensor.
                 The output tensor reflects the combined information from the hidden states and input.
-        
+
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If any input parameter does not meet the required restrictions.
-            - RuntimeError: If there are issues during the tensor processing or combination steps.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If any input parameter does not meet the required restrictions.
+            RuntimeError: If there are issues during the tensor processing or combination steps.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
@@ -651,17 +663,17 @@ class MSConvBertLayer(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of MSConvBertLayer.
-        
+
         Args:
             self (object): The instance of the MSConvBertLayer class.
             config (object): An object containing configuration parameters for the layer.
                 This parameter is used to configure the behavior of the layer.
-                
+
         Returns:
-            None. This method initializes the MSConvBertLayer instance.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.seq_len_dim = 1
@@ -676,17 +688,16 @@ class MSConvBertLayer(nn.Cell):
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
         """
         Constructs a Convolutional BERT layer.
-        
+
         Args:
             self (MSConvBertLayer): The instance of the MSConvBertLayer class.
             hidden_states (ms.Tensor): The hidden states of the input sequence. Shape: [batch_size, sequence_length, hidden_size].
             attention_mask (ms.Tensor): The attention mask to avoid performing attention on padding tokens. Shape: [batch_size, sequence_length].
-        
+
         Returns:
-            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the layer outputs. 
-            - layer_output (ms.Tensor): The output of the convolutional BERT layer. Shape: [batch_size, sequence_length, hidden_size].
-            - outputs (Optional[ms.Tensor]): Additional outputs from the attention mechanism.
-        
+            layer_output (ms.Tensor): The output of the convolutional BERT layer. Shape: [batch_size, sequence_length, hidden_size].
+            outputs (Optional[ms.Tensor]): Additional outputs from the attention mechanism.
+
         Raises:
             None
         """
@@ -708,16 +719,17 @@ class MSConvBertEncoder(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertEncoder class.
-        
+
         Args:
             self (MSConvBertEncoder): The instance of the class.
-            config (object): The configuration object for the MSConvBertEncoder. It contains various parameters and settings for the encoder.
-            
+            config (object): The configuration object for the MSConvBertEncoder.
+                It contains various parameters and settings for the encoder.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.config = config
@@ -730,19 +742,20 @@ class MSConvBertEncoder(nn.Cell):
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-        ''' 
+        '''
         Constructs the MSConvBertEncoder by processing the hidden states with attention mask.
-        
+
         Args:
             self: The instance of the MSConvBertEncoder class.
             hidden_states (ms.Tensor): The input hidden states to be processed by the encoder.
             attention_mask (ms.Tensor): The attention mask to be applied during the encoding process.
-        
+
         Returns:
-            Union[Tuple, BaseModelOutputWithCrossAttentions]: Returns the processed hidden states, which could be a Tuple or BaseModelOutputWithCrossAttentions.
-        
+            Union[Tuple, BaseModelOutputWithCrossAttentions]:
+                Returns the processed hidden states, which could be a Tuple or BaseModelOutputWithCrossAttentions.
+
         Raises:
-            N/A
+            None.
         '''
         for i, layer_cell in enumerate(self.layer):
             layer_outputs = layer_cell(
@@ -761,19 +774,19 @@ class MSConvBertModel(ConvBertPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertModel class.
-        
+
         Args:
             self: The instance of the MSConvBertModel class.
             config: A dictionary containing configuration parameters for the model initialization.
-                    This dictionary must include the necessary settings for the model to be properly configured.
-                    Expected keys may include settings related to embeddings, encoder, and other model specifics.
-        
+                This dictionary must include the necessary settings for the model to be properly configured.
+                Expected keys may include settings related to embeddings, encoder, and other model specifics.
+
         Returns:
-            None. This method does not return any value explicitly.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided 'config' parameter is not a dictionary.
-            - ValueError: If required keys are missing in the 'config' dictionary.
+            TypeError: If the provided 'config' parameter is not a dictionary.
+            ValueError: If required keys are missing in the 'config' dictionary.
         """
         super().__init__(config)
         self.embeddings = MSConvBertEmbeddings(config)
@@ -784,40 +797,43 @@ class MSConvBertModel(ConvBertPreTrainedModel):
     def get_input_embeddings(self):
         """
         Returns the input embeddings for the MSConvBertModel.
-        
+
         Args:
             self (MSConvBertModel): The instance of the MSConvBertModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
-        
+            None.
+
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings of the MSConvBertModel.
-        
+
         Args:
             self (MSConvBertModel): The instance of the MSConvBertModel class.
             new_embeddings (torch.Tensor): The new word embeddings to be set for the model.
-            
+
         Returns:
-            None. The method modifies the self.embeddings.word_embeddings attribute directly.
-        
+            None: The method modifies the self.embeddings.word_embeddings attribute directly.
+
         Raises:
             None.
-        
+
         Description:
-        This method allows for the setting of new word embeddings for the MSConvBertModel. The new_embeddings parameter should be a tensor containing the new word embeddings. The method updates the
-self.embeddings.word_embeddings attribute of the MSConvBertModel instance with the provided new_embeddings.
-        
+            This method allows for the setting of new word embeddings for the MSConvBertModel.
+            The new_embeddings parameter should be a tensor containing the new word embeddings.
+            The method updates the self.embeddings.word_embeddings attribute of the MSConvBertModel instance with
+            the provided new_embeddings.
+
         Note:
-        The new_embeddings tensor should have the same shape as the existing word_embeddings tensor. It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor
-of the model, otherwise unexpected behavior may occur.
+            The new_embeddings tensor should have the same shape as the existing word_embeddings tensor.
+            It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor
+            of the model, otherwise unexpected behavior may occur.
         """
         self.embeddings.word_embeddings = new_embeddings
 
@@ -854,7 +870,7 @@ of the model, otherwise unexpected behavior may occur.
             Union[Tuple, BaseModelOutputWithCrossAttentions]: The output hidden states of the MSConvBertModel.
             
         Raises:
-            N/A
+            None.
         """
         self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
         input_shape = input_ids.shape
@@ -890,7 +906,7 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
                 It must include the number of labels (num_labels) for the model.
                 
         Returns:
-            None. This method initializes the MSConvBertForQuestionAnswering instance.
+            None.
         
         Raises:
             None.
@@ -924,10 +940,11 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
             end_positions (Optional[ms.Tensor]): The tensor of end positions for the answer span. Default is None.
         
         Returns:
-            Union[Tuple, QuestionAnsweringModelOutput]: The total loss value or a tuple containing the total loss value and the QuestionAnsweringModelOutput.
+            Union[Tuple, QuestionAnsweringModelOutput]:
+                The total loss value or a tuple containing the total loss value and the QuestionAnsweringModelOutput.
         
         Raises:
-            N/A
+            None.
         """
         outputs = self.convbert(
             input_ids=input_ids,

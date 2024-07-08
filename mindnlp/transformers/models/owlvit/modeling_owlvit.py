@@ -604,8 +604,10 @@ OWLVIT_TEXT_INPUTS_DOCSTRING = r"""
             IDs?](../glossary#input-ids)
         attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         output_attentions (`bool`, *optional*):
             Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
@@ -639,8 +641,10 @@ OWLVIT_INPUTS_DOCSTRING = r"""
             IDs?](../glossary#input-ids)
         attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values.
@@ -666,8 +670,10 @@ OWLVIT_OBJECT_DETECTION_INPUTS_DOCSTRING = r"""
             IDs?](../glossary#input-ids).
         attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
+            
             [What are attention masks?](../glossary#attention-mask)
         output_hidden_states (`bool`, *optional*):
             Whether or not to return the last hidden state. See `text_model_last_hidden_state` and
@@ -722,13 +728,17 @@ class OwlViTEncoder(nn.Cell):
             inputs_embeds (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`).
             attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Causal mask for the text model. Mask values selected in `[0, 1]`:
+
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -803,7 +813,9 @@ class OwlViTTextTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -883,20 +895,22 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
-        ```python
-        >>> from transformers import AutoProcessor, OwlViTTextModel
-
-        >>> model = OwlViTTextModel.from_pretrained("google/owlvit-base-patch32")
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> inputs = processor(
-        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
-        ... )
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, OwlViTTextModel
+            ...
+            >>> model = OwlViTTextModel.from_pretrained("google/owlvit-base-patch32")
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> inputs = processor(
+            ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+            ... )
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
+            ```
+        """
 
         # Get embeddings for all text queries in all batch samples
         return self.text_model(
@@ -928,7 +942,9 @@ class OwlViTVisionTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -988,24 +1004,26 @@ class OwlViTVisionModel(OwlViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, OwlViTVisionModel
-
-        >>> model = OwlViTVisionModel.from_pretrained("google/owlvit-base-patch32")
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, OwlViTVisionModel
+            ...
+            >>> model = OwlViTVisionModel.from_pretrained("google/owlvit-base-patch32")
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         return self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1063,19 +1081,20 @@ class OwlViTModel(OwlViTPreTrainedModel):
         r"""
         Returns:
             text_features (`ms.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
-            applying the projection layer to the pooled output of [`OwlViTTextModel`].
+                applying the projection layer to the pooled output of [`OwlViTTextModel`].
 
-        Examples:
-        ```python
-        >>> from transformers import AutoProcessor, OwlViTModel
-
-        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> inputs = processor(
-        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
-        ... )
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, OwlViTModel
+            ...
+            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> inputs = processor(
+            ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+            ... )
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1097,21 +1116,22 @@ class OwlViTModel(OwlViTPreTrainedModel):
         r"""
         Returns:
             image_features (`ms.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
-            applying the projection layer to the pooled output of [`OwlViTVisionModel`].
+                applying the projection layer to the pooled output of [`OwlViTVisionModel`].
 
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, OwlViTModel
-
-        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, OwlViTModel
+            ...
+            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1144,22 +1164,24 @@ class OwlViTModel(OwlViTPreTrainedModel):
     ) -> Union[Tuple, OwlViTOutput]:
         r"""
         Returns:
+            `Union[Tuple, OwlViTOutput]`
 
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, OwlViTModel
-
-        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, OwlViTModel
+            ...
+            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1357,6 +1379,7 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
                 Features extracted from the image, returned by the `image_text_embedder` method.
             feature_map:
                 A spatial re-arrangement of image_features, also returned by the `image_text_embedder` method.
+
         Returns:
             pred_boxes:
                 List of predicted boxes (cxcywh normalized to 0, 1) nested within a dictionary.
@@ -1519,38 +1542,41 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> OwlViTImageGuidedObjectDetectionOutput:
         r"""
+
         Returns:
+            `OwlViTImageGuidedObjectDetectionOutput`
 
-        Examples:
-        ```python
-        >>> import requests
-        >>> from PIL import Image
-        >>> import torch
-        >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch16")
-        >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch16")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> query_url = "http://images.cocodataset.org/val2017/000000001675.jpg"
-        >>> query_image = Image.open(requests.get(query_url, stream=True).raw)
-        >>> inputs = processor(images=image, query_images=query_image, return_tensors="pt")
-        >>> with torch.no_grad():
-        ...     outputs = model.image_guided_detection(**inputs)
-        >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
-        >>> target_sizes = ms.Tensor([image.size[::-1]])
-        >>> # Convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-        >>> results = processor.post_process_image_guided_detection(
-        ...     outputs=outputs, threshold=0.6, nms_threshold=0.3, target_sizes=target_sizes
-        ... )
-        >>> i = 0  # Retrieve predictions for the first image
-        >>> boxes, scores = results[i]["boxes"], results[i]["scores"]
-        >>> for box, score in zip(boxes, scores):
-        ...     box = [round(i, 2) for i in box.tolist()]
-        ...     print(f"Detected similar object with confidence {round(score.item(), 3)} at location {box}")
-        Detected similar object with confidence 0.856 at location [10.94, 50.4, 315.8, 471.39]
-        Detected similar object with confidence 1.0 at location [334.84, 25.33, 636.16, 374.71]
-        ```"""
+        Example:
+            ```python
+            >>> import requests
+            >>> from PIL import Image
+            >>> import torch
+            >>> from transformers import AutoProcessor, OwlViTForObjectDetection
+            ...
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch16")
+            >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch16")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> query_url = "http://images.cocodataset.org/val2017/000000001675.jpg"
+            >>> query_image = Image.open(requests.get(query_url, stream=True).raw)
+            >>> inputs = processor(images=image, query_images=query_image, return_tensors="pt")
+            >>> with torch.no_grad():
+            ...     outputs = model.image_guided_detection(**inputs)
+            >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
+            >>> target_sizes = ms.Tensor([image.size[::-1]])
+            >>> # Convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
+            >>> results = processor.post_process_image_guided_detection(
+            ...     outputs=outputs, threshold=0.6, nms_threshold=0.3, target_sizes=target_sizes
+            ... )
+            >>> i = 0  # Retrieve predictions for the first image
+            >>> boxes, scores = results[i]["boxes"], results[i]["scores"]
+            >>> for box, score in zip(boxes, scores):
+            ...     box = [round(i, 2) for i in box.tolist()]
+            ...     print(f"Detected similar object with confidence {round(score.item(), 3)} at location {box}")
+            Detected similar object with confidence 0.856 at location [10.94, 50.4, 315.8, 471.39]
+            Detected similar object with confidence 1.0 at location [334.84, 25.33, 636.16, 374.71]
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1619,40 +1645,42 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
     ) -> OwlViTObjectDetectionOutput:
         r"""
         Returns:
+            `OwlViTObjectDetectionOutput`
 
-        Examples:
-        ```python
-        >>> import requests
-        >>> from PIL import Image
-        >>> import torch
-        >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-
-        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-        >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> texts = [["a photo of a cat", "a photo of a dog"]]
-        >>> inputs = processor(text=texts, images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
-        >>> target_sizes = ms.Tensor([image.size[::-1]])
-        >>> # Convert outputs (bounding boxes and class logits) to final bounding boxes and scores
-        >>> results = processor.post_process_object_detection(
-        ...     outputs=outputs, threshold=0.1, target_sizes=target_sizes
-        ... )
-
-        >>> i = 0  # Retrieve predictions for the first image for the corresponding text queries
-        >>> text = texts[i]
-        >>> boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
-
-        >>> for box, score, label in zip(boxes, scores, labels):
-        ...     box = [round(i, 2) for i in box.tolist()]
-        ...     print(f"Detected {text[label]} with confidence {round(score.item(), 3)} at location {box}")
-        Detected a photo of a cat with confidence 0.707 at location [324.97, 20.44, 640.58, 373.29]
-        Detected a photo of a cat with confidence 0.717 at location [1.46, 55.26, 315.55, 472.17]
-        ```"""
+        Example:
+            ```python
+            >>> import requests
+            >>> from PIL import Image
+            >>> import torch
+            >>> from transformers import AutoProcessor, OwlViTForObjectDetection
+            ...
+            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+            >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> texts = [["a photo of a cat", "a photo of a dog"]]
+            >>> inputs = processor(text=texts, images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
+            >>> target_sizes = ms.Tensor([image.size[::-1]])
+            >>> # Convert outputs (bounding boxes and class logits) to final bounding boxes and scores
+            >>> results = processor.post_process_object_detection(
+            ...     outputs=outputs, threshold=0.1, target_sizes=target_sizes
+            ... )
+            ...
+            >>> i = 0  # Retrieve predictions for the first image for the corresponding text queries
+            >>> text = texts[i]
+            >>> boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
+            ...
+            >>> for box, score, label in zip(boxes, scores, labels):
+            ...     box = [round(i, 2) for i in box.tolist()]
+            ...     print(f"Detected {text[label]} with confidence {round(score.item(), 3)} at location {box}")
+            Detected a photo of a cat with confidence 0.707 at location [324.97, 20.44, 640.58, 373.29]
+            Detected a photo of a cat with confidence 0.717 at location [1.46, 55.26, 315.55, 472.17]
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

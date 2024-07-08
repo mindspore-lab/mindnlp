@@ -76,7 +76,7 @@ class BatchFeature(UserDict):
                 It can be None, a string, or an instance of the TensorType class.
         
         Returns:
-            None. This method returns nothing.
+            None.
         
         Raises:
             None.
@@ -99,20 +99,22 @@ class BatchFeature(UserDict):
         
         Args:
             self: Instance of the BatchFeature class.
-                Type: BatchFeature
-                Purpose: Represents the current instance of the class.
-                Restrictions: Must be an instance of the BatchFeature class.
+                - Type: BatchFeature
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: Must be an instance of the BatchFeature class.
         
             item: The attribute name being accessed.
-                Type: str
-                Purpose: Indicates the name of the attribute to retrieve.
-                Restrictions: Must be a string representing a valid attribute name.
+                - Type: str
+                - Purpose: Indicates the name of the attribute to retrieve.
+                - Restrictions: Must be a string representing a valid attribute name.
         
         Returns:
-            None: If the attribute 'item' does not exist in the data dictionary of the BatchFeature instance.
+            None:
+                If the attribute 'item' does not exist in the data dictionary of the BatchFeature instance.
         
         Raises:
-            AttributeError: Raised when the specified 'item' attribute does not exist in the data dictionary of the BatchFeature instance.
+            AttributeError: Raised when the specified 'item' attribute does not exist in the data dictionary of the
+                BatchFeature instance.
         """
         try:
             return self.data[item]
@@ -121,39 +123,42 @@ class BatchFeature(UserDict):
 
     def __getstate__(self):
         """
-        Method: __getstate__
         
         Description:
-        This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a dictionary containing the 'data' attribute of the instance.
-        
+            This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a
+            dictionary containing the 'data' attribute of the instance.
+
         Args:
-        - self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first argument when the method is called.
-        
+            self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first
+                argument when the method is called.
+
         Returns:
-        - None: This method does not explicitly return a value. However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
-        
+            None: This method does not explicitly return a value.
+                However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
+
         Raises:
-        - None: This method does not raise any exceptions.
-        
+            None.
+
         """
         return {"data": self.data}
 
     def __setstate__(self, state):
         """
         Sets the state of the BatchFeature object.
-        
+
         Args:
             self (BatchFeature): The BatchFeature object to set the state for.
             state (dict): A dictionary containing the state information to be set. It should include the 'data' key.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method is automatically called by the pickle module when unpickling a BatchFeature object. It sets the state of the object based on the provided 'state' dictionary. The 'data' key in the 'state'
-dictionary is used to set the 'data' attribute of the BatchFeature object.
+
+        This method is automatically called by the pickle module when unpickling a BatchFeature object.
+        It sets the state of the object based on the provided 'state' dictionary.
+        The 'data' key in the 'state' dictionary is used to set the 'data' attribute of the BatchFeature object.
         """
         if "data" in state:
             self.data = state["data"]
@@ -162,18 +167,18 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
     def keys(self):
         '''
         Method: keys
-        
+
         Description:
-        This method returns a list of all the keys in the BatchFeature's data dictionary.
-        
+            This method returns a list of all the keys in the BatchFeature's data dictionary.
+
         Args:
-        - self: (object) The instance of the BatchFeature class.
-        
+            self: (object) The instance of the BatchFeature class.
+
         Returns:
-        - None: This method does not return any value, as it directly operates on the instance's data.
-        
+            None: This method does not return any value, as it directly operates on the instance's data.
+
         Raises:
-        - No specific exceptions are documented to be raised by this method.
+            None.
         '''
         return self.data.keys()
 
@@ -181,15 +186,15 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
     def values(self):
         """
         Retrieves and returns the values stored in the 'data' attribute of the BatchFeature class instance.
-        
+
         Args:
             self (BatchFeature): The current instance of the BatchFeature class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.data.values()
 
@@ -197,15 +202,15 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
     def items(self):
         """
         Method items in class BatchFeature.
-        
+
         Args:
             self: BatchFeature object
                 The self parameter refers to the instance of the BatchFeature class.
-        
+
         Returns:
             dict_items
                 Returns a view object that displays a list of a given dictionary's (key, value) tuple pairs.
-        
+
         Raises:
             None
         """
@@ -213,20 +218,24 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
 
     def _get_is_as_tensor_fns(self, tensor_type: Optional[Union[str, TensorType]] = None):
         """
-        This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified
-tensor type.
-        
+        This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions
+        for checking if a given input is a tensor and converting values to tensors based on the specified
+        tensor type.
+
         Args:
             self: An instance of the class BatchFeature.
-            tensor_type: An optional parameter indicating the type of tensor to be used for conversion. It can be a string or an instance of the enum TensorType. If not provided, the default value is None.
-        
+            tensor_type: An optional parameter indicating the type of tensor to be used for conversion.
+                It can be a string or an instance of the enum TensorType. If not provided, the default value is None.
+
         Returns:
-            A tuple containing two functions:
-            - is_tensor: A function that checks whether a given value is a tensor.
-            - as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
-        
+            tuple:
+                A tuple containing two functions:
+
+                - is_tensor: A function that checks whether a given value is a tensor.
+                - as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
+
         Raises:
-            - ImportError: If the tensor_type is set to MindSpore but MindSpore is not installed.
+            ImportError: If the tensor_type is set to MindSpore but MindSpore is not installed.
         """
         if tensor_type is None:
             return None, None
@@ -398,7 +407,6 @@ class FeatureExtractionMixin():
                 git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
 
-
                 <Tip>
 
                 To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>".
@@ -418,28 +426,28 @@ class FeatureExtractionMixin():
         Returns:
             A feature extractor of type [`~feature_extraction_utils.FeatureExtractionMixin`].
 
-        Examples:
-
-        ```python
-        # We can't instantiate directly the base class *FeatureExtractionMixin* nor *SequenceFeatureExtractor* so let's show the examples on a
-        # derived class: *Wav2Vec2FeatureExtractor*
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h"
-        )  # Download feature_extraction_config from hf-mirror.com and cache.
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "./test/saved_model/"
-        )  # E.g. feature_extractor (or model) was saved using *save_pretrained('./test/saved_model/')*
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("./test/saved_model/preprocessor_config.json")
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False
-        )
-        assert feature_extractor.return_attention_mask is False
-        feature_extractor, unused_kwargs = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False, return_unused_kwargs=True
-        )
-        assert feature_extractor.return_attention_mask is False
-        assert unused_kwargs == {"foo": False}
-        ```"""
+        Example:
+            ```python
+            >>> # We can't instantiate directly the base class *FeatureExtractionMixin* nor *SequenceFeatureExtractor* so let's show the examples on a
+            >>> # derived class: *Wav2Vec2FeatureExtractor*
+            >>> feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            >>>     "facebook/wav2vec2-base-960h"
+            >>> )  # Download feature_extraction_config from hf-mirror.com and cache.
+            >>> feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            >>>     "./test/saved_model/"
+            >>> )  # E.g. feature_extractor (or model) was saved using *save_pretrained('./test/saved_model/')*
+            >>> feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("./test/saved_model/preprocessor_config.json")
+            >>> feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            >>>     "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False
+            >>> )
+            >>> assert feature_extractor.return_attention_mask is False
+            >>> feature_extractor, unused_kwargs = Wav2Vec2FeatureExtractor.from_pretrained(
+            >>>     "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False, return_unused_kwargs=True
+            >>> )
+            >>> assert feature_extractor.return_attention_mask is False
+            >>> assert unused_kwargs == {"foo": False}
+            ```
+        """
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
@@ -614,8 +622,8 @@ class FeatureExtractionMixin():
                 Additional parameters from which to initialize the feature extractor object.
 
         Returns:
-            [`~feature_extraction_utils.FeatureExtractionMixin`]: The feature extractor object instantiated from those
-            parameters.
+            [`~feature_extraction_utils.FeatureExtractionMixin`]:
+                The feature extractor object instantiated from those parameters.
         """
         return_unused_kwargs = kwargs.pop("return_unused_kwargs", False)
 
@@ -659,8 +667,8 @@ class FeatureExtractionMixin():
                 Path to the JSON file containing the parameters.
 
         Returns:
-            A feature extractor of type [`~feature_extraction_utils.FeatureExtractionMixin`]: The feature_extractor
-            object instantiated from that JSON file.
+            A feature extractor of type [`~feature_extraction_utils.FeatureExtractionMixin`]:
+                The feature_extractor object instantiated from that JSON file.
         """
         with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
@@ -708,11 +716,12 @@ class FeatureExtractionMixin():
                 This parameter refers to the current instance of the class.
         
         Returns:
-            None.
-                This method does not return any value explicitly; it generates a formatted string representation of the object.
+            None:
+                This method does not return any value explicitly;
+                it generates a formatted string representation of the object.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return f"{self.__class__.__name__} {self.to_json_string()}"
 

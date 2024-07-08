@@ -161,14 +161,14 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file.
         
         Args:
-        - self: The instance of the CpmTokenizerFast class.
-        
+            self: The instance of the CpmTokenizerFast class.
+
         Returns:
-        - bool: Returns a boolean value indicating whether the slow tokenizer can be saved. 
-          Returns True if the vocabulary file exists, otherwise False.
-        
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
+                Returns True if the vocabulary file exists, otherwise False.
+
         Raises:
-        This method does not raise any exceptions.
+            This method does not raise any exceptions.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -243,15 +243,19 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: Raised if the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: Raised if the fast tokenizer does not have the necessary information to save the vocabulary
+                for a slow tokenizer.
             OSError: Raised if the save_directory is not a valid directory.
         
         Note:
-            The method assumes that the fast tokenizer has the required information to save the vocabulary for a slow tokenizer. If this is not the case, a ValueError is raised.
+            The method assumes that the fast tokenizer has the required information to save the vocabulary for
+            a slow tokenizer. If this is not the case, a ValueError is raised.
         
         Example:
-            tokenizer = CpmTokenizerFast()
-            tokenizer.save_vocabulary('path/to/save', 'vocab')
+            ```python
+            >>> tokenizer = CpmTokenizerFast()
+            >>> tokenizer.save_vocabulary('path/to/save', 'vocab')
+            ```
         """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
@@ -308,7 +312,7 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the CpmTokenizerFast class.
             
         Returns:
-            None. This method modifies the text representation of the CpmTokenizerFast object in-place.
+            None: This method modifies the text representation of the CpmTokenizerFast object in-place.
             
         Raises:
             None.
