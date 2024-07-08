@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Sentence transformer models init"""
+"""
+MGP-STR Model.
+"""
+from . import (
+    modeling_mgp_str,
+    configuration_mgp_str,
+    processing_mgp_str,
+    tokenization_mgp_str,
+)
+from .modeling_mgp_str import *
+from .configuration_mgp_str import *
+from .processing_mgp_str import *
+from .tokenization_mgp_str import *
 
-from .transformer import Transformer
-from .pooling import Pooling
-
-__all__ = [
-    "transformer",
-    "pooling",
-]
+__all__ = []
+__all__.extend(modeling_mgp_str.__all__)
+__all__.extend(configuration_mgp_str.__all__)
+__all__.extend(processing_mgp_str.__all__)
+__all__.extend(tokenization_mgp_str.__all__)

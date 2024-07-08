@@ -12,12 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Sentence transformer models init"""
+"""
+FNet Model.
+"""
 
-from .transformer import Transformer
-from .pooling import Pooling
+from . import (
+    configuration_fnet,
+    modeling_fnet,
+    tokenization_fnet,
+    tokenization_fnet_fast,
+)
 
-__all__ = [
-    "transformer",
-    "pooling",
-]
+from .configuration_fnet import *
+from .modeling_fnet import *
+from .tokenization_fnet import *
+from .tokenization_fnet_fast import *
+
+__all__ = []
+__all__.extend(configuration_fnet.__all__)
+__all__.extend(modeling_fnet.__all__)
+__all__.extend(tokenization_fnet.__all__)
+__all__.extend(tokenization_fnet_fast.__all__)

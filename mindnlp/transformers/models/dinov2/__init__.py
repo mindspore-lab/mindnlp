@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Sentence transformer models init"""
+"""
+DINOv2 Model init
+"""
+from . import configuration_dinov2, modeling_dinov2
+from .configuration_dinov2 import *
+from .modeling_dinov2 import *
 
-from .transformer import Transformer
-from .pooling import Pooling
-
-__all__ = [
-    "transformer",
-    "pooling",
-]
+__all__ = []
+__all__.extend(configuration_dinov2.__all__)
+__all__.extend(modeling_dinov2.__all__)

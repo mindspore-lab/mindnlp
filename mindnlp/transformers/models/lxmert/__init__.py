@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Sentence transformer models init"""
+"""
+Lxmert Model.
+"""
+from . import (
+    modeling_lxmert,
+    configuration_lxmert,
+    tokenization_lxmert,
+    tokenization_lxmert_fast,
+)
+from .modeling_lxmert import *
+from .configuration_lxmert import *
+from .tokenization_lxmert import *
+from .tokenization_lxmert_fast import *
 
-from .transformer import Transformer
-from .pooling import Pooling
-
-__all__ = [
-    "transformer",
-    "pooling",
-]
+__all__ = []
+__all__.extend(modeling_lxmert.__all__)
+__all__.extend(configuration_lxmert.__all__)
+__all__.extend(tokenization_lxmert.__all__)
+__all__.extend(tokenization_lxmert_fast.__all__)

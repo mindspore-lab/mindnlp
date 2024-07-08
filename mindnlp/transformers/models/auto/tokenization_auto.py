@@ -1064,13 +1064,13 @@ class AutoTokenizer:
     def __init__(self):
         """
         This method initializes an instance of the AutoTokenizer class.
-        
+
         Args:
             self: The instance of the AutoTokenizer class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method,
                 an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the
