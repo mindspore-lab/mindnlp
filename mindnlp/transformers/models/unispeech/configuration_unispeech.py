@@ -18,7 +18,7 @@ import functools
 import operator
 
 from ...configuration_utils import PretrainedConfig
-from ...utils import logging
+from mindnlp.utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -304,3 +304,5 @@ class UniSpeechConfig(PretrainedConfig):
     @property
     def inputs_to_logits_ratio(self):
         return functools.reduce(operator.mul, self.conv_stride, 1)
+
+__all__ = ['UniSpeechConfig']

@@ -11,51 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING
+# ============================================================================
+"""
+unispeech Model init
+"""
+from . import configuration_unispeech, modeling_unispeech
+from .configuration_unispeech import *
+from .modeling_unispeech import *
 
-from ...utils import (
-    OptionalDependencyNotAvailable,
-    _LazyModule,
-    is_flax_available,
-    is_tf_available,
-    is_torch_available,
-)
-
-
-_import_structure = {"configuration_unispeech": ["UniSpeechConfig"]}
-
-try:
-    if not is_torch_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["modeling_unispeech"] = [
-        "UniSpeechForCTC",
-        "UniSpeechForPreTraining",
-        "UniSpeechForSequenceClassification",
-        "UniSpeechModel",
-        "UniSpeechPreTrainedModel",
-    ]
-
-if TYPE_CHECKING:
-    from .configuration_unispeech import UniSpeechConfig
-
-    try:
-        if not is_torch_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .modeling_unispeech import (
-            UniSpeechForCTC,
-            UniSpeechForPreTraining,
-            UniSpeechForSequenceClassification,
-            UniSpeechModel,
-            UniSpeechPreTrainedModel,
-        )
-
-else:
-    import sys
-
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+__all__ = []
+__all__.extend(modeling_unispeech.__all__)
+__all__.extend(configuration_unispeech.__all__)

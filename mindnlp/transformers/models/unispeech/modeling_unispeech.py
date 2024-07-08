@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch UniSpeech model."""
+"""Mindspore UniSpeech model."""
 
 import math
 import warnings
@@ -20,33 +20,18 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy as np
-import torch
-import torch.nn.functional as F
-import torch.utils.checkpoint
-from torch import nn
-from torch.nn import CrossEntropyLoss
+import mindspore
+from mindspore import nn,ops
 
 from ...activations import ACT2FN
-from ...integrations.deepspeed import is_deepspeed_zero3_enabled
+# from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput, Wav2Vec2BaseModelOutput
 from ...modeling_utils import PreTrainedModel
-from ...utils import (
+from mindnlp.utils import (
     ModelOutput,
-    add_code_sample_docstrings,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-    is_flash_attn_2_available,
-    is_flash_attn_greater_or_equal_2_10,
     logging,
-    replace_return_docstrings,
 )
 from .configuration_unispeech import UniSpeechConfig
-
-
-if is_flash_attn_2_available():
-    from flash_attn import flash_attn_func, flash_attn_varlen_func
-    from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
-
 
 logger = logging.get_logger(__name__)
 
@@ -67,10 +52,10 @@ _CTC_EXPECTED_LOSS = 17.17
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=torch.int32)
-    indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
+    indices = mindspore.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(torch.cumsum(seqlens_in_batch, dim=0, dtype=torch.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -106,12 +91,12 @@ class UniSpeechForPreTrainingOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional[torch.FloatTensor] = None
-    projected_states: torch.FloatTensor = None
-    projected_quantized_states: torch.FloatTensor = None
-    codevector_perplexity: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    projected_states: mindspore.Tensor = None
+    projected_quantized_states: mindspore.Tensor = None
+    codevector_perplexity: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2._compute_mask_indices
@@ -119,7 +104,7 @@ def _compute_mask_indices(
     shape: Tuple[int, int],
     mask_prob: float,
     mask_length: int,
-    attention_mask: Optional[torch.LongTensor] = None,
+    attention_mask: Optional[mindspore.Tensor] = None,
     min_masks: int = 0,
 ) -> np.ndarray:
     """
@@ -235,7 +220,7 @@ def _compute_mask_indices(
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2NoLayerNormConvLayer with Wav2Vec2->UniSpeech
-class UniSpeechNoLayerNormConvLayer(nn.Module):
+class UniSpeechNoLayerNormConvLayer(nn.Cell):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -250,14 +235,14 @@ class UniSpeechNoLayerNormConvLayer(nn.Module):
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2LayerNormConvLayer with Wav2Vec2->UniSpeech
-class UniSpeechLayerNormConvLayer(nn.Module):
+class UniSpeechLayerNormConvLayer(nn.Cell):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -273,19 +258,19 @@ class UniSpeechLayerNormConvLayer(nn.Module):
         self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.conv(hidden_states)
 
-        hidden_states = hidden_states.transpose(-2, -1)
+        hidden_states = hidden_states.swapaxes(-2, -1)
         hidden_states = self.layer_norm(hidden_states)
-        hidden_states = hidden_states.transpose(-2, -1)
+        hidden_states = hidden_states.swapaxes(-2, -1)
 
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2GroupNormConvLayer with Wav2Vec2->UniSpeech
-class UniSpeechGroupNormConvLayer(nn.Module):
+class UniSpeechGroupNormConvLayer(nn.Cell):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -302,7 +287,7 @@ class UniSpeechGroupNormConvLayer(nn.Module):
 
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
@@ -310,7 +295,7 @@ class UniSpeechGroupNormConvLayer(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PositionalConvEmbedding with Wav2Vec2->UniSpeech
-class UniSpeechPositionalConvEmbedding(nn.Module):
+class UniSpeechPositionalConvEmbedding(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -325,50 +310,50 @@ class UniSpeechPositionalConvEmbedding(nn.Module):
         if hasattr(nn.utils.parametrizations, "weight_norm"):
             weight_norm = nn.utils.parametrizations.weight_norm
 
-        if is_deepspeed_zero3_enabled():
-            import deepspeed
-
-            with deepspeed.zero.GatheredParameters(self.conv.weight, modifier_rank=0):
-                self.conv = weight_norm(self.conv, name="weight", dim=2)
-            if hasattr(self.conv, "parametrizations"):
-                weight_g = self.conv.parametrizations.weight.original0
-                weight_v = self.conv.parametrizations.weight.original1
-            else:
-                weight_g = self.conv.weight_g
-                weight_v = self.conv.weight_v
-            deepspeed.zero.register_external_parameter(self, weight_v)
-            deepspeed.zero.register_external_parameter(self, weight_g)
-        else:
-            self.conv = weight_norm(self.conv, name="weight", dim=2)
+        # if is_deepspeed_zero3_enabled():
+        #     import deepspeed
+        #
+        #     with deepspeed.zero.GatheredParameters(self.conv.weight, modifier_rank=0):
+        #         self.conv = weight_norm(self.conv, name="weight", dim=2)
+        #     if hasattr(self.conv, "parametrizations"):
+        #         weight_g = self.conv.parametrizations.weight.original0
+        #         weight_v = self.conv.parametrizations.weight.original1
+        #     else:
+        #         weight_g = self.conv.weight_g
+        #         weight_v = self.conv.weight_v
+        #     deepspeed.zero.register_external_parameter(self, weight_v)
+        #     deepspeed.zero.register_external_parameter(self, weight_g)
+        # else:
+        #     self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = UniSpeechSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def forward(self, hidden_states):
-        hidden_states = hidden_states.transpose(1, 2)
+    def construct(self, hidden_states):
+        hidden_states = hidden_states.swapaxes(1, 2)
 
         hidden_states = self.conv(hidden_states)
         hidden_states = self.padding(hidden_states)
         hidden_states = self.activation(hidden_states)
 
-        hidden_states = hidden_states.transpose(1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2SamePadLayer with Wav2Vec2->UniSpeech
-class UniSpeechSamePadLayer(nn.Module):
+class UniSpeechSamePadLayer(nn.Cell):
     def __init__(self, num_conv_pos_embeddings):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         if self.num_pad_remove > 0:
             hidden_states = hidden_states[:, :, : -self.num_pad_remove]
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureEncoder with Wav2Vec2->UniSpeech
-class UniSpeechFeatureEncoder(nn.Module):
+class UniSpeechFeatureEncoder(nn.Cell):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
@@ -396,7 +381,7 @@ class UniSpeechFeatureEncoder(nn.Module):
             param.requires_grad = False
         self._requires_grad = False
 
-    def forward(self, input_values):
+    def construct(self, input_values):
         hidden_states = input_values[:, None]
 
         # make sure hidden_states require grad for gradient_checkpointing
@@ -427,14 +412,14 @@ class UniSpeechFeatureExtractor(UniSpeechFeatureEncoder):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureProjection with Wav2Vec2->UniSpeech
-class UniSpeechFeatureProjection(nn.Module):
+class UniSpeechFeatureProjection(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
-        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
+        self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(config.feat_proj_dropout)
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         # non-projected hidden states are needed for quantization
         norm_hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.projection(norm_hidden_states)
@@ -443,7 +428,7 @@ class UniSpeechFeatureProjection(nn.Module):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->UniSpeech
-class UniSpeechAttention(nn.Module):
+class UniSpeechAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -472,30 +457,30 @@ class UniSpeechAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
+        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
+        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
+        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
 
-    def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.size()
+        bsz, tgt_len, _ = hidden_states.shape()
 
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
@@ -519,18 +504,18 @@ class UniSpeechAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = torch.cat([past_key_value[0], key_states], dim=2)
-            value_states = torch.cat([past_key_value[1], value_states], dim=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
         if self.is_decoder:
-            # if cross_attention save Tuple(torch.Tensor, torch.Tensor) of all cross attention key/value_states.
+            # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
             # key/value_states (first "if" case)
-            # if uni-directional self-attention (decoder) save Tuple(torch.Tensor, torch.Tensor) of
+            # if uni-directional self-attention (decoder) save Tuple(mindspore.Tensor, mindspore.Tensor) of
             # all previous decoder key/value_states. Further calls to uni-directional self-attention
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
@@ -542,29 +527,29 @@ class UniSpeechAttention(nn.Module):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.size(1)
-        attn_weights = torch.bmm(query_states, key_states.transpose(1, 2))
+        attn_weights = mindspore.bmm(query_states, key_states.swapaxes(1, 2))
 
-        if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
+        if attn_weights.shape() != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
-                f" {attn_weights.size()}"
+                f" {attn_weights.shape()}"
             )
 
         if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, tgt_len, src_len):
+            if attention_mask.shape() != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape()}"
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if layer_head_mask is not None:
-            if layer_head_mask.size() != (self.num_heads,):
+            if layer_head_mask.shape() != (self.num_heads,):
                 raise ValueError(
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
-                    f" {layer_head_mask.size()}"
+                    f" {layer_head_mask.shape()}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -579,18 +564,18 @@ class UniSpeechAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
 
-        attn_output = torch.bmm(attn_probs, value_states)
+        attn_output = mindspore.bmm(attn_probs, value_states)
 
-        if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape() != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape()}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -616,20 +601,20 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
         # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
         # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
-        self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
+        # self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
 
-    def _reshape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
+    def _reshape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         # UniSpeechFlashAttention2 attention does not support output_attentions
         if output_attentions:
             raise ValueError("UniSpeechFlashAttention2 attention does not support output_attentions")
@@ -638,7 +623,7 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, _ = hidden_states.shape()
 
         # get query proj
         query_states = self._reshape(self.q_proj(hidden_states), -1, bsz)
@@ -652,8 +637,8 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
             and past_key_value[0].shape[2] == key_value_states.shape[1]
         ):
             # reuse k,v, cross_attentions
-            key_states = past_key_value[0].transpose(1, 2)
-            value_states = past_key_value[1].transpose(1, 2)
+            key_states = past_key_value[0].swapaxes(1, 2)
+            value_states = past_key_value[1].swapaxes(1, 2)
         elif is_cross_attention:
             # cross_attentions
             key_states = self._reshape(self.k_proj(key_value_states), -1, bsz)
@@ -662,8 +647,8 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
             # reuse k, v, self_attention
             key_states = self._reshape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._reshape(self.v_proj(hidden_states), -1, bsz)
-            key_states = torch.cat([past_key_value[0].transpose(1, 2), key_states], dim=1)
-            value_states = torch.cat([past_key_value[1].transpose(1, 2), value_states], dim=1)
+            key_states = ops.cat([past_key_value[0].swapaxes(1, 2), key_states], axis=1)
+            value_states = ops.cat([past_key_value[1].swapaxes(1, 2), value_states], axis=1)
         else:
             # self_attention
             key_states = self._reshape(self.k_proj(hidden_states), -1, bsz)
@@ -677,7 +662,7 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
             # all previous decoder key/value_states. Further calls to uni-directional self-attention
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
-            past_key_value = (key_states.transpose(1, 2), value_states.transpose(1, 2))
+            past_key_value = (key_states.swapaxes(1, 2), value_states.swapaxes(1, 2))
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -690,9 +675,9 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
         # in fp32. (LlamaRMSNorm handles it correctly)
 
         input_dtype = query_states.dtype
-        if input_dtype == torch.float32:
-            if torch.is_autocast_enabled():
-                target_dtype = torch.get_autocast_gpu_dtype()
+        if input_dtype == mindspore.float32:
+            if mindspore.is_autocast_enabled():
+                target_dtype = mindspore.get_autocast_gpu_dtype()
             # Handle the case where the model is quantized
             elif hasattr(self.config, "_pre_quantization_dtype"):
                 target_dtype = self.config._pre_quantization_dtype
@@ -759,56 +744,56 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
             cu_seqlens_q, cu_seqlens_k = cu_seq_lens
             max_seqlen_in_batch_q, max_seqlen_in_batch_k = max_seq_lens
 
-            attn_output_unpad = flash_attn_varlen_func(
-                query_states,
-                key_states,
-                value_states,
-                cu_seqlens_q=cu_seqlens_q,
-                cu_seqlens_k=cu_seqlens_k,
-                max_seqlen_q=max_seqlen_in_batch_q,
-                max_seqlen_k=max_seqlen_in_batch_k,
-                dropout_p=dropout,
-                softmax_scale=softmax_scale,
-                causal=causal,
-            )
+            # attn_output_unpad = flash_attn_varlen_func(
+            #     query_states,
+            #     key_states,
+            #     value_states,
+            #     cu_seqlens_q=cu_seqlens_q,
+            #     cu_seqlens_k=cu_seqlens_k,
+            #     max_seqlen_q=max_seqlen_in_batch_q,
+            #     max_seqlen_k=max_seqlen_in_batch_k,
+            #     dropout_p=dropout,
+            #     softmax_scale=softmax_scale,
+            #     causal=causal,
+            # )
 
-            attn_output = pad_input(attn_output_unpad, indices_q, batch_size, query_length)
-        else:
-            attn_output = flash_attn_func(
-                query_states, key_states, value_states, dropout, softmax_scale=softmax_scale, causal=causal
-            )
+            # attn_output = pad_input(attn_output_unpad, indices_q, batch_size, query_length)
+        # else:
+        #     attn_output = flash_attn_func(
+        #         query_states, key_states, value_states, dropout, softmax_scale=softmax_scale, causal=causal
+        #     )
 
-        return attn_output
+        # return attn_output
 
     # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2._upad_input
     def _upad_input(self, query_layer, key_layer, value_layer, attention_mask, query_length):
         indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
         batch_size, kv_seq_len, num_key_value_heads, head_dim = key_layer.shape
 
-        key_layer = index_first_axis(
-            key_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
-        )
-        value_layer = index_first_axis(
-            value_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
-        )
+        # key_layer = index_first_axis(
+        #     key_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
+        # )
+        # value_layer = index_first_axis(
+        #     value_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
+        # )
         if query_length == kv_seq_len:
-            query_layer = index_first_axis(
-                query_layer.reshape(batch_size * kv_seq_len, self.num_heads, head_dim), indices_k
-            )
+            # query_layer = index_first_axis(
+            #     query_layer.reshape(batch_size * kv_seq_len, self.num_heads, head_dim), indices_k
+            # )
             cu_seqlens_q = cu_seqlens_k
             max_seqlen_in_batch_q = max_seqlen_in_batch_k
             indices_q = indices_k
         elif query_length == 1:
             max_seqlen_in_batch_q = 1
-            cu_seqlens_q = torch.arange(
-                batch_size + 1, dtype=torch.int32, device=query_layer.device
+            cu_seqlens_q = ops.arange(
+                batch_size + 1, dtype=mindspore.int32
             )  # There is a memcpy here, that is very bad.
             indices_q = cu_seqlens_q[:-1]
             query_layer = query_layer.squeeze(1)
         else:
             # The -q_len: slice assumes left padding.
             attention_mask = attention_mask[:, -query_length:]
-            query_layer, indices_q, cu_seqlens_q, max_seqlen_in_batch_q = unpad_input(query_layer, attention_mask)
+            # query_layer, indices_q, cu_seqlens_q, max_seqlen_in_batch_q = unpad_input(query_layer, attention_mask)
 
         return (
             query_layer,
@@ -822,15 +807,15 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
 
 class UniSpeechSdpaAttention(UniSpeechAttention):
     # Copied from transformers.models.bart.modeling_bart.BartSdpaAttention.forward with Bart->UniSpeech
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
         if output_attentions or layer_head_mask is not None:
             # TODO: Improve this warning with e.g. `model.config._attn_implementation = "manual"` once this is implemented.
@@ -851,7 +836,7 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.size()
+        bsz, tgt_len, _ = hidden_states.shape()
 
         # get query proj
         query_states = self.q_proj(hidden_states)
@@ -875,8 +860,8 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = torch.cat([past_key_value[0], key_states], dim=2)
-            value_states = torch.cat([past_key_value[1], value_states], dim=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -901,7 +886,7 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
 
         # NOTE: SDPA with memory-efficient backend is currently (torch==2.1.2) bugged when using non-contiguous inputs and a custom attn_mask,
         # but we are fine here as `_shape` do call `.contiguous()`. Reference: https://github.com/pytorch/pytorch/issues/112577
-        attn_output = torch.nn.functional.scaled_dot_product_attention(
+        attn_output = mindspore.ops.scaled_dot_product_attention(
             query_states,
             key_states,
             value_states,
@@ -910,13 +895,13 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
             is_causal=is_causal,
         )
 
-        if attn_output.size() != (bsz, self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape() != (bsz, self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz, self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape()}"
             )
 
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -935,21 +920,21 @@ UNISPEECH_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeedForward with Wav2Vec2->UniSpeech
-class UniSpeechFeedForward(nn.Module):
+class UniSpeechFeedForward(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(config.activation_dropout)
 
-        self.intermediate_dense = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-        self.output_dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(config.hidden_dropout)
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = self.intermediate_dropout(hidden_states)
@@ -960,7 +945,7 @@ class UniSpeechFeedForward(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayer with Wav2Vec2->UniSpeech, WAV2VEC2->UNISPEECH
-class UniSpeechEncoderLayer(nn.Module):
+class UniSpeechEncoderLayer(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.attention = UNISPEECH_ATTENTION_CLASSES[config._attn_implementation](
@@ -971,11 +956,11 @@ class UniSpeechEncoderLayer(nn.Module):
         )
 
         self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.feed_forward = UniSpeechFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
+    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
         attn_residual = hidden_states
         hidden_states, attn_weights, _ = self.attention(
             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
@@ -996,7 +981,7 @@ class UniSpeechEncoderLayer(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2AttnAdapterLayer with Wav2Vec2->UniSpeech
-class UniSpeechAttnAdapterLayer(nn.Module):
+class UniSpeechAttnAdapterLayer(nn.Cell):
     def __init__(self, config):
         """
         Implements adapter modules directly with 3D tensor weight as parameters and without using ModuleList to speed
@@ -1007,11 +992,11 @@ class UniSpeechAttnAdapterLayer(nn.Module):
         self.hidden_dim = config.hidden_size
 
         self.norm = nn.LayerNorm(self.hidden_dim)
-        self.linear_1 = nn.Linear(self.hidden_dim, self.input_dim)
+        self.linear_1 = nn.Dense(self.hidden_dim, self.input_dim)
         self.act_fn = nn.ReLU()
-        self.linear_2 = nn.Linear(self.input_dim, self.hidden_dim)
+        self.linear_2 = nn.Dense(self.input_dim, self.hidden_dim)
 
-    def forward(self, hidden_states: torch.FloatTensor):
+    def construct(self, hidden_states: mindspore.Tensor):
         hidden_states = self.norm(hidden_states)
 
         hidden_states = self.linear_1(hidden_states)
@@ -1022,7 +1007,7 @@ class UniSpeechAttnAdapterLayer(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayerStableLayerNorm with Wav2Vec2->UniSpeech, WAV2VEC2->UNISPEECH
-class UniSpeechEncoderLayerStableLayerNorm(nn.Module):
+class UniSpeechEncoderLayerStableLayerNorm(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.attention = UNISPEECH_ATTENTION_CLASSES[config._attn_implementation](
@@ -1032,19 +1017,19 @@ class UniSpeechEncoderLayerStableLayerNorm(nn.Module):
             is_decoder=False,
         )
         self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.feed_forward = UniSpeechFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
         if getattr(config, "adapter_attn_dim", None) is not None:
             self.adapter_layer = UniSpeechAttnAdapterLayer(config)
         else:
             self.adapter_layer = None
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
     ):
         attn_residual = hidden_states
@@ -1068,21 +1053,21 @@ class UniSpeechEncoderLayerStableLayerNorm(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Encoder with Wav2Vec2->UniSpeech
-class UniSpeechEncoder(nn.Module):
+class UniSpeechEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout)
         self.layers = nn.ModuleList([UniSpeechEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.tensor,
-        attention_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
         return_dict: bool = True,
@@ -1100,9 +1085,9 @@ class UniSpeechEncoder(nn.Module):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * torch.finfo(hidden_states.dtype).min
-                attention_mask = attention_mask.expand(
-                    attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+                attention_mask = attention_mask * mindspore.finfo(hidden_states.dtype).min
+                attention_mask = attention_mask.broadcast_to(
+                    (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
                 )
 
         position_embeddings = self.pos_conv_embed(hidden_states)
@@ -1110,30 +1095,30 @@ class UniSpeechEncoder(nn.Module):
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
-        deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
+        # deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
 
         for layer in self.layers:
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = torch.rand([])
+            dropout_probability = mindspore.rand([])
 
             skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
-            if not skip_the_layer or deepspeed_zero3_is_enabled:
-                # under deepspeed zero3 all gpus must run in sync
-                if self.gradient_checkpointing and self.training:
-                    layer_outputs = self._gradient_checkpointing_func(
-                        layer.__call__,
-                        hidden_states,
-                        attention_mask,
-                        output_attentions,
-                    )
-                else:
-                    layer_outputs = layer(
-                        hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
-                    )
-                hidden_states = layer_outputs[0]
+            # if not skip_the_layer or deepspeed_zero3_is_enabled:
+            #     # under deepspeed zero3 all gpus must run in sync
+            #     if self.gradient_checkpointing and self.training:
+            #         layer_outputs = self._gradient_checkpointing_func(
+            #             layer.__call__,
+            #             hidden_states,
+            #             attention_mask,
+            #             output_attentions,
+            #         )
+            #     else:
+            #         layer_outputs = layer(
+            #             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
+            #         )
+            #     hidden_states = layer_outputs[0]
 
             if skip_the_layer:
                 layer_outputs = (None, None)
@@ -1154,12 +1139,12 @@ class UniSpeechEncoder(nn.Module):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderStableLayerNorm with Wav2Vec2->UniSpeech
-class UniSpeechEncoderStableLayerNorm(nn.Module):
+class UniSpeechEncoderStableLayerNorm(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout)
         self.layers = nn.ModuleList(
             [UniSpeechEncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
@@ -1167,7 +1152,7 @@ class UniSpeechEncoderStableLayerNorm(nn.Module):
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -1188,40 +1173,40 @@ class UniSpeechEncoderStableLayerNorm(nn.Module):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * torch.finfo(hidden_states.dtype).min
-                attention_mask = attention_mask.expand(
-                    attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+                attention_mask = attention_mask * mindspore.finfo(hidden_states.dtype).min
+                attention_mask = attention_mask.broadcast_to(
+                    (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
                 )
 
         position_embeddings = self.pos_conv_embed(hidden_states)
         hidden_states = hidden_states + position_embeddings
         hidden_states = self.dropout(hidden_states)
 
-        deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
+        # deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
 
         for layer in self.layers:
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = torch.rand([])
+            dropout_probability = mindspore.rand([])
 
             skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
-            if not skip_the_layer or deepspeed_zero3_is_enabled:
-                # under deepspeed zero3 all gpus must run in sync
-                # XXX: could optimize this like synced_gpus in generate_utils but not sure if it's worth the code complication
-                if self.gradient_checkpointing and self.training:
-                    layer_outputs = self._gradient_checkpointing_func(
-                        layer.__call__,
-                        hidden_states,
-                        attention_mask,
-                        output_attentions,
-                    )
-                else:
-                    layer_outputs = layer(
-                        hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
-                    )
-                hidden_states = layer_outputs[0]
+            # if not skip_the_layer or deepspeed_zero3_is_enabled:
+            #     # under deepspeed zero3 all gpus must run in sync
+            #     # XXX: could optimize this like synced_gpus in generate_utils but not sure if it's worth the code complication
+            #     if self.gradient_checkpointing and self.training:
+            #         layer_outputs = self._gradient_checkpointing_func(
+            #             layer.__call__,
+            #             hidden_states,
+            #             attention_mask,
+            #             output_attentions,
+            #         )
+            #     else:
+            #         layer_outputs = layer(
+            #             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
+            #         )
+            #     hidden_states = layer_outputs[0]
 
             if skip_the_layer:
                 layer_outputs = (None, None)
@@ -1243,7 +1228,7 @@ class UniSpeechEncoderStableLayerNorm(nn.Module):
         )
 
 
-class UniSpeechGumbelVectorQuantizer(nn.Module):
+class UniSpeechGumbelVectorQuantizer(nn.Cell):
     """
     Vector quantization using gumbel softmax. See [CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -1261,10 +1246,10 @@ class UniSpeechGumbelVectorQuantizer(nn.Module):
             )
 
         # storage for codebook variables (codewords)
-        self.codevectors = nn.Parameter(
-            torch.FloatTensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups)
+        self.codevectors = mindspore.Parameter(
+            mindspore.Tensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups),'bias'
         )
-        self.weight_proj = nn.Linear(config.conv_dim[-1], self.num_groups * self.num_vars)
+        self.weight_proj = nn.Dense(config.conv_dim[-1], self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
@@ -1272,10 +1257,10 @@ class UniSpeechGumbelVectorQuantizer(nn.Module):
     @staticmethod
     def _compute_perplexity(probs):
         marginal_probs = probs.mean(dim=0)
-        perplexity = torch.exp(-torch.sum(marginal_probs * torch.log(marginal_probs + 1e-7), dim=-1)).sum()
+        perplexity = mindspore.exp(-mindspore.sum(marginal_probs * mindspore.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         batch_size, sequence_length, hidden_size = hidden_states.shape
 
         # project to codevector dim
@@ -1284,12 +1269,12 @@ class UniSpeechGumbelVectorQuantizer(nn.Module):
 
         if self.training:
             # sample code vector probs via gumbel in differentiateable way
-            codevector_probs = nn.functional.gumbel_softmax(
+            codevector_probs = ops.gumbel_softmax(
                 hidden_states.float(), tau=self.temperature, hard=True
             ).type_as(hidden_states)
 
             # compute perplexity
-            codevector_soft_dist = torch.softmax(
+            codevector_soft_dist = mindspore.softmax(
                 hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist)
@@ -1326,40 +1311,40 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
     _supports_flash_attn_2 = True
     _supports_sdpa = True
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights"""
         # gumbel softmax requires special init
-        if isinstance(module, UniSpeechGumbelVectorQuantizer):
-            module.weight_proj.weight.data.normal_(mean=0.0, std=1)
-            module.weight_proj.bias.data.zero_()
-            nn.init.uniform_(module.codevectors)
-        elif isinstance(module, UniSpeechPositionalConvEmbedding):
+        if isinstance(cell, UniSpeechGumbelVectorQuantizer):
+            cell.weight_proj.weight.data.normal_(mean=0.0, std=1)
+            cell.weight_proj.bias.data.zero_()
+            nn.init.uniform_(cell.codevectors)
+        elif isinstance(cell, UniSpeechPositionalConvEmbedding):
             nn.init.normal_(
-                module.conv.weight,
+                cell.conv.weight,
                 mean=0,
-                std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
+                std=2 * math.sqrt(1 / (cell.conv.kernel_size[0] * cell.conv.in_channels)),
             )
-            nn.init.constant_(module.conv.bias, 0)
-        elif isinstance(module, UniSpeechFeatureProjection):
-            k = math.sqrt(1 / module.projection.in_features)
-            nn.init.uniform_(module.projection.weight, a=-k, b=k)
-            nn.init.uniform_(module.projection.bias, a=-k, b=k)
-        elif isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            nn.init.constant_(cell.conv.bias, 0)
+        elif isinstance(cell, UniSpeechFeatureProjection):
+            k = math.sqrt(1 / cell.projection.in_features)
+            nn.init.uniform_(cell.projection.weight, a=-k, b=k)
+            nn.init.uniform_(cell.projection.bias, a=-k, b=k)
+        elif isinstance(cell, nn.Dense):
+            cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
 
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-        elif isinstance(module, nn.Conv1d):
-            nn.init.kaiming_normal_(module.weight)
+            if cell.bias is not None:
+                cell.bias.data.zero_()
+        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
+            cell.bias.data.zero_()
+            cell.weight.data.fill_(1.0)
+        elif isinstance(cell, nn.Conv1d):
+            nn.init.kaiming_normal_(cell.weight)
 
-            if module.bias is not None:
-                k = math.sqrt(module.groups / (module.in_channels * module.kernel_size[0]))
-                nn.init.uniform_(module.bias, a=-k, b=k)
+            if cell.bias is not None:
+                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
+                nn.init.uniform_(cell.bias, a=-k, b=k)
 
-    def _get_feat_extract_output_lengths(self, input_lengths: Union[torch.LongTensor, int]):
+    def _get_feat_extract_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
         """
         Computes the output length of the convolutional layers
         """
@@ -1367,25 +1352,25 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
             # from https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
-            return torch.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
+            return mindspore.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
 
         for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
 
         return input_lengths
 
-    def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: torch.LongTensor):
+    def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: mindspore.Tensor):
         # Effectively attention_mask.sum(-1), but not inplace to be able to run
         # on inference mode.
         non_padded_lengths = attention_mask.cumsum(dim=-1)[:, -1]
-        output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths).to(torch.long)
+        output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths).to(mindspore.int64)
         batch_size = attention_mask.shape[0]
 
-        attention_mask = torch.zeros(
-            (batch_size, feature_vector_length), dtype=attention_mask.dtype, device=attention_mask.device
+        attention_mask = ops.zeros(
+            (batch_size, feature_vector_length), dtype=attention_mask.dtype
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
-        attention_mask[(torch.arange(attention_mask.shape[0], device=attention_mask.device), output_lengths - 1)] = 1
+        attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
         attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
         return attention_mask
 
@@ -1446,10 +1431,6 @@ UNISPEECH_INPUTS_DOCSTRING = r"""
 """
 
 
-@add_start_docstrings(
-    "The bare UniSpeech Model transformer outputting raw hidden-states without any specific head on top.",
-    UNISPEECH_START_DOCSTRING,
-)
 class UniSpeechModel(UniSpeechPreTrainedModel):
     def __init__(self, config: UniSpeechConfig):
         super().__init__(config)
@@ -1458,7 +1439,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
         self.feature_projection = UniSpeechFeatureProjection(config)
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = nn.Parameter(torch.Tensor(config.hidden_size).uniform_())
+            self.masked_spec_embed = mindspore.Parameter(mindspore.Tensor(config.hidden_size).uniform_(),'bias')
 
         if config.do_stable_layer_norm:
             self.encoder = UniSpeechEncoderStableLayerNorm(config)
@@ -1471,9 +1452,9 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Model._mask_hidden_states
     def _mask_hidden_states(
         self,
-        hidden_states: torch.FloatTensor,
-        mask_time_indices: Optional[torch.FloatTensor] = None,
-        attention_mask: Optional[torch.LongTensor] = None,
+        hidden_states: mindspore.Tensor,
+        mask_time_indices: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
     ):
         """
         Masks extracted features along time axis and/or along feature axis according to
@@ -1485,7 +1466,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
             return hidden_states
 
         # generate indices & apply SpecAugment along time axis
-        batch_size, sequence_length, hidden_size = hidden_states.size()
+        batch_size, sequence_length, hidden_size = hidden_states.shape()
 
         if mask_time_indices is not None:
             # apply SpecAugment along time axis with given mask_time_indices
@@ -1498,7 +1479,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = torch.tensor(mask_time_indices, device=hidden_states.device, dtype=torch.bool)
+            mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool)
             hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
 
         if self.config.mask_feature_prob > 0 and self.training:
@@ -1509,25 +1490,17 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = torch.tensor(mask_feature_indices, device=hidden_states.device, dtype=torch.bool)
-            mask_feature_indices = mask_feature_indices[:, None].expand(-1, sequence_length, -1)
+            mask_feature_indices = mindspore.tensor(mask_feature_indices, dtype=mindspore.bool)
+            mask_feature_indices = mask_feature_indices[:, None].broadcast_to((-1, sequence_length, -1))
             hidden_states[mask_feature_indices] = 0
 
         return hidden_states
 
-    @add_start_docstrings_to_model_forward(UNISPEECH_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(
-        checkpoint=_CHECKPOINT_FOR_DOC,
-        output_type=Wav2Vec2BaseModelOutput,
-        config_class=_CONFIG_FOR_DOC,
-        modality="audio",
-        expected_output=_EXPECTED_OUTPUT_SHAPE,
-    )
-    def forward(
+    def construct(
         self,
-        input_values: Optional[torch.Tensor],
-        attention_mask: Optional[torch.Tensor] = None,
-        mask_time_indices: Optional[torch.FloatTensor] = None,
+        input_values: Optional[mindspore.Tensor],
+        attention_mask: Optional[mindspore.Tensor] = None,
+        mask_time_indices: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -1539,7 +1512,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         extract_features = self.feature_extractor(input_values)
-        extract_features = extract_features.transpose(1, 2)
+        extract_features = extract_features.swapaxes(1, 2)
 
         if attention_mask is not None:
             # compute reduced attention_mask corresponding to feature vectors
@@ -1571,9 +1544,6 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
         )
 
 
-@add_start_docstrings(
-    """UniSpeech Model with a vector-quantization module and ctc loss for pre-training.""", UNISPEECH_START_DOCSTRING
-)
 class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
     def __init__(self, config: UniSpeechConfig):
         super().__init__(config)
@@ -1581,10 +1551,10 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
         self.quantizer = UniSpeechGumbelVectorQuantizer(config)
-        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
-        self.project_hid = nn.Linear(config.proj_codevector_dim, config.hidden_size)
+        self.project_q = nn.Dense(config.codevector_dim, config.proj_codevector_dim)
+        self.project_hid = nn.Dense(config.proj_codevector_dim, config.hidden_size)
 
-        self.ctc_proj = nn.Linear(config.hidden_size, config.num_ctc_classes)
+        self.ctc_proj = nn.Dense(config.hidden_size, config.num_ctc_classes)
         self.dropout = nn.Dropout(config.final_dropout)
 
         # Initialize weights and apply final processing
@@ -1617,30 +1587,28 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
 
     @staticmethod
     def compute_contrastive_logits(
-        target_features: torch.FloatTensor,
-        negative_features: torch.FloatTensor,
-        predicted_features: torch.FloatTensor,
+        target_features: mindspore.Tensor,
+        negative_features: mindspore.Tensor,
+        predicted_features: mindspore.Tensor,
         temperature: int = 1,
     ):
         """
         Compute logits for contrastive loss based using cosine similarity as the distance measure between
         `[positive_feature, negative_features]` and `[predicted_features]`. Additionally, temperature can be applied.
         """
-        target_features = torch.cat([target_features, negative_features], dim=0)
+        target_features = ops.cat([target_features, negative_features], axis=0)
 
-        logits = torch.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1)
+        logits = mindspore.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1)
         logits = logits.type_as(target_features)
 
         # apply temperature
         logits = logits / temperature
         return logits
 
-    @add_start_docstrings_to_model_forward(UNISPEECH_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=UniSpeechForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_values: Optional[torch.Tensor],
-        attention_mask: Optional[torch.Tensor] = None,
+        input_values: Optional[mindspore.Tensor],
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -1658,8 +1626,8 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         Example:
 
         ```python
-        >>> import torch
-        >>> from transformers import AutoFeatureExtractor, UniSpeechForPreTraining
+        >>> import mindspore
+        # >>> from transformers import AutoFeatureExtractor, UniSpeechForPreTraining
 
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/unispeech-large-1500h-cv")
         >>> model = UniSpeechForPreTraining.from_pretrained("microsoft/unispeech-large-1500h-cv")
@@ -1685,12 +1653,12 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         quantized_features = self.project_q(quantized_features)
         quantized_features = self.project_hid(quantized_features)
 
-        prob_replace_matrix = torch.empty(transformer_features.size(0), transformer_features.size(1)).fill_(
+        prob_replace_matrix = mindspore.empty(transformer_features.size(0), transformer_features.size(1)).fill_(
             self.config.replace_prob
         )
-        prob_replace_matrix = prob_replace_matrix.transpose(0, 1)
-        sampled_replace_matrix = torch.bernoulli(prob_replace_matrix).bool().to(transformer_features.device)
-        sampled_replace_matrix = sampled_replace_matrix.transpose(0, 1)
+        prob_replace_matrix = prob_replace_matrix.swapaxes(0, 1)
+        sampled_replace_matrix = mindspore.bernoulli(prob_replace_matrix).bool().to(transformer_features.device)
+        sampled_replace_matrix = sampled_replace_matrix.swapaxes(0, 1)
         sampled_replace_matrix = sampled_replace_matrix.unsqueeze(-1)
         logits = transformer_features.masked_fill(sampled_replace_matrix, 0.0) + (
             quantized_features.masked_fill(~sampled_replace_matrix, 0.0)
@@ -1717,16 +1685,6 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         )
 
 
-@add_start_docstrings(
-    """UniSpeech Model with a `language modeling` head on top for Connectionist Temporal Classification (CTC).""",
-    UNISPEECH_START_DOCSTRING,
-    """
-        target_lang (`str`, *optional*):
-            Language id of adapter weights. Adapter weights are stored in the format adapter.<lang>.safetensors or
-            adapter.<lang>.bin. Only relevant when using an instance of [`UniSpeechForCTC`] with adapters. Uses 'eng'
-            by default.
-    """,
-)
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForCTC with Wav2Vec2->UniSpeech, wav2vec2->unispeech, WAV_2_VEC_2->UNISPEECH
 class UniSpeechForCTC(UniSpeechPreTrainedModel):
     def __init__(self, config, target_lang: Optional[str] = None):
@@ -1747,7 +1705,7 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         output_hidden_size = (
             config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
-        self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
+        self.lm_head = nn.Dense(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1800,22 +1758,14 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         for param in self.unispeech.parameters():
             param.requires_grad = False
 
-    @add_start_docstrings_to_model_forward(UNISPEECH_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(
-        checkpoint=_CHECKPOINT_FOR_DOC,
-        output_type=CausalLMOutput,
-        config_class=_CONFIG_FOR_DOC,
-        expected_output=_CTC_EXPECTED_OUTPUT,
-        expected_loss=_CTC_EXPECTED_LOSS,
-    )
-    def forward(
+    def construct(
         self,
-        input_values: Optional[torch.Tensor],
-        attention_mask: Optional[torch.Tensor] = None,
+        input_values: Optional[mindspore.Tensor],
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        labels: Optional[torch.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, target_length)`, *optional*):
@@ -1846,9 +1796,9 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         if labels is not None:
             # retrieve loss input_lengths from attention_mask
             attention_mask = (
-                attention_mask if attention_mask is not None else torch.ones_like(input_values, dtype=torch.long)
+                attention_mask if attention_mask is not None else mindspore.ones_like(input_values, dtype=mindspore.int64)
             )
-            input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(torch.long)
+            input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
 
             # assuming that padded tokens are filled with -100
             # when not being attended to
@@ -1857,10 +1807,10 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=torch.float32).transpose(0, 1)
+            log_probs = ops.log_softmax(logits, axis=-1, dtype=mindspore.float32).swapaxes(0, 1)
 
-            with torch.backends.cudnn.flags(enabled=False):
-                loss = nn.functional.ctc_loss(
+            with mindspore.backends.cudnn.flags(enabled=False):
+                loss = ops.ctc_loss(
                     log_probs,
                     flattened_targets,
                     input_lengths,
@@ -1879,13 +1829,6 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         )
 
 
-@add_start_docstrings(
-    """
-    UniSpeech Model with a sequence classification head on top (a linear layer over the pooled output) for tasks like
-    SUPERB Keyword Spotting.
-    """,
-    UNISPEECH_START_DOCSTRING,
-)
 class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1897,9 +1840,9 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
         self.unispeech = UniSpeechModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
-        self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
-        self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
+            self.layer_weights = nn.Parameter(ops.ones(num_layers) / num_layers)
+        self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
+        self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1934,22 +1877,15 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
         for param in self.unispeech.parameters():
             param.requires_grad = False
 
-    @add_start_docstrings_to_model_forward(UNISPEECH_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(
-        checkpoint=_CHECKPOINT_FOR_DOC,
-        output_type=SequenceClassifierOutput,
-        config_class=_CONFIG_FOR_DOC,
-        modality="audio",
-    )
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with Wav2Vec2->UniSpeech, wav2vec2->unispeech
-    def forward(
+    def construct(
         self,
-        input_values: Optional[torch.Tensor],
-        attention_mask: Optional[torch.Tensor] = None,
+        input_values: Optional[mindspore.Tensor],
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        labels: Optional[torch.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -1971,8 +1907,8 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = torch.stack(hidden_states, dim=1)
-            norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
+            hidden_states = ops.stack(hidden_states, axis=1)
+            norm_weights = ops.softmax(self.layer_weights, axis=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
         else:
             hidden_states = outputs[0]
@@ -1989,7 +1925,7 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
+            loss_fct = ops.cross_entropy()
             loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:

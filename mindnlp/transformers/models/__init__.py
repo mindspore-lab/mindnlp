@@ -186,6 +186,7 @@ from . import (
     trocr,
     upernet,
     umt5,
+    unispeech,
     univnet,
     videomae,
     vipllava,
@@ -575,6 +576,7 @@ __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(unispeech.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vilt.__all__)
