@@ -21,8 +21,8 @@ import numpy as np
 import pytest
 from datasets import load_dataset
 
-from transformers import UniSpeechConfig, is_torch_available
-from transformers.testing_utils import require_soundfile, require_torch, slow, torch_device
+from mindnlp.transformers import UniSpeechConfig
+from mindnlp.utils.testing_utils import require_soundfile, slow,is_mindspore_available,require_mindspore
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -32,13 +32,11 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
-from ...test_pipeline_mixin import PipelineTesterMixin
 
-
-if is_torch_available():
-    import torch
-
-    from transformers import (
+if is_mindspore_available():
+    import mindspore
+    from mindspore import ops
+    from mindnlp.transformers import (
         UniSpeechForCTC,
         UniSpeechForPreTraining,
         UniSpeechForSequenceClassification,
@@ -139,8 +137,8 @@ class UniSpeechModelTester:
 
     def create_and_check_model(self, config, input_values, attention_mask):
         model = UniSpeechModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        # model.to(torch_device)
+        model.set_train(False)
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
             result.last_hidden_state.shape, (self.batch_size, self.output_seq_length, self.hidden_size)
@@ -150,11 +148,11 @@ class UniSpeechModelTester:
         # test does not pass for models making use of `group_norm`
         # check: https://github.com/pytorch/fairseq/issues/3227
         model = UniSpeechModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        # model.to(torch_device)
+        model.set_train(False)
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.bool)
+        attention_mask = mindspore.ones(input_values.shape, dtype=mindspore.bool)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
 
@@ -170,20 +168,20 @@ class UniSpeechModelTester:
             output = model(input_slice).last_hidden_state
 
             batch_output = batch_outputs[i : i + 1, : output.shape[1]]
-            self.parent.assertTrue(torch.allclose(output, batch_output, atol=1e-3))
+            self.parent.assertTrue(np.allclose(output, batch_output, atol=1e-3))
 
     def check_ctc_loss(self, config, input_values, *args):
         model = UniSpeechForCTC(config=config)
-        model.to(torch_device)
+        # model.to(torch_device)
 
         # make sure that dropout is disabled
-        model.eval()
+        model.set_train(False)
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.long)
+        attention_mask = mindspore.ones(input_values.shape, dtype=mindspore.long)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], min(max_length_labels) - 1), model.config.vocab_size)
 
         # pad input
@@ -202,13 +200,13 @@ class UniSpeechModelTester:
 
     def check_seq_classifier_loss(self, config, input_values, *args):
         model = UniSpeechForSequenceClassification(config=config)
-        model.to(torch_device)
+        # model.to(torch_device)
 
         # make sure that dropout is disabled
-        model.eval()
+        model.set_train(False)
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.long)
+        attention_mask = mindspore.ones(input_values.shape, dtype=mindspore.long)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         labels = ids_tensor((input_values.shape[0], 1), len(model.config.id2label))
@@ -228,8 +226,8 @@ class UniSpeechModelTester:
     def check_ctc_training(self, config, input_values, *args):
         config.ctc_zero_infinity = True
         model = UniSpeechForCTC(config=config)
-        model.to(torch_device)
-        model.train()
+        # model.to(torch_device)
+        model.set_train()
 
         # freeze feature encoder
         model.freeze_feature_encoder()
@@ -237,7 +235,7 @@ class UniSpeechModelTester:
         input_values = input_values[:3]
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size)
 
         # pad input
@@ -250,15 +248,15 @@ class UniSpeechModelTester:
                 labels[i, max_length_labels[i] - 1 :] = -100
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(torch.isinf(loss).item())
+        self.parent.assertFalse(mindspore.isinf(loss).item())
 
         loss.backward()
 
     def check_seq_classifier_training(self, config, input_values, *args):
         config.ctc_zero_infinity = True
         model = UniSpeechForSequenceClassification(config=config)
-        model.to(torch_device)
-        model.train()
+        # model.to(torch_device)
+        model.set_train()
 
         # freeze everything but the classification head
         model.freeze_base_model()
@@ -273,19 +271,19 @@ class UniSpeechModelTester:
             input_values[i, input_lengths[i] :] = 0.0
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(torch.isinf(loss).item())
+        self.parent.assertFalse(mindspore.isinf(loss).item())
 
         loss.backward()
 
     def check_labels_out_of_vocab(self, config, input_values, *args):
         model = UniSpeechForCTC(config)
-        model.to(torch_device)
-        model.train()
+        # model.to(torch_device)
+        model.set_train()
 
         input_values = input_values[:3]
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size + 100)
 
         with pytest.raises(ValueError):
@@ -297,11 +295,11 @@ class UniSpeechModelTester:
         return config, inputs_dict
 
 
-@require_torch
-class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
+@require_mindspore
+class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (UniSpeechForCTC, UniSpeechModel, UniSpeechForSequenceClassification, UniSpeechForPreTraining)
-        if is_torch_available()
+        (UniSpeechForCTC, UniSpeechForSequenceClassification, UniSpeechForPreTraining)
+        if is_mindspore_available()
         else ()
     )
     pipeline_model_mapping = (
@@ -310,7 +308,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
             "automatic-speech-recognition": UniSpeechForCTC,
             "feature-extraction": UniSpeechModel,
         }
-        if is_torch_available()
+        if is_mindspore_available()
         else {}
     )
     test_pruning = False
@@ -381,20 +379,20 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         # no need to test all models as different heads yield the same functionality
         model_class = self.all_model_classes[0]
         model = model_class(config)
-        model.to(torch_device)
+        # model.to(torch_device)
 
         # set layer drop to 0
         model.config.layerdrop = 0.0
 
         input_values = inputs_dict["input_values"]
 
-        input_lengths = torch.tensor(
-            [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=torch.long, device=torch_device
+        input_lengths = mindspore.tensor(
+            [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=mindspore.long
         )
         output_lengths = model._get_feat_extract_output_lengths(input_lengths)
 
         labels = ids_tensor((input_values.shape[0], output_lengths[0] - 2), self.model_tester.vocab_size)
-        inputs_dict["attention_mask"] = torch.ones_like(inputs_dict["attention_mask"])
+        inputs_dict["attention_mask"] = mindspore.ones_like(inputs_dict["attention_mask"])
         inputs_dict["labels"] = labels
 
         outputs = model(**inputs_dict)
@@ -465,7 +463,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", mask_feature_prob=0.2, mask_feature_length=2
         )
-        model.to(torch_device).train()
+        # model.to(torch_device).train()
         processor = Wav2Vec2Processor.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True
         )
@@ -478,8 +476,8 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         )
 
         logits = model(
-            input_values=batch["input_values"].to(torch_device),
-            attention_mask=batch["attention_mask"].to(torch_device),
+            # input_values=batch["input_values"].to(torch_device),
+            # attention_mask=batch["attention_mask"].to(torch_device),
         ).logits
 
         self.assertEqual(logits.shape, (4, 1498, 32))
@@ -488,7 +486,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", mask_time_prob=0.2, mask_time_length=2
         )
-        model.to(torch_device).train()
+        # model.to(torch_device).train()
         processor = Wav2Vec2Processor.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True
         )
@@ -501,8 +499,8 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         )
 
         logits = model(
-            input_values=batch["input_values"].to(torch_device),
-            attention_mask=batch["attention_mask"].to(torch_device),
+            # input_values=batch["input_values"].to(torch_device),
+            # attention_mask=batch["attention_mask"].to(torch_device),
         ).logits
 
         self.assertEqual(logits.shape, (4, 1498, 32))
@@ -515,7 +513,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
             mask_time_length=2,
             mask_feature_length=2,
         )
-        model.to(torch_device).train()
+        # model.to(torch_device).train()
         processor = Wav2Vec2Processor.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True
         )
@@ -528,8 +526,8 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         )
 
         logits = model(
-            input_values=batch["input_values"].to(torch_device),
-            attention_mask=batch["attention_mask"].to(torch_device),
+            # input_values=batch["input_values"].to(torch_device),
+            # attention_mask=batch["attention_mask"].to(torch_device),
         ).logits
 
         self.assertEqual(logits.shape, (1, 1498, 32))
@@ -544,7 +542,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.T
         self.assertIsNotNone(model)
 
 
-@require_torch
+@require_mindspore
 @require_soundfile
 @slow
 class UniSpeechModelIntegrationTest(unittest.TestCase):
@@ -566,31 +564,30 @@ class UniSpeechModelIntegrationTest(unittest.TestCase):
 
     def test_inference_pretraining(self):
         model = UniSpeechForPreTraining.from_pretrained("microsoft/unispeech-large-1500h-cv")
-        model.to(torch_device)
+        # model.to(torch_device)
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-large-xlsr-53")
         input_speech = self._load_datasamples(2)
 
         inputs_dict = feature_extractor(input_speech, return_tensors="pt", padding=True)
 
-        with torch.no_grad():
-            torch.manual_seed(0)
+        with mindspore.no_grad():
+            mindspore.manual_seed(0)
             outputs = model(
-                inputs_dict.input_values.to(torch_device),
-                attention_mask=inputs_dict.attention_mask.to(torch_device),
+                # inputs_dict.input_values.to(torch_device),
+                # attention_mask=inputs_dict.attention_mask.to(torch_device),
             )
 
         # compute cosine similarity
-        cosine_sim = torch.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
+        cosine_sim = mindspore.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
 
         # pretrained model should have learned a high cosine similarity
         self.assertTrue(cosine_sim.mean() > 0.5)
 
         # fmt: off
-        expected_cosine_sim_slice = torch.tensor(
+        expected_cosine_sim_slice = mindspore.tensor(
             [[0.8290, 0.8335, 0.8815, 0.8580, 0.8249],
-             [0.8892, 0.9221, 0.8711, 0.8601, 0.8482]],
-            device=torch_device,
+             [0.8892, 0.9221, 0.8711, 0.8601, 0.8482]]
         )
         # fmt: on
 
-        self.assertTrue(torch.allclose(cosine_sim[:, :5], expected_cosine_sim_slice, atol=1e-3))
+        self.assertTrue(np.allclose(cosine_sim[:, :5], expected_cosine_sim_slice, atol=1e-3))

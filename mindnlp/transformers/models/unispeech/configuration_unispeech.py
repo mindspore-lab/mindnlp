@@ -169,7 +169,7 @@ class UniSpeechConfig(PretrainedConfig):
     Example:
 
     ```python
-    >>> from transformers import UniSpeechConfig, UniSpeechModel
+    >>> from mindspore.transformers import UniSpeechConfig, UniSpeechModel
 
     >>> # Initializing a UniSpeech facebook/unispeech-base-960h style configuration
     >>> configuration = UniSpeechConfig()

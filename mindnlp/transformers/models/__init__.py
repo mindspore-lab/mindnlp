@@ -210,7 +210,7 @@ from . import (
     xlm_roberta_xl,
     xlnet,
     xmod,
-    vilt,
+    vilt
 )
 
 from .owlv2 import *
