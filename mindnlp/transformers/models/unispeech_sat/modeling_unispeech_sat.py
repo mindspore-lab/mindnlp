@@ -255,7 +255,7 @@ class UniSpeechSatNoLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -277,7 +277,7 @@ class UniSpeechSatLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -305,7 +305,7 @@ class UniSpeechSatGroupNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
