@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,10 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""functional modules init"""
+# ============================================
+"""
+PLBart Model init
+"""
+from . import configuration_plbart, modeling_plbart, tokenization_plbart
 
-from .neural_network import embedding
-from .graph_func import *
-from .normalize import *
-from .tensor_slice import getitem
+from .configuration_plbart import *
+from .modeling_plbart import *
+from .tokenization_plbart import *
+
+__all__ = []
+__all__.extend(configuration_plbart.__all__)
+__all__.extend(modeling_plbart.__all__)
+__all__.extend(tokenization_plbart.__all__)

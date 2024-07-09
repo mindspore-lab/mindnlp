@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""functional modules init"""
+"""
+UnivNet init
+"""
+from . import configuration_univnet, modeling_univnet, feature_extraction_univnet
 
-from .neural_network import embedding
-from .graph_func import *
-from .normalize import *
-from .tensor_slice import getitem
+from .configuration_univnet import *
+from .modeling_univnet import *
+from .feature_extraction_univnet import *
+
+__all__ = []
+__all__.extend(configuration_univnet.__all__)
+__all__.extend(modeling_univnet.__all__)
+__all__.extend(feature_extraction_univnet.__all__)

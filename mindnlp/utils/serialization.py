@@ -926,7 +926,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         None. This function does not return any value.
         
     Raises:
-        ValueError: Raised if legacy load for Pytorch is not supported.
+        ValueError: Raised if legacy load for MindSpore is not supported.
         RuntimeError: Raised if an unknown saved id type is encountered during deserialization.
         RuntimeError: Raised if the magic number in the file does not match the expected value.
         RuntimeError: Raised if the protocol version in the file does not match the expected value.
@@ -956,7 +956,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
 
         with closing(tarfile.open(fileobj=f, mode='r:', format=tarfile.PAX_FORMAT)) as tar, \
                 mkdtemp() as tmpdir:
-            raise ValueError('do not support legacy load for Pytorch.')
+            raise ValueError('do not support legacy load for MindSpore.')
 
     deserialized_objects = {}
 
