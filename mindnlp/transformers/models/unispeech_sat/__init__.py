@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TrOCR Model init."""
+"""UniSpeechSat Model init."""
 
-from . import configuration_unispeech_sat, modeling_trocr, processing_trocr
-from .configuration_trocr import *
-from .modeling_trocr import *
-from .processing_trocr import *
+from . import configuration_unispeech_sat, modeling_unispeech_sat
+from .configuration_unispeech_sat import *
+from .modeling_unispeech_sat import *
 
 __all__ = []
 __all__.extend(configuration_unispeech_sat.__all__)
-__all__.extend(modeling_trocr.__all__)
-__all__.extend(processing_trocr.__all__)
+__all__.extend(modeling_unispeech_sat.__all__)
+
