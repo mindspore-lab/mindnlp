@@ -850,7 +850,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
 
         self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
         self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
-        self.logit_scale = mindspore.Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
+        self.logit_scale = mindspore.tensor([self.config.logit_scale_init_value])
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -988,7 +988,6 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1107,24 +1106,33 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
 
         if config.use_complex_transposed_convolution:
             transposed_kernels = (config.vision_config.patch_size // 4, config.vision_config.patch_size // 4)
-
             self.transposed_convolution = nn.SequentialCell(
-                nn.Conv2d(config.reduce_dim, config.reduce_dim, kernel_size=3),
+                nn.Conv2d(config.reduce_dim, 
+                          config.reduce_dim, 
+                          kernel_size=3,
+                          padding=1,
+                          pad_mode="pad",
+                          has_bias=True),
                 nn.ReLU(),
                 nn.Conv2dTranspose(
                     config.reduce_dim,
                     config.reduce_dim // 2,
                     kernel_size=transposed_kernels[0],
                     stride=transposed_kernels[0],
+                    has_bias=True
                 ),
                 nn.ReLU(),
                 nn.Conv2dTranspose(
-                    config.reduce_dim // 2, 1, kernel_size=transposed_kernels[1], stride=transposed_kernels[1]
+                    config.reduce_dim // 2, 1, 
+                    kernel_size=transposed_kernels[1], 
+                    stride=transposed_kernels[1], 
+                    has_bias=True
                 ),
             )
+            print(self.transposed_convolution)
         else:
             self.transposed_convolution = nn.Conv2dTranspose(
-                config.reduce_dim, 1, config.vision_config.patch_size, stride=config.vision_config.patch_size
+                config.reduce_dim, 1, config.vision_config.patch_size, stride=config.vision_config.patch_size,has_bias=True
             )
 
         depth = len(config.extract_layers)
@@ -1293,11 +1301,10 @@ class CLIPSegForImageSegmentation(CLIPSegPreTrainedModel):
             return_dict=return_dict,
         )
         pooled_output = self.clip.visual_projection(vision_outputs[1])
-
         hidden_states = vision_outputs.hidden_states if return_dict else vision_outputs[2]
         # we add +1 here as the hidden states also include the initial embeddings
         activations = [hidden_states[i + 1] for i in self.extract_layers]
-
+        
         # update vision_outputs
         if return_dict:
             vision_outputs = BaseModelOutputWithPooling(
