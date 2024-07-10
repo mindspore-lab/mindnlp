@@ -21,4 +21,3 @@ from .modeling_unispeech_sat import *
 __all__ = []
 __all__.extend(configuration_unispeech_sat.__all__)
 __all__.extend(modeling_unispeech_sat.__all__)
-

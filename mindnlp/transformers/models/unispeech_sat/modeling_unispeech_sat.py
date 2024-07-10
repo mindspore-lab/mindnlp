@@ -21,7 +21,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-import mindspore.ops as ops
+from mindspore import ops
 from mindspore import nn
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, HeNormal, Normal, Uniform
@@ -256,6 +256,7 @@ class UniSpeechSatNoLayerNormConvLayer(nn.Cell):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -278,6 +279,7 @@ class UniSpeechSatLayerNormConvLayer(nn.Cell):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -306,6 +308,7 @@ class UniSpeechSatGroupNormConvLayer(nn.Cell):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -326,8 +329,9 @@ class UniSpeechSatPositionalConvEmbedding(nn.Cell):
             config.hidden_size,
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
+            pad_mode='pad',
             padding=config.num_conv_pos_embeddings // 2,
-            groups=config.num_conv_pos_embedding_groups,
+            group=config.num_conv_pos_embedding_groups,
         )
 
         self.conv = weight_norm(self.conv, name="weight", dim=2)
@@ -383,7 +387,7 @@ class UniSpeechSatFeatureEncoder(nn.Cell):
         self._requires_grad = True
 
     def _freeze_parameters(self):
-        for param in self.parameters():
+        for param in self.get_parameters():
             param.requires_grad = False
         self._requires_grad = False
 
@@ -785,7 +789,8 @@ class UniSpeechSatEncoder(nn.Cell):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            # skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
             if not skip_the_layer or deepspeed_zero3_is_enabled:
                 # under deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
@@ -872,10 +877,10 @@ class UniSpeechSatEncoderStableLayerNorm(nn.Cell):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            # skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
             if not skip_the_layer or deepspeed_zero3_is_enabled:
                 # under deepspeed zero3 all gpus must run in sync
-                # XXX: could optimize this like synced_gpus in generate_utils
                 # but not sure if it's worth the code complication
                 if self.gradient_checkpointing and self.training:
                     layer_outputs = self._gradient_checkpointing_func(
@@ -1003,15 +1008,16 @@ class UniSpeechSatPreTrainedModel(PreTrainedModel):
                                                          cell.weight_proj.weight.shape, cell.weight_proj.weight.dtype))
             cell.weight_proj.bias.set_data(initializer('zeros', cell.weight_proj.bias.shape,
                                                        cell.weight_proj.bias.dtype))
-            cell.codevectors.set_data(ops.uniform(cell.codevectors.shape, mindspore.Tensor(0),
-                                                  mindspore.Tensor(1), dtype=cell.codevectors.dtype))
+            cell.codevectors.set_data(ops.uniform(cell.codevectors.shape, mindspore.Tensor(0, dtype=mindspore.float32),
+                                                  mindspore.Tensor(1, dtype=mindspore.float32),
+                                                  dtype=cell.codevectors.dtype))
         elif isinstance(cell, UniSpeechSatPositionalConvEmbedding):
             std = 2 * math.sqrt(1 / (cell.conv.kernel_size[0] * cell.conv.in_channels))
             cell.conv.weight.set_data(initializer(Normal(sigma=std, mean=0),
                                                   cell.conv.weight.shape, cell.conv.weight.dtype))
             cell.conv.bias.set_data(initializer('zeros', cell.conv.bias.shape, cell.conv.bias.dtype))
         elif isinstance(cell, UniSpeechSatFeatureProjection):
-            k = math.sqrt(1 / cell.projection.in_features)
+            k = math.sqrt(1 / cell.projection.in_channels)
             cell.projection.weight.set_data(initializer(Uniform(k),
                                                         cell.projection.weight.shape, cell.projection.weight.dtype))
             cell.projection.bias.set_data(initializer(Uniform(k),
@@ -1027,7 +1033,7 @@ class UniSpeechSatPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, nn.Conv1d):
             cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
-                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
+                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(k), cell.bias.shape, cell.bias.dtype))
 
     def _get_feat_extract_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
@@ -1083,9 +1089,12 @@ class UniSpeechSatModel(UniSpeechSatPreTrainedModel):
         self.feature_extractor = UniSpeechSatFeatureEncoder(config)
         self.feature_projection = UniSpeechSatFeatureProjection(config)
 
-        self.masked_spec_embed = mindspore.Parameter(ops.uniform(config.hidden_size, mindspore.Tensor(0),
-                                                                 mindspore.Tensor(1), dtype=mindspore.float32),
-                                                     name='masked_spec_embed')
+        self.masked_spec_embed = mindspore.Parameter(
+            ops.uniform(mindspore.Tensor(config.hidden_size, dtype=mindspore.int32),
+                        mindspore.Tensor(0, dtype=mindspore.float32),
+                        mindspore.Tensor(1, dtype=mindspore.float32),
+                        dtype=mindspore.float32),
+            name='masked_spec_embed')
 
         if config.do_stable_layer_norm:
             self.encoder = UniSpeechSatEncoderStableLayerNorm(config)
@@ -1268,7 +1277,6 @@ class UniSpeechSatForPreTraining(UniSpeechSatPreTrainedModel):
         self.label_embeddings_concat = mindspore.Parameter(ops.zeros((config.num_clusters, config.codevector_dim),
                                                                      dtype=mindspore.float32),
                                                            name="label_embeddings_concat")
-        self.label_embeddings_concat.data.zero_()
 
         self.layer_norm_for_extract = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         if self.config.do_stable_layer_norm:
@@ -1525,7 +1533,7 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
+            labels: Optional[Union[None, mindspore.Tensor]] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
         Args:
@@ -1582,7 +1590,7 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if labels is not None and labels.max() >= self.config.vocab_size:
+        if labels is not None and np.max(labels.asnumpy()) >= self.config.vocab_size:
             raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
 
         outputs = self.unispeech_sat(
@@ -1615,15 +1623,28 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
             # ctc_loss doesn't support fp16
             log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
 
-            loss = ops.ctc_loss(
-                log_probs,
-                flattened_targets,
-                input_lengths,
-                target_lengths,
-                blank=self.config.pad_token_id,
-                reduction=self.config.ctc_loss_reduction,
-                zero_infinity=self.config.ctc_zero_infinity,
-            )
+            # loss = ops.ctc_loss(
+            #     log_probs,
+            #     flattened_targets.view(log_probs.shape[1], int(max(target_lengths))),
+            #     input_lengths,
+            #     target_lengths,
+            #     blank=self.config.pad_token_id,
+            #     reduction=self.config.ctc_loss_reduction,
+            #     zero_infinity=self.config.ctc_zero_infinity,
+            # )[0]
+            target = ops.zeros((log_probs.shape[1], int(max(target_lengths))), dtype=mindspore.int64)
+            j = 0
+            acc = 0
+            for i in target_lengths:
+                target[j, 0:i] = flattened_targets[acc:acc+i]
+                j += 1
+                acc += i
+            loss = nn.CTCLoss(blank=self.config.pad_token_id,
+                              reduction=self.config.ctc_loss_reduction,
+                              zero_infinity=self.config.ctc_zero_infinity)(log_probs,
+                                                                           target,
+                                                                           input_lengths,
+                                                                           target_lengths)
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1699,7 +1720,7 @@ class UniSpeechSatForSequenceClassification(UniSpeechSatPreTrainedModel):
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.unispeech_sat.parameters():
+        for param in self.unispeech_sat.get_parameters():
             param.requires_grad = False
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with
@@ -1799,7 +1820,7 @@ class UniSpeechSatForSequenceClassification(UniSpeechSatPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1).to(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1995,7 +2016,7 @@ class AMSoftmaxLoss(nn.Cell):
 
         onehot = ops.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
-        loss = self.loss(logits, labels)
+        loss = self.loss(logits, labels.to(mindspore.int32))
 
         return loss
 
@@ -2085,7 +2106,7 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.unispeech_sat.parameters():
+        for param in self.unispeech_sat.get_parameters():
             param.requires_grad = False
 
     def _get_tdnn_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
@@ -2192,7 +2213,9 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
         # Statistic Pooling
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
-            std_features = hidden_states.std(axis=1)
+            # std_features = hidden_states.std(axis=1)
+            std_features = mindspore.tensor(np.std(hidden_states.asnumpy(), axis=1, dtype=np.float32),
+                                            mindspore.float32)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
