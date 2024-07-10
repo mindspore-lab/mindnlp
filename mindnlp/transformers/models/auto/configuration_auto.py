@@ -101,6 +101,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("m2m_100", "M2M100Config"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
