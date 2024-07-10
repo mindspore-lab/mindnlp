@@ -93,7 +93,6 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
         super().__init__()
-        self.weights = None
         self.offset = 2
         self.embedding_dim = embedding_dim
         self.padding_idx = padding_idx
@@ -101,10 +100,14 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
 
     def make_weights(self, vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
         emb_weights = self.get_embedding(vocab_size, embedding_dim, padding_idx)
+        has_weight = False
         if hasattr(self, "weights"):
+            has_weight = True
+        self.weights = emb_weights
+        if has_weight:
             # in forward put the weights on the correct dtype and device of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype)
-        self.weights = emb_weights
+            self.weights = emb_weights
         #self.register_buffer("weights", emb_weights, persistent=False)
 
     @staticmethod
@@ -327,7 +330,7 @@ class M2M100Attention(nn.Cell):
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
+    indices = ops.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
     cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
     return (
