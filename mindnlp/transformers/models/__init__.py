@@ -118,6 +118,7 @@ from . import (
     lxmert,
     mamba,
     marian,
+    m2m_100,
     mask2former,
     mbart,
     mbart50,
@@ -311,6 +312,7 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
+from .m2m_100 import *
 from .lxmert import *
 from .mamba import *
 from .marian import *
@@ -507,6 +509,7 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(m2m_100.__all__)
 __all__.extend(lxmert.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
