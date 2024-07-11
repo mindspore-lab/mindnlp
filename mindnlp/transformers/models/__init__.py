@@ -186,6 +186,7 @@ from . import (
     trocr,
     upernet,
     umt5,
+    unispeech_sat,
     univnet,
     videomae,
     vipllava,
@@ -380,6 +381,7 @@ from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
 from .upernet import *
+from .unispeech_sat import *
 from .univnet import *
 from .videomae import *
 from .vilt import *
@@ -575,6 +577,7 @@ __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vilt.__all__)
