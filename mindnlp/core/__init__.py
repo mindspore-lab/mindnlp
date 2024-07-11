@@ -13,31 +13,4 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-import functools
-import mindspore
-from .tensor import Tensor
-
-
-def core_patch_decorator(autocast_instance, func):
-    @functools.wraps(func)
-    def decorate_autocast(*args, **kwargs):
-        with autocast_instance:
-            return func(*args, **kwargs)
-
-    return decorate_autocast
-
-class CorePatch:
-    def __enter__(self):
-        # Replace StubTensor with Tensor
-        self.original_stub_tensor = mindspore.common._stub_tensor.StubTensor
-        mindspore.common._stub_tensor.StubTensor = Tensor
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Restore original StubTensor
-        mindspore.common._stub_tensor.StubTensor = self.original_stub_tensor
-
-    def __call__(self, func):
-        return core_patch_decorator(self, func)
-
-__all__ = ['Tensor', 'CorePatch']
+from . import optim

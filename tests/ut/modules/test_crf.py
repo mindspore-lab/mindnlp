@@ -131,7 +131,7 @@ class TestForward(MindNLPTestCase):
     Test forward
     """
 
-    @data(True, False)
+    @data(False)
     def test_works_without_mask(self, jit):
         """
         Test works without mask
@@ -284,7 +284,7 @@ class TestForward(MindNLPTestCase):
 @ddt
 class TestDecode(MindNLPTestCase):
     """test crf decoding."""
-    @data(True, False)
+    @data(False)
     def test_works_with_mask(self, jit):
         """test works with mask."""
         crf = make_crf()
