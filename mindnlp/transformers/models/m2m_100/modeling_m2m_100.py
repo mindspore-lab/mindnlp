@@ -108,7 +108,6 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
             # in forward put the weights on the correct dtype and device of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype)
             self.weights = emb_weights
-        #self.register_buffer("weights", emb_weights, persistent=False)
 
     @staticmethod
     def get_embedding(vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -340,195 +339,6 @@ def _get_unpad_data(attention_mask):
     )
 
 
-# class M2M100FlashAttention2(M2M100Attention):
-#     def __init__(
-#         self,
-#         embed_dim: int,
-#         num_heads: int,
-#         dropout: float = 0.0,
-#         is_decoder: bool = False,
-#         bias: bool = True,
-#         is_causal: bool = False,
-#         config: Optional[M2M100Config] = None,
-#     ):
-#         super().__init__(embed_dim, num_heads, dropout, is_decoder, bias, is_causal, config)
-#         self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
-
-#     def _reshape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-#         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
-
-#     def construct(
-#         self,
-#         hidden_states: mindspore.Tensor,
-#         key_value_states: Optional[mindspore.Tensor] = None,
-#         past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-#         attention_mask: Optional[mindspore.Tensor] = None,
-#         layer_head_mask: Optional[mindspore.Tensor] = None,
-#         output_attentions: bool = False,
-#     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-#         """Input shape: Batch x Time x Channel"""
-
-#         # if key_value_states are provided this layer is used as a cross-attention layer
-#         # for the decoder
-#         is_cross_attention = key_value_states is not None
-
-#         bsz, q_len, _ = hidden_states.shape
-
-#         # get query proj
-#         query_states = self._reshape(self.q_proj(hidden_states), -1, bsz)
-#         # get key, value proj
-#         # `past_key_value[0].shape[2] == key_value_states.shape[1]`
-#         # is checking that the `sequence_length` of the `past_key_value` is the same as
-#         # the provided `key_value_states` to support prefix tuning
-#         if (
-#             is_cross_attention
-#             and past_key_value is not None
-#             and past_key_value[0].shape[2] == key_value_states.shape[1]
-#         ):
-#             # reuse k,v, cross_attentions
-#             key_states = past_key_value[0].swapaxes(1, 2)
-#             value_states = past_key_value[1].swapaxes(1, 2)
-#         elif is_cross_attention:
-#             # cross_attentions
-#             key_states = self._reshape(self.k_proj(key_value_states), -1, bsz)
-#             value_states = self._reshape(self.v_proj(key_value_states), -1, bsz)
-#         elif past_key_value is not None:
-#             # reuse k, v, self_attention
-#             key_states = self._reshape(self.k_proj(hidden_states), -1, bsz)
-#             value_states = self._reshape(self.v_proj(hidden_states), -1, bsz)
-#             key_states = ops.cat([past_key_value[0].swapaxes(1, 2), key_states], dim=1)
-#             value_states = ops.cat([past_key_value[1].swapaxes(1, 2), value_states], dim=1)
-#         else:
-#             # self_attention
-#             key_states = self._reshape(self.k_proj(hidden_states), -1, bsz)
-#             value_states = self._reshape(self.v_proj(hidden_states), -1, bsz)
-
-#         if self.is_decoder:
-#             # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
-#             # Further calls to cross_attention layer can then reuse all cross-attention
-#             # key/value_states (first "if" case)
-#             # if uni-directional self-attention (decoder) save Tuple(mindspore.Tensor, mindspore.Tensor) of
-#             # all previous decoder key/value_states. Further calls to uni-directional self-attention
-#             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
-#             # if encoder bi-directional self-attention `past_key_value` is always `None`
-#             past_key_value = (key_states.swapaxes(1, 2), value_states.swapaxes(1, 2))
-
-#         kv_seq_len = key_states.shape[-2]
-#         if past_key_value is not None:
-#             kv_seq_len += past_key_value[0].shape[-2]
-
-#         attn_output = self._flash_attention_forward(
-#             query_states, key_states, value_states, attention_mask, q_len, dropout=self.dropout, softmax_scale=None
-#         )
-
-#         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
-#         # partitioned across GPUs when using tensor-parallelism.
-#         attn_output = attn_output.reshape(bsz, q_len, self.embed_dim)
-
-#         attn_output = self.out_proj(attn_output)
-
-#         return attn_output, None, past_key_value
-
-#     # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2._flash_attention_forward
-#     def _flash_attention_forward(
-#         self, query_states, key_states, value_states, attention_mask, query_length, dropout=0.0, softmax_scale=None
-#     ):
-#         """
-#         Calls the forward method of Flash Attention - if the input hidden states contain at least one padding token
-#         first unpad the input, then computes the attention scores and pad the final attention scores.
-
-#         Args:
-#             query_states (`mindspore.Tensor`):
-#                 Input query states to be passed to Flash Attention API
-#             key_states (`mindspore.Tensor`):
-#                 Input key states to be passed to Flash Attention API
-#             value_states (`mindspore.Tensor`):
-#                 Input value states to be passed to Flash Attention API
-#             attention_mask (`mindspore.Tensor`):
-#                 The padding mask - corresponds to a tensor of size `(batch_size, seq_len)` where 0 stands for the
-#                 position of padding tokens and 1 for the position of non-padding tokens.
-#             dropout (`float`):
-#                 Attention dropout
-#             softmax_scale (`float`, *optional*):
-#                 The scaling of QK^T before applying softmax. Default to 1 / sqrt(head_dim)
-#         """
-#         if not self._flash_attn_uses_top_left_mask:
-#             causal = self.is_causal
-#         else:
-#             # TODO: Remove the `query_length != 1` check once Flash Attention for RoCm is bumped to 2.1. For details, please see the comment in LlamaFlashAttention2 __init__.
-#             causal = self.is_causal and query_length != 1
-
-#         # Contains at least one padding token in the sequence
-#         if attention_mask is not None:
-#             batch_size = query_states.shape[0]
-#             query_states, key_states, value_states, indices_q, cu_seq_lens, max_seq_lens = self._upad_input(
-#                 query_states, key_states, value_states, attention_mask, query_length
-#             )
-
-#             cu_seqlens_q, cu_seqlens_k = cu_seq_lens
-#             max_seqlen_in_batch_q, max_seqlen_in_batch_k = max_seq_lens
-
-#             attn_output_unpad = flash_attn_varlen_func(
-#                 query_states,
-#                 key_states,
-#                 value_states,
-#                 cu_seqlens_q=cu_seqlens_q,
-#                 cu_seqlens_k=cu_seqlens_k,
-#                 max_seqlen_q=max_seqlen_in_batch_q,
-#                 max_seqlen_k=max_seqlen_in_batch_k,
-#                 dropout_p=dropout,
-#                 softmax_scale=softmax_scale,
-#                 causal=causal,
-#             )
-
-#             attn_output = pad_input(attn_output_unpad, indices_q, batch_size, query_length)
-#         else:
-#             attn_output = flash_attn_func(
-#                 query_states, key_states, value_states, dropout, softmax_scale=softmax_scale, causal=causal
-#             )
-
-#         return attn_output
-
-#     # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2._upad_input
-#     def _upad_input(self, query_layer, key_layer, value_layer, attention_mask, query_length):
-#         indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
-#         batch_size, kv_seq_len, num_key_value_heads, head_dim = key_layer.shape
-
-#         key_layer = index_first_axis(
-#             key_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
-#         )
-#         value_layer = index_first_axis(
-#             value_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
-#         )
-#         if query_length == kv_seq_len:
-#             query_layer = index_first_axis(
-#                 query_layer.reshape(batch_size * kv_seq_len, self.num_heads, head_dim), indices_k
-#             )
-#             cu_seqlens_q = cu_seqlens_k
-#             max_seqlen_in_batch_q = max_seqlen_in_batch_k
-#             indices_q = indices_k
-#         elif query_length == 1:
-#             max_seqlen_in_batch_q = 1
-#             cu_seqlens_q = ops.arange(
-#                 batch_size + 1, dtype=mindspore.int32, device=query_layer.device
-#             )  # There is a memcpy here, that is very bad.
-#             indices_q = cu_seqlens_q[:-1]
-#             query_layer = query_layer.squeeze(1)
-#         else:
-#             # The -q_len: slice assumes left padding.
-#             attention_mask = attention_mask[:, -query_length:]
-#             query_layer, indices_q, cu_seqlens_q, max_seqlen_in_batch_q = unpad_input(query_layer, attention_mask)
-
-#         return (
-#             query_layer,
-#             key_layer,
-#             value_layer,
-#             indices_q,
-#             (cu_seqlens_q, cu_seqlens_k),
-#             (max_seqlen_in_batch_q, max_seqlen_in_batch_k),
-#         )
-
-
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->M2M100, MBART->M2M100
 class M2M100EncoderLayer(nn.Cell):
     def __init__(self, config: M2M100Config):
@@ -737,34 +547,14 @@ class M2M100PreTrainedModel(PreTrainedModel):
         std = self.config.init_std
         if isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(Normal(std),cell.weight.shape,cell.weight.dtype))
-            #cell.weight.data.normal_(mean=0.0, std=std)
             if cell.has_bias:
                 cell.bias.set_data(initializer("zeros",cell.bias.shape,cell.bias.dtype))
-                #cell.bias.data.zero_()
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0,std,cell.weight.shape)
-            #cell.weight.data.normal_(mean=0.0, std=std)
             if cell.padding_idx:
-                #cell.weight.data[cell.padding_idx].zero_()
                 weight[cell.padding_idx] = 0
             cell.weight.set_data(Tensor(weight,cell.weight.dtype))
 
-
-# M2M_100_START_DOCSTRING = r"""
-#     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-#     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-#     etc.)
-
-#     This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
-#     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-#     and behavior.
-
-#     Parameters:
-#         config ([`M2M100Config`]):
-#             Model configuration class with all the parameters of the model. Initializing with a config file does not
-#             load the weights associated with the model, only the configuration. Check out the
-#             [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-# """
 
 M2M_100_GENERATION_EXAMPLE = r"""
     Translation example:
@@ -783,95 +573,6 @@ M2M_100_GENERATION_EXAMPLE = r"""
     >>> print(tokenizer.batch_decode(gen_tokens, skip_special_tokens=True))
     ```
 """
-
-# M2M_100_INPUTS_DOCSTRING = r"""
-#     Args:
-#         input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-#             Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
-#             it.
-
-#             Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-#             [`PreTrainedTokenizer.__call__`] for details.
-
-#             [What are input IDs?](../glossary#input-ids)
-#         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-#             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-#             - 1 for tokens that are **not masked**,
-#             - 0 for tokens that are **masked**.
-
-#             [What are attention masks?](../glossary#attention-mask)
-#         decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
-#             Indices of decoder input sequence tokens in the vocabulary.
-
-#             Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-#             [`PreTrainedTokenizer.__call__`] for details.
-
-#             [What are decoder input IDs?](../glossary#decoder-input-ids)
-
-#             M2M100 uses the `eos_token_id` as the starting token for `decoder_input_ids` generation. If
-#             `past_key_values` is used, optionally only the last `decoder_input_ids` have to be input (see
-#             `past_key_values`).
-#         decoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
-#             Default behavior: generate a tensor that ignores pad tokens in `decoder_input_ids`. Causal mask will also
-#             be used by default.
-#         head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-#             Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-
-#             - 1 indicates the head is **not masked**,
-#             - 0 indicates the head is **masked**.
-
-#         decoder_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-#             Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-
-#             - 1 indicates the head is **not masked**,
-#             - 0 indicates the head is **masked**.
-
-#         cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-#             Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0,
-#             1]`:
-
-#             - 1 indicates the head is **not masked**,
-#             - 0 indicates the head is **masked**.
-#         encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
-#             Tuple consists of (`last_hidden_state`, *optional*: `hidden_states`, *optional*: `attentions`)
-#             `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)`, *optional*) is a sequence of
-#             hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the decoder.
-#         past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-#             Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-#             `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-#             `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
-
-#             Contains pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
-#             blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-#             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-#             don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-#             `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-#         inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-#             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
-#             This is useful if you want more control over how to convert `input_ids` indices into associated vectors
-#             than the model's internal embedding lookup matrix.
-#         decoder_inputs_embeds (`mindspore.Tensor` of shape `(batch_size, target_sequence_length, hidden_size)`, *optional*):
-#             Optionally, instead of passing `decoder_input_ids` you can choose to directly pass an embedded
-#             representation. If `past_key_values` is used, optionally only the last `decoder_inputs_embeds` have to be
-#             input (see `past_key_values`). This is useful if you want more control over how to convert
-#             `decoder_input_ids` indices into associated vectors than the model's internal embedding lookup matrix.
-
-#             If `decoder_input_ids` and `decoder_inputs_embeds` are both unset, `decoder_inputs_embeds` takes the value
-#             of `inputs_embeds`.
-#         use_cache (`bool`, *optional*):
-#             If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-#             `past_key_values`).
-#         output_attentions (`bool`, *optional*):
-#             Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-#             tensors for more detail.
-#         output_hidden_states (`bool`, *optional*):
-#             Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-#             more detail.
-#         return_dict (`bool`, *optional*):
-#             Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-# """
 
 
 class M2M100Encoder(M2M100PreTrainedModel):
@@ -909,7 +610,6 @@ class M2M100Encoder(M2M100PreTrainedModel):
         )
         self.layers = nn.CellList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
-        #self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -983,7 +683,6 @@ class M2M100Encoder(M2M100PreTrainedModel):
             inputs_embeds = self.embed_tokens(input_ids)
 
         embed_pos = self.embed_positions(input_ids, inputs_embeds)
-        #embed_pos = embed_pos.to(inputs_embeds.device)
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
@@ -1003,7 +702,6 @@ class M2M100Encoder(M2M100PreTrainedModel):
                     f"The head_mask should be specified for {len(self.layers)} layers, but it is for"
                     f" {head_mask.shape[0]}."
                 )
-        #deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
 
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
@@ -1011,7 +709,6 @@ class M2M100Encoder(M2M100PreTrainedModel):
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
-            #skip_the_layer = True if self.training and (dropout_probability < self.layerdrop) else False
             skip_the_layer = self.training and (dropout_probability < self.layerdrop)
             if not skip_the_layer: #or deepspeed_zero3_is_enabled:
                 # under deepspeed zero3 all gpus must run in sync
@@ -1082,7 +779,6 @@ class M2M100Decoder(M2M100PreTrainedModel):
             self.padding_idx,
         )
         self.layers = nn.CellList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
-        #self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -1207,7 +903,6 @@ class M2M100Decoder(M2M100PreTrainedModel):
 
         # embed positions
         positions = self.embed_positions(input_ids, inputs_embeds, past_key_values_length)
-        #positions = positions.to(inputs_embeds.device)
 
         hidden_states = inputs_embeds + positions
 
@@ -1234,7 +929,6 @@ class M2M100Decoder(M2M100PreTrainedModel):
                         f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
                         f" {head_mask.shape[0]}."
                     )
-        #deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
 
         for idx, decoder_layer in enumerate(self.layers):
             if output_hidden_states:
@@ -1503,9 +1197,6 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            # move labels to the correct device to enable PP
-            #labels = labels.to(lm_logits.device)
-            #loss_fct = CrossEntropyLoss()
             masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1565,7 +1256,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
     def _reorder_cache(past_key_values, beam_idx):
         reordered_past = ()
         for layer_past in past_key_values:
-            reordered_past += (#tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
+            reordered_past += (
                 tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
