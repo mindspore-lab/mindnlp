@@ -1489,10 +1489,6 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
         logits = predict_logits[:, 0]
         logits_ngram = predict_logits[:, 1:] if self.config.ngram > 1 else None
 
-        # To use .view in loss computation, make sure that logits is contiguous.
-        if not logits.is_contiguous():
-            logits = logits
-
         loss = None
         if labels is not None:
             loss = self._compute_loss(predict_logits, labels)
