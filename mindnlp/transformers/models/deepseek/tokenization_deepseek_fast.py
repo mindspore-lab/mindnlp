@@ -1,7 +1,8 @@
 from typing import List, Optional, Union
 
 
-from transformers.models.llama import LlamaTokenizerFast
+# from transformers.models.llama import LlamaTokenizerFast
+from mindnlp.transformers.models.llama import LlamaTokenizerFast
 
 
 class DeepseekTokenizerFast(LlamaTokenizerFast):
