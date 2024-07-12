@@ -1,5 +1,6 @@
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
+
 
 logger = logging.get_logger(__name__)
 
@@ -111,4 +112,5 @@ class DeepseekV2Config(PretrainedConfig):
             **kwargs,
         )
 
-        __all__ = ["DeepseekV2Config"]
+
+__all__ = ["DeepseekV2Config"]

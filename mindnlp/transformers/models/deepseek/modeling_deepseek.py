@@ -22,11 +22,6 @@ import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
-# import torch
-# import torch.nn.functional as F
-# import torch.utils.checkpoint
-# from torch import nn
-# from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import mindspore
 import mindnlp
 from mindspore import ops
@@ -34,14 +29,6 @@ from mindspore import nn
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-
-# from transformers.activations import ACT2FN
-# from transformers.cache_utils import Cache, DynamicCache
-# from transformers.modeling_attn_mask_utils import (
-#     AttentionMaskConverter,
-#     _prepare_4d_attention_mask,
-#     _prepare_4d_causal_attention_mask,
-# )
 from mindnlp.transformers.activations import ACT2FN
 from mindnlp.transformers.cache_utils import Cache, DynamicCache
 from mindnlp.transformers.modeling_attn_mask_utils import (
@@ -50,60 +37,24 @@ from mindnlp.transformers.modeling_attn_mask_utils import (
     _prepare_4d_causal_attention_mask
 )
 
-# from transformers.modeling_outputs import (
-#     BaseModelOutputWithPast,
-#     CausalLMOutputWithPast,
-#     SequenceClassifierOutputWithPast,
-# )
 from mindnlp.transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
 )
 
-# from transformers.modeling_utils import PreTrainedModel
-# from transformers.pytorch_utils import (
-#     ALL_LAYERNORM_LAYERS,
-#     is_torch_greater_or_equal_than_1_13,
-# )
 from mindnlp.transformers.modeling_utils import PreTrainedModel
 from mindnlp.transformers.ms_utils import (
     ALL_LAYERNORM_LAYERS,
 )
 
-# from transformers.utils import (
-#     add_start_docstrings,
-#     add_start_docstrings_to_model_forward,
-#     is_flash_attn_2_available,
-#     is_flash_attn_greater_or_equal_2_10,
-#     logging,
-#     replace_return_docstrings,
-# )
 from mindnlp.utils import (
     logging,
 )
 
-# from transformers.utils.import_utils import is_torch_fx_available
-# from .configuration_deepseek import DeepseekV2Config
-# import torch.distributed as dist
 from mindnlp.utils.import_utils import is_mindspore_available
 from .configuration_deepseek import DeepseekV2Config
-# import torch.distributed as dist
-
 import numpy as np
-
-# if is_flash_attn_2_available():
-#     from flash_attn import flash_attn_func, flash_attn_varlen_func
-#     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
-
-
-# This makes `_prepare_4d_causal_attention_mask` a leaf function in the FX graph.
-# It means that the function will not be traced through and simply appear as a node in the graph.
-# if is_torch_fx_available():
-#     if not is_torch_greater_or_equal_than_1_13:
-#         import torch.fx
-#
-#     _prepare_4d_causal_attention_mask = torch.fx.wrap(_prepare_4d_causal_attention_mask)
 
 logger = logging.get_logger(__name__)
 
