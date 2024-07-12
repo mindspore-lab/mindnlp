@@ -1524,7 +1524,6 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
         lprobs = ops.log_softmax(
             logits.view(-1, logits.shape[-1]),
             axis=-1,
-            dtype=mindspore.float32,
         )
 
         loss = ops.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
@@ -1710,7 +1709,6 @@ class XLMProphetNetForCausalLM(XLMProphetNetPreTrainedModel):
         lprobs = ops.log_softmax(
             logits.view(-1, logits.shape[-1]),
             axis=-1,
-            dtype=mindspore.float32,
         )
 
         loss = ops.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
