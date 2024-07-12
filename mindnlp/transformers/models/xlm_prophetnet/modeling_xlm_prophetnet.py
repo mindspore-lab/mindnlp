@@ -890,7 +890,6 @@ class XLMProphetNetDecoderLayer(nn.Cell):
 
         return outputs
 
-# Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetEncoder with microsoft/prophetnet-large-uncased->patrickvonplaten/xprophetnet-large-uncased-standalone, ProphetNet->XLMProphetNet, PROPHETNET->XLM_PROPHETNET
 class XLMProphetNetEncoder(XLMProphetNetPreTrainedModel):
 
 
@@ -998,7 +997,6 @@ class XLMProphetNetEncoder(XLMProphetNetPreTrainedModel):
         )
 
 
-# Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetDecoder with microsoft/prophetnet-large-uncased->patrickvonplaten/xprophetnet-large-uncased-standalone, ProphetNet->XLMProphetNet, PROPHETNET->XLM_PROPHETNET,
 class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
 
 
@@ -1305,8 +1303,6 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
             extended_predict_attention_mask = extended_predict_causal_mask
         return extended_predict_attention_mask.to(hidden_states.dtype)
 
-
-# Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetModel with microsoft/prophetnet-large-uncased->patrickvonplaten/xprophetnet-large-uncased-standalone, ProphetNet->XLMProphetNet, PROPHETNET->XLM_PROPHETNET
 class XLMProphetNetModel(XLMProphetNetPreTrainedModel):
     _tied_weights_keys = ["encoder.word_embeddings.weight", "decoder.word_embeddings.weight"]
 
@@ -1414,7 +1410,6 @@ class XLMProphetNetModel(XLMProphetNetPreTrainedModel):
             encoder_attentions=encoder_outputs.attentions,
         )
 
-# Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetForConditionalGeneration with microsoft/prophetnet-large-uncased->patrickvonplaten/xprophetnet-large-uncased-standalone, ProphetNet->XLMProphetNet, PROPHETNET->XLM_PROPHETNET
 class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
     _tied_weights_keys = ["encoder.word_embeddings.weight", "decoder.word_embeddings.weight", "lm_head.weight"]
 
@@ -1599,7 +1594,6 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
     def get_decoder(self):
         return self.prophetnet.decoder
 
-# Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetForCausalLM with microsoft/prophetnet-large-uncased->patrickvonplaten/xprophetnet-large-uncased-standalone, ProphetNet->XLMProphetNet, PROPHETNET->XLM_PROPHETNET
 class XLMProphetNetForCausalLM(XLMProphetNetPreTrainedModel):
     _tied_weights_keys = [
         "prophetnet.word_embeddings.weight",
