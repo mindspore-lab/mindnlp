@@ -180,6 +180,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("xclip", "XCLIPConfig"),
         ("xlm-roberta", "XLMRobertaConfig"),
         ("xlm-roberta-xl", "XLMRobertaXLConfig"),
+        ("xlm-prophetnet", "XLMProphetNetConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),
         ("xmod", "XmodConfig"),
