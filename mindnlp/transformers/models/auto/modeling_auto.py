@@ -172,6 +172,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
+        ("xlm-prophetnet","XLMProphetNetModel"),
         ("xlnet", "XLNetModel"),
         ("umt5", "UMT5Model"),
         ("xmod", "XmodModel"),
@@ -210,6 +211,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("wav2vec2-conformer", "Wav2Vec2ConformerForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
+        ("xlm-prophetnet","XLMProphetNetForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasPreTrainedModel"),
         ("xmod", "XmodForMaskedLM"),
@@ -257,6 +259,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
+        ("xlm-prophetnet","XLMProphetNetForConditionalGeneration"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasForMaskedLM"),
         ("xmod", "XmodForMaskedLM"),
@@ -322,6 +325,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
+        ("xlm-prophetnet","XLMProphetNetForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
         ("tapas", "TapasForMaskedLM"),
         ("xmod", "XmodForCausalLM"),
@@ -942,6 +946,7 @@ MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES = OrderedDict(
         ("xlm", "XLMModel"),
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlm-roberta-xl", "XLMRobertaXLModel"),
+        ("xlm-prophetnet","XLMProphetNetModel"),
     ]
 )
 
