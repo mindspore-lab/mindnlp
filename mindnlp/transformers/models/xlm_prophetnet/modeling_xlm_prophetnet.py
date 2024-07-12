@@ -1112,13 +1112,10 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
 
         if self.embeddings_layer_norm:
             hidden_states = self.embeddings_layer_norm(hidden_states)
-
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
-
         # init attentions, hidden_states and cache with empty tuples
         all_main_stream_hidden_states = () if output_hidden_states else None
         all_ngram_stream_hidden_states = () if output_hidden_states and self.config.ngram > 0 else None
-
         all_main_stream_attns = () if output_attentions else None
         all_ngram_stream_attns = () if output_attentions else None
         all_cross_attns = () if output_attentions and self.config.add_cross_attention else None
@@ -1145,9 +1142,7 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
                 all_main_stream_hidden_states += (hidden_states[:, :sequence_length],)
                 if self.config.ngram > 0:
                     all_ngram_stream_hidden_states += (hidden_states[:, sequence_length:],)
-
             past_key_value = past_key_values[idx] if past_key_values is not None else None
-
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,
@@ -1183,7 +1178,6 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
                     use_cache=use_cache,
                     output_attentions=output_attentions,
                 )
-
             hidden_states = layer_outputs[0]
             if use_cache:
                 present_key_values += (layer_outputs[4 if output_attentions else 1],)
@@ -1594,7 +1588,7 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
         for layer_past in past_key_values:
             # cached cross_attention states don't have to be reordered -> they are always the same
             reordered_past += (
-                tuple(past_state.index_select(0) for past_state in layer_past[:2])
+                tuple(past_state.index_select(0,beam_idx) for past_state in layer_past[:2])
                 + layer_past[2:],
             )
         return reordered_past
@@ -1772,7 +1766,7 @@ class XLMProphetNetForCausalLM(XLMProphetNetPreTrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(past_state.index_select(0) for past_state in layer_past),
+                tuple(past_state.index_select(0,beam_idx) for past_state in layer_past),
             )
         return reordered_past
 
