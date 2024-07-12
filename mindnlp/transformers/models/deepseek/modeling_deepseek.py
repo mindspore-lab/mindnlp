@@ -32,7 +32,7 @@ import mindnlp
 from mindspore import ops
 from mindspore import nn
 from mindspore import Tensor
-from mindspore.common import initializer
+from mindspore.common.initializer import initializer, Normal
 
 
 # from transformers.activations import ACT2FN
@@ -104,7 +104,6 @@ import numpy as np
 #         import torch.fx
 #
 #     _prepare_4d_causal_attention_mask = torch.fx.wrap(_prepare_4d_causal_attention_mask)
-
 
 logger = logging.get_logger(__name__)
 
@@ -548,7 +547,7 @@ class AddAuxiliaryLoss(nn.LossBase):
         return grad_output, grad_loss
 
 
-class DeepseekV2MoE(nn.Module):
+class DeepseekV2MoE(nn.Cell):
     """
     A mixed expert module containing shared experts.
     """
@@ -558,36 +557,18 @@ class DeepseekV2MoE(nn.Module):
         self.config = config
         self.num_experts_per_tok = config.num_experts_per_tok
 
-        if hasattr(config, "ep_size") and config.ep_size > 1:
-            assert config.ep_size == dist.get_world_size()
-            self.ep_size = config.ep_size
-            self.experts_per_rank = config.n_routed_experts // config.ep_size
-            self.ep_rank = dist.get_rank()
-            self.experts = nn.CellList(
-                [
-                    (
-                        DeepseekV2MLP(
-                            config, intermediate_size=config.moe_intermediate_size
-                        )
-                        if i >= self.ep_rank * self.experts_per_rank
-                        and i < (self.ep_rank + 1) * self.experts_per_rank
-                        else None
-                    )
-                    for i in range(config.n_routed_experts)
-                ]
-            )
-        else:
-            self.ep_size = 1
-            self.experts_per_rank = config.n_routed_experts
-            self.ep_rank = 0
-            self.experts = nn.CellList(
-                [
-                    DeepseekV2MLP(
-                        config, intermediate_size=config.moe_intermediate_size
-                    )
-                    for i in range(config.n_routed_experts)
-                ]
-            )
+
+        self.ep_size = 1
+        self.experts_per_rank = config.n_routed_experts
+        self.ep_rank = 0
+        self.experts = nn.CellList(
+            [
+                DeepseekV2MLP(
+                    config, intermediate_size=config.moe_intermediate_size
+                )
+                for i in range(config.n_routed_experts)
+            ]
+        )
         self.gate = MoEGate(config)
         if config.n_shared_experts is not None:
             intermediate_size = config.moe_intermediate_size * config.n_shared_experts
@@ -605,7 +586,7 @@ class DeepseekV2MoE(nn.Module):
             hidden_states = hidden_states.repeat_interleave(
                 self.num_experts_per_tok, dim=0
             )
-            y = Tensor(np.empty_like(hidden_states)).astype(mindspore.float32)
+            y = Tensor(np.empty_like(hidden_states.asnumpy())).astype(mindspore.float32)
             for i, expert in enumerate(self.experts):
                 y[flat_topk_idx == i] = expert(hidden_states[flat_topk_idx == i])
             y = (y.view(*topk_weight.shape, -1) * topk_weight.unsqueeze(-1)).sum(dim=1)
@@ -616,82 +597,6 @@ class DeepseekV2MoE(nn.Module):
         if self.config.n_shared_experts is not None:
             y = y + self.shared_experts(identity)
         return y
-
-    @torch.no_grad()
-    def moe_infer(self, x, topk_ids, topk_weight):
-        cnts = topk_ids.new_zeros((topk_ids.shape[0], len(self.experts)))
-        cnts.scatter_(1, topk_ids, 1)
-        tokens_per_expert = cnts.sum(dim=0)
-        idxs = topk_ids.view(-1).argsort()
-        sorted_tokens = x[idxs // topk_ids.shape[1]]
-        sorted_tokens_shape = sorted_tokens.shape
-        if self.ep_size > 1:
-            tokens_per_ep_rank = tokens_per_expert.view(self.ep_size, -1).sum(dim=1)
-            tokens_per_expert_group = tokens_per_expert.new_empty(
-                tokens_per_expert.shape[0]
-            )
-            dist.all_to_all_single(tokens_per_expert_group, tokens_per_expert)
-            output_splits = (
-                tokens_per_expert_group.view(self.ep_size, -1)
-                .sum(1)
-                .cpu()
-                .numpy()
-                .tolist()
-            )
-            gathered_tokens = sorted_tokens.new_empty(
-                tokens_per_expert_group.sum(dim=0).cpu().item(), sorted_tokens.shape[1]
-            )
-            input_split_sizes = tokens_per_ep_rank.cpu().numpy().tolist()
-            dist.all_to_all(
-                list(gathered_tokens.split(output_splits)),
-                list(sorted_tokens.split(input_split_sizes)),
-            )
-            tokens_per_expert_post_gather = tokens_per_expert_group.view(
-                self.ep_size, self.experts_per_rank
-            ).sum(dim=0)
-            gatherd_idxs = np.zeros(shape=(gathered_tokens.shape[0],), dtype=np.int32)
-            s = 0
-            for i, k in enumerate(tokens_per_expert_group.cpu().numpy()):
-                gatherd_idxs[s : s + k] = i % self.experts_per_rank
-                s += k
-            gatherd_idxs = gatherd_idxs.argsort()
-            sorted_tokens = gathered_tokens[gatherd_idxs]
-            tokens_per_expert = tokens_per_expert_post_gather
-        tokens_per_expert = tokens_per_expert.cpu().numpy()
-
-        outputs = []
-        start_idx = 0
-        for i, num_tokens in enumerate(tokens_per_expert):
-            end_idx = start_idx + num_tokens
-            if num_tokens == 0:
-                continue
-            expert = self.experts[i + self.ep_rank * self.experts_per_rank]
-            tokens_for_this_expert = sorted_tokens[start_idx:end_idx]
-            expert_out = expert(tokens_for_this_expert)
-            outputs.append(expert_out)
-            start_idx = end_idx
-
-        outs = torch.cat(outputs, dim=0) if len(outputs) else sorted_tokens.new_empty(0)
-        if self.ep_size > 1:
-            new_x = torch.empty_like(outs)
-            new_x[gatherd_idxs] = outs
-            gathered_tokens = new_x.new_empty(*sorted_tokens_shape)
-            dist.all_to_all(
-                list(gathered_tokens.split(input_split_sizes)),
-                list(new_x.split(output_splits)),
-            )
-            outs = gathered_tokens
-
-        new_x = torch.empty_like(outs)
-        new_x[idxs] = outs
-        final_out = (
-            new_x.view(*topk_ids.shape, -1)
-            .type(topk_weight.dtype)
-            .mul_(topk_weight.unsqueeze(dim=-1))
-            .sum(dim=1)
-            .type(new_x.dtype)
-        )
-        return final_out
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
@@ -718,7 +623,7 @@ class DeepseekV2Attention(nn.Cell):
         self.config = config
         self.layer_idx = layer_idx
         if layer_idx is None:
-            logger.warning_once(
+            logger.warning(
                 f"Instantiating {self.__class__.__name__} without passing `layer_idx` is not recommended and will "
                 "to errors during the forward call, if caching is used. Please make sure to provide a `layer_idx` "
                 "when creating this class."
@@ -955,7 +860,6 @@ class DeepseekV2FlashAttention2(DeepseekV2Attention):
         # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
         # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
-        self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
 
     def construct(
         self,
@@ -1047,28 +951,11 @@ class DeepseekV2FlashAttention2(DeepseekV2Attention):
         # in fp32. (DeepseekV2RMSNorm handles it correctly)
 
         input_dtype = query_states.dtype
-        if input_dtype == mindspore.float32:
-            # Handle the case where the model is quantized
-            if hasattr(self.config, "_pre_quantization_dtype"):
-                target_dtype = self.config._pre_quantization_dtype
-            elif torch.is_autocast_enabled():
-                target_dtype = torch.get_autocast_gpu_dtype()
-            else:
-                target_dtype = (
-                    self.q_proj.weight.dtype
-                    if self.q_lora_rank is None
-                    else self.q_a_proj.weight.dtype
-                )
+        target_dtype = mindspore.float32
 
-            logger.warning_once(
-                f"The input hidden states seems to be silently casted in float32, this might be related to"
-                f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
-                f" {target_dtype}."
-            )
-
-            query_states = query_states.to(target_dtype)
-            key_states = key_states.to(target_dtype)
-            value_states = value_states.to(target_dtype)
+        query_states = query_states.to(target_dtype)
+        key_states = key_states.to(target_dtype)
+        value_states = value_states.to(target_dtype)
 
         attn_output = self._flash_attention_forward(
             query_states,
@@ -1091,131 +978,6 @@ class DeepseekV2FlashAttention2(DeepseekV2Attention):
             attn_weights = None
 
         return attn_output, attn_weights, past_key_value
-
-    def _flash_attention_forward(
-        self,
-        query_states,
-        key_states,
-        value_states,
-        attention_mask,
-        query_length,
-        dropout=0.0,
-        softmax_scale=None,
-    ):
-        """
-        Calls the forward method of Flash Attention - if the input hidden states contain at least one padding token
-        first unpad the input, then computes the attention scores and pad the final attention scores.
-
-        Args:
-            query_states (`mindspore.Tensor`):
-                Input query states to be passed to Flash Attention API
-            key_states (`mindspore.Tensor`):
-                Input key states to be passed to Flash Attention API
-            value_states (`mindspore.Tensor`):
-                Input value states to be passed to Flash Attention API
-            attention_mask (`mindspore.Tensor`):
-                The padding mask - corresponds to a tensor of size `(batch_size, seq_len)` where 0 stands for the
-                position of padding tokens and 1 for the position of non-padding tokens.
-            dropout (`int`, *optional*):
-                Attention dropout
-            softmax_scale (`float`, *optional*):
-                The scaling of QK^T before applying softmax. Default to 1 / sqrt(head_dim)
-        """
-        if not self._flash_attn_uses_top_left_mask:
-            causal = self.is_causal
-        else:
-            # TODO: Remove the `query_length != 1` check once Flash Attention for RoCm is bumped to 2.1. For details, please see the comment in DeepseekV2FlashAttention2 __init__.
-            causal = self.is_causal and query_length != 1
-
-        # Contains at least one padding token in the sequence
-        if attention_mask is not None:
-            batch_size = query_states.shape[0]
-            (
-                query_states,
-                key_states,
-                value_states,
-                indices_q,
-                cu_seq_lens,
-                max_seq_lens,
-            ) = self._upad_input(
-                query_states, key_states, value_states, attention_mask, query_length
-            )
-
-            cu_seqlens_q, cu_seqlens_k = cu_seq_lens
-            max_seqlen_in_batch_q, max_seqlen_in_batch_k = max_seq_lens
-
-            attn_output_unpad = flash_attn_varlen_func(
-                query_states,
-                key_states,
-                value_states,
-                cu_seqlens_q=cu_seqlens_q,
-                cu_seqlens_k=cu_seqlens_k,
-                max_seqlen_q=max_seqlen_in_batch_q,
-                max_seqlen_k=max_seqlen_in_batch_k,
-                dropout_p=dropout,
-                softmax_scale=softmax_scale,
-                causal=causal,
-            )
-
-            attn_output = pad_input(
-                attn_output_unpad, indices_q, batch_size, query_length
-            )
-        else:
-            attn_output = flash_attn_func(
-                query_states,
-                key_states,
-                value_states,
-                dropout,
-                softmax_scale=softmax_scale,
-                causal=causal,
-            )
-
-        return attn_output
-
-    def _upad_input(
-        self, query_layer, key_layer, value_layer, attention_mask, query_length
-    ):
-        indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
-        batch_size, kv_seq_len, num_key_value_heads, head_dim = key_layer.shape
-
-        key_layer = index_first_axis(
-            key_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim),
-            indices_k,
-        )
-        value_layer = index_first_axis(
-            value_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim),
-            indices_k,
-        )
-        if query_length == kv_seq_len:
-            query_layer = index_first_axis(
-                query_layer.reshape(batch_size * kv_seq_len, self.num_heads, head_dim),
-                indices_k,
-            )
-            cu_seqlens_q = cu_seqlens_k
-            max_seqlen_in_batch_q = max_seqlen_in_batch_k
-            indices_q = indices_k
-        elif query_length == 1:
-            max_seqlen_in_batch_q = 1
-            cu_seqlens_q = torch.arange(
-                batch_size + 1, dtype=mindspore.int3232, device=query_layer.device
-            )  # There is a memcpy here, that is very bad.
-            indices_q = cu_seqlens_q[:-1]
-            query_layer = query_layer.squeeze(1)
-        else:
-            # The -q_len: slice assumes left padding.
-            attention_mask = attention_mask[:, -query_length:]
-            query_layer, indices_q, cu_seqlens_q, max_seqlen_in_batch_q = unpad_input(
-                query_layer, attention_mask
-            )
-
-        return (
-            query_layer,
-            key_layer,
-            value_layer,
-            indices_q,
-            (cu_seqlens_q, cu_seqlens_k),
-            (max_seqlen_in_batch_q, max_seqlen_in_batch_k),
-        )
 
 
 ATTENTION_CLASSES = {
@@ -1246,7 +1008,7 @@ class DeepseekV2DecoderLayer(nn.Cell):
             config.hidden_size, eps=config.rms_norm_eps
         )
         self.post_attention_layernorm = DeepseekV2RMSNorm(
-            config.hidden_size, eps = config.rms_norm_eps
+            config.hidden_size, eps=config.rms_norm_eps
         )
 
     def construct(
@@ -1329,10 +1091,6 @@ DeepseekV2_START_DOCSTRING = r"""
 """
 
 
-@add_start_docstrings(
-    "The bare DeepseekV2 Model outputting raw hidden-states without any specific head on top.",
-    DeepseekV2_START_DOCSTRING,
-)
 class DeepseekV2PreTrainedModel(PreTrainedModel):
     config_class = DeepseekV2Config
     base_model_prefix = "model"
@@ -1354,12 +1112,19 @@ class DeepseekV2PreTrainedModel(PreTrainedModel):
     #             module.weight.data[module.padding_idx].zero_()
 
     def _init_weights(self, cell):
+        """Initialize the weights"""
         std = self.config.initializer_range
         if isinstance(cell, nn.Dense):
-            cell.weight.set_data(initializer(initializer.Normal(self.config.initializer_range),cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                             cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
-                cell.bias.set_data(ini)
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table)
+            if cell.padding_idx:
+                embedding_table[cell.padding_idx] = 0
 
+            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
 
 
 DeepseekV2_INPUTS_DOCSTRING = r"""
@@ -1432,10 +1197,6 @@ DeepseekV2_INPUTS_DOCSTRING = r"""
 """
 
 
-@add_start_docstrings(
-    "The bare DeepseekV2 Model outputting raw hidden-states without any specific head on top.",
-    DeepseekV2_START_DOCSTRING,
-)
 class DeepseekV2Model(DeepseekV2PreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`DeepseekV2DecoderLayer`]
@@ -1471,8 +1232,7 @@ class DeepseekV2Model(DeepseekV2PreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    @add_start_docstrings_to_model_forward(DeepseekV2_INPUTS_DOCSTRING)
-    def forward(
+    def construct(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1514,7 +1274,7 @@ class DeepseekV2Model(DeepseekV2PreTrainedModel):
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
-                logger.warning_once(
+                logger.warning(
                     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`transformers."
                 )
                 use_cache = False
@@ -1527,12 +1287,10 @@ class DeepseekV2Model(DeepseekV2PreTrainedModel):
             past_key_values_length = past_key_values.get_usable_length(seq_length)
 
         if position_ids is None:
-            device = input_ids.device if input_ids is not None else inputs_embeds.device
-            position_ids = torch.arange(
+            position_ids = ops.arange(
                 past_key_values_length,
                 seq_length + past_key_values_length,
                 dtype=mindspore.int64,
-                device=device,
             )
             position_ids = position_ids.unsqueeze(0)
 
@@ -1652,11 +1410,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    @add_start_docstrings_to_model_forward(DeepseekV2_INPUTS_DOCSTRING)
-    @replace_return_docstrings(
-        output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC
-    )
-    def forward(
+    def construct(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1802,21 +1556,6 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
         return reordered_past
 
 
-@add_start_docstrings(
-    """
-    The DeepseekV2 Model transformer with a sequence classification head on top (linear layer).
-
-    [`DeepseekV2ForSequenceClassification`] uses the last token in order to do the classification, as other causal models
-    (e.g. GPT-2) do.
-
-    Since it does classification on the last token, it requires to know the position of the last token. If a
-    `pad_token_id` is defined in the configuration, it finds the last token that is not a padding token in each row. If
-    no `pad_token_id` is defined, it simply takes the last value in each row of the batch. Since it cannot guess the
-    padding tokens when `inputs_embeds` are passed instead of `input_ids`, it does the same (take the last value in
-    each row of the batch).
-    """,
-    DeepseekV2_START_DOCSTRING,
-)
 class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1833,8 +1572,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    @add_start_docstrings_to_model_forward(DeepseekV2_INPUTS_DOCSTRING)
-    def forward(
+    def construct(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
