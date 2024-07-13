@@ -77,6 +77,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
         ("donut-swin", "DonutSwinConfig"),
+        ("dpt", "DPTConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),

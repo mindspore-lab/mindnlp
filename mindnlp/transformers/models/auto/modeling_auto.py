@@ -78,6 +78,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2Model"),
         ("detr", "DetrModel"),
         ("dinov2", "Dinov2Model"),
+        ("dpt", "DPTModel"),
         ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
