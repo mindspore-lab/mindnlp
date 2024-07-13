@@ -235,7 +235,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
-            "deepseek-v2",
+            "deepseek_v2",
             (
                 "DeepseekTokenizerFast"
             )
