@@ -209,6 +209,7 @@ from . import (
     xlm,
     xlm_roberta,
     xlm_roberta_xl,
+    xlm_prophetnet,
     xlnet,
     xmod,
     vilt,
@@ -406,6 +407,7 @@ from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
+from .xlm_prophetnet import *
 from .xlnet import *
 from .umt5 import *
 from .xmod import *
@@ -603,6 +605,7 @@ __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
+__all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
