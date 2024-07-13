@@ -1619,3 +1619,22 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+
+
+__all__ = ["DeepseekV2RMSNorm",
+           "DeepseekV2RotaryEmbedding",
+           "DeepseekV2LinearScalingRotaryEmbedding",
+           "DeepseekV2DynamicNTKScalingRotaryEmbedding",
+           "DeepseekV2YarnRotaryEmbedding",
+           "DeepseekV2MLP",
+           "MoEGate",
+           "AddAuxiliaryLoss",
+           "DeepseekV2MoE",
+           "DeepseekV2Attention",
+           "DeepseekV2FlashAttention2",
+           "DeepseekV2DecoderLayer",
+           "DeepseekV2PreTrainedModel",
+           "DeepseekV2Model",
+           "DeepseekV2ForCausalLM",
+           "DeepseekV2ForSequenceClassification",
+           ]
