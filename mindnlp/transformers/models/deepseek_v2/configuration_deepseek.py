@@ -1,7 +1,3 @@
-import sys
-sys.path.append('C:\\Users\\li\\Desktop\\开源实习\\mindnlp')
-
-
 from mindnlp.utils import logging
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 
