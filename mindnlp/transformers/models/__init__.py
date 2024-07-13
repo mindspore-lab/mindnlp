@@ -73,6 +73,7 @@ from . import (
     distilbert,
     donut,
     dpr,
+    dpt,
     efficientnet,
     efficientformer,
     electra,
@@ -271,6 +272,7 @@ from .dinov2 import *
 from .distilbert import *
 from .donut import *
 from .dpr import *
+from .dpt import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -469,6 +471,7 @@ __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
+__all__.extend(dpt.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
