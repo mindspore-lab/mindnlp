@@ -237,7 +237,8 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         (
             "deepseek_v2",
             (
-                "DeepseekTokenizerFast"
+                "LlamaTokenizerFast",
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
             )
         ),
         (

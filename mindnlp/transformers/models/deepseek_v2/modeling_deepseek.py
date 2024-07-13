@@ -96,31 +96,30 @@ ALL_LAYERNORM_LAYERS.append(DeepseekV2RMSNorm)
 
 
 class DeepseekV2RotaryEmbedding(nn.Cell):
-    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
+    def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
 
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
         inv_freq = 1.0 / (
-            self.base ** (ops.arange(0, self.dim, 2).float().to(device) / self.dim)
+            self.base ** (ops.arange(0, self.dim, 2).float() / self.dim)
         )
         self.inv_freq = inv_freq
 
         # Build here to make `torch.jit.trace` work.
         self._set_cos_sin_cache(
             seq_len=max_position_embeddings,
-            device=self.inv_freq.device,
             dtype=mindspore.float32,
         )
         self.max_seq_len_cached = None
 
-    def _set_cos_sin_cache(self, seq_len, device, dtype):
+    def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype
         )
 
-        freqs = ops.outer(t, self.inv_freq.to(t.device))
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
@@ -129,7 +128,7 @@ class DeepseekV2RotaryEmbedding(nn.Cell):
     def construct(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if self.max_seq_len_cached is None or seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
+            self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
 
         return (
             self.cos_cached[:seq_len].to(dtype=x.dtype),
@@ -146,13 +145,12 @@ class DeepseekV2LinearScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         dim,
         max_position_embeddings=2048,
         base=10000,
-        device=None,
         scaling_factor=1.0,
     ):
         self.scaling_factor = scaling_factor
-        super().__init__(dim, max_position_embeddings, base, device)
+        super().__init__(dim, max_position_embeddings, base)
 
-    def _set_cos_sin_cache(self, seq_len, device, dtype):
+    def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype
         )
@@ -173,13 +171,12 @@ class DeepseekV2DynamicNTKScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         dim,
         max_position_embeddings=2048,
         base=10000,
-        device=None,
         scaling_factor=1.0,
     ):
         self.scaling_factor = scaling_factor
-        super().__init__(dim, max_position_embeddings, base, device)
+        super().__init__(dim, max_position_embeddings, base)
 
-    def _set_cos_sin_cache(self, seq_len, device, dtype):
+    def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
 
         if seq_len > self.max_position_embeddings:
@@ -188,9 +185,9 @@ class DeepseekV2DynamicNTKScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
                 - (self.scaling_factor - 1)
             ) ** (self.dim / (self.dim - 2))
             inv_freq = 1.0 / (
-                base ** (ops.arange(0, self.dim, 2).float().to(device) / self.dim)
+                base ** (ops.arange(0, self.dim, 2).float() / self.dim)
             )
-            self.register_buffer("inv_freq", inv_freq, persistent=False)
+            self.inv_freq = inv_freq
 
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype
         )
@@ -198,8 +195,8 @@ class DeepseekV2DynamicNTKScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+        self.cos_cached = emb.cos().to(dtype)
+        self.sin_cached = emb.sin().to(dtype)
 
 
 # Inverse dim formula to find dim based on number of rotations
@@ -246,7 +243,6 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
         dim,
         max_position_embeddings=2048,
         base=10000,
-        device=None,
         scaling_factor=1.0,
         original_max_position_embeddings=4096,
         beta_fast=32,
@@ -260,9 +256,9 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
         self.beta_slow = beta_slow
         self.mscale = mscale
         self.mscale_all_dim = mscale_all_dim
-        super().__init__(dim, max_position_embeddings, base, device)
+        super().__init__(dim, max_position_embeddings, base)
 
-    def _set_cos_sin_cache(self, seq_len, device, dtype):
+    def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
         dim = self.dim
 
@@ -283,11 +279,9 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
             self.base,
             self.original_max_position_embeddings,
         )
-        inv_freq_mask = 1.0 - yarn_linear_ramp_mask(low, high, dim // 2).to(
-            device=device, dtype=mindspore.float32
-        )
+        inv_freq_mask = 1.0 - yarn_linear_ramp_mask(low, high, dim // 2).to(mindspore.float32)
         inv_freq = freq_inter * (1 - inv_freq_mask) + freq_extra * inv_freq_mask
-        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        self.inv_freq = inv_freq
 
         t = ops.arange(start=0, end=seq_len, dtype=mindspore.float32)
 
@@ -299,12 +293,8 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
         )
 
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.register_buffer(
-            "cos_cached", (emb.cos() * _mscale).to(dtype), persistent=False
-        )
-        self.register_buffer(
-            "sin_cached", (emb.sin() * _mscale).to(dtype), persistent=False
-        )
+        self.cos_cached = (emb.cos() * _mscale).to(dtype)
+        self.sin_cached = (emb.sin() * _mscale).to(dtype)
 
 
 # Copied from transformers.models.llama.modeling_llama.rotate_half
@@ -390,12 +380,6 @@ class MoEGate(nn.Cell):
         self.weight = mindspore.Parameter(
             Tensor(np.empty((self.n_routed_experts, self.gating_dim))).astype(mindspore.float32), 'weight'
         )
-        self.reset_parameters()
-
-    def reset_parameters(self) -> None:
-        from mindspore.common.initializer import HeUniform
-
-        self.weight.set_param_attr('initializer', HeUniform())
 
     def construct(self, hidden_states):
         bsz, seq_len, h = hidden_states.shape
@@ -405,7 +389,7 @@ class MoEGate(nn.Cell):
             hidden_states.type(mindspore.float32), self.weight.type(mindspore.float32), None
         )
         if self.scoring_func == "softmax":
-            scores = logits.softmax(axis=-1, dtype=mindspore.float32)
+            scores = ops.softmax(logits, axis=-1, dtype=mindspore.float32)
         else:
             raise NotImplementedError(
                 f"insupportable scoring function for MoE gating: {self.scoring_func}"
@@ -441,7 +425,7 @@ class MoEGate(nn.Cell):
 
         ### norm gate to sum 1
         if self.top_k > 1 and self.norm_topk_prob:
-            denominator = topk_weight.sum(dim=-1, keep_dims=True) + 1e-20
+            denominator = topk_weight.sum(axis=-1, keep_dims=True) + 1e-20
             topk_weight = topk_weight / denominator
         else:
             topk_weight = topk_weight * self.routed_scaling_factor
@@ -462,7 +446,7 @@ class MoEGate(nn.Cell):
                     ops.ones(bsz, seq_len * aux_topk),
                 ).div_(seq_len * aux_topk / self.n_routed_experts)
                 aux_loss = (ce * scores_for_seq_aux.mean(dim=1)).sum(
-                    dim=1
+                    axis=1
                 ).mean() * self.alpha
             else:
                 mask_ce = ops.one_hot(
@@ -477,25 +461,25 @@ class MoEGate(nn.Cell):
         return topk_idx, topk_weight, aux_loss
 
 
-class AddAuxiliaryLoss(nn.LossBase):
-    """
-    The trick function of adding auxiliary (aux) loss,
-    which includes the gradient of the aux loss during backpropagation.
-    """
-
-    @staticmethod
-    def forward(ctx, x, loss):
-        assert loss.numel() == 1
-        ctx.dtype = loss.dtype
-        ctx.required_aux_loss = loss.requires_grad
-        return x
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        grad_loss = None
-        if ctx.required_aux_loss:
-            grad_loss = ops.ones(1, dtype=ctx.dtype)
-        return grad_output, grad_loss
+# class AddAuxiliaryLoss(torch.autograd.Function):
+#     """
+#     The trick function of adding auxiliary (aux) loss,
+#     which includes the gradient of the aux loss during backpropagation.
+#     """
+#
+#     @staticmethod
+#     def forward(ctx, x, loss):
+#         assert loss.numel() == 1
+#         ctx.dtype = loss.dtype
+#         ctx.required_aux_loss = loss.requires_grad
+#         return x
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         grad_loss = None
+#         if ctx.required_aux_loss:
+#             grad_loss = torch.ones(1, dtype=ctx.dtype, device=grad_output.device)
+#         return grad_output, grad_loss
 
 
 class DeepseekV2MoE(nn.Cell):
@@ -507,7 +491,6 @@ class DeepseekV2MoE(nn.Cell):
         super().__init__()
         self.config = config
         self.num_experts_per_tok = config.num_experts_per_tok
-
 
         self.ep_size = 1
         self.experts_per_rank = config.n_routed_experts
@@ -533,18 +516,15 @@ class DeepseekV2MoE(nn.Cell):
         topk_idx, topk_weight, aux_loss = self.gate(hidden_states)
         hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
         flat_topk_idx = topk_idx.view(-1)
-        if self.training:
-            hidden_states = hidden_states.repeat_interleave(
-                self.num_experts_per_tok, dim=0
-            )
-            y = Tensor(np.empty_like(hidden_states.asnumpy())).astype(mindspore.float32)
-            for i, expert in enumerate(self.experts):
-                y[flat_topk_idx == i] = expert(hidden_states[flat_topk_idx == i])
-            y = (y.view(*topk_weight.shape, -1) * topk_weight.unsqueeze(-1)).sum(dim=1)
-            y = y.to(hidden_states.dtype).view(*orig_shape)
-            y = AddAuxiliaryLoss.apply(y, aux_loss)
-        else:
-            y = self.moe_infer(hidden_states, topk_idx, topk_weight).view(*orig_shape)
+
+        hidden_states = hidden_states.repeat_interleave(self.num_experts_per_tok, dim=0)
+        y = Tensor(np.empty_like(hidden_states.asnumpy())).astype(mindspore.float32)
+        for i, expert in enumerate(self.experts):
+            y[flat_topk_idx == i] = expert(hidden_states[flat_topk_idx == i])
+        y = (y.view(*topk_weight.shape, -1) * topk_weight.unsqueeze(-1)).sum(axis=1)
+        y = y.to(hidden_states.dtype).view(*orig_shape)
+        # y = AddAuxiliaryLoss(y, aux_loss)
+
         if self.config.n_shared_experts is not None:
             y = y + self.shared_experts(identity)
         return y
@@ -740,11 +720,13 @@ class DeepseekV2Attention(nn.Cell):
 
         q_pe, k_pe = apply_rotary_pos_emb(q_pe, k_pe, cos, sin, position_ids)
 
-        query_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        # query_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        query_states = Tensor(np.empty((bsz, self.num_heads, q_len, self.q_head_dim))).astype(mindspore.float32)
         query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
         query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
 
-        key_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        # key_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        key_states = Tensor(np.empty((bsz, self.num_heads, q_len, self.q_head_dim))).astype(mindspore.float32)
         key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
         key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
         if past_key_value is not None:
@@ -870,11 +852,13 @@ class DeepseekV2FlashAttention2(DeepseekV2Attention):
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         q_pe, k_pe = apply_rotary_pos_emb(q_pe, k_pe, cos, sin, position_ids)
 
-        query_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        # query_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        query_states = Tensor(np.empty((bsz, self.num_heads, q_len, self.q_head_dim))).astype(mindspore.float32)
         query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
         query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
 
-        key_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        # key_states = k_pe.new_empty(bsz, self.num_heads, q_len, self.q_head_dim)
+        key_states = Tensor(np.empty((bsz, self.num_heads, q_len, self.q_head_dim))).astype(mindspore.float32)
         key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
         key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
 
@@ -1415,7 +1399,6 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            shift_labels = shift_labels.to(shift_logits.device)
             loss = ops.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
@@ -1474,7 +1457,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
@@ -1500,7 +1483,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (
                 tuple(
-                    past_state.index_select(0, beam_idx.to(past_state.device))
+                    past_state.index_select(0, beam_idx)
                     for past_state in layer_past
                 ),
             )
@@ -1573,9 +1556,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = (
-                    ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
-                ).to(logits.device)
+                sequence_lengths = (ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1)
             else:
                 sequence_lengths = -1
 
@@ -1585,7 +1566,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels.to(logits.device)
+            labels = labels
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
@@ -1628,7 +1609,6 @@ __all__ = ["DeepseekV2RMSNorm",
            "DeepseekV2YarnRotaryEmbedding",
            "DeepseekV2MLP",
            "MoEGate",
-           "AddAuxiliaryLoss",
            "DeepseekV2MoE",
            "DeepseekV2Attention",
            "DeepseekV2FlashAttention2",
@@ -1638,3 +1618,4 @@ __all__ = ["DeepseekV2RMSNorm",
            "DeepseekV2ForCausalLM",
            "DeepseekV2ForSequenceClassification",
            ]
+# "AddAuxiliaryLoss",

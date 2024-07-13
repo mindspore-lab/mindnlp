@@ -1,5 +1,5 @@
 import mindspore
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
+from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 
 # model_name = "deepseek-ai/deepseek-math-7b-base"
 # tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -14,10 +14,9 @@ from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM, Generation
 # result = tokenizer.decode(outputs[0], skip_special_tokens=True)
 # print(result)
 
-tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-Coder-V2-Lite-Base", trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-Coder-V2-Lite-Base",
-                                             trust_remote_code=True, torch_dtype=mindspore.bfloat16)
+tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-Coder-V2-Lite-Base")
+model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-Coder-V2-Lite-Base", ms_dtype=mindspore.float32)
 input_text = "#write a quick sort algorithm"
-inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
+inputs = tokenizer(input_text, return_tensors="ms")
 outputs = model.generate(**inputs, max_length=128)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))

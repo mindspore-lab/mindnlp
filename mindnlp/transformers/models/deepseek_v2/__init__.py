@@ -1,4 +1,3 @@
-from . import configuration_deepseek, modeling_deepseek, tokenization_deepseek_fast
 from .modeling_deepseek import *
 from .configuration_deepseek import *
 from .tokenization_deepseek_fast import *
