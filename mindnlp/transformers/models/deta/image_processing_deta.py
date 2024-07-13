@@ -1259,7 +1259,7 @@ class DetaImageProcessor(BaseImageProcessor):
         all_labels = all_indexes % out_logits.shape[2]
 
         boxes = center_to_corners_format(out_bbox)
-        boxes = ops.gather(boxes, 1, all_boxes.unsqueeze(-1).repeat(1, 1, 4))
+        boxes = ops.gather_elements(boxes, 1, all_boxes.unsqueeze(-1).repeat(1, 1, 4))
 
         # and from relative [0, 1] to absolute [0, height] coordinates
         if target_sizes is not None:
@@ -1277,8 +1277,7 @@ class DetaImageProcessor(BaseImageProcessor):
             box = boxes[b]
             score = all_scores[b]
             lbls = all_labels[b]
-
-            pre_topk = score.topk(min(10000, num_queries * num_labels)).indices
+            _, pre_topk = ops.topk(score, min(10000, num_queries * num_labels))
             box = box[pre_topk]
             score = score[pre_topk]
             lbls = lbls[pre_topk]
@@ -1288,7 +1287,6 @@ class DetaImageProcessor(BaseImageProcessor):
             score = score[keep_inds]
             lbls = lbls[keep_inds]
             box = box[keep_inds]
-
             results.append(
                 {
                     "scores": score[score > threshold],
@@ -1360,7 +1358,7 @@ def _batched_nms_coordinate_trick(
     if boxes.numel() == 0:
         return ops.zeros((0,), dtype=ms.int64)
     max_coordinate = boxes.max()
-    offsets = idxs.to(boxes) * (max_coordinate + ms.tensor(1).to(boxes))
+    offsets = idxs.to(boxes.dtype) * (max_coordinate + ms.tensor(1).to(boxes.dtype))
     boxes_for_nms = boxes + offsets[:, None]
     keep = nms(boxes_for_nms, scores, iou_threshold)
     return keep
@@ -1388,10 +1386,10 @@ def _batched_nms_vanilla(
     """
     # Based on Detectron2 implementation, just manually call nms() on each class independently
     keep_mask = ops.zeros_like(scores, dtype=ms.bool_)
-    for class_id in ops.unique(idxs):
-        curr_indices = ops.nonzero(idxs == class_id)[0]
+    for class_id in ops.unique(idxs)[0]:
+        curr_indices = ops.nonzero(idxs == class_id)
         curr_keep_indices = nms(
-            boxes[curr_indices], scores[curr_indices], iou_threshold
+            boxes[curr_indices[:, 0]], scores[curr_indices[:, 0]], iou_threshold
         )
         keep_mask[curr_indices[curr_keep_indices]] = True
     keep_indices = ops.nonzero(keep_mask)[0]
@@ -1417,10 +1415,8 @@ def nms(boxes: ms.Tensor, scores: ms.Tensor, iou_threshold: float):
         TypeError: If any of the input arguments are not of the expected type.
         ValueError: If the shape of 'boxes' and 'scores' tensors are incompatible or if 'iou_threshold' is not within the valid range.
     """
-    box_with_score = ops.stack((boxes, scores))
-    _, _, selected_mask = _get_cache_prim(ops.NMSWithMask)(iou_threshold)(
-        box_with_score
-    )
+    box_with_score = ops.column_stack((boxes, scores))
+    _, _, selected_mask = ops.NMSWithMask(iou_threshold)(box_with_score)
     return ops.nonzero(selected_mask).reshape(-1)
 
 

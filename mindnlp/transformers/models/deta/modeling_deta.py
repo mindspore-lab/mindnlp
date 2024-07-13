@@ -19,9 +19,8 @@ import math
 import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
-
-import mindspore as ms
 from mindspore import ops, nn, Tensor
+import mindspore as ms
 from mindspore.common.initializer import (
     initializer,
     Uniform,
@@ -2599,7 +2598,7 @@ def dice_loss(inputs, targets, num_boxes):
     """
     inputs = inputs.sigmoid()
     inputs = inputs.flatten(start_dim=1)
-    numerator = 2 * (inputs * targets).sum(-1)
+    numerator = 2 * (inputs * targets).sum(1)
     denominator = inputs.sum(-1) + targets.sum(-1)
     loss = 1 - (numerator + 1) / (denominator + 1)
     loss = loss.sum() / num_boxes
@@ -3241,17 +3240,8 @@ def subsample_labels(
 
     # randomly select positive and negative examples
 
-    print("ascaaaaaaaaaaa", type(positive.numel()), num_pos)
-
-    n = 12  # 根据您的 positive.numel() 值
-    # n = ms.tensor([12]).to(ms.int64)
-    randperm_op = ops.RandpermV2(dtype=ms.int64)
-    permutation = randperm_op(n, 0, 0)
-    print("Random permutation:", permutation)
-
-    tmp = int(positive.numel())
-    perm1 = ops.randperm(tmp)[:num_pos]
-    perm2 = ops.randperm(negative.numel())[:num_neg]
+    perm1 = ops.randperm(int(positive.numel()))[:num_pos]
+    perm2 = ops.randperm(int(negative.numel()))[:num_neg]
 
     pos_idx = positive[perm1]
     neg_idx = negative[perm2]
@@ -3270,6 +3260,34 @@ def sample_topk_per_gt(pr_inds, gt_inds, iou, k):
     pr_inds3 = ops.cat([pr[:c] for c, pr in zip(counts, pr_inds2)])
     gt_inds3 = ops.cat([gt[:c] for c, gt in zip(counts, gt_inds2)])
     return pr_inds3, gt_inds3
+
+
+# def sample_topk_per_gt(pr_inds, gt_inds, iou, k):
+#     if len(gt_inds) == 0:
+#         return pr_inds, gt_inds
+
+#     # 查找每个gt的topk匹配项
+#     gt_inds_unique, _, counts = ops.unique_with_pad(gt_inds)
+#     scores, pr_inds_topk = ops.top_k(iou[gt_inds_unique], k)
+#     gt_inds_repeated = ops.tile(ops.expand_dims(gt_inds_unique, -1), (1, k))
+
+#     # 根据gt的数量过滤匹配项
+#     pr_inds_filtered = ops.concat(
+#         [
+#             pr[:c]
+#             for c, pr in zip(counts.asnumpy().tolist(), pr_inds_topk.split(1, axis=0))
+#         ]
+#     )
+#     gt_inds_filtered = ops.concat(
+#         [
+#             gt[:c]
+#             for c, gt in zip(
+#                 counts.asnumpy().tolist(), gt_inds_repeated.split(1, axis=0)
+#             )
+#         ]
+#     )
+
+#     return pr_inds_filtered, gt_inds_filtered
 
 
 # modified from https://github.com/facebookresearch/detectron2/blob/cbbc1ce26473cb2a5cc8f58e8ada9ae14cb41052/detectron2/modeling/roi_heads/roi_heads.py#L123
