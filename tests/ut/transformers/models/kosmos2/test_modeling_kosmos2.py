@@ -424,7 +424,7 @@ class Kosmos2ModelTest(ModelTesterMixin, unittest.TestCase):
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    url = "https://huggingface.co/hf-internal-testing/Kosmos2-test-image/resolve/main/demo.jpg"
+    url = "https://hf-mirror.com/microsoft/kosmos-2-patch14-224/resolve/main/snowman.jpg?download=true"
     im = Image.open(requests.get(url, stream=True).raw)
     return im
 
@@ -459,7 +459,7 @@ class Kosmos2ModelIntegrationTest(unittest.TestCase):
         return scores, generated_ids, generated_text, processed_text, final_text_with_entities
 
     def test_snowman_image_captioning(self):
-        url = "https://huggingface.co/microsoft/kosmos-2-patch14-224/resolve/main/snowman.png"
+        url = "https://hf-mirror.com/microsoft/kosmos-2-patch14-224/resolve/main/snowman.png?download=true"
 
         image = Image.open(requests.get(url, stream=True).raw)
         image.save("new_image.jpg")
@@ -606,7 +606,7 @@ class Kosmos2ModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(entities, EXPECTED_ENTITIES_LONG)
 
     def test_snowman_image_captioning_batch(self):
-        url = "https://huggingface.co/microsoft/kosmos-2-patch14-224/resolve/main/snowman.png"
+        url = "https://hf-mirror.com/microsoft/kosmos-2-patch14-224/resolve/main/snowman.png?download=true"
         image = Image.open(requests.get(url, stream=True).raw)
         image.save("new_image.jpg")
         image = Image.open("new_image.jpg")

@@ -88,9 +88,7 @@ class Kosmos2ProcessorTest(unittest.TestCase):
     def test_image_procesor_load_save_reload(self):
         # make sure load from Hub repo. -> save -> reload locally work
         image_processor = CLIPImageProcessor.from_pretrained("microsoft/kosmos-2-patch14-224")
-        print(f"image_processor:{image_processor}")
         with TemporaryDirectory() as tmp_dir:
-            print(f"tmp_dir{tmp_dir}")
             image_processor.save_pretrained(tmp_dir)
             reloaded_image_processor = CLIPImageProcessor.from_pretrained(tmp_dir)
             assert image_processor.to_dict() == reloaded_image_processor.to_dict()
@@ -199,7 +197,7 @@ class Kosmos2ProcessorTest(unittest.TestCase):
 
     @require_mindspore
     def test_full_processor(self):
-        url = "https://huggingface.co/microsoft/kosmos-2-patch14-224/resolve/main/two_dogs.jpg"
+        url = "https://hf-mirror.com/microsoft/kosmos-2-patch14-224/resolve/main/two_dogs.jpg?download=true"
 
         processor = Kosmos2Processor.from_pretrained("microsoft/kosmos-2-patch14-224")
 
@@ -377,7 +375,7 @@ class Kosmos2ProcessorTest(unittest.TestCase):
             images=None,
             text=batch_text,
             bboxes=batch_bboxes,
-            return_tensors="pt",
+            return_tensors="ms",
             padding=True,
             add_eos_token=True,
         )
