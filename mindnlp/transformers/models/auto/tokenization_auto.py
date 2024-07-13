@@ -235,6 +235,12 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "deepseek-v2",
+            (
+                "DeepseekTokenizerFast"
+            )
+        ),
+        (
             "distilbert",
             (
                 "DistilBertTokenizer",
