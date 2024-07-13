@@ -97,6 +97,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("ibert", "IBertConfig"),
         ("instructblip", "InstructBlipConfig"),
         ("jetmoe", "JetMoEConfig"),
+        ("kosmos-2", "Kosmos2Config"),
         ("led", "LEDConfig"),
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),

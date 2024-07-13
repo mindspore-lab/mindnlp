@@ -165,6 +165,7 @@ class CLIPImageProcessor(BaseImageProcessor):
         # for backwards compatibility of KOSMOS-2
         if "use_square_size" in kwargs:
             self.size = {"height": size["shortest_edge"], "width": size["shortest_edge"]}
+            delattr(self, "use_square_size")
 
     def resize(
         self,
@@ -283,7 +284,6 @@ class CLIPImageProcessor(BaseImageProcessor):
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
-
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -301,11 +301,8 @@ class CLIPImageProcessor(BaseImageProcessor):
         image_mean = image_mean if image_mean is not None else self.image_mean
         image_std = image_std if image_std is not None else self.image_std
         do_convert_rgb = do_convert_rgb if do_convert_rgb is not None else self.do_convert_rgb
-
         validate_kwargs(captured_kwargs=kwargs.keys(), valid_processor_keys=self._valid_processor_keys)
-
         images = make_list_of_images(images)
-
         if not valid_images(images):
             raise ValueError(
                 "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "

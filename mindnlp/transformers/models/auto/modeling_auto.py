@@ -100,6 +100,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("layoutlmv2", "LayoutLMv2Model"),
         ("longformer", "LongformerModel"),
         ("jetmoe", "JetMoEModel"),
+        ("kosmos-2", "Kosmos2Model"),
         ("led", "LEDModel"),
         ("llama", "LlamaModel"),
         ("m2m_100", "M2M100Model"),

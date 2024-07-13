@@ -379,13 +379,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("jukebox", ("JukeboxTokenizer", None)),
-        # (
-        #     "kosmos-2",
-        #     (
-        #         "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
-        #         "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
-        #     ),
-        # ),
+        (
+            "kosmos-2",
+            (
+                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         (
             "layoutlm",
             (
