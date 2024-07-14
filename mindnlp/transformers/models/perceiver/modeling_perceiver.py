@@ -22,9 +22,9 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-import torch.utils.checkpoint
-from mindspore import nn
+from mindspore import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithCrossAttentions
@@ -36,16 +36,12 @@ from mindnlp.utils import (
 )
 from .configuration_perceiver import PerceiverConfig
 
-
 ModalitySizeType = Mapping[str, int]
-PreprocessorOutputType = Tuple[torch.Tensor, Optional[torch.Tensor], torch.Tensor]
+PreprocessorOutputType = Tuple[mindspore.Tensor, Optional[mindspore.Tensor], mindspore.Tensor]
 PreprocessorType = Callable[..., PreprocessorOutputType]
 PostprocessorType = Callable[..., Any]
 
 logger = logging.get_logger(__name__)
-
-_CHECKPOINT_FOR_DOC = "deepmind/language-perceiver"
-_CONFIG_FOR_DOC = "PerceiverConfig"
 
 
 @dataclass
@@ -54,29 +50,32 @@ class PerceiverModelOutput(ModelOutput):
     Base class for Perceiver base model's outputs, with potential hidden states, attentions and cross-attentions.
 
     Args:
-        logits (`torch.FloatTensor` of shape `(batch_size, num_labels)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        last_hidden_state (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
+        when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
+        `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+        when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
     """
 
-    logits: torch.FloatTensor = None
-    last_hidden_state: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    logits: mindspore.Tensor = None
+    last_hidden_state: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -85,16 +84,17 @@ class PerceiverDecoderOutput(ModelOutput):
     Base class for Perceiver decoder outputs, with potential cross-attentions.
 
     Args:
-        logits (`torch.FloatTensor` of shape `(batch_size, num_labels)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, num_labels)`):
             Output of the basic decoder.
-        cross_attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+        when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
     """
 
-    logits: torch.FloatTensor = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    logits: mindspore.Tensor = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -103,29 +103,32 @@ class PerceiverMaskedLMOutput(ModelOutput):
     Base class for Perceiver's masked language model outputs.
 
     Args:
-        loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Masked language modeling (MLM) loss.
-        logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
+        when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, num_latents,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
+        `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_latents,
             num_latents)`. Attentions weights after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+        when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
     """
 
-    loss: Optional[torch.FloatTensor] = None
-    logits: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -135,43 +138,46 @@ class PerceiverClassifierOutput(ModelOutput):
     autoencoding.
 
     Args:
-        loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Classification (or regression if config.num_labels==1) loss.
-        logits (`torch.FloatTensor` of shape `(batch_size, config.num_labels)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
+        when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
+        `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+        when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
     """
 
-    loss: Optional[torch.FloatTensor] = None
-    logits: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-class PerceiverEmbeddings(nn.Module):
+class PerceiverEmbeddings(nn.Cell):
     """Construct the latent embeddings."""
 
     def __init__(self, config):
         super().__init__()
-        self.latents = nn.Parameter(torch.randn(config.num_latents, config.d_latents))
+        self.latents = mindspore.Parameter(ops.randn((config.num_latents, config.d_latents)), 'latents')
 
-    def forward(self, batch_size: int):
-        return self.latents.expand(batch_size, -1, -1)  # Thanks, Phil Wang
+    def construct(self, batch_size: int):
+        return self.latents.expand((batch_size, -1, -1))  # Thanks, Phil Wang
 
 
-class PerceiverSelfAttention(nn.Module):
+class PerceiverSelfAttention(nn.Cell):
     """Multi-headed {cross, self}-attention. Can be used both in the encoder as well as in the decoder."""
 
     def __init__(
@@ -209,31 +215,32 @@ class PerceiverSelfAttention(nn.Module):
         self.layernorm2 = nn.LayerNorm(kv_dim) if is_cross_attention else nn.Identity()
 
         # Projection matrices
-        self.query = nn.Linear(q_dim, qk_channels)
-        self.key = nn.Linear(kv_dim, qk_channels)
-        self.value = nn.Linear(kv_dim, v_channels)
+        self.query = nn.Dense(q_dim, qk_channels)
+        self.key = nn.Dense(kv_dim, qk_channels)
+        self.value = nn.Dense(kv_dim, v_channels)
 
-        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x, channels_per_head):
-        new_x_shape = x.size()[:-1] + (self.num_heads, channels_per_head)
+        new_x_shape = x.shape[:-1] + (self.num_heads, channels_per_head)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def forward(
+    def construct(
             self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.FloatTensor] = None,
-            head_mask: Optional[torch.FloatTensor] = None,
-            inputs: Optional[torch.FloatTensor] = None,
-            inputs_mask: Optional[torch.FloatTensor] = None,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            inputs_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         hidden_states = self.layernorm1(hidden_states)
         inputs = self.layernorm2(inputs)
 
-        # Project queries, keys and values to a common feature dimension. If this is instantiated as a cross-attention module,
-        # the keys and values come from the inputs; the attention mask needs to be such that the inputs's non-relevant tokens are not attended to.
+        # Project queries, keys and values to a common feature dimension. If this is instantiated as a cross-attention
+        # module, the keys and values come from the inputs; the attention mask needs to be such that the inputs's
+        # non-relevant tokens are not attended to.
         is_cross_attention = inputs is not None
         queries = self.query(hidden_states)
 
@@ -252,7 +259,7 @@ class PerceiverSelfAttention(nn.Module):
         values = self.transpose_for_scores(values, self.v_channels_per_head)
 
         # Take the dot product between the queries and keys to get the raw attention scores.
-        attention_scores = torch.matmul(queries, keys.transpose(-1, -2))
+        attention_scores = ops.matmul(queries, keys.swapaxes(-1, -2))
 
         batch_size, num_heads, seq_len, q_head_dim = queries.shape
         _, _, _, v_head_dim = values.shape
@@ -265,7 +272,7 @@ class PerceiverSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(dim=-1)(attention_scores)
+        attention_probs = nn.Softmax(axis=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -275,10 +282,10 @@ class PerceiverSelfAttention(nn.Module):
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
 
-        context_layer = torch.matmul(attention_probs, values)
+        context_layer = ops.matmul(attention_probs, values)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
-        new_context_layer_shape = context_layer.size()[:-2] + (hiddens,)
+        context_layer = context_layer.permute(0, 2, 1, 3)
+        new_context_layer_shape = context_layer.shape[:-2] + (hiddens,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
@@ -286,17 +293,17 @@ class PerceiverSelfAttention(nn.Module):
         return outputs
 
 
-class PerceiverSelfOutput(nn.Module):
+class PerceiverSelfOutput(nn.Cell):
     def __init__(self, config, input_channels, output_channels):
         super().__init__()
-        self.dense = nn.Linear(input_channels, output_channels)
+        self.dense = nn.Dense(input_channels, output_channels)
 
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         return hidden_states
 
 
-class PerceiverAttention(nn.Module):
+class PerceiverAttention(nn.Cell):
     """Attention module, including a dense block."""
 
     def __init__(
@@ -358,22 +365,22 @@ class PerceiverAttention(nn.Module):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def forward(
+    def construct(
             self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.FloatTensor] = None,
-            head_mask: Optional[torch.FloatTensor] = None,
-            inputs: Optional[torch.FloatTensor] = None,
-            inputs_mask: Optional[torch.FloatTensor] = None,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            inputs_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         self_outputs = self.self(
             hidden_states,
             attention_mask,
@@ -396,26 +403,26 @@ class PerceiverAttention(nn.Module):
         return outputs
 
 
-class PerceiverMLP(nn.Module):
+class PerceiverMLP(nn.Cell):
     """A Transformer-style dense module to follow attention."""
 
     def __init__(self, config, input_size, widening_factor):
         super().__init__()
-        self.dense1 = nn.Linear(input_size, widening_factor * input_size)
+        self.dense1 = nn.Dense(input_size, widening_factor * input_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
-        self.dense2 = nn.Linear(widening_factor * input_size, input_size)
+        self.dense2 = nn.Dense(widening_factor * input_size, input_size)
 
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense1(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = self.dense2(hidden_states)
         return hidden_states
 
 
-class PerceiverLayer(nn.Module):
+class PerceiverLayer(nn.Cell):
     def __init__(
             self,
             config,
@@ -444,15 +451,15 @@ class PerceiverLayer(nn.Module):
         self.layernorm = nn.LayerNorm(q_dim)
         self.mlp = PerceiverMLP(config, input_size=q_dim, widening_factor=widening_factor)
 
-    def forward(
+    def construct(
             self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.FloatTensor] = None,
-            head_mask: Optional[torch.FloatTensor] = None,
-            inputs: Optional[torch.FloatTensor] = None,
-            inputs_mask: Optional[torch.FloatTensor] = None,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            inputs_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         attention_outputs = self.attention(
             hidden_states,
             attention_mask,
@@ -481,7 +488,7 @@ class PerceiverLayer(nn.Module):
         return layer_output
 
 
-class PerceiverEncoder(nn.Module):
+class PerceiverEncoder(nn.Cell):
     """The Perceiver Encoder: a scalable, fully attentional encoder."""
 
     def __init__(self, config, kv_dim=None):
@@ -529,15 +536,15 @@ class PerceiverEncoder(nn.Module):
             )
             self_attention_layers.append(layer)
 
-        self.self_attends = nn.ModuleList(self_attention_layers)
+        self.self_attends = nn.CellList(self_attention_layers)
 
-    def forward(
+    def construct(
             self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.FloatTensor] = None,
-            head_mask: Optional[torch.FloatTensor] = None,
-            inputs: Optional[torch.FloatTensor] = None,
-            inputs_mask: Optional[torch.FloatTensor] = None,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            inputs_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
             output_hidden_states: Optional[bool] = False,
             return_dict: Optional[bool] = True,
@@ -606,28 +613,29 @@ class PerceiverPreTrainedModel(PreTrainedModel):
     base_model_prefix = "perceiver"
     main_input_name = "inputs"
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(module, (nn.Linear, nn.Conv2d)):
+        if isinstance(cell, (nn.Dense, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif hasattr(module, "latents"):
-            module.latents.data.normal_(mean=0.0, std=self.config.initializer_range)
-        elif hasattr(module, "position_embeddings") and isinstance(module, PerceiverTrainablePositionEncoding):
-            module.position_embeddings.data.normal_(mean=0.0, std=self.config.initializer_range)
-        elif isinstance(module, nn.ParameterDict):
-            for modality in module.keys():
-                module[modality].data.normal_(mean=0.0, std=self.config.initializer_range)
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
+                                             cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif hasattr(cell, "latents"):
+            cell.latents.set_data(Normal(self.config.initializer_range, 0.0), cell.latents.shape,
+                                  cell.latents.dtype)
+        elif hasattr(cell, "position_embeddings") and isinstance(cell, PerceiverTrainablePositionEncoding):
+            cell.position_embeddings.set_data(
+                initializer(Normal(self.config.initializer_range, 0.0), cell.position_embeddings.shape,
+                            cell.position_embeddings.dtype))
+        elif isinstance(cell, nn.Embedding):
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            if cell.padding_idx is not None:
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(mindspore.Tensor(weight, dtype=cell.weight.dtype))
+        elif isinstance(cell, nn.LayerNorm):
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 class PerceiverModel(PerceiverPreTrainedModel):
@@ -666,6 +674,7 @@ class PerceiverModel(PerceiverPreTrainedModel):
 
         Note that you can define your own decoders, preprocessors and/or postprocessors to fit your use-case.
     """
+
     def __init__(
             self,
             config,
@@ -701,12 +710,12 @@ class PerceiverModel(PerceiverPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def forward(
+    def construct(
             self,
-            inputs: torch.FloatTensor,
-            attention_mask: Optional[torch.FloatTensor] = None,
-            subsampled_output_points: Optional[Dict[str, torch.Tensor]] = None,
-            head_mask: Optional[torch.FloatTensor] = None,
+            inputs: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             interpolate_pos_encoding: bool = False,
@@ -714,16 +723,16 @@ class PerceiverModel(PerceiverPreTrainedModel):
     ) -> Union[Tuple, PerceiverModelOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -755,18 +764,18 @@ class PerceiverModel(PerceiverPreTrainedModel):
         else:
             modality_sizes = None
             inputs_without_pos = None
-            if inputs.size()[-1] != self.config.d_model:
+            if inputs.shape[-1] != self.config.d_model:
                 raise ValueError(
-                    f"Last dimension of the inputs: {inputs.size()[-1]} doesn't correspond to config.d_model:"
+                    f"Last dimension of the inputs: {inputs.shape[-1]} doesn't correspond to config.d_model:"
                     f" {self.config.d_model}. Make sure to set config.d_model appropriately."
                 )
 
-        batch_size, seq_length, _ = inputs.size()
+        batch_size, seq_length, _ = inputs.shape
         device = inputs.device
 
         # If no attention mask is provided, make them all ones
         if attention_mask is None:
-            attention_mask = torch.ones((batch_size, seq_length), device=device)
+            attention_mask = ops.ones((batch_size, seq_length))
         # Make the attention mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
         extended_attention_mask = self.invert_attention_mask(attention_mask)
 
@@ -851,6 +860,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config: PerceiverConfig):
         super().__init__(config)
 
@@ -867,7 +877,8 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
             decoder=PerceiverBasicDecoder(
                 config,
                 output_num_channels=config.d_latents,
-                output_index_dims=config.max_position_embeddings,  # we need to define the seq_len of the inputs beforehand
+                output_index_dims=config.max_position_embeddings,
+                # we need to define the seq_len of the inputs beforehand
                 num_channels=text_preprocessor.num_channels,
                 qk_channels=8 * 32,
                 v_channels=text_preprocessor.num_channels,
@@ -882,29 +893,29 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
-            input_ids: Optional[torch.Tensor] = None,
+            input_ids: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverMaskedLMOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -920,7 +931,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
                 config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
                 the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
@@ -978,6 +989,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -998,29 +1010,29 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
-            input_ids: Optional[torch.Tensor] = None,
+            input_ids: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1036,7 +1048,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the classification/regression loss. Indices should be in
                 `[0, ..., config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed
                 (Mean-Square loss), If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1068,7 +1080,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1119,10 +1131,11 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config):
         super().__init__(config)
 
-        trainable_position_encoding_kwargs_preprocessor = {"num_channels": 256, "index_dims": config.image_size**2}
+        trainable_position_encoding_kwargs_preprocessor = {"num_channels": 256, "index_dims": config.image_size ** 2}
         trainable_position_encoding_kwargs_decoder = {"num_channels": config.d_latents, "index_dims": 1}
 
         self.num_labels = config.num_labels
@@ -1149,30 +1162,30 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             interpolate_pos_encoding: bool = False,
             return_dict: Optional[bool] = None,
-            pixel_values: Optional[torch.Tensor] = None,
+            pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1188,7 +1201,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
                 config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss),
                 If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1220,7 +1233,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1271,6 +1284,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1302,29 +1316,29 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
-            pixel_values: Optional[torch.Tensor] = None,
+            pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1340,7 +1354,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
                 config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss),
                 If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1370,7 +1384,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1421,6 +1435,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1453,29 +1468,29 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
-            pixel_values: Optional[torch.Tensor] = None,
+            pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1491,7 +1506,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
                 config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
                 `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1521,7 +1536,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1572,6 +1587,7 @@ class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1621,28 +1637,28 @@ class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1658,7 +1674,7 @@ class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the optical flow loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
@@ -1730,6 +1746,7 @@ class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
     """
+
     def __init__(self, config: PerceiverConfig):
         super().__init__(config)
 
@@ -1845,29 +1862,29 @@ class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
             self,
-            inputs: Optional[torch.Tensor] = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            subsampled_output_points: Optional[Dict[str, torch.Tensor]] = None,
-            head_mask: Optional[torch.Tensor] = None,
+            inputs: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            labels: Optional[torch.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
         Args:
-            inputs (`torch.FloatTensor`):
+            inputs (`mindspore.Tensor`):
                 Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
                 Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1883,7 +1900,7 @@ class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
                 Whether to interpolate the pre-trained position encodings.
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
                 config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
                 `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1954,7 +1971,7 @@ def build_position_encoding(
         raise ValueError(f"Unknown position encoding type: {position_encoding_type}.")
 
     # Optionally, project the position encoding to a target dimension:
-    positions_projection = nn.Linear(out_channels, project_pos_dim) if project_pos_dim > 0 else nn.Identity()
+    positions_projection = nn.Dense(out_channels, project_pos_dim) if project_pos_dim > 0 else nn.Identity()
 
     return output_pos_enc, positions_projection
 
@@ -1962,7 +1979,7 @@ def build_position_encoding(
 # Below: Perceiver decoders
 
 
-class PerceiverAbstractDecoder(nn.Module, metaclass=abc.ABCMeta):
+class PerceiverAbstractDecoder(nn.Cell, metaclass=abc.ABCMeta):
     """Perceiver abstract decoder."""
 
     @abc.abstractmethod
@@ -1975,7 +1992,7 @@ class PerceiverAbstractDecoder(nn.Module, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def forward(self, query, z, query_mask=None):
+    def construct(self, query, z, query_mask=None):
         raise NotImplementedError
 
 
@@ -1990,16 +2007,16 @@ class PerceiverProjectionDecoder(PerceiverAbstractDecoder):
 
     def __init__(self, config):
         super().__init__()
-        self.classifier = nn.Linear(config.d_latents, config.num_labels)
+        self.classifier = nn.Dense(config.d_latents, config.num_labels)
 
     def decoder_query(self, inputs, modality_sizes=None, inputs_without_pos=None, subsampled_points=None):
         return None
 
-    def forward(
-            self, query: torch.Tensor, z: torch.FloatTensor, query_mask: Optional[torch.FloatTensor] = None
-    ) -> torch.FloatTensor:
+    def construct(
+            self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
+    ) -> mindspore.Tensor:
         # (batch_size, num_latents, d_latents) -> (batch_size, d_latents)
-        z = torch.mean(z, dim=1)
+        z = ops.mean(z, axis=1)
         # (batch_size, d_latents) -> (batch_size, config.num_labels)
         logits = self.classifier(z)
         return logits
@@ -2096,7 +2113,7 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
                 widening_factor=widening_factor,
                 use_query_residual=use_query_residual,
             )
-            self.final_layer = nn.Linear(num_channels, output_num_channels) if final_project else nn.Identity()
+            self.final_layer = nn.Dense(num_channels, output_num_channels) if final_project else nn.Identity()
 
     @property
     def num_query_channels(self) -> int:
@@ -2121,23 +2138,24 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
             # to get the indices for the unflattened array
             # unravel_index returns a tuple (x_idx, y_idx, ...)
             # stack to get the [n, d] tensor of coordinates
-            indices = [torch.from_numpy(x) for x in np.unravel_index(subsampled_points.cpu(), self.output_index_dims)]
-            pos = torch.stack(indices, dim=1)
+            indices = [mindspore.Tensor.from_numpy(x) for x in
+                       np.unravel_index(subsampled_points, self.output_index_dims)]
+            pos = ops.stack(indices, axis=1)
             batch_size = inputs.shape[0]
             # Map these coordinates to [-1, 1]
-            pos = -1 + 2 * pos / torch.tensor(self.output_index_dims)[None, :]
-            pos = torch.broadcast_to(pos[None], [batch_size, pos.shape[0], pos.shape[1]])
+            pos = -1 + 2 * pos / mindspore.Tensor(self.output_index_dims)[None, :]
+            pos = ops.broadcast_to(pos[None], (batch_size, pos.shape[0], pos.shape[1]))
             # Construct the position encoding.
             if self.position_encoding_type == "trainable":
                 pos_emb = self.output_position_encodings(batch_size)
             elif self.position_encoding_type == "fourier":
                 pos_emb = self.output_position_encodings(
-                    self.output_index_dims, batch_size=batch_size, device=inputs.device, dtype=inputs.dtype, pos=pos
+                    self.output_index_dims, batch_size=batch_size, dtype=inputs.dtype, pos=pos
                 )
 
             # Optionally project them to a target dimension.
             pos_emb = self.positions_projection(pos_emb)
-            pos_emb = torch.reshape(pos_emb, [pos_emb.shape[0], -1, pos_emb.shape[-1]])
+            pos_emb = ops.reshape(pos_emb, [pos_emb.shape[0], -1, pos_emb.shape[-1]])
         else:
             batch_size = inputs.shape[0]
             index_dims = inputs.shape[2:]
@@ -2147,7 +2165,7 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
                 pos_emb = self.output_position_encodings(batch_size)
             elif self.position_encoding_type == "fourier":
                 pos_emb = self.output_position_encodings(
-                    index_dims, batch_size, device=inputs.device, dtype=inputs.dtype
+                    index_dims, batch_size, dtype=inputs.dtype
                 )
 
             # Optionally project them to a target dimension.
@@ -2156,15 +2174,15 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
         if self.concat_preprocessed_input:
             if inputs_without_pos is None:
                 raise ValueError("Value is required for inputs_without_pos if concat_preprocessed_input is True")
-            pos_emb = torch.cat([inputs_without_pos, pos_emb], dim=-1)
+            pos_emb = ops.cat([inputs_without_pos, pos_emb], axis=-1)
 
         return pos_emb
 
-    def forward(
+    def construct(
             self,
-            query: torch.Tensor,
-            z: torch.FloatTensor,
-            query_mask: Optional[torch.FloatTensor] = None,
+            query: mindspore.Tensor,
+            z: mindspore.Tensor,
+            query_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         # Cross-attention decoding.
@@ -2222,11 +2240,11 @@ class PerceiverClassificationDecoder(PerceiverAbstractDecoder):
             inputs, modality_sizes, inputs_without_pos, subsampled_points=subsampled_points
         )
 
-    def forward(
+    def construct(
             self,
-            query: torch.Tensor,
-            z: torch.FloatTensor,
-            query_mask: Optional[torch.FloatTensor] = None,
+            query: mindspore.Tensor,
+            z: mindspore.Tensor,
+            query_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
@@ -2257,11 +2275,11 @@ class PerceiverOpticalFlowDecoder(PerceiverAbstractDecoder):
             raise ValueError("FlowDecoder doesn't support subsampling yet.")
         return inputs
 
-    def forward(
+    def construct(
             self,
-            query: torch.Tensor,
-            z: torch.FloatTensor,
-            query_mask: Optional[torch.FloatTensor] = None,
+            query: mindspore.Tensor,
+            z: mindspore.Tensor,
+            query_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
@@ -2315,17 +2333,17 @@ class PerceiverBasicVideoAutoencodingDecoder(PerceiverAbstractDecoder):
             subsampled_points=subsampled_points,
         )
 
-    def forward(
-            self, query: torch.Tensor, z: torch.FloatTensor, query_mask: Optional[torch.FloatTensor] = None
+    def construct(
+            self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z)
         logits = decoder_outputs.logits
 
-        logits = torch.reshape(logits, self.output_shape + [logits.shape[-1]])
+        logits = ops.reshape(logits, self.output_shape + [logits.shape[-1]])
         return PerceiverDecoderOutput(logits=logits, cross_attentions=decoder_outputs.cross_attentions)
 
 
-def restructure(modality_sizes: ModalitySizeType, inputs: torch.Tensor) -> Mapping[str, torch.Tensor]:
+def restructure(modality_sizes: ModalitySizeType, inputs: mindspore.Tensor) -> Mapping[str, mindspore.Tensor]:
     """
     Partitions a [B, N, C] tensor into tensors for each modality.
 
@@ -2343,7 +2361,7 @@ def restructure(modality_sizes: ModalitySizeType, inputs: torch.Tensor) -> Mappi
     # Apply a predictable ordering to the modalities
     for modality in sorted(modality_sizes.keys()):
         size = modality_sizes[modality]
-        inp = inputs[:, index : index + size]
+        inp = inputs[:, index: index + size]
         index += size
         outputs[modality] = inp
     return outputs
@@ -2386,7 +2404,7 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
             **decoder_kwargs,
     ) -> None:
         super().__init__()
-        self.modalities = nn.ModuleDict(modalities)
+        self.modalities = nn.CellDict(modalities)
         self.subsampled_index_dims = subsampled_index_dims
         self.min_padding_size = min_padding_size
         self.output_num_channels = output_num_channels
@@ -2399,12 +2417,12 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
             num_channels=self.num_query_channels,
             **decoder_kwargs,
         )
-        self.padding = nn.ParameterDict(
-            {
-                modality: nn.Parameter(torch.randn(1, self.num_query_channels - decoder.num_query_channels))
-                for modality, decoder in modalities.items()
-            }
-        )
+        self.padding = {
+            modality: mindspore.Parameter(
+                ops.normal((1, self.num_query_channels - decoder.num_query_channels), 0, 0.02),
+                modality)
+            for modality, decoder in modalities.items()
+        }
 
     @property
     def num_query_channels(self) -> int:
@@ -2436,23 +2454,23 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
         # Pad all queries with trainable position encodings to make them have the same channels
 
         def embed(modality, x):
-            x = torch.reshape(x, [x.shape[0], np.prod(x.shape[1:-1]), x.shape[-1]])
+            x = ops.reshape(x, [x.shape[0], np.prod(x.shape[1:-1]), x.shape[-1]])
             pos = self.padding[modality]
-            pos = torch.broadcast_to(pos, [x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]])
-            return torch.cat([x, pos], dim=2)
+            pos = ops.broadcast_to(pos, (x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]))
+            return ops.cat([x, pos], axis=2)
 
         # Apply a predictable ordering to the modalities
-        return torch.cat(
-            [embed(modality, decoder_queries[modality]) for modality in sorted(self.modalities.keys())], dim=1
+        return ops.cat(
+            [embed(modality, decoder_queries[modality]) for modality in sorted(self.modalities.keys())], axis=1
         )
 
-    def forward(
+    def construct(
             self,
-            query: torch.Tensor,
-            z: torch.FloatTensor,
-            query_mask: Optional[torch.FloatTensor] = None,
+            query: mindspore.Tensor,
+            z: mindspore.Tensor,
+            query_mask: Optional[mindspore.Tensor] = None,
             output_attentions: Optional[bool] = False,
-    ) -> torch.Tensor:
+    ) -> mindspore.Tensor:
         # B x 1 x num_classes -> B x num_classes
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
 
@@ -2460,13 +2478,12 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
 
 
 # Below: IO pre- and post-processor classes for Perceiver.
-def space_to_depth(frames: torch.Tensor, temporal_block_size: int = 1, spatial_block_size: int = 1) -> torch.Tensor:
+def space_to_depth(frames: mindspore.Tensor, temporal_block_size: int = 1,
+                   spatial_block_size: int = 1) -> mindspore.Tensor:
     """
     Space to depth transform. Rearranges blocks of spatial data, into depth.
 
     This function assumes the channels to be first, but will place the channels last after transformation.
-
-    Based on https://discuss.pytorch.org/t/is-there-any-layer-like-tensorflows-space-to-depth-function/3487/15.
     """
     if len(frames.shape) == 4:
         batch_size, num_channels, height, width = frames.shape
@@ -2478,16 +2495,16 @@ def space_to_depth(frames: torch.Tensor, temporal_block_size: int = 1, spatial_b
             spatial_block_size,
             width // spatial_block_size,
             spatial_block_size,
-            )
+        )
         # move blocks to last dimension: (batch_size, H//bs, W//bs, bs, bs, C)
-        frames = frames.permute(0, 2, 4, 3, 5, 1).contiguous()
+        frames = frames.permute(0, 2, 4, 3, 5, 1)
         # concatenate blocks along channel dimension: (batch_size, H//bs, W//bs, bs*bs*C)
         frames = frames.view(
             batch_size,
             height // spatial_block_size,
             width // spatial_block_size,
-            (spatial_block_size**2) * num_channels,
-            )
+            (spatial_block_size ** 2) * num_channels,
+        )
         return frames
     elif len(frames.shape) == 5:
         batch_size, time, num_channels, height, width = frames.shape
@@ -2501,17 +2518,17 @@ def space_to_depth(frames: torch.Tensor, temporal_block_size: int = 1, spatial_b
             spatial_block_size,
             width // spatial_block_size,
             spatial_block_size,
-            )
+        )
         # move blocks to last dimension: (batch_size, T//ts, H//bs, W//bs, ts, bs, bs, C)
-        frames = frames.permute(0, 1, 4, 6, 2, 5, 7, 3).contiguous()
+        frames = frames.permute(0, 1, 4, 6, 2, 5, 7, 3)
         # concatenate blocks along channel dimension: (batch_size, T//ts, H//bs, W//bs, ts*bs*bs*C)
         frames = frames.view(
             batch_size,
             time // temporal_block_size,
             height // spatial_block_size,
             width // spatial_block_size,
-            temporal_block_size * (spatial_block_size**2) * num_channels,
-            )
+            temporal_block_size * (spatial_block_size ** 2) * num_channels,
+        )
         return frames
     else:
         raise ValueError(
@@ -2532,11 +2549,12 @@ class Conv2dSamePadding(nn.Conv2d):
             reduce(__add__, [(k // 2 + (k - 2 * (k // 2)) - 1, k // 2) for k in self.kernel_size[::-1]])
         )
 
-    def forward(self, input):
-        return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
+    def construct(self, input):
+        # return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
+        return super(Conv2dSamePadding, self)(self.zero_pad_2d(input))
 
 
-class Conv2DDownsample(nn.Module):
+class Conv2DDownsample(nn.Cell):
     """Downsamples 4x by applying a 2D convolution and doing max pooling."""
 
     def __init__(
@@ -2560,13 +2578,14 @@ class Conv2DDownsample(nn.Module):
         super().__init__()
 
         self.conv = Conv2dSamePadding(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, bias=False
+            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, has_bias=False,
+            pad_mode='valid'
         )
         self.batchnorm = nn.BatchNorm2d(num_features=out_channels) if use_batchnorm else nn.Identity()
         self.relu = nn.ReLU()
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2)
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def construct(self, inputs: mindspore.Tensor) -> mindspore.Tensor:
         out = self.conv(inputs)
         out = self.batchnorm(out)
         out = self.relu(out)
@@ -2579,7 +2598,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     Generate a Fourier frequency position encoding with linear spacing.
 
     Args:
-      pos (`torch.LongTensor` of shape `(batch_size, sequence_length, dim)`):
+      pos (`mindspore.Tensor` of shape `(batch_size, sequence_length, dim)`):
         The Tensor containing the position of n points in d dimensional space.
       num_bands (`int`):
         The number of frequency bands (K) to use.
@@ -2591,7 +2610,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
         Whether to use a single phase (sin) or two (sin/cos) for each frequency band.
 
     Returns:
-      `torch.FloatTensor` of shape `(batch_size, sequence_length, n_channels)`: The Fourier position embeddings. If
+      `mindspore.Tensor` of shape `(batch_size, sequence_length, n_channels)`: The Fourier position embeddings. If
       `concat_pos` is `True` and `sine_only` is `False`, output dimensions are ordered as: [dim_1, dim_2, ..., dim_d,
       sin(pi*f_1*dim_1), ..., sin(pi*f_K*dim_1), ..., sin(pi*f_1*dim_d), ..., sin(pi*f_K*dim_d), cos(pi*f_1*dim_1),
       ..., cos(pi*f_K*dim_1), ..., cos(pi*f_1*dim_d), ..., cos(pi*f_K*dim_d)], where dim_i is pos[:, i] and f_k is the
@@ -2602,27 +2621,27 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
 
     min_freq = 1.0
     # Nyquist frequency at the target resolution:
-    freq_bands = torch.stack(
-        [torch.linspace(start=min_freq, end=res / 2, steps=num_bands) for res in max_resolution], dim=0
+    freq_bands = ops.stack(
+        [ops.linspace(start=min_freq, end=res / 2, steps=num_bands) for res in max_resolution], axis=0
     )
 
     # Get frequency bands for each spatial dimension.
     # Output is size [n, d * num_bands]
     per_pos_features = pos[0, :, :][:, :, None] * freq_bands[None, :, :]
-    per_pos_features = torch.reshape(per_pos_features, [-1, np.prod(per_pos_features.shape[1:])])
+    per_pos_features = ops.reshape(per_pos_features, [-1, np.prod(per_pos_features.shape[1:])])
 
     if sine_only:
         # Output is size [n, d * num_bands]
-        per_pos_features = torch.sin(np.pi * (per_pos_features))
+        per_pos_features = ops.sin(np.pi * (per_pos_features))
     else:
         # Output is size [n, 2 * d * num_bands]
-        per_pos_features = torch.cat(
-            [torch.sin(np.pi * per_pos_features), torch.cos(np.pi * per_pos_features)], dim=-1
+        per_pos_features = ops.cat(
+            [ops.sin(np.pi * per_pos_features), ops.cos(np.pi * per_pos_features)], axis=-1
         )
     # Concatenate the raw input positions.
     if concat_pos:
         # Adds d bands to the encoding.
-        per_pos_features = torch.cat([pos, per_pos_features.expand(batch_size, -1, -1)], dim=-1)
+        per_pos_features = ops.cat([pos, per_pos_features.expand((batch_size, -1, -1))], axis=-1)
     return per_pos_features
 
 
@@ -2637,19 +2656,19 @@ def build_linear_positions(index_dims, output_range=(-1.0, 1.0)):
         The min and max values taken by each input index dimension.
 
     Returns:
-      `torch.FloatTensor` of shape `(index_dims[0], index_dims[1], .., index_dims[-1], N)`.
+      `mindspore.Tensor` of shape `(index_dims[0], index_dims[1], .., index_dims[-1], N)`.
     """
 
     def _linspace(n_xels_per_dim):
-        return torch.linspace(start=output_range[0], end=output_range[1], steps=n_xels_per_dim, dtype=torch.float32)
+        return ops.linspace(start=output_range[0], end=output_range[1], steps=n_xels_per_dim)
 
     dim_ranges = [_linspace(n_xels_per_dim) for n_xels_per_dim in index_dims]
     array_index_grid = meshgrid(*dim_ranges, indexing="ij")
 
-    return torch.stack(array_index_grid, dim=-1)
+    return ops.stack(array_index_grid, axis=-1)
 
 
-class PerceiverAbstractPositionEncoding(nn.Module, metaclass=abc.ABCMeta):
+class PerceiverAbstractPositionEncoding(nn.Cell, metaclass=abc.ABCMeta):
     """Perceiver abstract position encoding."""
 
     @property
@@ -2662,7 +2681,7 @@ class PerceiverAbstractPositionEncoding(nn.Module, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def forward(self, batch_size, pos):
+    def construct(self, batch_size, pos):
         raise NotImplementedError
 
 
@@ -2674,7 +2693,7 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
         self._num_channels = num_channels
         self._index_dims = index_dims
         index_dim = np.prod(index_dims)
-        self.position_embeddings = nn.Parameter(torch.randn(index_dim, num_channels))
+        self.position_embeddings = mindspore.Parameter(ops.randn((index_dim, num_channels)), 'position_embeddings')
 
     @property
     def num_dimensions(self) -> int:
@@ -2685,24 +2704,26 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
     def output_size(self, *args, **kwargs) -> int:
         return self._num_channels
 
-    def interpolate_pos_encoding(self, position_embeddings: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    def interpolate_pos_encoding(self, position_embeddings: mindspore.Tensor, height: int,
+                                 width: int) -> mindspore.Tensor:
         num_positions = position_embeddings.shape[0]
         new_height = new_width = math.sqrt(num_positions)
         position_embeddings = position_embeddings.reshape(
             1, int(new_height), int(new_width), self._num_channels
         ).permute(0, 3, 1, 2)
-        position_embeddings = nn.functional.interpolate(
+        position_embeddings = ops.interpolate(
             position_embeddings,
             scale_factor=(height / new_height, width / new_width),
             mode="bicubic",
             align_corners=False,
+            recompute_scale_factor=True
         )
         position_embeddings = position_embeddings.reshape(1, self._num_channels, -1).permute(0, 2, 1).squeeze(0)
         return position_embeddings
 
-    def forward(
-            self, batch_size: int, interpolate_pos_encoding: bool = False, input_size: torch.Size = None
-    ) -> torch.Tensor:
+    def construct(
+            self, batch_size: int, interpolate_pos_encoding: bool = False, input_size=None
+    ) -> mindspore.Tensor:
         position_embeddings = self.position_embeddings
 
         if interpolate_pos_encoding:
@@ -2711,7 +2732,7 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
             position_embeddings = self.interpolate_pos_encoding(position_embeddings, height, width)
 
         if batch_size is not None:
-            position_embeddings = position_embeddings.expand(batch_size, -1, -1)
+            position_embeddings = position_embeddings.expand((batch_size, -1, -1))
         return position_embeddings
 
 
@@ -2720,7 +2741,7 @@ def _check_or_build_spatial_positions(pos, index_dims, batch_size):
     Checks or builds spatial position features (x, y, ...).
 
     Args:
-      pos (`torch.FloatTensor`):
+      pos (`mindspore.Tensor`):
         None, or an array of position features. If None, position features are built. Otherwise, their size is checked.
       index_dims (`List[int]`):
         An iterable giving the spatial/index size of the data to be featurized.
@@ -2728,14 +2749,12 @@ def _check_or_build_spatial_positions(pos, index_dims, batch_size):
         The batch size of the data to be featurized.
 
     Returns:
-        `torch.FloatTensor` of shape `(batch_size, prod(index_dims))` an array of position features.
+        `mindspore.Tensor` of shape `(batch_size, prod(index_dims))` an array of position features.
     """
     if pos is None:
         pos = build_linear_positions(index_dims)
-        # equivalent to `torch.broadcast_to(pos[None], (batch_size,) + pos.shape)`
-        # but `torch.broadcast_to` cannot be converted to ONNX
         pos = pos[None].expand((batch_size,) + pos.shape)
-        pos = torch.reshape(pos, [batch_size, np.prod(index_dims), -1])
+        pos = ops.reshape(pos, [batch_size, np.prod(index_dims), -1])
     else:
         # Just a warning label: you probably don't want your spatial features to
         # have a different spatial layout than your pos coordinate system.
@@ -2770,14 +2789,13 @@ class PerceiverFourierPositionEncoding(PerceiverAbstractPositionEncoding):
 
         return encoding_size
 
-    def forward(
+    def construct(
             self,
             index_dims: List[int],
             batch_size: int,
-            device: torch.device,
-            dtype: torch.dtype,
-            pos: torch.FloatTensor = None,
-    ) -> torch.FloatTensor:
+            dtype: mindspore.dtype,
+            pos: mindspore.Tensor = None,
+    ) -> mindspore.Tensor:
         pos = _check_or_build_spatial_positions(pos, index_dims, batch_size)
         fourier_pos_enc = generate_fourier_features(
             pos,
@@ -2785,11 +2803,11 @@ class PerceiverFourierPositionEncoding(PerceiverAbstractPositionEncoding):
             max_resolution=self.max_resolution,
             concat_pos=self.concat_pos,
             sine_only=self.sine_only,
-        ).to(device=device, dtype=dtype)
+        ).to(dtype=dtype)
         return fourier_pos_enc
 
 
-class AbstractPreprocessor(nn.Module):
+class AbstractPreprocessor(nn.Cell):
     @property
     def num_channels(self) -> int:
         """Returns size of preprocessor output."""
@@ -2810,30 +2828,30 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
     def __init__(self, config: PerceiverConfig) -> None:
         super().__init__()
         self.config = config
-        self.embeddings = nn.Embedding(num_embeddings=config.vocab_size, embedding_dim=config.d_model)
+        self.embeddings = nn.Embedding(vocab_size=config.vocab_size, embedding_size=config.d_model)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.d_model)
 
     @property
     def num_channels(self) -> int:
         return self.config.d_model
 
-    def forward(
+    def construct(
             self,
-            inputs: torch.LongTensor,
-            pos: Optional[torch.Tensor] = None,
+            inputs: mindspore.Tensor,
+            pos: Optional[mindspore.Tensor] = None,
             network_input_is_1d: bool = True,
             interpolate_pos_encoding: bool = False,
     ):
         embeddings_without_pos = self.embeddings(inputs)
 
         seq_length = inputs.shape[1]
-        position_ids = torch.arange(0, seq_length, device=inputs.device)
+        position_ids = ops.arange(0, seq_length)
         embeddings = embeddings_without_pos + self.position_embeddings(position_ids)
 
         return embeddings, None, embeddings_without_pos
 
 
-class PerceiverEmbeddingDecoder(nn.Module):
+class PerceiverEmbeddingDecoder(nn.Cell):
     """
     Module to decode embeddings (for masked language modeling).
 
@@ -2846,18 +2864,18 @@ class PerceiverEmbeddingDecoder(nn.Module):
         super().__init__()
         self.config = config
         self.vocab_size = config.vocab_size
-        self.bias = nn.Parameter(torch.zeros(self.vocab_size))
+        self.bias = mindspore.Parameter(ops.zeros(self.vocab_size), 'bias')
 
-    def forward(self, hidden_states: torch.Tensor, embedding_layer: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor, embedding_layer: mindspore.Tensor) -> mindspore.Tensor:
         batch_size, seq_len, d_model = hidden_states.shape
         # Flatten batch dim
-        output = torch.matmul(hidden_states.reshape([-1, d_model]), embedding_layer.weight.transpose(0, 1))
+        output = ops.matmul(hidden_states.reshape([-1, d_model]), embedding_layer.weight.swapaxes(0, 1))
         output = output + self.bias
 
         return output.reshape([batch_size, seq_len, self.vocab_size])
 
 
-class PerceiverMultimodalPostprocessor(nn.Module):
+class PerceiverMultimodalPostprocessor(nn.Cell):
     """
     Multimodal postprocessing for Perceiver. Can be used to combine modality-specific postprocessors into a single
     postprocessor.
@@ -2872,12 +2890,12 @@ class PerceiverMultimodalPostprocessor(nn.Module):
 
     def __init__(self, modalities: Mapping[str, PostprocessorType], input_is_dict: bool = False):
         super().__init__()
-        self.modalities = nn.ModuleDict(modalities)
+        self.modalities = nn.CellDict(modalities)
         self.input_is_dict = input_is_dict
 
-    def forward(
-            self, inputs: torch.Tensor, pos: Optional[torch.Tensor] = None, modality_sizes=None
-    ) -> Mapping[str, torch.Tensor]:
+    def construct(
+            self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, modality_sizes=None
+    ) -> Mapping[str, mindspore.Tensor]:
         if not self.input_is_dict:
             # Slice up modalities by their sizes.
             if modality_sizes is None:
@@ -2891,7 +2909,7 @@ class PerceiverMultimodalPostprocessor(nn.Module):
         return outputs
 
 
-class PerceiverClassificationPostprocessor(nn.Module):
+class PerceiverClassificationPostprocessor(nn.Cell):
     """
     Classification postprocessing for Perceiver. Can be used to convert the decoder output to classification logits.
 
@@ -2904,14 +2922,14 @@ class PerceiverClassificationPostprocessor(nn.Module):
 
     def __init__(self, config: PerceiverConfig, in_channels: int) -> None:
         super().__init__()
-        self.classifier = nn.Linear(in_channels, config.num_labels)
+        self.classifier = nn.Dense(in_channels, config.num_labels)
 
-    def forward(self, inputs, pos: Optional[torch.Tensor] = None, modality_sizes=None) -> torch.Tensor:
+    def construct(self, inputs, pos: Optional[mindspore.Tensor] = None, modality_sizes=None) -> mindspore.Tensor:
         logits = self.classifier(inputs)
         return logits[:, 0, :]
 
 
-class PerceiverAudioPostprocessor(nn.Module):
+class PerceiverAudioPostprocessor(nn.Cell):
     """
     Audio postprocessing for Perceiver. Can be used to convert the decoder output to audio features.
 
@@ -2931,14 +2949,15 @@ class PerceiverAudioPostprocessor(nn.Module):
             raise ValueError("Invalid postproc_type!")
 
         # Architecture parameters:
-        self.classifier = nn.Linear(in_channels, config.samples_per_patch)
+        self.classifier = nn.Dense(in_channels, config.samples_per_patch)
 
-    def forward(self, inputs: torch.Tensor, pos: Optional[torch.Tensor] = None, modality_sizes=None) -> torch.Tensor:
+    def construct(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
+                  modality_sizes=None) -> mindspore.Tensor:
         logits = self.classifier(inputs)
-        return torch.reshape(logits, [inputs.shape[0], -1])
+        return ops.reshape(logits, [inputs.shape[0], -1])
 
 
-class PerceiverProjectionPostprocessor(nn.Module):
+class PerceiverProjectionPostprocessor(nn.Cell):
     """
     Projection postprocessing for Perceiver. Can be used to project the channels of the decoder output to a lower
     dimension.
@@ -2952,9 +2971,10 @@ class PerceiverProjectionPostprocessor(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
-        self.classifier = nn.Linear(in_channels, out_channels)
+        self.classifier = nn.Dense(in_channels, out_channels)
 
-    def forward(self, inputs: torch.Tensor, pos: Optional[torch.Tensor] = None, modality_sizes=None) -> torch.Tensor:
+    def construct(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
+                  modality_sizes=None) -> mindspore.Tensor:
         logits = self.classifier(inputs)
         return logits
 
@@ -3054,6 +3074,8 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 kernel_size=(1, 1),
                 # spatial_downsample is unconstrained for 1x1 convolutions.
                 stride=(spatial_downsample, spatial_downsample),
+                pad_mode='valid',
+                has_bias=True
             )
 
         # Position embeddings
@@ -3067,7 +3089,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
 
         # Optional convolutional layer after patches.
         self.conv_after_patches = (
-            nn.Linear(conv_after_patching_in_channels, self.out_channels) if conv_after_patching else nn.Identity()
+            nn.Dense(conv_after_patching_in_channels, self.out_channels) if conv_after_patching else nn.Identity()
         )
 
     @property
@@ -3097,14 +3119,14 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             if self.conv_after_patching:
                 inp_dim = self.out_channels
             else:
-                inp_dim = self.in_channels * self.spatial_downsample**2
+                inp_dim = self.in_channels * self.spatial_downsample ** 2
                 if is_temporal:
                     inp_dim *= self.temporal_downsample
 
         return inp_dim + pos_dim
 
     def _build_network_inputs(
-            self, inputs: torch.Tensor, network_input_is_1d: bool = True, interpolate_pos_encoding: bool = False
+            self, inputs: mindspore.Tensor, network_input_is_1d: bool = True, interpolate_pos_encoding: bool = False
     ):
         """
         Construct the final input, including position encoding.
@@ -3119,13 +3141,13 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
 
         # Flatten input features to a 1D index dimension if necessary.
         if len(inputs.shape) > 3 and network_input_is_1d:
-            inputs = torch.reshape(inputs, [batch_size, indices, -1])
+            inputs = ops.reshape(inputs, [batch_size, indices, -1])
 
         # Construct the position encoding.
         if self.position_encoding_type == "trainable":
             pos_enc = self.position_embeddings(batch_size, interpolate_pos_encoding, input_size)
         elif self.position_encoding_type == "fourier":
-            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device, dtype=inputs.dtype)
+            pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -3134,17 +3156,17 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             # Reshape pos to match the input feature shape
             # if the network takes non-1D inputs
             sh = inputs.shape
-            pos_enc = torch.reshape(pos_enc, list(sh)[:-1] + [-1])
+            pos_enc = ops.reshape(pos_enc, list(sh)[:-1] + [-1])
         if self.concat_or_add_pos == "concat":
-            inputs_with_pos = torch.cat([inputs, pos_enc], dim=-1)
+            inputs_with_pos = ops.cat([inputs, pos_enc], axis=-1)
         elif self.concat_or_add_pos == "add":
             inputs_with_pos = inputs + pos_enc
         return inputs_with_pos, inputs
 
-    def forward(
+    def construct(
             self,
-            inputs: torch.Tensor,
-            pos: Optional[torch.Tensor] = None,
+            inputs: mindspore.Tensor,
+            pos: Optional[mindspore.Tensor] = None,
             network_input_is_1d: bool = True,
             interpolate_pos_encoding: bool = False,
     ):
@@ -3177,7 +3199,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
 
             if inputs.ndim == 5 and inputs.shape[1] == 1:
                 # for flow
-                inputs = inputs.squeeze(dim=1)
+                inputs = inputs.squeeze(axis=1)
 
             # Optionally apply conv layer.
             inputs = self.conv_after_patches(inputs)
@@ -3214,7 +3236,8 @@ class PerceiverOneHotPreprocessor(AbstractPreprocessor):
     def num_channels(self) -> int:
         return self.config.num_labels
 
-    def forward(self, inputs: torch.Tensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True):
+    def construct(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
+                  network_input_is_1d: bool = True):
         # Add a dummy index dimension.
         inputs = inputs[:, None, :]
 
@@ -3299,26 +3322,26 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         if self.position_encoding_type == "trainable":
             pos_enc = self.position_embeddings(batch_size)
         elif self.position_encoding_type == "fourier":
-            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device, dtype=inputs.dtype)
+            pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
 
         if self.concat_or_add_pos == "concat":
-            inputs_with_pos = torch.cat([inputs, pos_enc], dim=-1)
+            inputs_with_pos = ops.cat([inputs, pos_enc], axis=-1)
         elif self.concat_or_add_pos == "add":
             inputs_with_pos = inputs + pos_enc
 
         return inputs_with_pos, inputs
 
-    def forward(
+    def construct(
             self,
-            inputs: torch.Tensor,
-            pos: Optional[torch.Tensor] = None,
+            inputs: mindspore.Tensor,
+            pos: Optional[mindspore.Tensor] = None,
             network_input_is_1d: bool = True,
             interpolate_pos_encoding: bool = False,
     ):
-        inputs = torch.reshape(inputs, [inputs.shape[0], -1, self.samples_per_patch])
+        inputs = ops.reshape(inputs, [inputs.shape[0], -1, self.samples_per_patch])
 
         inputs, inputs_without_pos = self._build_network_inputs(inputs)
         modality_sizes = None  # Size for each modality, only needed for multimodal
@@ -3350,18 +3373,18 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
             min_padding_size: int = 2,
     ):
         super().__init__()
-        self.modalities = nn.ModuleDict(modalities)
+        self.modalities = nn.CellDict(modalities)
         self.min_padding_size = min_padding_size
         self.mask_probs = mask_probs if mask_probs is not None else {}
-        self.padding = nn.ParameterDict(
-            {
-                modality: nn.Parameter(torch.randn(1, self.num_channels - preprocessor.num_channels))
-                for modality, preprocessor in modalities.items()
-            }
-        )
-        self.mask = nn.ParameterDict(
-            {modality: nn.Parameter(torch.randn(1, self.num_channels)) for modality, _ in self.mask_probs.items()}
-        )
+        self.padding = {
+            modality: mindspore.Parameter(ops.normal((1, self.num_channels - preprocessor.num_channels), 0, 0.02),
+                                          modality)
+            for modality, preprocessor in modalities.items()
+        }
+        self.mask = {
+            modality: mindspore.Parameter(ops.normal((1, self.num_channels), 0, 0.02), modality) for modality, _ in
+            self.mask_probs.items()
+        }
 
     @property
     def num_channels(self) -> int:
@@ -3369,10 +3392,10 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         common_channel_size = max_channel_size + self.min_padding_size
         return common_channel_size
 
-    def forward(
+    def construct(
             self,
-            inputs: Mapping[str, torch.Tensor],
-            pos: Optional[torch.Tensor] = None,
+            inputs: Mapping[str, mindspore.Tensor],
+            pos: Optional[mindspore.Tensor] = None,
             network_input_is_1d: bool = True,
             interpolate_pos_encoding: bool = False,
     ) -> PreprocessorOutputType:
@@ -3387,20 +3410,21 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
             # pad to the same common_channel_size.
             batch_size, num_samples, num_channels = output.shape
-            pos_enc = self.padding[modality].expand(batch_size, -1, -1)
+            pos_enc = self.padding[modality].expand((batch_size, -1, -1))
 
-            padding = torch.broadcast_to(
+            padding = ops.broadcast_to(
                 pos_enc,
-                [batch_size, num_samples, self.num_channels - num_channels],
+                (batch_size, num_samples, self.num_channels - num_channels),
             )
-            output_padded = torch.cat([output, padding], dim=2)
+            output_padded = ops.cat([output, padding], axis=2)
 
             # mask if required
             if modality in self.mask_probs:
-                mask_token = self.mask[modality].expand(batch_size, -1, -1)
+                mask_token = self.mask[modality].expand((batch_size, -1, -1))
                 mask_prob = self.mask_probs[modality]
-                mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
-                mask = torch.unsqueeze(mask, dim=2).to(mask_token.device)
+                # mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
+                mask = ops.bernoulli(ops.zeros([batch_size, num_samples], dtype=mindspore.int64), p=mask_prob)
+                mask = ops.unsqueeze(mask, dim=2).to(mask_token.device)
                 output_padded = (1 - mask) * output_padded + mask * mask_token
 
             padded[modality] = output_padded
@@ -3410,6 +3434,6 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         padded_ls = [padded[k] for k in sorted(padded.keys())]
 
         # Finally, concatenate along the time dimension
-        final_inputs = torch.cat(padded_ls, dim=1)
+        final_inputs = ops.cat(padded_ls, axis=1)
 
         return final_inputs, modality_sizes, inputs_without_pos
