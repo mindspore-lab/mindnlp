@@ -140,6 +140,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvModel"),
         ("sam", "SamModel"),
         ("segformer", "SegformerModel"),
+        ("siglip", "SiglipTextModel"),
         ("speech_to_text", "Speech2TextModel"),
         ("speecht5", "SpeechT5Model"),
         ("stablelm", "StableLmModel"),

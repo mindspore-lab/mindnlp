@@ -99,6 +99,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("resnet", "ConvNextImageProcessor"),
         ("sam", "SamImageProcessor"),
         ("segformer", "SegformerImageProcessor"),
+        ("siglip", "SiglipImageProcessor"),
         # ("seggpt", "SegGptImageProcessor"),
         # ("siglip", "SiglipImageProcessor"),
         ("swiftformer", "ViTImageProcessor"),

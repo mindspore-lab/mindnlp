@@ -772,6 +772,12 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "siglip",
+            (
+                ("PreTrainedTokenizer" if is_sentencepiece_available() else None, None),
+            )
+        ),
+        (
             "speech_to_text",
             ("Speech2TextTokenizer" if is_sentencepiece_available() else None, None),
         ),
