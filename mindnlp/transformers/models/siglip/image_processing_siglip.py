@@ -23,8 +23,6 @@ from ...image_transforms import (
     to_channel_dimension_format,
 )
 from ...image_utils import (
-    IMAGENET_STANDARD_MEAN,
-    IMAGENET_STANDARD_STD,
     ChannelDimension,
     ImageInput,
     PILImageResampling,
@@ -36,7 +34,7 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from ...utils import TensorType, is_vision_available, logging
+from mindnlp.utils import TensorType, is_vision_available, logging
 
 
 logger = logging.get_logger(__name__)
@@ -95,8 +93,8 @@ class SiglipImageProcessor(BaseImageProcessor):
     ) -> None:
         super().__init__(**kwargs)
         size = size if size is not None else {"height": 224, "width": 224}
-        image_mean = image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
-        image_std = image_std if image_std is not None else IMAGENET_STANDARD_STD
+        image_mean = image_mean if image_mean is not None else [0.485, 0.456, 0.406]
+        image_std = image_std if image_std is not None else [0.229, 0.224, 0.225]
 
         self.do_resize = do_resize
         self.size = size
@@ -223,7 +221,7 @@ class SiglipImageProcessor(BaseImageProcessor):
             images = [convert_to_rgb(image) for image in images]
 
         if is_scaled_image(images[0]) and do_rescale:
-            logger.warning_once(
+            logger.warning(
                 "It looks like you are trying to rescale already rescaled images. If the input"
                 " images have pixel values between 0 and 1, set `do_rescale=False` to avoid rescaling them again."
             )
@@ -257,3 +255,6 @@ class SiglipImageProcessor(BaseImageProcessor):
 
         data = {"pixel_values": images}
         return BatchFeature(data=data, tensor_type=return_tensors)
+
+
+__all__ = ["SiglipImageProcessor"]

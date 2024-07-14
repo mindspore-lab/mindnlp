@@ -20,9 +20,9 @@ from typing import List, Optional, Union
 
 from ...feature_extraction_utils import BatchFeature
 from ...image_utils import ImageInput
-from ...processing_utils import ProcessorMixin
+from mindnlp.transformers.processing_utils import ProcessorMixin
 from ...tokenization_utils_base import PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
-from ...utils import TensorType
+from mindnlp.utils import TensorType
 
 
 class SiglipProcessor(ProcessorMixin):
@@ -45,6 +45,8 @@ class SiglipProcessor(ProcessorMixin):
 
     def __init__(self, image_processor, tokenizer):
         super().__init__(image_processor, tokenizer)
+        self.image_processor = image_processor
+        self.tokenizer = tokenizer
 
     def __call__(
         self,
@@ -53,7 +55,7 @@ class SiglipProcessor(ProcessorMixin):
         padding: Union[bool, str, PaddingStrategy] = False,
         truncation: Union[bool, str, TruncationStrategy] = None,
         max_length: int = None,
-        return_tensors: Optional[Union[str, TensorType]] = TensorType.PYTORCH,
+        return_tensors: Optional[Union[str, TensorType]] = TensorType.MINDSPORE,
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several sequences(s) and image(s). This method forwards the `text`
@@ -140,3 +142,6 @@ class SiglipProcessor(ProcessorMixin):
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))
+
+
+__all__ = ["SiglipProcessor"]
