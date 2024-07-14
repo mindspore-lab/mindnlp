@@ -17,8 +17,8 @@
 import functools
 import operator
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)

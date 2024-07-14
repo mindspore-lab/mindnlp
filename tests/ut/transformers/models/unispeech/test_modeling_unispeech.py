@@ -22,7 +22,6 @@ import pytest
 from datasets import load_dataset
 
 from mindnlp.transformers import UniSpeechConfig
-from mindnlp.modules.functional import normalize
 from mindnlp.utils.testing_utils import require_soundfile, slow,is_mindspore_available,require_mindspore
 
 from ...test_configuration_common import ConfigTester
