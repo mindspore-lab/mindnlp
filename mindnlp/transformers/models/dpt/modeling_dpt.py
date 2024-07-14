@@ -28,12 +28,12 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.utils import ModelOutput, logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, DepthEstimatorOutput, SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import ModelOutput, logging
 from ...backbone_utils import load_backbone
 from .configuration_dpt import DPTConfig
 
@@ -184,7 +184,7 @@ class DPTViTHybridEmbeddings(nn.Cell):
         # Retrieve also the intermediate activations to use them at later stages
         output_hidden_states = [backbone_output.feature_maps[index] for index in self.residual_feature_map_index]
 
-        embeddings = self.projection(features).flatten(2).swapaxes(1, 2)
+        embeddings = self.projection(features).flatten(start_dim=2).swapaxes(1, 2)
 
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)
         embeddings = ops.cat((cls_tokens, embeddings), axis=1)
@@ -256,7 +256,7 @@ class DPTViTEmbeddings(nn.Cell):
         embeddings = self.dropout(embeddings)
 
         if not return_dict:
-            return embeddings
+            return (embeddings,)
 
         return BaseModelOutputWithIntermediateActivations(last_hidden_states=embeddings)
 
@@ -289,7 +289,7 @@ class DPTViTPatchEmbeddings(nn.Cell):
             raise ValueError(
                 "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
             )
-        embeddings = self.projection(pixel_values).flatten(2).swapaxes(1, 2)
+        embeddings = self.projection(pixel_values).flatten(start_dim=2).swapaxes(1, 2)
         return embeddings
 
 
@@ -633,14 +633,14 @@ class DPTReassembleStage(nn.Cell):
                 feature_shape = hidden_state.shape
                 if self.config.readout_type == "project":
                     # reshape to (batch_size, height*width, num_channels)
-                    hidden_state = hidden_state.flatten(2).permute((0, 2, 1))
+                    hidden_state = hidden_state.flatten(start_dim=2).permute((0, 2, 1))
                     readout = cls_token.unsqueeze(1).expand_as(hidden_state)
                     # concatenate the readout token to the hidden states and project
                     hidden_state = self.readout_projects[i](ops.cat((hidden_state, readout), -1))
                     # reshape back to (batch_size, num_channels, height, width)
                     hidden_state = hidden_state.permute(0, 2, 1).reshape(feature_shape)
                 elif self.config.readout_type == "add":
-                    hidden_state = hidden_state.flatten(2) + cls_token.unsqueeze(-1)
+                    hidden_state = hidden_state.flatten(start_dim=2) + cls_token.unsqueeze(-1)
                     hidden_state = hidden_state.reshape(feature_shape)
                 hidden_state = self.layers[i](hidden_state)
             out.append(hidden_state)
@@ -797,7 +797,8 @@ class DPTFeatureFusionLayer(nn.Cell):
 
         hidden_state = self.residual_layer2(hidden_state)
         hidden_state = ops.interpolate(
-            hidden_state, scale_factor=2, mode="bilinear", align_corners=self.align_corners
+            hidden_state, scale_factor=2., mode="bilinear", align_corners=self.align_corners,
+            recompute_scale_factor=True
         )
         hidden_state = self.projection(hidden_state)
 
@@ -824,8 +825,8 @@ class DPTPreTrainedModel(PreTrainedModel):
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class DPTModel(DPTPreTrainedModel):
@@ -1029,13 +1030,13 @@ class DPTDepthEstimationHead(nn.Cell):
 
         self.projection = None
         if config.add_projection:
-            self.projection = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
+            self.projection = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=1,
                                         pad_mode='pad', has_bias=True)
 
         features = config.fusion_hidden_size
         self.head = nn.SequentialCell(
             nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1, pad_mode='pad', has_bias=True),
-            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+            nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
             nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1, pad_mode='pad', has_bias=True),
             nn.ReLU(),
             nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, pad_mode='pad', has_bias=True),
@@ -1202,7 +1203,7 @@ class DPTSemanticSegmentationHead(nn.Cell):
             nn.ReLU(),
             nn.Dropout(p=config.semantic_classifier_dropout),
             nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', has_bias=True),
-            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+            nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
         )
 
     def construct(self, hidden_states: List[mindspore.Tensor]) -> mindspore.Tensor:
@@ -1349,8 +1350,8 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
                 )
             # compute weighted loss
             loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
-            main_loss = loss_fct(upsampled_logits, labels)
-            auxiliary_loss = loss_fct(upsampled_auxiliary_logits, labels)
+            main_loss = loss_fct(upsampled_logits, labels.to(mindspore.int32))
+            auxiliary_loss = loss_fct(upsampled_auxiliary_logits, labels.to(mindspore.int32))
             loss = main_loss + self.config.auxiliary_loss_weight * auxiliary_loss
 
         if not return_dict:

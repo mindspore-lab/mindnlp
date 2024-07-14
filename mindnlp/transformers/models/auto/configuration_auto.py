@@ -75,6 +75,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
         ("detr", "DetrConfig"),
+        ("dinov2", "Dinov2Config"),
         ("distilbert", "DistilBertConfig"),
         ("donut-swin", "DonutSwinConfig"),
         ("dpt", "DPTConfig"),
