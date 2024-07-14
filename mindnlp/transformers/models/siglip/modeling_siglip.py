@@ -501,7 +501,11 @@ class SiglipPreTrainedModel(PreTrainedModel):
                                                                 cell.position_embedding.weight.dtype))
         elif isinstance(cell, nn.Embedding):
             # default_flax_embed_init(cell.weight)  # 标准正态分布
-            cell.weight.set_data(initializer(Normal()))
+            # cell.weight.set_data(initializer(Normal(), cell.weight.shape, cell.weight.dtype))
+            embedding_table = np.random.normal(0.0, 0.02, cell.embedding_table)
+            if cell.padding_idx:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
         elif isinstance(cell, SiglipAttention):
             cell.q_proj.weight.set_data(initializer(XavierUniform(), cell.q_proj.weight.shape, cell.q_proj.weight.dtype))
             # nn.init.xavier_uniform_(cell.k_proj.weight)
@@ -532,13 +536,14 @@ class SiglipPreTrainedModel(PreTrainedModel):
             cell.classifier.weight.set_data(initializer(Normal(sigma=self.config.vision_config.hidden_size**-0.5*self.config.initializer_factor),
                                                         cell.classifier.weight.shape, cell.classifier.weight.dtype))
         elif isinstance(cell, (nn.Dense, nn.Conv2d)):
-            # lecun_normal_(cell.weight)   # 截断正态分布
-            cell.weight.set_data(initializer())
+            cell.weight.set_data(initializer(TruncatedNormal(), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                nn.init.zeros_(cell.bias)
-        elif isinstance(cell, ops.LayerNorm):
-            cell.bias.data.zero_()
-            cell.weight.data.fill_(1.0)
+                cell.bias.set_data(initializer(Normal(sigma=0.02), cell.weight.shape, cell.weight.dtype))
+        elif isinstance(cell, nn.LayerNorm):
+            # cell.bias.data.zero_()
+            # cell.weight.data.fill_(1.0)
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoder with CLIP->Siglip
@@ -1154,4 +1159,15 @@ __all__ = ["SiglipVisionModel",
            "SiglipModel",
            "SiglipPreTrainedModel",
            "SiglipMLP",
-           "SiglipTextModel"]
+           "SiglipTextModel",
+           "SiglipForImageClassification",
+           "SiglipTextModelOutput",
+           "SiglipOutput",
+           "SiglipVisionEmbeddings",
+           "SiglipTextEmbeddings",
+           "SiglipAttention",
+           "SiglipSdpaAttention",
+           "SiglipEncoderLayer",
+           "SiglipEncoder",
+           "SiglipTextTransformer",
+           "SiglipMultiheadAttentionPoolingHead",]
