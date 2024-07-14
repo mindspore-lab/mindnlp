@@ -381,6 +381,7 @@ from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
 from .upernet import *
+from .unispeech import *
 from .univnet import *
 from .videomae import *
 from .vilt import *

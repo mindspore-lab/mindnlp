@@ -21,15 +21,26 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn,ops
+from mindspore import ops
+from mindspore import nn
+from mindspore.nn import CrossEntropyLoss
+from mindspore.common.initializer import initializer, HeNormal, Normal, Uniform
 
-from ...activations import ACT2FN
-# from ...integrations.deepspeed import is_deepspeed_zero3_enabled
-from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput, Wav2Vec2BaseModelOutput
-from ...modeling_utils import PreTrainedModel
 from mindnlp.utils import (
     ModelOutput,
     logging,
+)
+from mindnlp.modules import functional
+from mindnlp.modules.functional import finfo
+from mindnlp.modules.functional.weight_norm import weight_norm
+
+from ...activations import ACT2FN
+# from ...integrations.deepspeed import is_deepspeed_zero3_enabled
+from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput,TokenClassifierOutput,Wav2Vec2BaseModelOutput,XVectorOutput
+from ...modeling_utils import PreTrainedModel
+from mindnlp.utils import (
+    ModelOutput,
+    logging
 )
 from .configuration_unispeech import UniSpeechConfig
 
@@ -52,8 +63,8 @@ _CTC_EXPECTED_LOSS = 17.17
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
-    indices = mindspore.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
+    indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
     cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
     return (
@@ -155,7 +166,7 @@ def _compute_mask_indices(
 
     # compute number of masked spans in batch
     input_lengths = (
-        attention_mask.sum(-1).detach().tolist()
+        attention_mask.sum(-1).tolist()
         if attention_mask is not None
         else [sequence_length for _ in range(batch_size)]
     )
@@ -231,7 +242,8 @@ class UniSpeechNoLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -253,7 +265,8 @@ class UniSpeechLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -281,7 +294,8 @@ class UniSpeechGroupNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
+            has_bias=config.conv_bias,
+            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -302,13 +316,13 @@ class UniSpeechPositionalConvEmbedding(nn.Cell):
             config.hidden_size,
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
+            pad_mode='pad',
             padding=config.num_conv_pos_embeddings // 2,
-            groups=config.num_conv_pos_embedding_groups,
+            group=config.num_conv_pos_embedding_groups,
         )
-
-        weight_norm = nn.utils.weight_norm
-        if hasattr(nn.utils.parametrizations, "weight_norm"):
-            weight_norm = nn.utils.parametrizations.weight_norm
+        # weight_norm = nn.utils.weight_norm
+        # if hasattr(nn.utils.parametrizations, "weight_norm"):
+        #     weight_norm = nn.utils.parametrizations.weight_norm
 
         # if is_deepspeed_zero3_enabled():
         #     import deepspeed
@@ -324,8 +338,8 @@ class UniSpeechPositionalConvEmbedding(nn.Cell):
         #     deepspeed.zero.register_external_parameter(self, weight_v)
         #     deepspeed.zero.register_external_parameter(self, weight_g)
         # else:
-        #     self.conv = weight_norm(self.conv, name="weight", dim=2)
-
+        self.conv = weight_norm(self.conv, name="weight", dim=2)
+        #
         self.padding = UniSpeechSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -372,12 +386,12 @@ class UniSpeechFeatureEncoder(nn.Cell):
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
-        self.conv_layers = nn.ModuleList(conv_layers)
+        self.conv_layers = nn.CellList(conv_layers)
         self.gradient_checkpointing = False
         self._requires_grad = True
 
     def _freeze_parameters(self):
-        for param in self.parameters():
+        for param in self.get_parameters():
             param.requires_grad = False
         self._requires_grad = False
 
@@ -417,7 +431,7 @@ class UniSpeechFeatureProjection(nn.Cell):
         super().__init__()
         self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
         self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
-        self.dropout = nn.Dropout(config.feat_proj_dropout)
+        self.dropout = nn.Dropout(p=config.feat_proj_dropout)
 
     def construct(self, hidden_states):
         # non-projected hidden states are needed for quantization
@@ -457,10 +471,10 @@ class UniSpeechAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=False)
+        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -480,7 +494,7 @@ class UniSpeechAttention(nn.Cell):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.shape()
+        bsz, tgt_len, _ = hidden_states.shape
 
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
@@ -526,19 +540,19 @@ class UniSpeechAttention(nn.Cell):
         key_states = key_states.reshape(*proj_shape)
         value_states = value_states.reshape(*proj_shape)
 
-        src_len = key_states.size(1)
-        attn_weights = mindspore.bmm(query_states, key_states.swapaxes(1, 2))
+        src_len = key_states.shape[1]
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
-        if attn_weights.shape() != (bsz * self.num_heads, tgt_len, src_len):
+        if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
-                f" {attn_weights.shape()}"
+                f" {attn_weights.shape}"
             )
 
         if attention_mask is not None:
-            if attention_mask.shape() != (bsz, 1, tgt_len, src_len):
+            if attention_mask.shape!= (bsz, 1, tgt_len, src_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape()}"
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -546,10 +560,10 @@ class UniSpeechAttention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if layer_head_mask is not None:
-            if layer_head_mask.shape() != (self.num_heads,):
+            if layer_head_mask.shape != (self.num_heads,):
                 raise ValueError(
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
-                    f" {layer_head_mask.shape()}"
+                    f" {layer_head_mask.shape}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -566,12 +580,12 @@ class UniSpeechAttention(nn.Cell):
 
         attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
 
-        attn_output = mindspore.bmm(attn_probs, value_states)
+        attn_output = ops.bmm(attn_probs, value_states)
 
-        if attn_output.shape() != (bsz * self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.shape()}"
+                f" {attn_output.shape}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
@@ -585,6 +599,9 @@ class UniSpeechAttention(nn.Cell):
 
         return attn_output, attn_weights_reshaped, past_key_value
 
+UNISPEECHSAT_ATTENTION_CLASSES = {
+    "eager": UniSpeechAttention,
+}
 
 # Copied from transformers.models.bart.modeling_bart.BartFlashAttention2 with Bart->UniSpeech
 class UniSpeechFlashAttention2(UniSpeechAttention):
@@ -623,7 +640,7 @@ class UniSpeechFlashAttention2(UniSpeechAttention):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, q_len, _ = hidden_states.shape()
+        bsz, q_len, _ = hidden_states.shape
 
         # get query proj
         query_states = self._reshape(self.q_proj(hidden_states), -1, bsz)
@@ -836,7 +853,7 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.shape()
+        bsz, tgt_len, _ = hidden_states.shape
 
         # get query proj
         query_states = self.q_proj(hidden_states)
@@ -895,10 +912,10 @@ class UniSpeechSdpaAttention(UniSpeechAttention):
             is_causal=is_causal,
         )
 
-        if attn_output.shape() != (bsz, self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape != (bsz, self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz, self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.shape()}"
+                f" {attn_output.shape}"
             )
 
         attn_output = attn_output.swapaxes(1, 2)
@@ -923,7 +940,7 @@ UNISPEECH_ATTENTION_CLASSES = {
 class UniSpeechFeedForward(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.intermediate_dropout = nn.Dropout(config.activation_dropout)
+        self.intermediate_dropout = nn.Dropout(p=config.activation_dropout)
 
         self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -932,7 +949,7 @@ class UniSpeechFeedForward(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
         self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.output_dropout = nn.Dropout(config.hidden_dropout)
+        self.output_dropout = nn.Dropout(p=config.hidden_dropout)
 
     def construct(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
@@ -955,10 +972,10 @@ class UniSpeechEncoderLayer(nn.Cell):
             is_decoder=False,
         )
 
-        self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.feed_forward = UniSpeechFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states, attention_mask=None, output_attentions=False):
         attn_residual = hidden_states
@@ -1016,10 +1033,10 @@ class UniSpeechEncoderLayerStableLayerNorm(nn.Cell):
             dropout=config.attention_dropout,
             is_decoder=False,
         )
-        self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.feed_forward = UniSpeechFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
         if getattr(config, "adapter_attn_dim", None) is not None:
             self.adapter_layer = UniSpeechAttnAdapterLayer(config)
@@ -1058,15 +1075,15 @@ class UniSpeechEncoder(nn.Cell):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layers = nn.ModuleList([UniSpeechEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout)
+        self.layers = nn.CellList([UniSpeechEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
     def construct(
         self,
-        hidden_states: mindspore.tensor,
+        hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
@@ -1085,8 +1102,8 @@ class UniSpeechEncoder(nn.Cell):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * mindspore.finfo(hidden_states.dtype).min
-                attention_mask = attention_mask.broadcast_to(
+                attention_mask = attention_mask * finfo(hidden_states.dtype,"min")
+                attention_mask = attention_mask.expand(
                     (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
                 )
 
@@ -1095,30 +1112,31 @@ class UniSpeechEncoder(nn.Cell):
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
-        # deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
+        deepspeed_zero3_is_enabled = False
 
         for layer in self.layers:
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = mindspore.rand([])
+            dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
-            # if not skip_the_layer or deepspeed_zero3_is_enabled:
-            #     # under deepspeed zero3 all gpus must run in sync
-            #     if self.gradient_checkpointing and self.training:
-            #         layer_outputs = self._gradient_checkpointing_func(
-            #             layer.__call__,
-            #             hidden_states,
-            #             attention_mask,
-            #             output_attentions,
-            #         )
-            #     else:
-            #         layer_outputs = layer(
-            #             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
-            #         )
-            #     hidden_states = layer_outputs[0]
+            # skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
+            if not skip_the_layer or deepspeed_zero3_is_enabled:
+                # under deepspeed zero3 all gpus must run in sync
+                if self.gradient_checkpointing and self.training:
+                    layer_outputs = self._gradient_checkpointing_func(
+                        layer.__call__,
+                        hidden_states,
+                        attention_mask,
+                        output_attentions,
+                    )
+                else:
+                    layer_outputs = layer(
+                        hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
+                    )
+                hidden_states = layer_outputs[0]
 
             if skip_the_layer:
                 layer_outputs = (None, None)
@@ -1144,9 +1162,9 @@ class UniSpeechEncoderStableLayerNorm(nn.Cell):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layers = nn.ModuleList(
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout)
+        self.layers = nn.CellList(
             [UniSpeechEncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
@@ -1173,8 +1191,8 @@ class UniSpeechEncoderStableLayerNorm(nn.Cell):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * mindspore.finfo(hidden_states.dtype).min
-                attention_mask = attention_mask.broadcast_to(
+                attention_mask = attention_mask * finfo(hidden_states.dtype,"min")
+                attention_mask = attention_mask.expand(
                     (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
                 )
 
@@ -1182,31 +1200,32 @@ class UniSpeechEncoderStableLayerNorm(nn.Cell):
         hidden_states = hidden_states + position_embeddings
         hidden_states = self.dropout(hidden_states)
 
-        # deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
+        deepspeed_zero3_is_enabled = False
 
         for layer in self.layers:
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = mindspore.rand([])
+            dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
-            # if not skip_the_layer or deepspeed_zero3_is_enabled:
-            #     # under deepspeed zero3 all gpus must run in sync
-            #     # XXX: could optimize this like synced_gpus in generate_utils but not sure if it's worth the code complication
-            #     if self.gradient_checkpointing and self.training:
-            #         layer_outputs = self._gradient_checkpointing_func(
-            #             layer.__call__,
-            #             hidden_states,
-            #             attention_mask,
-            #             output_attentions,
-            #         )
-            #     else:
-            #         layer_outputs = layer(
-            #             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
-            #         )
-            #     hidden_states = layer_outputs[0]
+            # skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
+            if not skip_the_layer or deepspeed_zero3_is_enabled:
+                # under deepspeed zero3 all gpus must run in sync
+                # XXX: could optimize this like synced_gpus in generate_utils but not sure if it's worth the code complication
+                if self.gradient_checkpointing and self.training:
+                    layer_outputs = self._gradient_checkpointing_func(
+                        layer.__call__,
+                        hidden_states,
+                        attention_mask,
+                        output_attentions,
+                    )
+                else:
+                    layer_outputs = layer(
+                        hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
+                    )
+                hidden_states = layer_outputs[0]
 
             if skip_the_layer:
                 layer_outputs = (None, None)
@@ -1247,17 +1266,17 @@ class UniSpeechGumbelVectorQuantizer(nn.Cell):
 
         # storage for codebook variables (codewords)
         self.codevectors = mindspore.Parameter(
-            mindspore.Tensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups),'bias'
+            ops.zeros((1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups), dtype=mindspore.float32),name="codevectors"
         )
-        self.weight_proj = nn.Dense(config.conv_dim[-1], self.num_groups * self.num_vars)
+        self.weight_proj = nn.Dense(config.conv_dim[-1],self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
 
     @staticmethod
-    def _compute_perplexity(probs):
-        marginal_probs = probs.mean(dim=0)
-        perplexity = mindspore.exp(-mindspore.sum(marginal_probs * mindspore.log(marginal_probs + 1e-7), dim=-1)).sum()
+    def _compute_perplexity(probs,mask=None):
+        marginal_probs = probs.mean(axis=0)
+        perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
     def construct(self, hidden_states):
@@ -1274,15 +1293,15 @@ class UniSpeechGumbelVectorQuantizer(nn.Cell):
             ).type_as(hidden_states)
 
             # compute perplexity
-            codevector_soft_dist = mindspore.softmax(
-                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
+            codevector_soft_dist = ops.softmax(
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), axis=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist)
         else:
             # take argmax in non-differentiable way
             # comptute hard codevector distribution (one hot)
-            codevector_idx = hidden_states.argmax(dim=-1)
-            codevector_probs = hidden_states.new_zeros(*hidden_states.shape).scatter_(
+            codevector_idx = hidden_states.argmax(axis=-1)
+            codevector_probs = hidden_states.new_zeros(hidden_states.shape).scatter(
                 -1, codevector_idx.view(-1, 1), 1.0
             )
             codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)
@@ -1315,34 +1334,39 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         # gumbel softmax requires special init
         if isinstance(cell, UniSpeechGumbelVectorQuantizer):
-            cell.weight_proj.weight.data.normal_(mean=0.0, std=1)
-            cell.weight_proj.bias.data.zero_()
-            nn.init.uniform_(cell.codevectors)
+            cell.weight_proj.weight.set_data(initializer(Normal(sigma=1, mean=0),
+                                                         cell.weight_proj.weight.shape, cell.weight_proj.weight.dtype))
+            cell.weight_proj.bias.set_data(initializer('zeros', cell.weight_proj.bias.shape,
+                                                       cell.weight_proj.bias.dtype))
+            cell.codevectors.set_data(ops.uniform(cell.codevectors.shape, mindspore.Tensor(0, dtype=mindspore.float32),
+                                                  mindspore.Tensor(1, dtype=mindspore.float32),
+                                                  dtype=cell.codevectors.dtype))
         elif isinstance(cell, UniSpeechPositionalConvEmbedding):
-            nn.init.normal_(
-                cell.conv.weight,
-                mean=0,
-                std=2 * math.sqrt(1 / (cell.conv.kernel_size[0] * cell.conv.in_channels)),
-            )
-            nn.init.constant_(cell.conv.bias, 0)
+            std = 2 * math.sqrt(1 / (cell.conv.kernel_size[0] * cell.conv.in_channels))
+            cell.conv.weight.set_data(initializer(Normal(sigma=std, mean=0),
+                                                  cell.conv.weight.shape, cell.conv.weight.dtype))
+            cell.conv.bias.set_data(initializer('zeros', cell.conv.bias.shape, cell.conv.bias.dtype))
         elif isinstance(cell, UniSpeechFeatureProjection):
-            k = math.sqrt(1 / cell.projection.in_features)
-            nn.init.uniform_(cell.projection.weight, a=-k, b=k)
-            nn.init.uniform_(cell.projection.bias, a=-k, b=k)
+            k = math.sqrt(1 / cell.projection.in_channels)
+            cell.projection.weight.set_data(initializer(Uniform(k),
+                                                        cell.projection.weight.shape, cell.projection.weight.dtype))
+            cell.projection.bias.set_data(initializer(Uniform(k),
+                                                      cell.projection.bias.shape, cell.projection.bias.dtype))
         elif isinstance(cell, nn.Dense):
-            cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0),
+                                             cell.weight.shape, cell.weight.dtype))
 
-            if cell.bias is not None:
-                cell.bias.data.zero_()
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.bias.data.zero_()
-            cell.weight.data.fill_(1.0)
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Conv1d):
-            nn.init.kaiming_normal_(cell.weight)
+            cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
 
-            if cell.bias is not None:
-                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
-                nn.init.uniform_(cell.bias, a=-k, b=k)
+            if cell.has_bias:
+                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
+                cell.bias.set_data(initializer(Uniform(k), cell.bias.shape, cell.bias.dtype))
 
     def _get_feat_extract_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
         """
@@ -1352,7 +1376,7 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
             # from https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
-            return mindspore.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
+            return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
 
         for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
@@ -1362,7 +1386,7 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
     def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: mindspore.Tensor):
         # Effectively attention_mask.sum(-1), but not inplace to be able to run
         # on inference mode.
-        non_padded_lengths = attention_mask.cumsum(dim=-1)[:, -1]
+        non_padded_lengths = attention_mask.cumsum(axis=-1)[:, -1]
         output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths).to(mindspore.int64)
         batch_size = attention_mask.shape[0]
 
@@ -1375,62 +1399,6 @@ class UniSpeechPreTrainedModel(PreTrainedModel):
         return attention_mask
 
 
-UNISPEECH_START_DOCSTRING = r"""
-    UniSpeech was proposed in [UniSpeech: Unified Speech Representation Learning with Labeled and Unlabeled
-    Data](https://arxiv.org/abs/2101.07597) by Chengyi Wang, Yu Wu, Yao Qian, Kenichi Kumatani, Shujie Liu, Furu Wei,
-    Michael Zeng, Xuedong Huang.
-
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving etc.).
-
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
-    it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`UniSpeechConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-
-UNISPEECH_INPUTS_DOCSTRING = r"""
-    Args:
-        input_values (`torch.FloatTensor` of shape `(batch_size, sequence_length)`):
-            Float values of input raw speech waveform. Values can be obtained by loading a `.flac` or `.wav` audio file
-            into an array of type `List[float]` or a `numpy.ndarray`, *e.g.* via the soundfile library (`pip install
-            soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
-            conversion into a tensor of type `torch.FloatTensor`. See [`Wav2Vec2Processor.__call__`] for details.
-        attention_mask (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0,
-            1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-
-            <Tip warning={true}>
-
-            `attention_mask` should only be passed if the corresponding processor has `config.return_attention_mask ==
-            True`. For all models whose processor has `config.return_attention_mask == False`, `attention_mask` should
-            **not** be passed to avoid degraded performance when doing batched inference. For such models
-            `input_values` should simply be padded with 0 and passed without `attention_mask`. Be aware that these
-            models also yield slightly different results depending on whether `input_values` is padded or not.
-
-            </Tip>
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-
 class UniSpeechModel(UniSpeechPreTrainedModel):
     def __init__(self, config: UniSpeechConfig):
         super().__init__(config)
@@ -1438,8 +1406,13 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
         self.feature_extractor = UniSpeechFeatureEncoder(config)
         self.feature_projection = UniSpeechFeatureProjection(config)
 
-        if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = mindspore.Parameter(mindspore.Tensor(config.hidden_size).uniform_(),'bias')
+
+        self.masked_spec_embed = mindspore.Parameter(
+            ops.uniform(mindspore.Tensor(config.hidden_size, dtype=mindspore.int32),
+                        mindspore.Tensor(0, dtype=mindspore.float32),
+                        mindspore.Tensor(1, dtype=mindspore.float32),
+                        dtype=mindspore.float32),
+            name='masked_spec_embed')
 
         if config.do_stable_layer_norm:
             self.encoder = UniSpeechEncoderStableLayerNorm(config)
@@ -1466,7 +1439,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
             return hidden_states
 
         # generate indices & apply SpecAugment along time axis
-        batch_size, sequence_length, hidden_size = hidden_states.shape()
+        batch_size, sequence_length, hidden_size = hidden_states.shape
 
         if mask_time_indices is not None:
             # apply SpecAugment along time axis with given mask_time_indices
@@ -1479,7 +1452,7 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool)
+            mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool_)
             hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
 
         if self.config.mask_feature_prob > 0 and self.training:
@@ -1490,8 +1463,8 @@ class UniSpeechModel(UniSpeechPreTrainedModel):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = mindspore.tensor(mask_feature_indices, dtype=mindspore.bool)
-            mask_feature_indices = mask_feature_indices[:, None].broadcast_to((-1, sequence_length, -1))
+            mask_feature_indices = mindspore.tensor(mask_feature_indices, dtype=mindspore.bool_)
+            mask_feature_indices = mask_feature_indices[:, None].expand((-1, sequence_length, -1))
             hidden_states[mask_feature_indices] = 0
 
         return hidden_states
@@ -1548,15 +1521,23 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
     def __init__(self, config: UniSpeechConfig):
         super().__init__(config)
         self.unispeech = UniSpeechModel(config)
-        self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
+        self.dropout_features = nn.Dropout(p=config.feat_quantizer_dropout)
 
         self.quantizer = UniSpeechGumbelVectorQuantizer(config)
         self.project_q = nn.Dense(config.codevector_dim, config.proj_codevector_dim)
-        self.project_hid = nn.Dense(config.proj_codevector_dim, config.hidden_size)
+        self.project_hid = nn.Dense(config.hidden_size,config.proj_codevector_dim)
 
-        self.ctc_proj = nn.Dense(config.hidden_size, config.num_ctc_classes)
-        self.dropout = nn.Dropout(config.final_dropout)
+        # self.ctc_proj = nn.Dense(config.hidden_size, config.num_ctc_classes)
+        # self.dropout = nn.Dropout(p=config.final_dropout)
 
+        # self.speaker_proj = nn.Dense(config.hidden_size, config.codevector_dim)
+        # self.label_embeddings_concat = mindspore.Parameter(ops.zeros((config.num_clusters, config.codevector_dim),
+        #                                                              dtype=mindspore.float32),
+        #                                                    name="label_embeddings_concat")
+        # self.ctc_proj = nn.Dense(config.hidden_size, config.num_ctc_classes)
+        # self.layer_norm_for_extract = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        # if self.config.do_stable_layer_norm:
+        #     self.layer_norm_for_extract.requires_grad = False
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1583,7 +1564,7 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.unispeech.feature_extractor._freeze_parameters()
+        self.wav2vec2.feature_extractor._freeze_parameters()
 
     @staticmethod
     def compute_contrastive_logits(
@@ -1598,7 +1579,7 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         """
         target_features = ops.cat([target_features, negative_features], axis=0)
 
-        logits = mindspore.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1)
+        logits = ops.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1)
         logits = logits.type_as(target_features)
 
         # apply temperature
@@ -1645,26 +1626,26 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         )
         transformer_features = outputs[0]
 
-        # quantize all (unmasked) extracted features and project to final vq dim
+        # # quantize all (unmasked) extracted features and project to final vq dim
         extract_features = self.dropout_features(outputs[1])
         quantized_features, codevector_perplexity = self.quantizer(extract_features)
-
-        # project quantized features twice
+        #
+        # # project quantized features twice
         quantized_features = self.project_q(quantized_features)
         quantized_features = self.project_hid(quantized_features)
-
-        prob_replace_matrix = mindspore.empty(transformer_features.size(0), transformer_features.size(1)).fill_(
+        #
+        prob_replace_matrix = ops.empty(transformer_features.size(0), transformer_features.size(1)).fill_(
             self.config.replace_prob
         )
         prob_replace_matrix = prob_replace_matrix.swapaxes(0, 1)
-        sampled_replace_matrix = mindspore.bernoulli(prob_replace_matrix).bool().to(transformer_features.device)
+        sampled_replace_matrix = ops.bernoulli(prob_replace_matrix).bool().to(transformer_features.device)
         sampled_replace_matrix = sampled_replace_matrix.swapaxes(0, 1)
         sampled_replace_matrix = sampled_replace_matrix.unsqueeze(-1)
         logits = transformer_features.masked_fill(sampled_replace_matrix, 0.0) + (
             quantized_features.masked_fill(~sampled_replace_matrix, 0.0)
         )
-
-        # project to ctc units
+        #
+        # # project to ctc units
         logits = self.dropout(logits)
         logits = self.ctc_proj(logits)
 
@@ -1672,11 +1653,12 @@ class UniSpeechForPreTraining(UniSpeechPreTrainedModel):
         loss = None
         if not return_dict:
             if loss is not None:
-                return (loss, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
-            return (transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
+                return (loss, logits, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
+            return (logits, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
 
         return UniSpeechForPreTrainingOutput(
             loss=loss,
+            logits=logits,
             projected_states=transformer_features,
             projected_quantized_states=quantized_features,
             codevector_perplexity=codevector_perplexity,
@@ -1691,7 +1673,7 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         super().__init__(config)
 
         self.unispeech = UniSpeechModel(config)
-        self.dropout = nn.Dropout(config.final_dropout)
+        self.dropout = nn.Dropout(p=config.final_dropout)
 
         self.target_lang = target_lang
 
@@ -1776,7 +1758,7 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if labels is not None and labels.max() >= self.config.vocab_size:
+        if labels is not None and np.max(labels.asnumpy()) >= self.config.vocab_size:
             raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
 
         outputs = self.unispeech(
@@ -1796,7 +1778,7 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
         if labels is not None:
             # retrieve loss input_lengths from attention_mask
             attention_mask = (
-                attention_mask if attention_mask is not None else mindspore.ones_like(input_values, dtype=mindspore.int64)
+                attention_mask if attention_mask is not None else ops.ones_like(input_values, dtype=mindspore.int64)
             )
             input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
 
@@ -1807,19 +1789,31 @@ class UniSpeechForCTC(UniSpeechPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1, dtype=mindspore.float32).swapaxes(0, 1)
+            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
 
-            with mindspore.backends.cudnn.flags(enabled=False):
-                loss = ops.ctc_loss(
-                    log_probs,
-                    flattened_targets,
-                    input_lengths,
-                    target_lengths,
-                    blank=self.config.pad_token_id,
-                    reduction=self.config.ctc_loss_reduction,
-                    zero_infinity=self.config.ctc_zero_infinity,
-                )
-
+            # with mindspore.backends.cudnn.flags(enabled=False):
+            #     loss = ops.ctc_loss(
+            #         log_probs,
+            #         flattened_targets,
+            #         input_lengths,
+            #         target_lengths,
+            #         blank=self.config.pad_token_id,
+            #         reduction=self.config.ctc_loss_reduction,
+            #         zero_infinity=self.config.ctc_zero_infinity,
+            #     )
+            target = ops.zeros((log_probs.shape[1], int(max(target_lengths))), dtype=mindspore.int64)
+            j = 0
+            acc = 0
+            for i in target_lengths:
+                target[j, 0:i] = flattened_targets[acc:acc + i]
+                j += 1
+                acc += i
+            loss = nn.CTCLoss(blank=self.config.pad_token_id,
+                              reduction=self.config.ctc_loss_reduction,
+                              zero_infinity=self.config.ctc_zero_infinity)(log_probs,
+                                                                           target,
+                                                                           input_lengths,
+                                                                           target_lengths)
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
             return ((loss,) + output) if loss is not None else output
@@ -1840,7 +1834,7 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
         self.unispeech = UniSpeechModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = nn.Parameter(ops.ones(num_layers) / num_layers)
+            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers, name="layer_weights")
         self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
 
@@ -1874,7 +1868,7 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.unispeech.parameters():
+        for param in self.unispeech.get_parameters():
             param.requires_grad = False
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with Wav2Vec2->UniSpeech, wav2vec2->unispeech
@@ -1909,24 +1903,24 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, axis=1)
             norm_weights = ops.softmax(self.layer_weights, axis=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
 
         hidden_states = self.projector(hidden_states)
         if attention_mask is None:
-            pooled_output = hidden_states.mean(dim=1)
+            pooled_output = hidden_states.mean(axis=1)
         else:
             padding_mask = self._get_feature_vector_attention_mask(hidden_states.shape[1], attention_mask)
             hidden_states[~padding_mask] = 0.0
-            pooled_output = hidden_states.sum(dim=1) / padding_mask.sum(dim=1).view(-1, 1)
+            pooled_output = hidden_states.sum(axis=1) / padding_mask.sum(axis=1).view(-1, 1)
 
         logits = self.classifier(pooled_output)
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss_fct =  CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1).to(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1938,3 +1932,11 @@ class UniSpeechForSequenceClassification(UniSpeechPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "UniSpeechForCTC",
+    "UniSpeechForPreTraining",
+    "UniSpeechForSequenceClassification",
+    "UniSpeechModel",
+    "UniSpeechPreTrainedModel",
+]
