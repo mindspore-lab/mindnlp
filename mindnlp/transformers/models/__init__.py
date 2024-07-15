@@ -213,6 +213,7 @@ from . import (
     xlnet,
     xmod,
     vilt,
+    yolos,
 )
 
 from .owlv2 import *
@@ -411,6 +412,7 @@ from .xlm_prophetnet import *
 from .xlnet import *
 from .umt5 import *
 from .xmod import *
+from .yolos import *
 
 
 __all__ = []
@@ -609,3 +611,4 @@ __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(yolos.__all__)
