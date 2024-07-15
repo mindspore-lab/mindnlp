@@ -44,7 +44,7 @@ if is_scipy_available():
     from scipy.optimize import linear_sum_assignment
 
 if is_vision_available():
-    from transformers.image_transforms import center_to_corners_format
+    from ...image_transforms import center_to_corners_format
 
 logger = logging.get_logger(__name__)
 
