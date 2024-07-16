@@ -210,6 +210,7 @@ from . import (
     xlnet,
     xmod,
     vilt,
+    deepseek_v2,
 )
 
 from .owlv2 import *
@@ -262,6 +263,7 @@ from .data2vec import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .deepseek_v2 import *
 from .detr import *
 from .deit import *
 from .dinov2 import *
@@ -407,6 +409,7 @@ from .umt5 import *
 from .xmod import *
 
 
+
 __all__ = []
 __all__.extend(albert.__all__)
 __all__.extend(align.__all__)
@@ -457,6 +460,7 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(dinov2.__all__)
 __all__.extend(distilbert.__all__)
