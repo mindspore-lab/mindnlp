@@ -211,6 +211,7 @@ from . import (
     xlm_roberta_xl,
     xlm_prophetnet,
     xlnet,
+    xglm,
     xmod,
     vilt,
     yolos,
@@ -410,6 +411,7 @@ from .xlm_roberta import *
 from .xlm_roberta_xl import *
 from .xlm_prophetnet import *
 from .xlnet import *
+from .xglm import *
 from .umt5 import *
 from .xmod import *
 from .yolos import *
@@ -609,6 +611,7 @@ __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
+__all__.extend(xglm.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
 __all__.extend(yolos.__all__)
