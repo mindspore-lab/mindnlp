@@ -622,8 +622,8 @@ class PerceiverPreTrainedModel(PreTrainedModel):
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif hasattr(cell, "latents"):
-            cell.latents.set_data(Normal(self.config.initializer_range, 0.0), cell.latents.shape,
-                                  cell.latents.dtype)
+            cell.latents.set_data(initializer(Normal(self.config.initializer_range, 0.0), cell.latents.shape,
+                                              cell.latents.dtype))
         elif hasattr(cell, "position_embeddings") and isinstance(cell, PerceiverTrainablePositionEncoding):
             cell.position_embeddings.set_data(
                 initializer(Normal(self.config.initializer_range, 0.0), cell.position_embeddings.shape,
@@ -771,7 +771,6 @@ class PerceiverModel(PerceiverPreTrainedModel):
                 )
 
         batch_size, seq_length, _ = inputs.shape
-        device = inputs.device
 
         # If no attention mask is provided, make them all ones
         if attention_mask is None:
@@ -962,7 +961,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()  # -100 index = padding token
-            masked_lm_loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1).to(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1093,7 +1092,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1246,7 +1245,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1397,7 +1396,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1549,7 +1548,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -2139,7 +2138,7 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
             # unravel_index returns a tuple (x_idx, y_idx, ...)
             # stack to get the [n, d] tensor of coordinates
             indices = [mindspore.Tensor.from_numpy(x) for x in
-                       np.unravel_index(subsampled_points, self.output_index_dims)]
+                       np.unravel_index(subsampled_points.asnumpy(), self.output_index_dims)]
             pos = ops.stack(indices, axis=1)
             batch_size = inputs.shape[0]
             # Map these coordinates to [-1, 1]
@@ -2454,7 +2453,7 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
         # Pad all queries with trainable position encodings to make them have the same channels
 
         def embed(modality, x):
-            x = ops.reshape(x, [x.shape[0], np.prod(x.shape[1:-1]), x.shape[-1]])
+            x = ops.reshape(x, [x.shape[0], int(np.prod(x.shape[1:-1])), x.shape[-1]])
             pos = self.padding[modality]
             pos = ops.broadcast_to(pos, (x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]))
             return ops.cat([x, pos], axis=2)
@@ -2551,7 +2550,7 @@ class Conv2dSamePadding(nn.Conv2d):
 
     def construct(self, input):
         # return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
-        return super(Conv2dSamePadding, self)(self.zero_pad_2d(input))
+        return super(Conv2dSamePadding, self).construct(self.zero_pad_2d(input))
 
 
 class Conv2DDownsample(nn.Cell):
@@ -2618,6 +2617,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     """
 
     batch_size = pos.shape[0]
+    pos = pos.to(mindspore.float32)
 
     min_freq = 1.0
     # Nyquist frequency at the target resolution:
@@ -2628,7 +2628,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     # Get frequency bands for each spatial dimension.
     # Output is size [n, d * num_bands]
     per_pos_features = pos[0, :, :][:, :, None] * freq_bands[None, :, :]
-    per_pos_features = ops.reshape(per_pos_features, [-1, np.prod(per_pos_features.shape[1:])])
+    per_pos_features = ops.reshape(per_pos_features, [-1, int(np.prod(per_pos_features.shape[1:]))])
 
     if sine_only:
         # Output is size [n, d * num_bands]
@@ -2663,7 +2663,10 @@ def build_linear_positions(index_dims, output_range=(-1.0, 1.0)):
         return ops.linspace(start=output_range[0], end=output_range[1], steps=n_xels_per_dim)
 
     dim_ranges = [_linspace(n_xels_per_dim) for n_xels_per_dim in index_dims]
-    array_index_grid = meshgrid(*dim_ranges, indexing="ij")
+    if len(index_dims) != 1:
+        array_index_grid = ops.meshgrid(*dim_ranges, indexing="ij")
+    else:
+        array_index_grid = [dim_ranges[0]]
 
     return ops.stack(array_index_grid, axis=-1)
 
@@ -2692,7 +2695,7 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
         super().__init__()
         self._num_channels = num_channels
         self._index_dims = index_dims
-        index_dim = np.prod(index_dims)
+        index_dim = int(np.prod(index_dims))
         self.position_embeddings = mindspore.Parameter(ops.randn((index_dim, num_channels)), 'position_embeddings')
 
     @property
@@ -2754,7 +2757,7 @@ def _check_or_build_spatial_positions(pos, index_dims, batch_size):
     if pos is None:
         pos = build_linear_positions(index_dims)
         pos = pos[None].expand((batch_size,) + pos.shape)
-        pos = ops.reshape(pos, [batch_size, np.prod(index_dims), -1])
+        pos = ops.reshape(pos, [batch_size, int(np.prod(index_dims)), -1])
     else:
         # Just a warning label: you probably don't want your spatial features to
         # have a different spatial layout than your pos coordinate system.
@@ -3137,7 +3140,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         batch_size = inputs.shape[0]
         input_size = inputs.shape[1:3]
         index_dims = inputs.shape[1:-1]
-        indices = np.prod(index_dims)
+        indices = int(np.prod(index_dims))
 
         # Flatten input features to a 1D index dimension if necessary.
         if len(inputs.shape) > 3 and network_input_is_1d:
@@ -3424,7 +3427,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
                 mask_prob = self.mask_probs[modality]
                 # mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
                 mask = ops.bernoulli(ops.zeros([batch_size, num_samples], dtype=mindspore.int64), p=mask_prob)
-                mask = ops.unsqueeze(mask, dim=2).to(mask_token.device)
+                mask = ops.unsqueeze(mask, dim=2)
                 output_padded = (1 - mask) * output_padded + mask * mask_token
 
             padded[modality] = output_padded
@@ -3437,3 +3440,17 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         final_inputs = ops.cat(padded_ls, axis=1)
 
         return final_inputs, modality_sizes, inputs_without_pos
+
+
+__all__ = [
+    "PerceiverForImageClassificationConvProcessing",
+    "PerceiverForImageClassificationFourier",
+    "PerceiverForImageClassificationLearned",
+    "PerceiverForMaskedLM",
+    "PerceiverForMultimodalAutoencoding",
+    "PerceiverForOpticalFlow",
+    "PerceiverForSequenceClassification",
+    "PerceiverLayer",
+    "PerceiverModel",
+    "PerceiverPreTrainedModel",
+]
