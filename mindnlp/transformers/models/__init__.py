@@ -146,6 +146,7 @@ from . import (
     openelm,
     opt,
     owlvit,
+    patchtst,
     pegasus,
     persimmon,
     phi,
@@ -345,6 +346,7 @@ from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
+from .patchtst import *
 from .pegasus import *
 from .persimmon import *
 from .phi import *
@@ -544,6 +546,7 @@ __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
+__all__.extend(patchtst.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
