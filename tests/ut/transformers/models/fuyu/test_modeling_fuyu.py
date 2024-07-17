@@ -310,7 +310,7 @@ class FuyuModelTest(ModelTesterMixin, unittest.TestCase):
 
 
 @slow
-@require_mindspore_gpu
+@require_mindspore
 class FuyuModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_processor(self):
