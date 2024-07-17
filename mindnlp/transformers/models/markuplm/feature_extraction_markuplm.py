@@ -40,10 +40,9 @@ class MarkupLMFeatureExtractor(FeatureExtractionMixin):
 
     """
 
-    def __init__(self, **kwargs):
+    # def __init__(self, **kwargs):
         #requires_backends(self, ["bs4"])
         # super().__init__(**kwargs)
-
     def xpath_soup(self, element):
         xpath_tags = []
         xpath_subscripts = []
