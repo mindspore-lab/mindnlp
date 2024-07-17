@@ -214,8 +214,9 @@ from . import (
     xmod,
     vilt,
     yolos,
+    fuyu,
 )
-
+from .fuyu import *
 from .owlv2 import *
 from .albert import *
 from .align import *
@@ -611,4 +612,5 @@ __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(fuyu.__all__)
 __all__.extend(yolos.__all__)
