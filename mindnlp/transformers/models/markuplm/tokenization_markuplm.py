@@ -1214,7 +1214,7 @@ class MarkupLMTokenizer(PreTrainedTokenizer):
             of sequences (or a batch of pairs) is provided.
         """
         if num_tokens_to_remove <= 0:
-            return ids, xpath_tags_seq, xpath_subs_seq, pair_ids, pair_xpath_tags_seq, pair_xpath_subs_seq, [], [], []
+            return ids, xpath_tags_seq, xpath_subs_seq, pair_ids, pair_xpath_tags_seq, pair_xpath_subs_seq, [], [], [],[],[]
 
         if not isinstance(truncation_strategy, TruncationStrategy):
             truncation_strategy = TruncationStrategy(truncation_strategy)
