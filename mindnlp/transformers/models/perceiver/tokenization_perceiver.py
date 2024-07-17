@@ -14,9 +14,9 @@
 """Tokenization class for Perceiver."""
 
 from typing import Dict, List, Optional, Tuple
+from mindnlp.utils import logging
 
 from ...tokenization_utils import AddedToken, PreTrainedTokenizer
-from mindnlp.utils import logging
 
 logger = logging.get_logger(__name__)
 

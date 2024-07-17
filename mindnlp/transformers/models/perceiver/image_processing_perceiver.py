@@ -16,6 +16,7 @@
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+from mindnlp.utils import TensorType, is_vision_available, logging
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import center_crop, resize, to_channel_dimension_format
@@ -32,7 +33,6 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from mindnlp.utils import TensorType, is_vision_available, logging
 
 if is_vision_available():
     import PIL

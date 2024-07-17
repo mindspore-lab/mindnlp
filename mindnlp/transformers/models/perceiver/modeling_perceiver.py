@@ -25,15 +25,15 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
-
-from ...activations import ACT2FN
-from ...modeling_outputs import BaseModelOutputWithCrossAttentions
-from ...modeling_utils import PreTrainedModel
-from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
+
+from ...activations import ACT2FN
+from ...modeling_outputs import BaseModelOutputWithCrossAttentions
+from ...modeling_utils import PreTrainedModel
+from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_perceiver import PerceiverConfig
 
 ModalitySizeType = Mapping[str, int]
@@ -211,8 +211,8 @@ class PerceiverSelfAttention(nn.Cell):
         self.v_channels_per_head = self.v_channels // num_heads
 
         # Layer normalization
-        self.layernorm1 = nn.LayerNorm(q_dim)
-        self.layernorm2 = nn.LayerNorm(kv_dim) if is_cross_attention else nn.Identity()
+        self.layernorm1 = nn.LayerNorm(q_dim, epsilon=1e-5)
+        self.layernorm2 = nn.LayerNorm(kv_dim, epsilon=1e-5) if is_cross_attention else nn.Identity()
 
         # Projection matrices
         self.query = nn.Dense(q_dim, qk_channels)
@@ -1079,7 +1079,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1232,7 +1232,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1383,7 +1383,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1535,7 +1535,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -3151,6 +3151,8 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             pos_enc = self.position_embeddings(batch_size, interpolate_pos_encoding, input_size)
         elif self.position_encoding_type == "fourier":
             pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
+        else:
+            pos_enc = None
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -3326,6 +3328,8 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
             pos_enc = self.position_embeddings(batch_size)
         elif self.position_encoding_type == "fourier":
             pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
+        else:
+            pos_enc = None
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
