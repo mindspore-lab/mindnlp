@@ -19,6 +19,12 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
+from mindnlp.utils import (
+    TensorType,
+    is_mindspore_available,
+    logging,
+)
+
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import (
     pad,
@@ -37,17 +43,11 @@ from ...image_utils import (
     to_numpy_array,
     validate_preprocess_arguments,
 )
-from mindnlp.utils import (
-    TensorType,
-    is_mindspore_available,
-    logging,
-    requires_backends,
-)
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindspore import ops
 
 
 logger = logging.get_logger(__name__)
@@ -711,7 +711,7 @@ class FuyuImageProcessor(BaseImageProcessor):
                 indices_in_stream_per_subsequence = ops.full_like(subseq_image_input_ids, -1)
                 # patches_inds = ops.nonzero(patches_mask, as_tuple=True)[0]
                 patches_inds = ops.nonzero(patches_mask.to(mindspore.int64)).reshape(-1)
-                
+
                 indices_in_stream_per_batch[patches_inds] = indices + index_offset
                 indices_in_stream_per_subsequence[patches_inds] = indices
 

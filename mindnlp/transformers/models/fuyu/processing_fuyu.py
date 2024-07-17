@@ -21,9 +21,10 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from mindnlp.utils import TensorType, is_mindspore_available, logging
+
 from ...processing_utils import ProcessorMixin
 from ...tokenization_utils_base import PaddingStrategy, TruncationStrategy
-from mindnlp.utils import TensorType, is_mindspore_available, logging, requires_backends
 
 
 if is_mindspore_available():
@@ -35,7 +36,7 @@ logger = logging.get_logger(__name__)
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindspore import ops
 
 
 TEXT_REPR_BBOX_OPEN = "<box>"
@@ -404,7 +405,7 @@ class FuyuProcessor(ProcessorMixin):
             image_newline_id=image_newline_id,
             variable_sized=True,
         )
-        # FIXME max_tokens_to_generate is embedded into this processor's call.
+        # max_tokens_to_generate is embedded into this processor's call.
         prompt_tokens, prompts_length = _tokenize_prompts_with_image_and_batch(
             tokenizer=self.tokenizer,
             prompts=prompts,
@@ -536,7 +537,7 @@ class FuyuProcessor(ProcessorMixin):
 
         # --- Preprocess images using self.image_processor ---
 
-        # FIXME - We hard code "pt" here because the rest of the processing assumes torch tensors
+        # We hard code "pt" here because the rest of the processing assumes torch tensors
         image_encoding = self.image_processor.preprocess(images, return_tensors="ms")
         batch_images = image_encoding["images"]
         image_unpadded_heights = image_encoding["image_unpadded_heights"]

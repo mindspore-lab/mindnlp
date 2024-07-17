@@ -16,20 +16,22 @@
 
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
+
 import mindspore
 from mindspore import nn, ops
+
+from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import logging
 
 from ...modeling_outputs import CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
 from ...models.auto.modeling_auto import AutoModelForCausalLM
-from mindnlp.utils import logging
+
 from .configuration_fuyu import FuyuConfig
 
-
 logger = logging.get_logger(__name__)
-
-from mindspore.common.initializer import initializer, Normal
-import numpy as np
 
 class FuyuPreTrainedModel(PreTrainedModel):
     config_class = FuyuConfig
@@ -49,7 +51,7 @@ class FuyuPreTrainedModel(PreTrainedModel):
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
             cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-            
+
 class FuyuForCausalLM(FuyuPreTrainedModel):
     def __init__(self, config: FuyuConfig):
         super().__init__(config)
@@ -132,7 +134,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
         for batch_idx in range(word_embeddings.shape[0]):
             # First, find the positions of all the non-negative values in image_patch_input_indices, those are the
             # positions in word_embeddings that we want to replace with content from continuous_embeddings.
-            
+
             # dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0, as_tuple=True)[0]
             dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0)[0]
 

@@ -324,9 +324,9 @@ class FuyuModelIntegrationTest(unittest.TestCase):
         processor = self.default_processor
         model = self.default_model
 
-        # url = "https://huggingface.co/datasets/hf-internal-testing/fixtures-captioning/resolve/main/bus.png"
-        # image = Image.open(io.BytesIO(requests.get(url).content))
-        image = Image.open("/home/wuzhirong/MINDSPORE/mindnlp_fuyu/tests/ut/transformers/models/fuyu/bus.png")
+        url = "https://huggingface.co/datasets/hf-internal-testing/fixtures-captioning/resolve/main/bus.png"
+        image = Image.open(io.BytesIO(requests.get(url).content))
+        # image = Image.open("/home/wuzhirong/MINDSPORE/mindnlp_fuyu/tests/ut/transformers/models/fuyu/bus.png")
 
         text_prompt_coco_captioning = "Generate a coco-style caption.\n"
 
