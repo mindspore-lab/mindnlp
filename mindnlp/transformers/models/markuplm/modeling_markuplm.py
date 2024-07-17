@@ -21,6 +21,7 @@ from typing import Optional, Tuple, Union
 import mindspore
 from mindspore import nn,ops
 
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -39,7 +40,6 @@ from ...ms_utils import(
     prune_linear_layer
 )
 from .configuration_markuplm import MarkupLMConfig
-from mindspore.common.initializer import initializer, Normal
 
 
 logger = logging.get_logger(__name__)
@@ -294,7 +294,7 @@ class MarkupLMLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, bias=False)
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -343,7 +343,7 @@ class MarkupLMSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ("relative_key" , "relative_key_query"):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -405,7 +405,7 @@ class MarkupLMSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ("relative_key", "relative_key_query"):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
                 position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
@@ -728,8 +728,6 @@ class MarkupLMPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-    
     # def _init_weights(self, module):
     #     """Initialize the weights"""
     #     if isinstance(module, nn.Dense):
@@ -745,8 +743,6 @@ class MarkupLMPreTrainedModel(PreTrainedModel):
     #     elif isinstance(module, nn.LayerNorm):
     #         module.bias.data.zero_()
     #         module.weight.data.fill_(1.0)
-    
-
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Optional[Union[str, os.PathLike]], *model_args, **kwargs):
         return super(MarkupLMPreTrainedModel, cls).from_pretrained(
@@ -1220,7 +1216,7 @@ class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in ( mindspore.int64,mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

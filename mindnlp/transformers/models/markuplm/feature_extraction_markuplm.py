@@ -18,15 +18,14 @@ Feature extractor class for MarkupLM.
 
 import html
 
+import bs4
+from bs4 import BeautifulSoup
+from mindnlp.utils import logging
 from ...feature_extraction_utils import BatchFeature, FeatureExtractionMixin
 # from mindnlp.utils import is_bs4_available, logging, requires_backends
 # if is_bs4_available():
 #     import bs4
 #     from bs4 import BeautifulSoup
-
-from mindnlp.utils import logging, requires_backends
-import bs4
-from bs4 import BeautifulSoup
 
 logger = logging.get_logger(__name__)
 
@@ -43,7 +42,7 @@ class MarkupLMFeatureExtractor(FeatureExtractionMixin):
 
     def __init__(self, **kwargs):
         #requires_backends(self, ["bs4"])
-        super().__init__(**kwargs)
+        # super().__init__(**kwargs)
 
     def xpath_soup(self, element):
         xpath_tags = []
