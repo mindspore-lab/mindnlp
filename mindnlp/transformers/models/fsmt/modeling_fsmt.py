@@ -35,6 +35,7 @@ from mindspore import nn, ops
 
 import numpy as np
 
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -115,7 +116,13 @@ mkdir -p $DATA_DIR
 sacrebleu -t wmt19 -l $PAIR --echo src > $DATA_DIR/val.source
 sacrebleu -t wmt19 -l $PAIR --echo ref > $DATA_DIR/val.target
 echo $PAIR
-PYTHONPATH="src:examples/seq2seq" python examples/seq2seq/run_eval.py facebook/wmt19-$PAIR $DATA_DIR/val.source $SAVE_DIR/test_translations.txt --reference_path $DATA_DIR/val.target --score_path $SAVE_DIR/test_bleu.json --bs $BS --task translation --num_beams $NUM_BEAMS
+PYTHONPATH="src:examples/seq2seq" 
+    python examples/seq2seq/run_eval.py 
+    facebook/wmt19-$PAIR $DATA_DIR/val.source 
+    $SAVE_DIR/test_translations.txt 
+    --reference_path $DATA_DIR/val.target 
+    --score_path $SAVE_DIR/test_bleu.json 
+    --bs $BS --task translation --num_beams $NUM_BEAMS
 
 # (fairseq BLEU: 36.4 http://matrix.statmt.org/matrix/output/1914?score_id=37605)
 
@@ -130,7 +137,13 @@ export NUM_BEAMS=50
 mkdir -p $DATA_DIR
 sacrebleu -t wmt19 -l $PAIR --echo src > $DATA_DIR/val.source
 sacrebleu -t wmt19 -l $PAIR --echo ref > $DATA_DIR/val.target
-PYTHONPATH="src:examples/seq2seq" python examples/seq2seq/run_eval.py facebook/wmt19-$PAIR $DATA_DIR/val.source $SAVE_DIR/test_translations.txt --reference_path $DATA_DIR/val.target --score_path $SAVE_DIR/test_bleu.json --bs $BS --task translation --num_beams $NUM_BEAMS
+PYTHONPATH="src:examples/seq2seq" 
+    python examples/seq2seq/run_eval.py 
+    facebook/wmt19-$PAIR $DATA_DIR/val.source 
+    $SAVE_DIR/test_translations.txt 
+    --reference_path $DATA_DIR/val.target 
+    --score_path $SAVE_DIR/test_bleu.json 
+    --bs $BS --task translation --num_beams $NUM_BEAMS
 
 
 # (fairseq BLEU: 41.3 http://matrix.statmt.org/matrix/output/1907?run_id=6937)
@@ -147,7 +160,13 @@ mkdir -p $DATA_DIR
 sacrebleu -t wmt19 -l $PAIR --echo src > $DATA_DIR/val.source
 sacrebleu -t wmt19 -l $PAIR --echo ref > $DATA_DIR/val.target
 echo $PAIR
-PYTHONPATH="src:examples/seq2seq" python examples/seq2seq/run_eval.py facebook/wmt19-$PAIR $DATA_DIR/val.source $SAVE_DIR/test_translations.txt --reference_path $DATA_DIR/val.target --score_path $SAVE_DIR/test_bleu.json --bs $BS --task translation --num_beams $NUM_BEAMS
+PYTHONPATH="src:examples/seq2seq" 
+    python examples/seq2seq/run_eval.py 
+    facebook/wmt19-$PAIR $DATA_DIR/val.source
+    $SAVE_DIR/test_translations.txt 
+    --reference_path $DATA_DIR/val.target
+    --score_path $SAVE_DIR/test_bleu.json
+    --bs $BS --task translation --num_beams $NUM_BEAMS
 
 # (fairseq BLEU: 42.3 http://matrix.statmt.org/matrix/output/1902?run_id=6750)
 
@@ -163,7 +182,13 @@ mkdir -p $DATA_DIR
 sacrebleu -t wmt19 -l $PAIR --echo src > $DATA_DIR/val.source
 sacrebleu -t wmt19 -l $PAIR --echo ref > $DATA_DIR/val.target
 echo $PAIR
-PYTHONPATH="src:examples/seq2seq" python examples/seq2seq/run_eval.py facebook/wmt19-$PAIR $DATA_DIR/val.source $SAVE_DIR/test_translations.txt --reference_path $DATA_DIR/val.target --score_path $SAVE_DIR/test_bleu.json --bs $BS --task translation --num_beams $NUM_BEAMS
+PYTHONPATH="src:examples/seq2seq" 
+    python examples/seq2seq/run_eval.py
+    facebook/wmt19-$PAIR $DATA_DIR/val.source
+    $SAVE_DIR/test_translations.txt 
+    --reference_path $DATA_DIR/val.target 
+    --score_path $SAVE_DIR/test_bleu.json
+    --bs $BS --task translation --num_beams $NUM_BEAMS
 
 # (fairseq BLEU: 43.1 http://matrix.statmt.org/matrix/output/1909?run_id=6862)
 
@@ -208,8 +233,6 @@ def _prepare_fsmt_decoder_inputs(
         decoder_padding_mask = invert_mask(decoder_padding_mask)
     causal_mask = triu_onnx(fill_with_neg_inf(ops.zeros((tgt_len, tgt_len), dtype=causal_mask_dtype)), 1)
     return decoder_input_ids, decoder_padding_mask, causal_mask
-
-from mindspore.common.initializer import initializer, Normal
 
 class PretrainedFSMTModel(PreTrainedModel):
     config_class = FSMTConfig
@@ -562,7 +585,7 @@ class FSMTDecoder(nn.Cell):
         # with deepspeed.zero.GatheredParameters(self.embed_tokens.weight, modifier_rank=None):
         #     embed_tokens_weight_shape = self.embed_tokens.weight.shape
         embed_tokens_weight_shape = self.embed_tokens.weight.shape
-        
+
         # else:
         #     embed_tokens_weight_shape = self.embed_tokens.weight.shape
         self.output_projection = nn.Dense(embed_tokens_weight_shape[1], embed_tokens_weight_shape[0], has_bias=False)
