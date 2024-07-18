@@ -1,0 +1,2 @@
+:::mindnlp.transformers.models.wav2vec2_conformer.configuration_wav2vec2_conformer
+:::mindnlp.transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer
