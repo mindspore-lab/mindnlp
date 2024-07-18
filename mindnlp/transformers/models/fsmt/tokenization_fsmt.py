@@ -20,8 +20,8 @@ import re
 import unicodedata
 from typing import Dict, List, Optional, Tuple
 
-from ...tokenization_utils import PreTrainedTokenizer
 from mindnlp.utils import logging
+from ...tokenization_utils import PreTrainedTokenizer
 
 
 logger = logging.get_logger(__name__)

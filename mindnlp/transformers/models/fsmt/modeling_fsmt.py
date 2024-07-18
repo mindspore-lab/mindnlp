@@ -35,6 +35,8 @@ from mindspore import nn, ops
 
 import numpy as np
 
+from mindnlp.utils import logging
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -43,7 +45,6 @@ from ...modeling_outputs import (
     Seq2SeqModelOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from mindnlp.utils import logging
 from .configuration_fsmt import FSMTConfig
 
 
@@ -754,7 +755,7 @@ class Attention(nn.Cell):
         self.cache_key = "encoder_decoder" if self.encoder_decoder_attention else "self"
 
     def _shape(self, tensor, seq_len, bsz):
-        return tensor.contiguous().view(seq_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        return tensor.view(seq_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
 
     def construct(
         self,
@@ -856,7 +857,7 @@ class Attention(nn.Cell):
         assert v is not None
         attn_output = ops.bmm(attn_probs, v)
         assert attn_output.shape == (bsz * self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+        attn_output = attn_output.swapaxes(0, 1).view(tgt_len, bsz, embed_dim)
         attn_output = self.out_proj(attn_output)
 
         return attn_output, attn_weights_reshaped
