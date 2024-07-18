@@ -49,8 +49,6 @@ if is_vision_available():
 
     from mindnlp.transformers import AutoImageProcessor
 
-ms.set_context(pynative_synchronize=True)
-
 
 class DetaModelTester:
     def __init__(
@@ -597,7 +595,7 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         pass
 
     # Inspired by tests.test_modeling_common.ModelTesterMixin.test_tied_weights_keys
-    @unittest.skip(reason="Model doesn't use tied weights")
+    # @unittest.skip(reason="Model doesn't use tied weights")
     def test_tied_weights_keys(self):
         for model_class in self.all_model_classes:
             # We need to pass model class name to correctly initialize the config.
@@ -658,6 +656,7 @@ def prepare_img():
 
 @require_vision
 # @slow
+# @unittest.skip("Unsupported for batched_nms")
 class DetaModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
@@ -718,17 +717,10 @@ class DetaModelIntegrationTests(unittest.TestCase):
         results = image_processor.post_process_object_detection(
             outputs, threshold=0.3, target_sizes=[image.size[::-1]]
         )[0]
+        print(results["scores"], results["labels"].tolist())
         expected_scores = ms.Tensor([0.6392, 0.6276, 0.5546, 0.5260, 0.4706])
         expected_labels = [75, 17, 17, 75, 63]
         expected_slice_boxes = ms.Tensor([40.5866, 73.2107, 176.1421, 117.1751])
-        print(
-            "aaaaaaa",
-            outputs.logits[0, :3, :3],
-            outputs.pred_boxes[0, :3, :3],
-            results["scores"],
-            results["labels"].tolist(),
-            # results["boxes"][0, :],
-        )
         self.assertTrue(
             np.allclose(
                 results["scores"].asnumpy(), expected_scores.asnumpy(), atol=1e-4
@@ -741,6 +733,7 @@ class DetaModelIntegrationTests(unittest.TestCase):
             )
         )
 
+    @slow
     def test_inference_object_detection_head_swin_backbone(self):
         model = DetaForObjectDetection.from_pretrained(
             "jozhang97/deta-swin-large", from_pt=True

@@ -71,6 +71,129 @@ SUPPORTED_ANNOTATION_FORMATS = (
 )
 
 
+def batched_nms(
+    boxes: ms.Tensor,
+    scores: ms.Tensor,
+    idxs: ms.Tensor,
+    iou_threshold: float,
+) -> ms.Tensor:
+    """
+    Performs non-maximum suppression in a batched fashion.
+
+    Each index value correspond to a category, and NMS
+    will not be applied between elements of different categories.
+
+    Args:
+        boxes (Tensor[N, 4]): boxes where NMS will be performed. They
+            are expected to be in ``(x1, y1, x2, y2)`` format with ``0 <= x1 < x2`` and
+            ``0 <= y1 < y2``.
+        scores (Tensor[N]): scores for each one of the boxes
+        idxs (Tensor[N]): indices of the categories for each one of the boxes.
+        iou_threshold (float): discards all overlapping boxes with IoU > iou_threshold
+
+    Returns:
+        Tensor: int64 tensor with the indices of the elements that have been kept by NMS, sorted
+        in decreasing order of scores
+    """
+    # Benchmarks that drove the following thresholds are at
+    # https://github.com/pytorch/vision/issues/1311#issuecomment-781329339
+    if boxes.numel() > (4000 if ms.get_context("device_target") == "CPU" else 20000):
+        return _batched_nms_vanilla(boxes, scores, idxs, iou_threshold)
+    else:
+        return _batched_nms_coordinate_trick(boxes, scores, idxs, iou_threshold)
+
+
+def _batched_nms_coordinate_trick(
+    boxes: ms.Tensor,
+    scores: ms.Tensor,
+    idxs: ms.Tensor,
+    iou_threshold: float,
+) -> ms.Tensor:
+    """
+    Performs non-maximum suppression (NMS) on a batch of bounding boxes using the coordinate trick.
+
+    Args:
+        boxes (mindspore.Tensor): A tensor containing the bounding boxes coordinates. Its shape should be (N, 4), where N is the number of boxes and each box is represented by (x_min, y_min, x_max, y_max).
+        scores (mindspore.Tensor): A tensor containing the confidence scores for each bounding box. Its shape should be (N,).
+        idxs (mindspore.Tensor): A tensor containing the indices of the bounding boxes. Its shape should be (N,).
+        iou_threshold (float): The intersection over union (IoU) threshold used for NMS. Boxes with IoU higher than this threshold will be suppressed.
+
+    Returns:
+        mindspore.Tensor: A tensor containing the indices of the boxes to keep after NMS. Its shape is (M,), where M is the number of boxes to keep.
+
+    Raises:
+        None.
+    """
+    # strategy: in order to perform NMS independently per class,
+    # we add an offset to all the boxes. The offset is dependent
+    # only on the class idx, and is large enough so that boxes
+    # from different classes do not overlap
+    if boxes.numel() == 0:
+        return ms.numpy.empty((0,), dtype=ms.int64)
+    max_coordinate = boxes.max()
+    offsets = idxs.to(boxes.dtype) * (max_coordinate + ms.tensor(1).to(boxes.dtype))
+    boxes_for_nms = boxes + offsets[:, None]
+    keep = nms(boxes_for_nms, scores, iou_threshold)
+    return keep
+
+
+def _batched_nms_vanilla(
+    boxes: ms.Tensor,
+    scores: ms.Tensor,
+    idxs: ms.Tensor,
+    iou_threshold: float,
+) -> ms.Tensor:
+    """
+    Args:
+        boxes (mindspore.Tensor): A tensor containing bounding boxes coordinates of shape (N, 4) where N is the number of boxes. Each row represents a box in the format (x_min, y_min, x_max, y_max).
+        scores (mindspore.Tensor): A tensor containing confidence scores associated with each bounding box in 'boxes'.
+        idxs (mindspore.Tensor): A tensor containing class indices corresponding to each bounding box in 'boxes'.
+        iou_threshold (float): The intersection over union (IoU) threshold used for non-maximum suppression. It is a float value between 0 and 1.
+
+    Returns:
+        mindspore.Tensor: A tensor containing the indices of the selected boxes after applying non-maximum suppression based on the provided 'iou_threshold'.
+
+    Raises:
+        TypeError: If the input arguments are not of the expected types.
+        ValueError: If 'boxes' and 'scores' have mismatched shapes, or if 'iou_threshold' is not within the valid range [0, 1].
+    """
+    # Based on Detectron2 implementation, just manually call nms() on each class independently
+    keep_mask = ops.zeros_like(scores, dtype=ms.bool_)
+    for class_id in ops.unique(idxs)[0]:
+        curr_indices = ops.nonzero(idxs == class_id)
+        curr_keep_indices = nms(
+            boxes[curr_indices][:, 0], scores[curr_indices][:, 0], iou_threshold
+        )
+        keep_mask[curr_indices[curr_keep_indices]] = True
+    keep_indices = ops.nonzero(keep_mask)[0]
+    return keep_indices[scores[keep_indices].sort(descending=True)[1]]
+
+
+def nms(boxes: ms.Tensor, scores: ms.Tensor, iou_threshold: float):
+    """
+    Performs non-maximum suppression (NMS) on a set of bounding boxes.
+
+    Args:
+        boxes (mindspore.Tensor): A tensor of shape (N, 4) representing the coordinates of the N bounding boxes.
+            Each bounding box is defined by four values: (x_min, y_min, x_max, y_max).
+        scores (mindspore.Tensor): A tensor of shape (N,) representing the scores associated with each bounding box.
+        iou_threshold (float): The Intersection over Union (IoU) threshold used for NMS.
+            Bounding boxes with IoU greater than or equal to this threshold will be suppressed.
+
+    Returns:
+        mindspore.Tensor: A tensor containing the indices of the selected bounding boxes after NMS.
+            The shape of the returned tensor is (M,), where M is the number of selected bounding boxes.
+
+    Raises:
+        TypeError: If any of the input arguments are not of the expected type.
+        ValueError: If the shape of 'boxes' and 'scores' tensors are incompatible or if 'iou_threshold' is not within the valid range.
+    """
+    box_with_score = ops.column_stack((boxes, scores))
+    _, _, selected_mask = ops.NMSWithMask(iou_threshold)(box_with_score)
+    return selected_mask.reshape(-1)
+
+
+# Copied from transformers.models.detr.image_processing_detr.get_size_with_aspect_ratio
 def get_size_with_aspect_ratio(image_size, size, max_size=None) -> Tuple[int, int]:
     """
     Computes the output image size given the input image size and the desired output size.
@@ -84,32 +207,25 @@ def get_size_with_aspect_ratio(image_size, size, max_size=None) -> Tuple[int, in
             The maximum allowed output size.
     """
     height, width = image_size
-    raw_size = None
     if max_size is not None:
         min_original_size = float(min((height, width)))
         max_original_size = float(max((height, width)))
         if max_original_size / min_original_size * size > max_size:
-            raw_size = max_size * min_original_size / max_original_size
-            size = int(round(raw_size))
+            size = int(round(max_size * min_original_size / max_original_size))
 
     if (height <= width and height == size) or (width <= height and width == size):
-        oh, ow = height, width
-    elif width < height:
+        return height, width
+
+    if width < height:
         ow = size
-        if max_size is not None and raw_size is not None:
-            oh = int(raw_size * height / width)
-        else:
-            oh = int(size * height / width)
+        oh = int(size * height / width)
     else:
         oh = size
-        if max_size is not None and raw_size is not None:
-            ow = int(raw_size * width / height)
-        else:
-            ow = int(size * width / height)
-
+        ow = int(size * width / height)
     return (oh, ow)
 
 
+# Copied from transformers.models.detr.image_processing_detr.get_resize_output_image_size
 def get_resize_output_image_size(
     input_image: np.ndarray,
     size: Union[int, Tuple[int, int], List[int]],
@@ -138,6 +254,7 @@ def get_resize_output_image_size(
     return get_size_with_aspect_ratio(image_size, size, max_size)
 
 
+# Copied from transformers.models.detr.image_processing_detr.get_image_size_for_max_height_width
 def get_image_size_for_max_height_width(
     input_image: np.ndarray,
     max_height: int,
@@ -173,6 +290,7 @@ def get_image_size_for_max_height_width(
     return new_height, new_width
 
 
+# Copied from transformers.models.detr.image_processing_detr.get_numpy_to_framework_fn
 def get_numpy_to_framework_fn(arr) -> Callable:
     """
     Returns a function that converts a numpy array to the framework of the input array.
@@ -182,9 +300,11 @@ def get_numpy_to_framework_fn(arr) -> Callable:
     """
     if isinstance(arr, np.ndarray):
         return np.array
+
     raise ValueError(f"Cannot convert arrays of type {type(arr)}")
 
 
+# Copied from transformers.models.detr.image_processing_detr.safe_squeeze
 def safe_squeeze(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
     """
     Squeezes an array, but only if the axis specified has dim 1.
@@ -198,6 +318,7 @@ def safe_squeeze(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
         return arr
 
 
+# Copied from transformers.models.detr.image_processing_detr.normalize_annotation
 def normalize_annotation(annotation: Dict, image_size: Tuple[int, int]) -> Dict:
     image_height, image_width = image_size
     norm_annotation = {}
@@ -214,6 +335,7 @@ def normalize_annotation(annotation: Dict, image_size: Tuple[int, int]) -> Dict:
     return norm_annotation
 
 
+# Copied from transformers.models.detr.image_processing_detr.max_across_indices
 def max_across_indices(values: Iterable[Any]) -> List[Any]:
     """
     Return the maximum value across all indices of an iterable of values.
@@ -221,6 +343,7 @@ def max_across_indices(values: Iterable[Any]) -> List[Any]:
     return [max(values_i) for values_i in zip(*values)]
 
 
+# Copied from transformers.models.detr.image_processing_detr.get_max_height_width
 def get_max_height_width(
     images: List[np.ndarray],
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -240,6 +363,7 @@ def get_max_height_width(
     return (max_height, max_width)
 
 
+# Copied from transformers.models.detr.image_processing_detr.make_pixel_mask
 def make_pixel_mask(
     image: np.ndarray,
     output_size: Tuple[int, int],
@@ -260,6 +384,7 @@ def make_pixel_mask(
     return mask
 
 
+# Copied from transformers.models.detr.image_processing_detr.convert_coco_poly_to_mask
 def convert_coco_poly_to_mask(segmentations, height: int, width: int) -> np.ndarray:
     """
     Convert a COCO polygon annotation to a mask.
@@ -294,6 +419,7 @@ def convert_coco_poly_to_mask(segmentations, height: int, width: int) -> np.ndar
     return masks
 
 
+# Copied from transformers.models.detr.image_processing_detr.prepare_coco_detection_annotation with DETR->DETA
 def prepare_coco_detection_annotation(
     image,
     target,
@@ -361,6 +487,7 @@ def prepare_coco_detection_annotation(
     return new_target
 
 
+# Copied from transformers.models.detr.image_processing_detr.masks_to_boxes
 def masks_to_boxes(masks: np.ndarray) -> np.ndarray:
     """
     Compute the bounding boxes around the provided panoptic segmentation masks.
@@ -395,6 +522,7 @@ def masks_to_boxes(masks: np.ndarray) -> np.ndarray:
     return np.stack([x_min, y_min, x_max, y_max], 1)
 
 
+# Copied from transformers.models.detr.image_processing_detr.prepare_coco_panoptic_annotation with DETR->DETA
 def prepare_coco_panoptic_annotation(
     image: np.ndarray,
     target: Dict,
@@ -441,6 +569,7 @@ def prepare_coco_panoptic_annotation(
     return new_target
 
 
+# Copied from transformers.models.detr.image_processing_detr.resize_annotation
 def resize_annotation(
     annotation: Dict[str, Any],
     orig_size: Tuple[int, int],
@@ -596,6 +725,7 @@ class DetaImageProcessor(BaseImageProcessor):
         self.do_pad = do_pad
         self.pad_size = pad_size
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.prepare_annotation with DETR->DETA
     def prepare_annotation(
         self,
         image: np.ndarray,
@@ -703,6 +833,7 @@ class DetaImageProcessor(BaseImageProcessor):
         )
         return image
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.resize_annotation
     def resize_annotation(
         self,
         annotation,
@@ -718,6 +849,7 @@ class DetaImageProcessor(BaseImageProcessor):
             annotation, orig_size=orig_size, target_size=size, resample=resample
         )
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.rescale
     def rescale(
         self,
         image: np.ndarray,
@@ -751,6 +883,7 @@ class DetaImageProcessor(BaseImageProcessor):
             input_data_format=input_data_format,
         )
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.normalize_annotation
     def normalize_annotation(
         self, annotation: Dict, image_size: Tuple[int, int]
     ) -> Dict:
@@ -760,6 +893,7 @@ class DetaImageProcessor(BaseImageProcessor):
         """
         return normalize_annotation(annotation, image_size=image_size)
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor._update_annotation_for_padded_image
     def _update_annotation_for_padded_image(
         self,
         annotation: Dict,
@@ -803,6 +937,7 @@ class DetaImageProcessor(BaseImageProcessor):
                 new_annotation[key] = value
         return new_annotation
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor._pad_image
     def _pad_image(
         self,
         image: np.ndarray,
@@ -840,6 +975,7 @@ class DetaImageProcessor(BaseImageProcessor):
             )
         return padded_image, annotation
 
+    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.pad
     def pad(
         self,
         images: List[np.ndarray],
@@ -1264,8 +1400,8 @@ class DetaImageProcessor(BaseImageProcessor):
         # and from relative [0, 1] to absolute [0, height] coordinates
         if target_sizes is not None:
             if isinstance(target_sizes, List):
-                img_h = ms.Tensor([i[0] for i in target_sizes])
-                img_w = ms.Tensor([i[1] for i in target_sizes])
+                img_h = ops.Tensor([i[0] for i in target_sizes])
+                img_w = ops.Tensor([i[1] for i in target_sizes])
             else:
                 img_h, img_w = target_sizes.unbind(1)
 
@@ -1277,7 +1413,8 @@ class DetaImageProcessor(BaseImageProcessor):
             box = boxes[b]
             score = all_scores[b]
             lbls = all_labels[b]
-            _, pre_topk = ops.topk(score, min(10000, num_queries * num_labels))
+
+            pre_topk = score.topk(min(10000, num_queries * num_labels))[1]
             box = box[pre_topk]
             score = score[pre_topk]
             lbls = lbls[pre_topk]
@@ -1287,6 +1424,7 @@ class DetaImageProcessor(BaseImageProcessor):
             score = score[keep_inds]
             lbls = lbls[keep_inds]
             box = box[keep_inds]
+
             results.append(
                 {
                     "scores": score[score > threshold],
@@ -1296,128 +1434,6 @@ class DetaImageProcessor(BaseImageProcessor):
             )
 
         return results
-
-
-def batched_nms(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Performs non-maximum suppression in a batched fashion.
-
-    Each index value correspond to a category, and NMS
-    will not be applied between elements of different categories.
-
-    Args:
-        boxes (Tensor[N, 4]): boxes where NMS will be performed. They
-            are expected to be in ``(x1, y1, x2, y2)`` format with ``0 <= x1 < x2`` and
-            ``0 <= y1 < y2``.
-        scores (Tensor[N]): scores for each one of the boxes
-        idxs (Tensor[N]): indices of the categories for each one of the boxes.
-        iou_threshold (float): discards all overlapping boxes with IoU > iou_threshold
-
-    Returns:
-        Tensor: int64 tensor with the indices of the elements that have been kept by NMS, sorted
-        in decreasing order of scores
-    """
-    # Benchmarks that drove the following thresholds are at
-    # https://github.com/pytorch/vision/issues/1311#issuecomment-781329339
-    if boxes.numel() > (4000 if ms.get_context("device_target") == "CPU" else 20000):
-        return _batched_nms_vanilla(boxes, scores, idxs, iou_threshold)
-    else:
-        return _batched_nms_coordinate_trick(boxes, scores, idxs, iou_threshold)
-
-
-def _batched_nms_coordinate_trick(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Performs non-maximum suppression (NMS) on a batch of bounding boxes using the coordinate trick.
-
-    Args:
-        boxes (mindspore.Tensor): A tensor containing the bounding boxes coordinates. Its shape should be (N, 4), where N is the number of boxes and each box is represented by (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor containing the confidence scores for each bounding box. Its shape should be (N,).
-        idxs (mindspore.Tensor): A tensor containing the indices of the bounding boxes. Its shape should be (N,).
-        iou_threshold (float): The intersection over union (IoU) threshold used for NMS. Boxes with IoU higher than this threshold will be suppressed.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the boxes to keep after NMS. Its shape is (M,), where M is the number of boxes to keep.
-
-    Raises:
-        None.
-    """
-    # strategy: in order to perform NMS independently per class,
-    # we add an offset to all the boxes. The offset is dependent
-    # only on the class idx, and is large enough so that boxes
-    # from different classes do not overlap
-    if boxes.numel() == 0:
-        return ops.zeros((0,), dtype=ms.int64)
-    max_coordinate = boxes.max()
-    offsets = idxs.to(boxes.dtype) * (max_coordinate + ms.tensor(1).to(boxes.dtype))
-    boxes_for_nms = boxes + offsets[:, None]
-    keep = nms(boxes_for_nms, scores, iou_threshold)
-    return keep
-
-
-def _batched_nms_vanilla(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Args:
-        boxes (mindspore.Tensor): A tensor containing bounding boxes coordinates of shape (N, 4) where N is the number of boxes. Each row represents a box in the format (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor containing confidence scores associated with each bounding box in 'boxes'.
-        idxs (mindspore.Tensor): A tensor containing class indices corresponding to each bounding box in 'boxes'.
-        iou_threshold (float): The intersection over union (IoU) threshold used for non-maximum suppression. It is a float value between 0 and 1.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the selected boxes after applying non-maximum suppression based on the provided 'iou_threshold'.
-
-    Raises:
-        TypeError: If the input arguments are not of the expected types.
-        ValueError: If 'boxes' and 'scores' have mismatched shapes, or if 'iou_threshold' is not within the valid range [0, 1].
-    """
-    # Based on Detectron2 implementation, just manually call nms() on each class independently
-    keep_mask = ops.zeros_like(scores, dtype=ms.bool_)
-    for class_id in ops.unique(idxs)[0]:
-        curr_indices = ops.nonzero(idxs == class_id)
-        curr_keep_indices = nms(
-            boxes[curr_indices[:, 0]], scores[curr_indices[:, 0]], iou_threshold
-        )
-        keep_mask[curr_indices[curr_keep_indices]] = True
-    keep_indices = ops.nonzero(keep_mask)[0]
-    return keep_indices[scores[keep_indices].sort(descending=True)[1]]
-
-
-def nms(boxes: ms.Tensor, scores: ms.Tensor, iou_threshold: float):
-    """
-    Performs non-maximum suppression (NMS) on a set of bounding boxes.
-
-    Args:
-        boxes (mindspore.Tensor): A tensor of shape (N, 4) representing the coordinates of the N bounding boxes.
-            Each bounding box is defined by four values: (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor of shape (N,) representing the scores associated with each bounding box.
-        iou_threshold (float): The Intersection over Union (IoU) threshold used for NMS.
-            Bounding boxes with IoU greater than or equal to this threshold will be suppressed.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the selected bounding boxes after NMS.
-            The shape of the returned tensor is (M,), where M is the number of selected bounding boxes.
-
-    Raises:
-        TypeError: If any of the input arguments are not of the expected type.
-        ValueError: If the shape of 'boxes' and 'scores' tensors are incompatible or if 'iou_threshold' is not within the valid range.
-    """
-    box_with_score = ops.column_stack((boxes, scores))
-    _, _, selected_mask = ops.NMSWithMask(iou_threshold)(box_with_score)
-    return ops.nonzero(selected_mask).reshape(-1)
 
 
 __all__ = ["DetaImageProcessor"]

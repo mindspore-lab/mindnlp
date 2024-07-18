@@ -12,15 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MindSpore DETA model."""
+"""PyTorch DETA model."""
 
 import copy
 import math
 import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
-from mindspore import ops, nn, Tensor
+
 import mindspore as ms
+
+ms.set_context(pynative_synchronize=True, device_target="CPU")
+from mindspore import ops, nn, Tensor
 from mindspore.common.initializer import (
     initializer,
     Uniform,
@@ -28,10 +31,9 @@ from mindspore.common.initializer import (
     Normal,
     Constant,
 )
-from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.modules.functional import finfo
 
-# from .image_processing_deta import batched_nms
+from .image_processing_deta import batched_nms
 
 
 from ...activations import ACT2FN
@@ -46,11 +48,8 @@ from ....utils import (
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import meshgrid
 from ...backbone_utils import load_backbone
 from .configuration_deta import DetaConfig
-
-# from torch.autograd import Function
 
 
 logger = logging.get_logger(__name__)
@@ -58,128 +57,7 @@ logger = logging.get_logger(__name__)
 MultiScaleDeformableAttention = None
 
 
-def batched_nms(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Performs non-maximum suppression in a batched fashion.
-
-    Each index value correspond to a category, and NMS
-    will not be applied between elements of different categories.
-
-    Args:
-        boxes (Tensor[N, 4]): boxes where NMS will be performed. They
-            are expected to be in ``(x1, y1, x2, y2)`` format with ``0 <= x1 < x2`` and
-            ``0 <= y1 < y2``.
-        scores (Tensor[N]): scores for each one of the boxes
-        idxs (Tensor[N]): indices of the categories for each one of the boxes.
-        iou_threshold (float): discards all overlapping boxes with IoU > iou_threshold
-
-    Returns:
-        Tensor: int64 tensor with the indices of the elements that have been kept by NMS, sorted
-        in decreasing order of scores
-    """
-    # Benchmarks that drove the following thresholds are at
-    # https://github.com/pytorch/vision/issues/1311#issuecomment-781329339
-    if boxes.numel() > (4000 if ms.get_context("device_target") == "CPU" else 20000):
-        return _batched_nms_vanilla(boxes, scores, idxs, iou_threshold)
-    else:
-        return _batched_nms_coordinate_trick(boxes, scores, idxs, iou_threshold)
-
-
-def _batched_nms_coordinate_trick(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Performs non-maximum suppression (NMS) on a batch of bounding boxes using the coordinate trick.
-
-    Args:
-        boxes (mindspore.Tensor): A tensor containing the bounding boxes coordinates. Its shape should be (N, 4), where N is the number of boxes and each box is represented by (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor containing the confidence scores for each bounding box. Its shape should be (N,).
-        idxs (mindspore.Tensor): A tensor containing the indices of the bounding boxes. Its shape should be (N,).
-        iou_threshold (float): The intersection over union (IoU) threshold used for NMS. Boxes with IoU higher than this threshold will be suppressed.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the boxes to keep after NMS. Its shape is (M,), where M is the number of boxes to keep.
-
-    Raises:
-        None.
-    """
-    # strategy: in order to perform NMS independently per class,
-    # we add an offset to all the boxes. The offset is dependent
-    # only on the class idx, and is large enough so that boxes
-    # from different classes do not overlap
-    if boxes.numel() == 0:
-        return ops.zeros((0,), dtype=ms.int64)
-    max_coordinate = boxes.max()
-    offsets = idxs.to(boxes.dtype) * (max_coordinate + ms.tensor(1).to(boxes.dtype))
-    boxes_for_nms = boxes + offsets[:, None]
-    keep = nms(boxes_for_nms, scores, iou_threshold)
-    return keep
-
-
-def _batched_nms_vanilla(
-    boxes: ms.Tensor,
-    scores: ms.Tensor,
-    idxs: ms.Tensor,
-    iou_threshold: float,
-) -> ms.Tensor:
-    """
-    Args:
-        boxes (mindspore.Tensor): A tensor containing bounding boxes coordinates of shape (N, 4) where N is the number of boxes. Each row represents a box in the format (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor containing confidence scores associated with each bounding box in 'boxes'.
-        idxs (mindspore.Tensor): A tensor containing class indices corresponding to each bounding box in 'boxes'.
-        iou_threshold (float): The intersection over union (IoU) threshold used for non-maximum suppression. It is a float value between 0 and 1.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the selected boxes after applying non-maximum suppression based on the provided 'iou_threshold'.
-
-    Raises:
-        TypeError: If the input arguments are not of the expected types.
-        ValueError: If 'boxes' and 'scores' have mismatched shapes, or if 'iou_threshold' is not within the valid range [0, 1].
-    """
-    # Based on Detectron2 implementation, just manually call nms() on each class independently
-    keep_mask = ops.zeros_like(scores, dtype=ms.bool_)
-    for class_id in ops.unique(idxs)[0]:
-        curr_indices = ops.nonzero(idxs == class_id)
-        curr_keep_indices = nms(
-            boxes[curr_indices[:, 0]], scores[curr_indices[:, 0]], iou_threshold
-        )
-        keep_mask[curr_indices[curr_keep_indices]] = True
-    keep_indices = ops.nonzero(keep_mask)[0]
-    return keep_indices[scores[keep_indices].sort(descending=True)[1]]
-
-
-def nms(boxes: ms.Tensor, scores: ms.Tensor, iou_threshold: float):
-    """
-    Performs non-maximum suppression (NMS) on a set of bounding boxes.
-
-    Args:
-        boxes (mindspore.Tensor): A tensor of shape (N, 4) representing the coordinates of the N bounding boxes.
-            Each bounding box is defined by four values: (x_min, y_min, x_max, y_max).
-        scores (mindspore.Tensor): A tensor of shape (N,) representing the scores associated with each bounding box.
-        iou_threshold (float): The Intersection over Union (IoU) threshold used for NMS.
-            Bounding boxes with IoU greater than or equal to this threshold will be suppressed.
-
-    Returns:
-        mindspore.Tensor: A tensor containing the indices of the selected bounding boxes after NMS.
-            The shape of the returned tensor is (M,), where M is the number of selected bounding boxes.
-
-    Raises:
-        TypeError: If any of the input arguments are not of the expected type.
-        ValueError: If the shape of 'boxes' and 'scores' tensors are incompatible or if 'iou_threshold' is not within the valid range.
-    """
-    box_with_score = ops.column_stack((boxes, scores))
-    _, _, selected_mask = ops.NMSWithMask(iou_threshold)(box_with_score)
-    return ops.nonzero(selected_mask).reshape(-1)
-
-
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.MultiScaleDeformableAttentionFunction
 class MultiScaleDeformableAttentionFunction(nn.Cell):
     @staticmethod
     def construct(
@@ -236,7 +114,6 @@ class MultiScaleDeformableAttentionFunction(nn.Cell):
 if is_vision_available():
     from mindnlp.transformers.image_transforms import center_to_corners_format
 
-
 if is_scipy_available():
     from scipy.optimize import linear_sum_assignment
 
@@ -247,6 +124,7 @@ _CHECKPOINT_FOR_DOC = "jozhang97/deta-swin-large-o365"
 
 
 @dataclass
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrDecoderOutput with DeformableDetr->Deta
 class DetaDecoderOutput(ModelOutput):
     """
     Base class for outputs of the DetaDecoder. This class adds two attributes to
@@ -438,6 +316,7 @@ def inverse_sigmoid(x, eps=1e-5):
     return ops.log(x1 / x2)
 
 
+# Copied from transformers.models.detr.modeling_detr.DetrFrozenBatchNorm2d with Detr->Deta
 class DetaFrozenBatchNorm2d(nn.Cell):
     """
     BatchNorm2d where the batch statistics and the affine parameters are fixed.
@@ -531,7 +410,6 @@ class DetaBackboneWithPositionalEncodings(nn.Cell):
         # TODO fix this
         if config.backbone_config.model_type == "resnet":
             for name, parameter in self.model.parameters_and_names():
-                # name = parameter.name
                 if (
                     "stages.1" not in name
                     and "stages.2" not in name
@@ -556,7 +434,7 @@ class DetaBackboneWithPositionalEncodings(nn.Cell):
             # downsample pixel_mask to match shape of corresponding feature_map
             mask = ops.interpolate(
                 pixel_mask[None].float(), size=feature_map.shape[-2:]
-            ).astype(ms.bool_)[0]
+            ).to(ms.bool_)[0]
             position_embeddings = self.position_embedding(feature_map, mask).to(
                 feature_map.dtype
             )
@@ -566,6 +444,7 @@ class DetaBackboneWithPositionalEncodings(nn.Cell):
         return out, pos
 
 
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrSinePositionEmbedding with DeformableDetr->Deta
 class DetaSinePositionEmbedding(nn.Cell):
     """
     This is a more standard version of the position embedding, very similar to the one used by the Attention is all you
@@ -612,6 +491,7 @@ class DetaSinePositionEmbedding(nn.Cell):
         return pos
 
 
+# Copied from transformers.models.detr.modeling_detr.DetrLearnedPositionEmbedding
 class DetaLearnedPositionEmbedding(nn.Cell):
     """
     This module learns positional embeddings up to a fixed maximum size.
@@ -641,6 +521,7 @@ class DetaLearnedPositionEmbedding(nn.Cell):
         return pos
 
 
+# Copied from transformers.models.detr.modeling_detr.build_position_encoding with Detr->Deta
 def build_position_encoding(config):
     n_steps = config.d_model // 2
     if config.position_embedding_type == "sine":
@@ -654,12 +535,13 @@ def build_position_encoding(config):
     return position_embedding
 
 
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.multi_scale_deformable_attention
 def multi_scale_deformable_attention(
-    value: ms.Tensor,
-    value_spatial_shapes: ms.Tensor,
-    sampling_locations: ms.Tensor,
-    attention_weights: ms.Tensor,
-) -> ms.Tensor:
+    value: Tensor,
+    value_spatial_shapes: Tensor,
+    sampling_locations: Tensor,
+    attention_weights: Tensor,
+) -> Tensor:
     batch_size, _, num_heads, hidden_dim = value.shape
     _, num_queries, num_heads, num_levels, num_points, _ = sampling_locations.shape
     value_list = value.split(
@@ -681,7 +563,6 @@ def multi_scale_deformable_attention(
         # batch_size, num_queries, num_heads, num_points, 2
         # -> batch_size, num_heads, num_queries, num_points, 2
         # -> batch_size*num_heads, num_queries, num_points, 2
-        # sampling_grid_l_ = sampling_grids[:, :, :, level_id].swapaxes(1, 2).flatten(0, 1)
         tmp = sampling_grids[:, :, :, level_id, :, :].swapaxes(1, 2)
         B, H, *others = tmp.shape
         sampling_grid_l_ = tmp.reshape([B * H, *others])
@@ -711,6 +592,7 @@ def multi_scale_deformable_attention(
     return output.swapaxes(1, 2)
 
 
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrMultiscaleDeformableAttention with DeformableDetr->Deta
 class DetaMultiscaleDeformableAttention(nn.Cell):
     """
     Multiscale deformable attention as proposed in Deformable DETR.
@@ -719,13 +601,7 @@ class DetaMultiscaleDeformableAttention(nn.Cell):
     def __init__(self, config: DetaConfig, num_heads: int, n_points: int):
         super().__init__()
 
-        device_target = ms.get_context("device_target")
-        # if device_target == "GPU":
-        #     self.multi_scale_deformable_attention = MultiScaleDeformableAttention(
-        #         config
-        #     )
-        # else:
-        self.multi_scale_deformable_attention = multi_scale_deformable_attention
+        kernel_loaded = MultiScaleDeformableAttention is not None
 
         if config.d_model % num_heads != 0:
             raise ValueError(
@@ -908,34 +784,33 @@ class DetaMultiscaleDeformableAttention(nn.Cell):
                 f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}"
             )
 
-        # if self.disable_custom_kernels:
-        #     output = multi_scale_deformable_attention(
-        #         value, spatial_shapes, sampling_locations, attention_weights
-        #     )
-        # else:
-        #     try:
-        #         # custom kernel
-        #         output = MultiScaleDeformableAttentionFunction.apply(
-        #             value,
-        #             spatial_shapes,
-        #             level_start_index,
-        #             sampling_locations,
-        #             attention_weights,
-        #             self.im2col_step,
-        #         )
-        #     except Exception:
-        #         # PyTorch implementation
-        #         output = multi_scale_deformable_attention(
-        #             value, spatial_shapes, sampling_locations, attention_weights
-        #         )
-        output = multi_scale_deformable_attention(
-            value, spatial_shapes, sampling_locations, attention_weights
-        )
+        if self.disable_custom_kernels:
+            # PyTorch implementation
+            output = multi_scale_deformable_attention(
+                value, spatial_shapes, sampling_locations, attention_weights
+            )
+        else:
+            try:
+                # custom kernel
+                output = MultiScaleDeformableAttentionFunction.apply(
+                    value,
+                    spatial_shapes,
+                    level_start_index,
+                    sampling_locations,
+                    attention_weights,
+                    self.im2col_step,
+                )
+            except Exception:
+                # PyTorch implementation
+                output = multi_scale_deformable_attention(
+                    value, spatial_shapes, sampling_locations, attention_weights
+                )
         output = self.output_proj(output)
 
         return output, attention_weights
 
 
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrMultiheadAttention with DeformableDetr->Deta,Deformable DETR->DETA
 class DetaMultiheadAttention(nn.Cell):
     """
     Multi-headed attention from 'Attention Is All You Need' paper.
@@ -1083,13 +958,13 @@ class DetaEncoderLayer(nn.Cell):
             num_heads=config.encoder_attention_heads,
             n_points=config.encoder_n_points,
         )
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def construct(
         self,
@@ -1111,9 +986,9 @@ class DetaEncoderLayer(nn.Cell):
                 Position embeddings, to be added to `hidden_states`.
             reference_points (`ms.Tensor`, *optional*):
                 Reference points.
-            spatial_shapes (`torch.LongTensor`, *optional*):
+            spatial_shapes (`ms.Tensor`, *optional*):
                 Spatial shapes of the backbone feature maps.
-            level_start_index (`torch.LongTensor`, *optional*):
+            level_start_index (`ms.Tensor`, *optional*):
                 Level start index.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -1184,18 +1059,18 @@ class DetaDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         # cross-attention
         self.encoder_attn = DetaMultiscaleDeformableAttention(
             config,
             num_heads=config.decoder_attention_heads,
             n_points=config.decoder_n_points,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        # feedforward neural networks
+        self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        # feedconstruct neural networks
         self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def construct(
         self,
@@ -1216,9 +1091,9 @@ class DetaDecoderLayer(nn.Cell):
                 Position embeddings that are added to the queries and keys in the self-attention layer.
             reference_points (`ms.Tensor`, *optional*):
                 Reference points.
-            spatial_shapes (`torch.LongTensor`, *optional*):
+            spatial_shapes (`ms.Tensor`, *optional*):
                 Spatial shapes.
-            level_start_index (`torch.LongTensor`, *optional*):
+            level_start_index (`ms.Tensor`, *optional*):
                 Level start index.
             encoder_hidden_states (`ms.Tensor`):
                 cross attention input to the layer of shape `(batch, seq_len, embed_dim)`
@@ -1297,7 +1172,7 @@ class DetaPreTrainedModel(PreTrainedModel):
         r"DetaEncoderLayer",
         r"DetaDecoderLayer",
     ]
-    supports_gradient_checkpointing = False
+    supports_gradient_checkpointing = True
 
     def _init_weights(self, module):
         std = self.config.init_std
@@ -1397,7 +1272,7 @@ DETA_INPUTS_DOCSTRING = r"""
 
             Pixel values can be obtained using [`AutoImageProcessor`]. See [`AutoImageProcessor.__call__`] for details.
 
-        pixel_mask (`torch.LongTensor` of shape `(batch_size, height, width)`, *optional*):
+        pixel_mask (`ms.Tensor` of shape `(batch_size, height, width)`, *optional*):
             Mask to avoid performing attention on padding pixel values. Mask values selected in `[0, 1]`:
 
             - 1 for pixels that are real (i.e. **not masked**),
@@ -1457,7 +1332,7 @@ class DetaEncoder(DetaPreTrainedModel):
         Get reference points for each feature map. Used in decoder.
 
         Args:
-            spatial_shapes (`torch.LongTensor` of shape `(num_feature_levels, 2)`):
+            spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of each feature map.
             valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
                 Valid ratios of each feature map.
@@ -1469,8 +1344,16 @@ class DetaEncoder(DetaPreTrainedModel):
         reference_points_list = []
         for level, (height, width) in enumerate(spatial_shapes):
             ref_y, ref_x = ops.meshgrid(
-                ops.linspace(0.5, height - 0.5, height),
-                ops.linspace(0.5, width - 0.5, width),
+                ops.linspace(
+                    0.5,
+                    height - 0.5,
+                    height,
+                ),
+                ops.linspace(
+                    0.5,
+                    width - 0.5,
+                    width,
+                ),
                 indexing="ij",
             )
             # TODO: valid_ratios could be useless here. check https://github.com/fundamentalvision/Deformable-DETR/issues/36
@@ -1505,9 +1388,9 @@ class DetaEncoder(DetaPreTrainedModel):
                 [What are attention masks?](../glossary#attention-mask)
             position_embeddings (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
                 Position embeddings that are added to the queries and keys in each self-attention layer.
-            spatial_shapes (`torch.LongTensor` of shape `(num_feature_levels, 2)`):
+            spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of each feature map.
-            level_start_index (`torch.LongTensor` of shape `(num_feature_levels)`):
+            level_start_index (`ms.Tensor` of shape `(num_feature_levels)`):
                 Starting index of each feature map.
             valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
                 Ratio of valid area in each feature level.
@@ -1539,7 +1422,10 @@ class DetaEncoder(DetaPreTrainedModel):
             hidden_states, p=self.dropout, training=self.training
         )
 
-        reference_points = self.get_reference_points(spatial_shapes, valid_ratios)
+        reference_points = self.get_reference_points(
+            spatial_shapes,
+            valid_ratios,
+        )
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1585,7 +1471,7 @@ class DetaDecoder(DetaPreTrainedModel):
 
     Some tweaks for Deformable DETR:
 
-    - `position_embeddings`, `reference_points`, `spatial_shapes` and `valid_ratios` are added to the forward pass.
+    - `position_embeddings`, `reference_points`, `spatial_shapes` and `valid_ratios` are added to the construct pass.
     - it also returns a stack of intermediate outputs and reference points from all decoding layers.
 
     Args:
@@ -1629,7 +1515,7 @@ class DetaDecoder(DetaPreTrainedModel):
             encoder_hidden_states (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
-            encoder_attention_mask (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            encoder_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing cross-attention on padding pixel_values of the encoder. Mask values selected
                 in `[0, 1]`:
                 - 1 for pixels that are real (i.e. **not masked**),
@@ -1640,7 +1526,7 @@ class DetaDecoder(DetaPreTrainedModel):
                 Reference point in range `[0, 1]`, top-left (0,0), bottom-right (1, 1), including padding area.
             spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of the feature maps.
-            level_start_index (`torch.LongTensor` of shape `(num_feature_levels)`, *optional*):
+            level_start_index (`ms.Tensor` of shape `(num_feature_levels)`, *optional*):
                 Indexes for the start of each feature level. In range `[0, sequence_length]`.
             valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`, *optional*):
                 Ratio of valid area in each feature level.
@@ -1741,6 +1627,7 @@ class DetaDecoder(DetaPreTrainedModel):
                     )
                     new_reference_points = new_reference_points.sigmoid()
                 reference_points = new_reference_points
+
             intermediate += (hidden_states,)
             intermediate_reference_points += (reference_points,)
 
@@ -1785,7 +1672,6 @@ class DetaModel(DetaPreTrainedModel):
     def __init__(self, config: DetaConfig):
         super().__init__(config)
 
-        # config.two_stage = False
         if config.two_stage:
             requires_backends(self, ["mindspore"])
 
@@ -1801,13 +1687,7 @@ class DetaModel(DetaPreTrainedModel):
                 in_channels = intermediate_channel_sizes[_]
                 input_proj_list.append(
                     nn.SequentialCell(
-                        nn.Conv2d(
-                            in_channels,
-                            config.d_model,
-                            kernel_size=1,
-                            has_bias=True,
-                            pad_mode="pad",
-                        ),
+                        nn.Conv2d(in_channels, config.d_model, kernel_size=1),
                         nn.GroupNorm(32, config.d_model),
                     )
                 )
@@ -1819,9 +1699,8 @@ class DetaModel(DetaPreTrainedModel):
                             config.d_model,
                             kernel_size=3,
                             stride=2,
-                            pad_mode="pad",
                             padding=1,
-                            has_bias=True,
+                            pad_mode="pad",
                         ),
                         nn.GroupNorm(32, config.d_model),
                     )
@@ -1836,8 +1715,6 @@ class DetaModel(DetaPreTrainedModel):
                             intermediate_channel_sizes[-1],
                             config.d_model,
                             kernel_size=1,
-                            has_bias=True,
-                            pad_mode="pad",
                         ),
                         nn.GroupNorm(32, config.d_model),
                     )
@@ -1858,12 +1735,11 @@ class DetaModel(DetaPreTrainedModel):
 
         if config.two_stage:
             self.enc_output = nn.Dense(config.d_model, config.d_model)
-            self.enc_output_norm = nn.LayerNorm([config.d_model])
+            self.enc_output_norm = nn.LayerNorm(config.d_model)
             self.pos_trans = nn.Dense(config.d_model * 2, config.d_model * 2)
-            self.pos_trans_norm = nn.LayerNorm([config.d_model * 2])
+            self.pos_trans_norm = nn.LayerNorm(config.d_model * 2)
             self.pix_trans = nn.Dense(config.d_model, config.d_model)
-            self.pix_trans_norm = nn.LayerNorm([config.d_model])
-            # self.reference_points = nn.Dense(config.d_model, 2)
+            self.pix_trans_norm = nn.LayerNorm(config.d_model)
         else:
             self.reference_points = nn.Dense(config.d_model, 2)
 
@@ -1872,22 +1748,23 @@ class DetaModel(DetaPreTrainedModel):
 
         self.post_init()
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrModel.get_encoder
     def get_encoder(self):
         return self.encoder
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrModel.get_decoder
     def get_decoder(self):
         return self.decoder
 
     def freeze_backbone(self):
         for name, param in self.backbone.model.parameters_and_names():
-            # = param.name
             param.requires_grad = False
 
     def unfreeze_backbone(self):
         for name, param in self.backbone.model.parameters_and_names():
-            # name = param.name
             param.requires_grad = True
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrModel.get_valid_ratio
     def get_valid_ratio(self, mask, dtype=ms.float32):
         """Get the valid ratio of all feature maps."""
 
@@ -1899,6 +1776,7 @@ class DetaModel(DetaPreTrainedModel):
         valid_ratio = ops.stack([valid_ratio_width, valid_ratio_height], -1)
         return valid_ratio
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrModel.get_proposal_pos_embed
     def get_proposal_pos_embed(self, proposals):
         """Get the position embedding of the proposals."""
 
@@ -1906,7 +1784,10 @@ class DetaModel(DetaPreTrainedModel):
         temperature = 10000
         scale = 2 * math.pi
 
-        dim_t = ops.arange(num_pos_feats, dtype=ms.int64).float()
+        dim_t = ops.arange(
+            num_pos_feats,
+            dtype=ms.int64,
+        ).float()
         dim_t = temperature ** (
             2 * ops.div(dim_t, 2, rounding_mode="floor") / num_pos_feats
         )
@@ -1948,10 +1829,16 @@ class DetaModel(DetaPreTrainedModel):
             valid_height = ops.sum(~mask_flatten_[:, :, 0, 0], 1)
             valid_width = ops.sum(~mask_flatten_[:, 0, :, 0], 1)
 
-            grid_y, grid_x = meshgrid(
-                (
-                    ops.linspace(0, height - 1, height),
-                    ops.linspace(0, width - 1, width),
+            grid_y, grid_x = ops.meshgrid(
+                ops.linspace(
+                    0,
+                    height - 1,
+                    height,
+                ),
+                ops.linspace(
+                    0,
+                    width - 1,
+                    width,
                 ),
                 indexing="ij",
             )
@@ -1970,11 +1857,9 @@ class DetaModel(DetaPreTrainedModel):
         output_proposals_valid = (
             (output_proposals > 0.01) & (output_proposals < 0.99)
         ).all(-1, keep_dims=True)
-
         output_proposals = ops.log(
             output_proposals / (1 - output_proposals)
         )  # inverse sigmoid
-
         output_proposals = output_proposals.masked_fill(
             padding_mask.unsqueeze(-1), float("inf")
         )
@@ -2069,7 +1954,7 @@ class DetaModel(DetaPreTrainedModel):
                     source = self.input_proj[level](sources[-1])
                 mask = ops.interpolate(
                     pixel_mask[None].float(), size=source.shape[-2:]
-                ).astype(ms.bool_)[0]
+                ).to(ms.bool_)[0]
                 pos_l = self.backbone.position_embedding(source, mask).to(source.dtype)
                 sources.append(source)
                 masks.append(mask)
@@ -2089,7 +1974,6 @@ class DetaModel(DetaPreTrainedModel):
 
         lvl_pos_embed_flatten = []
         for level, pos_embed in enumerate(position_embeddings_list):
-
             pos_embed = pos_embed.flatten(start_dim=2).swapaxes(1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
@@ -2141,13 +2025,9 @@ class DetaModel(DetaPreTrainedModel):
             # hack implementation for two-stage DETA
             # apply a detection head to each pixel (A.4 in paper)
             # linear projection for bounding box binary classification (i.e. foreground and background)
-            enc_outputs_class = self.decoder.class_embed[-1](
-                object_query_embedding
-            )  # pylint: disable=unsubscriptable-object
+            enc_outputs_class = self.decoder.class_embed[-1](object_query_embedding) # pylint: disable=unsubscriptable-object
             # 3-layer FFN to predict bounding boxes coordinates (bbox regression branch)
-            delta_bbox = self.decoder.bbox_embed[-1](
-                object_query_embedding
-            )  # pylint: disable=unsubscriptable-object
+            delta_bbox = self.decoder.bbox_embed[-1](object_query_embedding) # pylint: disable=unsubscriptable-object
             enc_outputs_coord_logits = delta_bbox + output_proposals
 
             # only keep top scoring `config.two_stage_num_proposals` proposals
@@ -2205,7 +2085,7 @@ class DetaModel(DetaPreTrainedModel):
                     # pad to Q indices (might let ones filtered from pre-nms sneak by... unlikely because we pick high conf anyways)
                     if keep_inds_mask.sum() < topk:
                         num_to_add = topk - keep_inds_mask.sum()
-                        pad_inds = ops.nonzero((~keep_inds_mask))[:num_to_add]
+                        pad_inds = (~keep_inds_mask).nonzero()[:num_to_add]
                         keep_inds_mask[pad_inds] = True
 
                     keep_inds_topk = keep_inds[keep_inds_mask]
@@ -2213,11 +2093,13 @@ class DetaModel(DetaPreTrainedModel):
                 topk_proposals = ops.stack(topk_proposals)
             else:
                 topk_proposals = ops.topk(enc_outputs_class[..., 0], topk, dim=1)[1]
+
             topk_coords_logits = ops.gather_elements(
                 enc_outputs_coord_logits,
                 1,
                 topk_proposals.unsqueeze(-1).repeat(1, 1, 4),
             )
+            topk_coords_logits = topk_coords_logits
             reference_points = topk_coords_logits.sigmoid()
             init_reference_points = reference_points
             pos_trans_out = self.pos_trans_norm(
@@ -2291,6 +2173,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
     # We can't initialize the model on meta device as some weights are modified during the initialization
     _no_split_modules = None
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrForObjectDetection.__init__ with DeformableDetr->Deta
     def __init__(self, config: DetaConfig):
         super().__init__(config)
 
@@ -2403,7 +2286,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         labels (`List[Dict]` of len `(batch_size,)`, *optional*):
             Labels for computing the bipartite matching loss. List of dicts, each dictionary containing at least the
             following 2 keys: 'class_labels' and 'boxes' (the class labels and bounding boxes of an image in the batch
-            respectively). The class labels themselves should be a `torch.LongTensor` of len `(number of bounding boxes
+            respectively). The class labels themselves should be a `ms.Tensor` of len `(number of bounding boxes
             in the image,)` and the boxes a `ms.Tensor` of shape `(number of bounding boxes in the image, 4)`.
 
         Returns:
@@ -2425,7 +2308,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         >>> outputs = model(**inputs)
 
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-        >>> target_sizes = torch.tensor([image.size[::-1]])
+        >>> target_sizes = ms.Tensor([image.size[::-1]])
         >>> results = image_processor.post_process_object_detection(outputs, threshold=0.5, target_sizes=target_sizes)[
         ...     0
         ... ]
@@ -2516,7 +2399,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
                 assign_first_stage=self.config.assign_first_stage,
                 assign_second_stage=self.config.assign_second_stage,
             )
-            # criterion.to(logits.device)
+
             # Third: compute the losses, based on outputs and labels
             outputs_loss = {}
             outputs_loss["logits"] = logits
@@ -2544,7 +2427,6 @@ class DetaForObjectDetection(DetaPreTrainedModel):
                         {k + f"_{i}": v for k, v in weight_dict.items()}
                     )
                 aux_weight_dict.update({k + "_enc": v for k, v in weight_dict.items()})
-
                 weight_dict.update(aux_weight_dict)
             loss = sum(
                 loss_dict[k] * weight_dict[k]
@@ -2585,6 +2467,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         return dict_outputs
 
 
+# Copied from transformers.models.detr.modeling_detr.dice_loss
 def dice_loss(inputs, targets, num_boxes):
     """
     Compute the DICE loss, similar to generalized IOU for masks
@@ -2601,10 +2484,10 @@ def dice_loss(inputs, targets, num_boxes):
     numerator = 2 * (inputs * targets).sum(1)
     denominator = inputs.sum(-1) + targets.sum(-1)
     loss = 1 - (numerator + 1) / (denominator + 1)
-    loss = loss.sum() / num_boxes
-    return loss
+    return loss.sum() / num_boxes
 
 
+# Copied from transformers.models.detr.modeling_detr.sigmoid_focal_loss
 def sigmoid_focal_loss(
     inputs, targets, num_boxes, alpha: float = 0.25, gamma: float = 2
 ):
@@ -2678,6 +2561,7 @@ class DetaLoss(nn.Cell):
         if self.assign_second_stage:
             self.stg2_assigner = DetaStage2Assigner(num_queries)
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss.loss_labels
     def loss_labels(self, outputs, targets, indices, num_boxes):
         """
         Classification loss (Binary focal loss) targets dicts must contain the key "class_labels" containing a tensor
@@ -2697,6 +2581,7 @@ class DetaLoss(nn.Cell):
             dtype=ms.int64,
         )
         target_classes[idx] = target_classes_o
+
         target_classes_onehot = ops.zeros(
             [
                 source_logits.shape[0],
@@ -2705,10 +2590,11 @@ class DetaLoss(nn.Cell):
             ],
             dtype=ms.int64,
         )
-        tmp = ops.ones((8, 12, 1), dtype=ms.int64)
+        tmp = ops.ones(
+            (source_logits.shape[0], source_logits.shape[1], 1), dtype=ms.int64
+        )
         target_classes_onehot.scatter(2, target_classes.unsqueeze(-1), tmp)
         target_classes_onehot = target_classes_onehot[:, :, :-1].astype(ms.float32)
-
         loss_ce = (
             sigmoid_focal_loss(
                 source_logits,
@@ -2723,6 +2609,7 @@ class DetaLoss(nn.Cell):
 
         return losses
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss.loss_cardinality
     def loss_cardinality(self, outputs, targets, indices, num_boxes):
         """
         Compute the cardinality error, i.e. the absolute error in the number of predicted non-empty boxes.
@@ -2738,6 +2625,7 @@ class DetaLoss(nn.Cell):
         losses = {"cardinality_error": card_err}
         return losses
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss.loss_boxes
     def loss_boxes(self, outputs, targets, indices, num_boxes):
         """
         Compute the losses related to the bounding boxes, the L1 regression loss and the GIoU loss.
@@ -2767,17 +2655,16 @@ class DetaLoss(nn.Cell):
         losses["loss_giou"] = loss_giou.sum() / num_boxes
         return losses
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss._get_source_permutation_idx
     def _get_source_permutation_idx(self, indices):
         # permute predictions following indices
         batch_idx = ops.cat(
-            [
-                ops.full_like(source, i, dtype=ms.int64)
-                for i, (source, _) in enumerate(indices)
-            ]
+            [ops.full_like(source, i) for i, (source, _) in enumerate(indices)]
         )
-        source_idx = ops.cat([source.astype(ms.int64) for (source, _) in indices])
+        source_idx = ops.cat([source for (source, _) in indices])
         return batch_idx, source_idx
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss._get_target_permutation_idx
     def _get_target_permutation_idx(self, indices):
         # permute targets following indices
         batch_idx = ops.cat(
@@ -2786,6 +2673,7 @@ class DetaLoss(nn.Cell):
         target_idx = ops.cat([target for (_, target) in indices])
         return batch_idx, target_idx
 
+    # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrLoss.get_loss
     def get_loss(self, loss, outputs, targets, indices, num_boxes):
         loss_map = {
             "labels": self.loss_labels,
@@ -2866,6 +2754,7 @@ class DetaLoss(nn.Cell):
         return losses
 
 
+# Copied from transformers.models.detr.modeling_detr.DetrMLPPredictionHead
 class DetaMLPPredictionHead(nn.Cell):
     """
     Very simple multi-layer perceptron (MLP, also called FFN), used to predict the normalized center coordinates,
@@ -2889,6 +2778,7 @@ class DetaMLPPredictionHead(nn.Cell):
         return x
 
 
+# Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrHungarianMatcher with DeformableDetr->Deta
 class DetaHungarianMatcher(nn.Cell):
     """
     This class computes an assignment between the targets and the predictions of the network.
@@ -2948,7 +2838,7 @@ class DetaHungarianMatcher(nn.Cell):
         out_prob = ops.softmax(
             flatten_01(outputs["logits"]), -1
         )  # [batch_size * num_queries, num_classes]
-        out_bbox = flatten_01(outputs["pred_boxes"])  # [batch_size * num_queries, 4]
+        out_bbox = flatten_01(outputs["pred_boxes"])
 
         # Also concat the target labels and boxes
         target_ids = ops.cat([v["class_labels"] for v in targets])
@@ -2993,14 +2883,16 @@ class DetaHungarianMatcher(nn.Cell):
         ]
 
 
+# Copied from transformers.models.detr.modeling_detr._upcast
 def _upcast(t: Tensor) -> Tensor:
     # Protects from numerical overflows in multiplications by upcasting to the equivalent higher type
     if t.is_floating_point():
-        return t if t.dtype in (ms.float32, ms.float64) else t.flaot()
+        return t if t.dtype in (ms.float32, ms.float64) else t.float()
     else:
         return t if t.dtype in (ms.int32, ms.int64) else t.int()
 
 
+# Copied from transformers.models.detr.modeling_detr.box_area
 def box_area(boxes: Tensor) -> Tensor:
     """
     Computes the area of a set of bounding boxes, which are specified by its (x1, y1, x2, y2) coordinates.
@@ -3017,6 +2909,7 @@ def box_area(boxes: Tensor) -> Tensor:
     return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
 
 
+# Copied from transformers.models.detr.modeling_detr.box_iou
 def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
@@ -3033,6 +2926,7 @@ def box_iou(boxes1, boxes2):
     return iou, union
 
 
+# Copied from transformers.models.detr.modeling_detr.generalized_box_iou
 def generalized_box_iou(boxes1, boxes2):
     """
     Generalized IoU from https://giou.stanford.edu/. The boxes should be in [x0, y0, x1, y1] (corner) format.
@@ -3067,17 +2961,11 @@ def nonzero_tuple(x):
     A 'as_tuple=True' version of torch.nonzero to support torchscript. because of
     https://github.com/pytorch/pytorch/issues/38718
     """
-    # if ms.jit.is_scripting():
-    if x.dim() == 0:
-        out_x = ops.nonzero(x.unsqueeze(0))
-        return out_x.unbind(1)
-    #     return x.nonzero().unbind(1)
-    else:
-        return ops.nonzero(x).unbind(1)
+    return x.nonzero(as_tuple=True)
 
 
 # from https://github.com/facebookresearch/detectron2/blob/9921a2caa585d4fa66c4b534b6fab6e74d89b582/detectron2/modeling/matcher.py#L9
-class DetaMatcher:
+class DetaMatcher(object):
     """
     This class assigns to each predicted "element" (e.g., a box) a ground-truth element. Each predicted element will
     have exactly zero or one matches; each ground-truth element may be matched to zero or more predicted elements.
@@ -3163,7 +3051,9 @@ class DetaMatcher:
         # match_quality_matrix is M (gt) x N (predicted)
         # Max over gt elements (dim 0) to find best gt candidate for each prediction
         matched_vals, matches = ops.max(match_quality_matrix, axis=0)
+
         match_labels = ms.Tensor(ops.ones(matches.shape, dtype=ms.int8))
+
         for l, low, high in zip(self.labels, self.thresholds[:-1], self.thresholds[1:]):
             low_high = (matched_vals >= low) & (matched_vals < high)
             match_labels[low_high] = l
@@ -3192,12 +3082,6 @@ class DetaMatcher:
         # If an anchor was labeled positive only due to a low-quality match
         # with gt_A, but it has larger overlap with gt_B, it's matched index will still be gt_B.
         # This follows the implementation in Detectron, and is found to have no significant impact.
-        # updates = ms.Tensor(
-        #     ops.ones(pred_inds_with_highest_quality.shape, dtype=ms.int8)
-        # )
-        # match_labels = ops.scatter_nd_update(
-        #     match_labels, pred_inds_with_highest_quality.reshape(-1, 1), updates
-        # )
         match_labels[pred_inds_with_highest_quality] = 1
 
 
@@ -3239,9 +3123,8 @@ def subsample_labels(
     num_neg = min(negative.numel(), num_neg)
 
     # randomly select positive and negative examples
-
-    perm1 = ops.randperm(int(positive.numel()))[:num_pos]
-    perm2 = ops.randperm(int(negative.numel()))[:num_neg]
+    perm1 = ops.randperm(positive.numel())[:num_pos]
+    perm2 = ops.randperm(negative.numel())[:num_neg]
 
     pos_idx = positive[perm1]
     neg_idx = negative[perm2]
@@ -3253,41 +3136,13 @@ def sample_topk_per_gt(pr_inds, gt_inds, iou, k):
         return pr_inds, gt_inds
     # find topk matches for each gt
     gt_inds2, counts = gt_inds.unique(return_counts=True)
-    scores, pr_inds2 = iou[gt_inds2].topk(k, axis=1)
+    scores, pr_inds2 = iou[gt_inds2].topk(k, dim=1)
     gt_inds2 = gt_inds2[:, None].repeat(1, k)
 
     # filter to as many matches that gt has
     pr_inds3 = ops.cat([pr[:c] for c, pr in zip(counts, pr_inds2)])
     gt_inds3 = ops.cat([gt[:c] for c, gt in zip(counts, gt_inds2)])
     return pr_inds3, gt_inds3
-
-
-# def sample_topk_per_gt(pr_inds, gt_inds, iou, k):
-#     if len(gt_inds) == 0:
-#         return pr_inds, gt_inds
-
-#     # 查找每个gt的topk匹配项
-#     gt_inds_unique, _, counts = ops.unique_with_pad(gt_inds)
-#     scores, pr_inds_topk = ops.top_k(iou[gt_inds_unique], k)
-#     gt_inds_repeated = ops.tile(ops.expand_dims(gt_inds_unique, -1), (1, k))
-
-#     # 根据gt的数量过滤匹配项
-#     pr_inds_filtered = ops.concat(
-#         [
-#             pr[:c]
-#             for c, pr in zip(counts.asnumpy().tolist(), pr_inds_topk.split(1, axis=0))
-#         ]
-#     )
-#     gt_inds_filtered = ops.concat(
-#         [
-#             gt[:c]
-#             for c, gt in zip(
-#                 counts.asnumpy().tolist(), gt_inds_repeated.split(1, axis=0)
-#             )
-#         ]
-#     )
-
-#     return pr_inds_filtered, gt_inds_filtered
 
 
 # modified from https://github.com/facebookresearch/detectron2/blob/cbbc1ce26473cb2a5cc8f58e8ada9ae14cb41052/detectron2/modeling/roi_heads/roi_heads.py#L123
@@ -3405,9 +3260,9 @@ class DetaStage1Assigner(nn.Cell):
             label, self.batch_size_per_image, self.positive_fraction, 0
         )
         # Fill with the ignore label (-1), then set positive and negative labels
-        label.fill(-1)
-        label.scatter(0, pos_idx, 1)
-        label.scatter(0, neg_idx, 0)
+        label.fill_(-1)
+        label.scatter_(0, pos_idx, 1)
+        label.scatter_(0, neg_idx, 0)
         return label
 
     def construct(self, outputs, targets):
@@ -3438,6 +3293,7 @@ class DetaStage1Assigner(nn.Cell):
             pos_pr_inds, pos_gt_inds = self.postprocess_indices(
                 pos_pr_inds, pos_gt_inds, iou
             )
+
             indices.append((pos_pr_inds, pos_gt_inds))
         return indices
 
