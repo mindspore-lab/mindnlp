@@ -810,6 +810,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("tapex", ("TapexTokenizer", None)),
         ("transfo-xl", ("TransfoXLTokenizer", None)),
         (
+                "udop",
+                (
+                    "UdopTokenizer" if is_sentencepiece_available() else None,
+                    "UdopTokenizerFast" if is_tokenizers_available() else None,
+                ),
+            ),
+        (
             "umt5",
             (
                 "T5Tokenizer" if is_sentencepiece_available() else None,
