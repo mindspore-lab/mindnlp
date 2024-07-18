@@ -1,0 +1,1 @@
+export MS_ALLOC_CONF=enable_vmm:True,vmm_align_size:2MB
