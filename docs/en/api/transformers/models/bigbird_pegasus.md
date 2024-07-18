@@ -1,7 +1,0 @@
-:::mindnlp.transformers.models.bigbird_pegasus.configuration_bigbird_pegasus.BigBirdPegasusConfig
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusForCausalLM
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusForConditionalGeneration
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusForQuestionAnswering
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusForSequenceClassification
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusModel
-:::mindnlp.transformers.models.bigbird_pegasus.modeling_bigbird_pegasus.BigBirdPegasusPreTrainedModel

@@ -1,1 +1,0 @@
-:::mindnlp.transformers.pipelines.pipeline
