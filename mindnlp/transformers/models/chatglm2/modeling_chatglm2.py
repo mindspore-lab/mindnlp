@@ -207,14 +207,12 @@ class PrefixEncoder(nn.Cell):
 def split_tensor_along_last_dim(
         tensor: mindspore.Tensor,
         num_partitions: int,
-        contiguous_split_chunks: bool = False,
 ) -> List[mindspore.Tensor]:
     """Split a tensor along its last dimension.
 
     Arguments:
         tensor: input tensor.
         num_partitions: number of partitions to split the tensor
-        contiguous_split_chunks: If True, make each chunk contiguous in memory.
 
     Returns:
         A list of Tensors
@@ -224,7 +222,6 @@ def split_tensor_along_last_dim(
     last_dim_size = tensor.shape[last_dim] // num_partitions
     # Split.
     tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
-    # Note: torch.split does not create contiguous tensors by default.
     return tensor_list
 
 
@@ -1720,7 +1717,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1),
+            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
                                      ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)

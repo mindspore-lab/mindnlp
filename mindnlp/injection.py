@@ -40,55 +40,13 @@ from mindspore.common.parameter import PARAMETER_NAME_DEFAULT
 
 from mindnlp._legacy.functional import einsum
 from .utils.logging import get_logger
-from .amp import OP_WHITE_LIST, OP_BLACK_LIST, CELL_WHITE_LIST, get_global_amp
+from .amp import OP_WHITE_LIST, OP_BLACK_LIST, get_global_amp
 
 LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
 LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
+GE_MS_2_3 = version.parse(mindspore.__version__) >= version.parse('2.3.0')
 
 DEVICE_TARGET = mindspore.get_context('device_target')
-GLOBAL_FP16_PATCH = False
-
-if DEVICE_TARGET == 'Ascend':
-    GLOBAL_FP16_PATCH = True
-
-old_set_context = mindspore.set_context
-def _set_context(**kwargs):
-    """
-    Args:
-        device_target (str): Specifies the target device. If device_target is not 'Ascend', sets global floating point precision to False.
-        
-    Returns:
-        None: This function does not return any value.
-        
-    Raises:
-        None
-    """
-    if 'device_target' in kwargs and kwargs['device_target'] != 'Ascend':
-        set_global_fp16(False)
-    old_set_context(**kwargs)
-
-mindspore.set_context = _set_context
-
-def set_global_fp16(mode: bool):
-    """set global fp16"""
-    global GLOBAL_FP16_PATCH
-    GLOBAL_FP16_PATCH = mode
-
-def fp16_patch_decorator(func):
-    """fp16 patch on ascend"""
-    def wrapper(*args, **kwargs):
-        if GLOBAL_FP16_PATCH:
-            args = (arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
-                    else arg for arg in args)
-            new_kwargs = {}
-            for k, v in kwargs.items():
-                new_kwargs[k] = v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v
-            result = func(*args, **new_kwargs)
-            result = result.astype(mstype.float32)
-            return result
-        return func(*args, **kwargs)
-
-    return wrapper
 
 def int32_patch_decorator(func):
     """int32 patch on ascend"""
@@ -217,39 +175,15 @@ ops.Primitive.__call__ = _op_call
 # For all backend
 # For functional api
 # matmul
-origin_matmul = ops.matmul
-ops.matmul = fp16_patch_decorator(origin_matmul)
-# mm
-ops.mm = fp16_patch_decorator(origin_matmul)
-# addbmm
-origin_addbmm = ops.addbmm
-ops.addbmm = fp16_patch_decorator(origin_addbmm)
-# addmm
-origin_addmm = ops.addmm
-ops.addmm = fp16_patch_decorator(origin_addmm)
-# addmv
-origin_addmv = ops.addmv
-ops.addmv = fp16_patch_decorator(origin_addmv)
-# addr
-origin_addr = ops.addr
-ops.addr = fp16_patch_decorator(origin_addr)
-# baddbmm
-origin_baddbmm = ops.baddbmm
-ops.baddbmm = fp16_patch_decorator(origin_baddbmm)
-# bmm
-origin_bmm = ops.bmm
-ops.bmm = fp16_patch_decorator(origin_bmm)
 # dense
 def dense(input, weight, bias=None):
     """patched dense"""
     dense_ = _get_cache_prim(ops.Dense)()
     return dense_(input, weight, bias)
 
-ops.dense = fp16_patch_decorator(dense)
+ops.dense = dense
 # einsum
 ops.einsum = einsum
-# conv1d
-ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
 def _ones(*size, dtype=None):
     r"""
@@ -326,6 +260,11 @@ def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mea
 # ops.cross_entropy = _cross_entropy
 
 # for Tensor
+# mean
+if GE_MS_2_3 and DEVICE_TARGET == 'Ascend':
+    Tensor.mean = mindspore.mint.mean
+    StubTensor.mean = mindspore.mint.mean
+
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
     """
@@ -960,6 +899,9 @@ class Embedding(nn.Cell):
             TypeError: If the 'ids' parameter is not a numpy array.
             ValueError: If the shape of the 'ids' array is not (batch_size, sequence_length).
         """
+        if DEVICE_TARGET == 'Ascend' and GE_MS_2_3:
+            return ops.embedding(ids, self.weight, self.padding_idx)
+
         out_shape = ids.shape + (self.embedding_size,)
         flat_ids = ids.reshape((-1,))
 
@@ -1846,12 +1788,9 @@ def _cell_call(self, *args, **kwargs):
     Raises:
         None. The function does not raise any exceptions.
     """
-    GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
-    if GLOBAL_AMP and self.__class__.__name__ in CELL_WHITE_LIST:
-        self.to_float(GLOBAL_AMP_DTYPE)
-    return old_cell_call(self, *args, **kwargs)
+    return self._run_construct(args, kwargs)
 
-nn.Cell.__call__ = old_cell_call
+nn.Cell.__call__ = _cell_call
 
 def get_cell(self, target):
     r"""

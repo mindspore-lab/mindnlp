@@ -90,7 +90,7 @@ class LlamaRMSNorm(nn.Cell):
         """
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        variance = hidden_states.pow(2).mean(-1, keep_dims=True)
+        variance = hidden_states.pow(2).mean(-1, True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
         return self.weight.astype(input_dtype) * hidden_states.astype(input_dtype)
 
@@ -194,7 +194,7 @@ class LlamaRotaryEmbedding(nn.Cell):
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
@@ -274,7 +274,7 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
@@ -332,7 +332,7 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
 
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
