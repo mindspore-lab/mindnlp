@@ -318,7 +318,7 @@ def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mea
         ValueError: If the label_smoothing parameter is outside the valid range [0, 1].
     """
     if weight is None:
-        weight = ops.ones(input.shape[-1], input.dtype)
+        weight = ops.ones((input.shape[-1],), input.dtype)
     _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
     class_dim = 0 if input.ndim == 1 else 1
     return _nll_loss(ops.log_softmax(input, class_dim), target, weight)[0]

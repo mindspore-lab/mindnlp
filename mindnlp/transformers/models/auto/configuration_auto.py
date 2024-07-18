@@ -58,7 +58,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
         ("clipseg", "CLIPSegConfig"),
-        ("clipseg_vision_model","CLIPSegVisionConfig"),
+        ("clipseg_vision_model", "CLIPSegVisionConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("cohere", "CohereConfig"),
@@ -74,15 +74,19 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deit", "DeiTConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
+        ("deepseek_v2", "DeepseekV2Config"),
         ("detr", "DetrConfig"),
+        ("dinov2", "Dinov2Config"),
         ("distilbert", "DistilBertConfig"),
         ("donut-swin", "DonutSwinConfig"),
+        ("dpt", "DPTConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
-        ("focalnet","FocalNetConfig"),
+        ("fnet", "FNetConfig"),
+        ("focalnet", "FocalNetConfig"),
         ("funnel", "FunnelConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
         ("gemma", "GemmaConfig"),
@@ -102,6 +106,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("lxmert", "LxmertConfig"),
         ("m2m_100", "M2M100Config"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
@@ -112,8 +117,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
-        ("mobilenet_v1","MobileNetV1Config"),
-        ("mobilenet_v2","MobileNetV2Config"),
+        ("mobilenet_v1", "MobileNetV1Config"),
+        ("mobilenet_v2", "MobileNetV2Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
@@ -156,10 +161,14 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("tapas", "TapasConfig"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("trocr", "TrOCRConfig"),
+        ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
+        ("unispeech-sat", "UniSpeechSatConfig"),
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vilt", "ViltConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
@@ -175,8 +184,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("xclip", "XCLIPConfig"),
         ("xlm-roberta", "XLMRobertaConfig"),
         ("xlm-roberta-xl", "XLMRobertaXLConfig"),
+        ("xlm-prophetnet", "XLMProphetNetConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),
+        ("xmod", "XmodConfig"),
     ]
 )
 
@@ -231,6 +242,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("decision_transformer", "DECISION_TRANSFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("deformable_detr", "DEFORMABLE_DETR_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("deit", "DEIT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("deepseek_v2", "DEEPSEEK_V2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("deta", "DETA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("detr", "DETR_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("dinat", "DINAT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -434,7 +446,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("clipseg", "CLIPSeg"),
-        ("clipseg_vision_model","CLIPSegVisionModel"),
+        ("clipseg_vision_model", "CLIPSegVisionModel"),
         ("code_llama", "CodeLlama"),
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
@@ -455,6 +467,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("deberta-v2", "DeBERTa-v2"),
         ("decision_transformer", "Decision Transformer"),
         ("deformable_detr", "Deformable DETR"),
+        ("deepseek_v2", "Deepseek_v2"),
         ("deit", "DeiT"),
         ("deplot", "DePlot"),
         ("deta", "DETA"),
@@ -694,7 +707,7 @@ SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(
         ("kosmos-2", "kosmos2"),
         ("maskformer-swin", "maskformer"),
         ("clip_vision_model", "clip"),
-        ("clipseg_vision_model","clipseg"),
+        ("clipseg_vision_model", "clipseg"),
         ("xclip", "x_clip"),
     ]
 )
@@ -768,8 +781,8 @@ class _LazyConfigMapping(OrderedDict):
 
         Raises:
             KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-            AttributeError: 
-                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, 
+            AttributeError:
+                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module,
                 an AttributeError is raised.
             ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """

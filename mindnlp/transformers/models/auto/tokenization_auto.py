@@ -235,6 +235,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "deepseek_v2",
+            (
+                "LlamaTokenizerFast",
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            )
+        ),
+        (
             "distilbert",
             (
                 "DistilBertTokenizer",
@@ -1064,13 +1071,13 @@ class AutoTokenizer:
     def __init__(self):
         """
         This method initializes an instance of the AutoTokenizer class.
-        
+
         Args:
             self: The instance of the AutoTokenizer class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method,
                 an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the

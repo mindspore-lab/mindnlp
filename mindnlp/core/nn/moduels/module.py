@@ -1,8 +1,6 @@
 """Module"""
 from collections import OrderedDict
-from ...tensor import Tensor
-from ..parameter import Parameter
-
+from mindspore import Tensor, Parameter
 
 class Module:
     r"""Base class for all neural network modules.
