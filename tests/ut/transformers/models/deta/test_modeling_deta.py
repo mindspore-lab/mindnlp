@@ -695,29 +695,28 @@ class DetaModelIntegrationTests(unittest.TestCase):
             ]
         )
 
-        # self.assertTrue(
-        #     np.allclose(
-        #         outputs.logits[0, :3, :3].asnumpy(),
-        #         expected_logits.asnumpy(),
-        #         atol=1e-4,
-        #     )
-        # )
+        self.assertTrue(
+            np.allclose(
+                outputs.logits[0, :3, :3].asnumpy(),
+                expected_logits.asnumpy(),
+                atol=1e-4,
+            )
+        )
 
-        # expected_shape_boxes = (1, 300, 4)
-        # self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
-        # self.assertTrue(
-        #     np.allclose(
-        #         outputs.pred_boxes[0, :3, :3].asnumpy(),
-        #         expected_boxes.asnumpy(),
-        #         atol=1e-4,
-        #     )
-        # )
+        expected_shape_boxes = (1, 300, 4)
+        self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
+        self.assertTrue(
+            np.allclose(
+                outputs.pred_boxes[0, :3, :3].asnumpy(),
+                expected_boxes.asnumpy(),
+                atol=1e-4,
+            )
+        )
 
         # verify postprocessing
         results = image_processor.post_process_object_detection(
             outputs, threshold=0.3, target_sizes=[image.size[::-1]]
         )[0]
-        print(results["scores"], results["labels"].tolist())
         expected_scores = ms.Tensor([0.6392, 0.6276, 0.5546, 0.5260, 0.4706])
         expected_labels = [75, 17, 17, 75, 63]
         expected_slice_boxes = ms.Tensor([40.5866, 73.2107, 176.1421, 117.1751])

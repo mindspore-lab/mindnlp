@@ -22,7 +22,6 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore as ms
 
-ms.set_context(pynative_synchronize=True, device_target="CPU")
 from mindspore import ops, nn, Tensor
 from mindspore.common.initializer import (
     initializer,
@@ -2099,7 +2098,6 @@ class DetaModel(DetaPreTrainedModel):
                 1,
                 topk_proposals.unsqueeze(-1).repeat(1, 1, 4),
             )
-            topk_coords_logits = topk_coords_logits
             reference_points = topk_coords_logits.sigmoid()
             init_reference_points = reference_points
             pos_trans_out = self.pos_trans_norm(
@@ -2965,7 +2963,7 @@ def nonzero_tuple(x):
 
 
 # from https://github.com/facebookresearch/detectron2/blob/9921a2caa585d4fa66c4b534b6fab6e74d89b582/detectron2/modeling/matcher.py#L9
-class DetaMatcher(object):
+class DetaMatcher():
     """
     This class assigns to each predicted "element" (e.g., a box) a ground-truth element. Each predicted element will
     have exactly zero or one matches; each ground-truth element may be matched to zero or more predicted elements.
