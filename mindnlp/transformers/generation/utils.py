@@ -28,8 +28,9 @@ from addict import Dict as ADDict
 
 import mindspore
 from mindspore import ops
+from mindspore.common.api import _no_grad
 
-from mindnlp.utils import ModelOutput, logging, ExplicitEnum, no_grad
+from mindnlp.utils import ModelOutput, logging, ExplicitEnum
 from .configuration_utils import GenerationConfig
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
 from ..cache_utils import StaticCache
@@ -1523,7 +1524,7 @@ class GenerationMixin:
 
         return model_kwargs
 
-    @no_grad
+    @_no_grad()
     def generate(
         self,
         inputs: Optional[mindspore.Tensor] = None,
@@ -2077,6 +2078,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
+    @_no_grad()
     def contrastive_search(
         self,
         input_ids: mindspore.Tensor,
