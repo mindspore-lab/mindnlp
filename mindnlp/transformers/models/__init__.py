@@ -108,6 +108,7 @@ from . import (
     instructblip,
     ibert,
     jetmoe,
+    kosmos2,
     layoutlm,
     layoutlmv2,
     led,
@@ -310,6 +311,7 @@ from .hubert import *
 from .imagegpt import *
 from .instructblip import *
 from .jetmoe import *
+from .kosmos2 import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .led import *
@@ -319,8 +321,8 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
-from .m2m_100 import *
 from .lxmert import *
+from .m2m_100 import *
 from .mamba import *
 from .marian import *
 from .markuplm import *
@@ -513,6 +515,7 @@ __all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
+__all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(led.__all__)
@@ -522,8 +525,8 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
-__all__.extend(m2m_100.__all__)
 __all__.extend(lxmert.__all__)
+__all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(markuplm.__all__)
