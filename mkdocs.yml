@@ -10,6 +10,7 @@ nav:
       - Data Preprocess: tutorials/data_preprocess.md
       - Use Trainer: tutorials/use_trainer.md
       - PEFT: tutorials/peft.md
+      - Use Mirror: tutorials/use_mirror.md
   - Supported Models: supported_models.md
   - How-To Contribute:  contribute.md
   - API Reference:

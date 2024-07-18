@@ -67,12 +67,14 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    deepseek_v2,
     detr,
     deit,
     dinov2,
     distilbert,
     donut,
     dpr,
+    dpt,
     efficientnet,
     efficientformer,
     electra,
@@ -118,6 +120,8 @@ from . import (
     lxmert,
     mamba,
     marian,
+    markuplm,
+    m2m_100,
     mask2former,
     mbart,
     mbart50,
@@ -186,6 +190,7 @@ from . import (
     trocr,
     upernet,
     umt5,
+    unispeech_sat,
     univnet,
     videomae,
     vipllava,
@@ -207,10 +212,11 @@ from . import (
     xlm,
     xlm_roberta,
     xlm_roberta_xl,
+    xlm_prophetnet,
     xlnet,
     xmod,
     vilt,
-    deepseek_v2,
+    yolos,
 )
 
 from .owlv2 import *
@@ -270,6 +276,7 @@ from .dinov2 import *
 from .distilbert import *
 from .donut import *
 from .dpr import *
+from .dpt import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -312,9 +319,11 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
+from .m2m_100 import *
 from .lxmert import *
 from .mamba import *
 from .marian import *
+from .markuplm import *
 from .mask2former import *
 from .mbart import *
 from .mbart50 import *
@@ -382,6 +391,7 @@ from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
 from .upernet import *
+from .unispeech_sat import *
 from .univnet import *
 from .videomae import *
 from .vilt import *
@@ -404,9 +414,11 @@ from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
+from .xlm_prophetnet import *
 from .xlnet import *
 from .umt5 import *
 from .xmod import *
+from .yolos import *
 
 
 
@@ -467,6 +479,7 @@ __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
+__all__.extend(dpt.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
@@ -509,9 +522,11 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(m2m_100.__all__)
 __all__.extend(lxmert.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
+__all__.extend(markuplm.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(mbart50.__all__)
@@ -579,6 +594,7 @@ __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vilt.__all__)
@@ -601,6 +617,8 @@ __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
+__all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(yolos.__all__)
