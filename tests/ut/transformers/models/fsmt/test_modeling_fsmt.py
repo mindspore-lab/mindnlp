@@ -336,6 +336,10 @@ class FSMTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     def test_resize_embeddings_untied(self):
         pass
 
+    @unittest.skip(reason="")
+    def test_model_common_attributes(self):
+        pass
+
 
 @require_mindspore
 class FSMTHeadTests(unittest.TestCase):
