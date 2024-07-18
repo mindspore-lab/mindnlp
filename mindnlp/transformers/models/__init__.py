@@ -90,6 +90,7 @@ from . import (
     focalnet,
     fnet,
     funnel,
+    fsmt,
     gemma,
     git,
     gpt,
@@ -291,6 +292,7 @@ from .flava import *
 from .focalnet import *
 from .fnet import *
 from .funnel import *
+from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
@@ -491,6 +493,7 @@ __all__.extend(flava.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
