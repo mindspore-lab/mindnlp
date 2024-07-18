@@ -20,7 +20,6 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 import numpy as np
 import mindspore as ms
 from mindspore import ops
-from mindspore.ops._primitive_cache import _get_cache_prim
 from ...feature_extraction_utils import BatchFeature
 from ...image_processing_utils import BaseImageProcessor, get_size_dict
 from ...image_transforms import (
