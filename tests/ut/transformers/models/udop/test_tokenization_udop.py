@@ -1936,8 +1936,6 @@ class UdopTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
                 py_tokens_output = tokenizer_py.tokenize(special_sentence)
                 rust_tokens_output = tokenizer_rust.tokenize(special_sentence,split_special_tokens=True)
-                print(py_tokens_output)
-                print(rust_tokens_output)
                 self.assertTrue(special_token not in py_tokens_output)
                 self.assertTrue(special_token not in rust_tokens_output)
 
