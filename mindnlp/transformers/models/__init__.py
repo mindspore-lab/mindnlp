@@ -110,6 +110,7 @@ from . import (
     kosmos2,
     layoutlm,
     layoutlmv2,
+    layoutlmv3,
     led,
     lilt,
     llama,
@@ -188,6 +189,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    udop,
     upernet,
     umt5,
     unispeech_sat,
@@ -312,6 +314,7 @@ from .jetmoe import *
 from .kosmos2 import *
 from .layoutlm import *
 from .layoutlmv2 import *
+from .layoutlmv3 import *
 from .led import *
 from .lilt import *
 from .llama import *
@@ -390,6 +393,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .udop import *
 from .upernet import *
 from .unispeech_sat import *
 from .univnet import *
@@ -514,6 +518,7 @@ __all__.extend(jetmoe.__all__)
 __all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+__all__.extend(layoutlmv3.__all__)
 __all__.extend(led.__all__)
 __all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
@@ -592,6 +597,7 @@ __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
