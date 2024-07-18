@@ -21,6 +21,7 @@
 import math
 import warnings
 from typing import List, Optional, Tuple, Union
+import numpy as np
 
 import mindspore
 from mindspore import ops
@@ -50,7 +51,6 @@ from mindnlp.utils import (
 )
 
 from .configuration_deepseek import DeepseekV2Config
-import numpy as np
 
 logger = logging.get_logger(__name__)
 
@@ -1399,12 +1399,11 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
                 elif self.num_labels > 1 and (
-                    labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32
+                    labels.dtype in (mindspore.int64, mindspore.int32)
                 ):
                     self.config.problem_type = "single_label_classification"
                 else:
