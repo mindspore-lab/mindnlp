@@ -388,9 +388,9 @@ class LlamaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         """
         Overwritting the common test as the test is flaky on tiny models
         """
-        model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf")
+        model = LlamaForCausalLM.from_pretrained("shakechen/Llama-2-7b-hf", mirror='modelscope')
 
-        tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
+        tokenizer = LlamaTokenizer.from_pretrained("shakechen/Llama-2-7b-hf", mirror='modelscope')
 
         texts = ["hi", "Hello this is a very long sentence"]
 

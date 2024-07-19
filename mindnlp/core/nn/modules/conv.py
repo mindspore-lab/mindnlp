@@ -3,8 +3,8 @@
 import math
 from typing import Optional, Tuple, Union, List
 from mindspore import ops, Tensor, Parameter
+from mindspore.common.initializer import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from .module import Module
-from ..init import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from ..common_types import _size_2_t, _size_1_t
 from .utils import _single, _pair, _reverse_repeat_tuple
 

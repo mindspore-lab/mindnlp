@@ -2,7 +2,7 @@
 from typing import Any
 import math
 from mindspore import Parameter, Tensor, ops
-from ..init import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
+from mindspore.common.initializer import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from .module import Module
 
 class Linear(Module):
