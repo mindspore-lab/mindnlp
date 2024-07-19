@@ -13,4 +13,4 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-from . import optim
+from . import optim, ops, nn
