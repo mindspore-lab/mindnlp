@@ -2,9 +2,9 @@
 import numbers
 import mindspore
 from mindspore import ops, Parameter
-import mindspore.mint.nn.functional
+from mindspore.common.initializer import initializer
+
 from mindnlp.configs import USE_PYBOOST
-from ..init import initializer
 from .module import Module
 
 class LayerNorm(Module):

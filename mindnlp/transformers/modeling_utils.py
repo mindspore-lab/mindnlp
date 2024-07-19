@@ -1107,7 +1107,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
 
         ptrs = collections.defaultdict(list)
         for name, tensor in model.parameters_dict().items():
-            id_tensor = id(tensor)
+            id_tensor = hash(tensor)
             ptrs[id_tensor].append(name)
 
         # These are all the pointers of shared tensors.
@@ -1138,7 +1138,6 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             return state_dict
 
         keys_missing = list(model.parameters_dict().keys())
-        param_id_set = set()
 
         use_keep_in_fp32_modules = False
         if model._keep_in_fp32_modules:
@@ -1175,12 +1174,6 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                     param_name = pname_in_net.replace(f'{prefix}.', '', 1)
                 else:
                     param_name = pname_in_net
-
-                if id(param) in param_id_set:
-                    # for tied params
-                    if param_name in keys_unexpected:
-                        keys_unexpected.remove(param_name)
-                    continue
 
                 new_param = param_dict.pop(param_name, None)
                 module_dtype = None
@@ -1223,7 +1216,6 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                     keys_unexpected.remove(param_name)
                     if pname_in_net in keys_missing:
                         keys_missing.remove(pname_in_net)
-                    param_id_set.add(id(param))
                 else:
                     # fix missing value parameter dtype cast.
                     if isinstance(param, Parameter) and ms_dtype and ms_dtype != param.dtype:
@@ -1397,12 +1389,9 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
     def num_parameters(self, only_trainable=False):
         """return parameters count"""
         total = 0
-        param_set = set()
         for param in self.get_parameters():
-            param_id = id(param)
-            if param_id not in param_set and (only_trainable or param.requires_grad):
+            if (only_trainable or param.requires_grad):
                 total += param.size
-            param_set.add(param_id)
         return total
 
     def trainable_params(self, recurse=True):
@@ -1656,7 +1645,7 @@ def shard_checkpoint(
         # check: https://github.com/huggingface/transformers/pull/24416 for more details
         if isinstance(weight, str):
             continue
-        storage_id = id(weight)
+        storage_id = hash(weight)
 
         # If a `weight` shares the same underlying storage as another tensor, we put `weight` in the same `block`
         if storage_id in storage_id_to_block:

@@ -2,10 +2,10 @@
 from typing import Optional
 import mindspore
 from mindspore import ops, Tensor, Parameter
+from mindspore.common.initializer import initializer
 import mindspore.mint.nn.functional
 
 from mindnlp.configs import USE_PYBOOST
-from ..init import initializer
 from .module import Module
 
 class _NormBase(Module):
@@ -40,8 +40,8 @@ class _NormBase(Module):
         self.weight = Parameter(initializer('ones', (num_features,)), 'weight', affine)
         self.bias = Parameter(initializer('zeros', (num_features,)), 'bias', affine)
         if self.track_running_stats:
-            self.register_buffer('running_mean', ops.zeros(num_features, **factory_kwargs))
-            self.register_buffer('running_var', ops.ones(num_features, **factory_kwargs))
+            self.register_buffer('running_mean', Parameter(initializer('zeros', (num_features,)), 'running_mean', False))
+            self.register_buffer('running_var', Parameter(initializer('ones', (num_features,)), 'running_mean', False))
             self.running_mean: Optional[Tensor]
             self.running_var: Optional[Tensor]
             self.register_buffer('num_batches_tracked',

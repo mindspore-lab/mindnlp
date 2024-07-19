@@ -1604,7 +1604,7 @@ class GenerationTesterMixin:
                 ),
             }
 
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # We want to test only models where encoder/decoder head masking is implemented
             if not set(head_masking.keys()) < {*signature.parameters.keys()}:
                 continue
@@ -1670,7 +1670,7 @@ class GenerationTesterMixin:
         for model_class in decoder_only_classes:
             config, input_ids, attention_mask, _ = self._get_input_ids_and_config()
             model = model_class(config).set_train(False)
-            signature = inspect.signature(model.construct).parameters.keys()
+            signature = inspect.signature(model.forward).parameters.keys()
 
             # Without padding
             model_kwargs = _prepare_model_kwargs(input_ids, attention_mask, signature)
