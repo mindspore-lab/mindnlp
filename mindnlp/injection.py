@@ -21,7 +21,6 @@ from typing import OrderedDict, List
 from functools import reduce, partial
 import math
 import types
-from uuid import uuid4
 import mindspore.experimental
 import mindspore.experimental.optim
 from packaging import version
@@ -582,55 +581,6 @@ def _eq(self, other):
 
 Parameter.__eq__ = _eq
 
-
-def _initialize(self, init_method):
-    r"""
-    Initializes the object with the given initialization method.
-    
-    Args:
-        self (object): The instance of the class.
-        init_method (str): The method used for initialization.
-            This parameter determines how the data is initialized.
-            Valid values for `init_method` are:
-                - "random": Initializes the data with random values.
-                - "zeros": Initializes the data with zeros.
-                - "ones": Initializes the data with ones.
-            Default value is "random".
-    
-    Returns:
-        None. This function does not return any value.
-    
-    Raises:
-        None.
-    
-    Note:
-        This function sets the data of the object using the specified `init_method` and the object's shape and data type.
-    """
-    self.set_data(initializer(init_method, self.shape, self.dtype))
-
-Parameter.initialize = _initialize
-
-old_param_init = Parameter.__init__
-def _param_new_init(self, default_input, name=None, requires_grad=True, layerwise_parallel=False, parallel_optimizer=True):
-    """
-    Args:
-        self (object): The instance of the class.
-        default_input (object): The default input for the function.
-        name (str, optional): The name of the parameter (default is None).
-        requires_grad (bool, optional): Flag indicating if gradients are required (default is True).
-        layerwise_parallel (bool, optional): Flag for layerwise parallelism (default is False).
-        parallel_optimizer (bool, optional): Flag for parallel optimizer (default is True).
-    
-    Returns:
-        None. This function does not return any value.
-    
-    Raises:
-        None.
-    """
-    old_param_init(self, default_input, name, requires_grad, layerwise_parallel, parallel_optimizer)
-    self.uuid = uuid4().hex
-
-Parameter.__init__ = _param_new_init
 
 old_repeat = Tensor.repeat
 def new_repeat_interleave(input, repeats, axis=None):

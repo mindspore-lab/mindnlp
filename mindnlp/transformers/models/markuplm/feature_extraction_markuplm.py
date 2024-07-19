@@ -18,14 +18,11 @@ Feature extractor class for MarkupLM.
 
 import html
 
-import bs4
-from bs4 import BeautifulSoup
-from mindnlp.utils import logging
+from mindnlp.utils import is_bs4_available, logging
 from ...feature_extraction_utils import BatchFeature, FeatureExtractionMixin
-# from mindnlp.utils import is_bs4_available, logging, requires_backends
-# if is_bs4_available():
-#     import bs4
-#     from bs4 import BeautifulSoup
+if is_bs4_available():
+    import bs4
+    from bs4 import BeautifulSoup
 
 logger = logging.get_logger(__name__)
 

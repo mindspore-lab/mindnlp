@@ -79,7 +79,8 @@ from mindnlp.configs import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindspore import ops
+    from mindnlp.core import nn, serialization
 
     from mindnlp.transformers import MODEL_MAPPING
 
@@ -195,7 +196,7 @@ class ModelTesterMixin:
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -397,7 +398,7 @@ class ModelTesterMixin:
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.config.save_pretrained(tmpdirname)
-                mindspore.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
+                serialization.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
 
                 model_fast_init = base_class_copy.from_pretrained(tmpdirname)
                 model_slow_init = base_class_copy.from_pretrained(tmpdirname, _fast_init=False)
@@ -672,7 +673,6 @@ class ModelTesterMixin:
             inputs_dict["output_attentions"] = True
             config.output_hidden_states = False
             model = model_class(config=config)
-            model
             model.set_train(False)
             heads_to_prune = {
                 0: list(range(1, self.model_tester.num_attention_heads)),
@@ -1093,11 +1093,11 @@ class ModelTesterMixin:
             self.assertIsInstance(model.get_input_embeddings(), nn.Embedding)
             model.set_input_embeddings(nn.Embedding(10, 10))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model_main_input_name(self):
         for model_class in self.all_model_classes:
-            model_signature = inspect.signature(getattr(model_class, "construct"))
+            model_signature = inspect.signature(getattr(model_class, "forward"))
             # The main input is the name of the argument after `self`
             observed_main_input_name = list(model_signature.parameters.keys())[1]
             self.assertEqual(model_class.main_input_name, observed_main_input_name)

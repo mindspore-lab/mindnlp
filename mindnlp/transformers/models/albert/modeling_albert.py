@@ -22,9 +22,10 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -63,7 +64,7 @@ ALBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class AlbertEmbeddings(nn.Cell):
+class AlbertEmbeddings(nn.Module):
     """
     Construct the embeddings from word, position and token_type embeddings.
     """
@@ -98,7 +99,7 @@ class AlbertEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.embedding_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.embedding_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
@@ -107,7 +108,7 @@ class AlbertEmbeddings(nn.Cell):
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.forward
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -174,7 +175,7 @@ class AlbertEmbeddings(nn.Cell):
         return embeddings
 
 
-class AlbertAttention(nn.Cell):
+class AlbertAttention(nn.Module):
 
     """
     A class representing the attention mechanism for the ALBERT (A Lite BERT) model.
@@ -183,7 +184,7 @@ class AlbertAttention(nn.Cell):
     It includes methods for processing queries, keys, and values, calculating attention scores, applying attention masks,
     handling position embeddings, and generating the final contextualized output.
 
-    This class inherits from the nn.Cell class and contains the following methods:
+    This class inherits from the nn.Module class and contains the following methods:
 
     - __init__(self, config: AlbertConfig): Initializes the AlbertAttention instance with the provided configuration.
     - transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor: Transposes the input tensor for calculating attention scores.
@@ -233,14 +234,14 @@ class AlbertAttention(nn.Cell):
         self.attention_head_size = config.hidden_size // config.num_attention_heads
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.attention_dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.output_dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pruned_heads = set()
 
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
@@ -300,7 +301,7 @@ class AlbertAttention(nn.Cell):
         self.all_head_size = self.attention_head_size * self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -390,11 +391,11 @@ class AlbertAttention(nn.Cell):
         return (layernormed_context_layer, attention_probs) if output_attentions else (layernormed_context_layer,)
 
 
-class AlbertLayer(nn.Cell):
+class AlbertLayer(nn.Module):
 
     '''
     This class represents an AlbertLayer module, which is a single layer of the Albert model.
-    It inherits from nn.Cell and contains methods for initialization and forward pass computation.
+    It inherits from nn.Module and contains methods for initialization and forward pass computation.
 
     The __init__ method initializes the AlbertLayer with the provided configuration.
     It sets various attributes based on the configuration, including chunk size for feed forward, sequence length dimension,
@@ -428,14 +429,14 @@ class AlbertLayer(nn.Cell):
         self.config = config
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.full_layer_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.full_layer_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.attention = AlbertAttention(config)
-        self.ffn = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.ffn_output = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.ffn = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.ffn_output = nn.Linear(config.intermediate_size, config.hidden_size)
         self.activation = ACT2FN[config.hidden_act]
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -501,13 +502,13 @@ class AlbertLayer(nn.Cell):
         return ffn_output
 
 
-class AlbertLayerGroup(nn.Cell):
+class AlbertLayerGroup(nn.Module):
 
     """
-    This class represents a group of Albert layers within the Albert model. It inherits from the nn.Cell class.
+    This class represents a group of Albert layers within the Albert model. It inherits from the nn.Module class.
 
     Attributes:
-        albert_layers (nn.CellList): A list of AlbertLayer instances that make up the group.
+        albert_layers (nn.ModuleList): A list of AlbertLayer instances that make up the group.
 
     Methods:
         __init__:
@@ -541,9 +542,9 @@ class AlbertLayerGroup(nn.Cell):
         """
         super().__init__()
 
-        self.albert_layers = nn.CellList([AlbertLayer(config) for _ in range(config.inner_group_num)])
+        self.albert_layers = nn.ModuleList([AlbertLayer(config) for _ in range(config.inner_group_num)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -593,17 +594,17 @@ class AlbertLayerGroup(nn.Cell):
         return outputs  # last-layer hidden state, (layer hidden states), (layer attentions)
 
 
-class AlbertTransformer(nn.Cell):
+class AlbertTransformer(nn.Module):
 
     """
     This class represents the AlbertTransformer, which is a part of the Albert model in the MindSpore library. It is responsible for constructing the Albert transformer layers.
 
-    The AlbertTransformer class inherits from the nn.Cell class.
+    The AlbertTransformer class inherits from the nn.Module class.
 
     Attributes:
         config (AlbertConfig): The configuration object for the Albert model.
-        embedding_hidden_mapping_in (nn.Dense): The dense layer to map the input hidden states to the embedding size.
-        albert_layer_groups (nn.CellList): A list of AlbertLayerGroup instances representing the transformer layers.
+        embedding_hidden_mapping_in (nn.Linear): The dense layer to map the input hidden states to the embedding size.
+        albert_layer_groups (nn.ModuleList): A list of AlbertLayerGroup instances representing the transformer layers.
 
     Methods:
         construct(hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False, return_dict=True):
@@ -641,10 +642,10 @@ class AlbertTransformer(nn.Cell):
         super().__init__()
 
         self.config = config
-        self.embedding_hidden_mapping_in = nn.Dense(config.embedding_size, config.hidden_size)
-        self.albert_layer_groups = nn.CellList([AlbertLayerGroup(config) for _ in range(config.num_hidden_groups)])
+        self.embedding_hidden_mapping_in = nn.Linear(config.embedding_size, config.hidden_size)
+        self.albert_layer_groups = nn.ModuleList([AlbertLayerGroup(config) for _ in range(config.num_hidden_groups)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -718,12 +719,12 @@ class AlbertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -806,7 +807,7 @@ class AlbertModel(AlbertPreTrainedModel):
         self.embeddings = AlbertEmbeddings(config)
         self.encoder = AlbertTransformer(config)
         if add_pooling_layer:
-            self.pooler = nn.Dense(config.hidden_size, config.hidden_size)
+            self.pooler = nn.Linear(config.hidden_size, config.hidden_size)
             self.pooler_activation = nn.Tanh()
         else:
             self.pooler = None
@@ -865,7 +866,7 @@ class AlbertModel(AlbertPreTrainedModel):
             inner_group_idx = int(layer - group_idx * self.config.inner_group_num)
             self.encoder.albert_layer_groups[group_idx].albert_layers[inner_group_idx].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1000,7 +1001,7 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_output_embeddings(self) -> nn.Dense:
+    def get_output_embeddings(self) -> nn.Linear:
         """
         Retrieves the output embeddings from the AlbertForPreTraining model.
 
@@ -1008,7 +1009,7 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
             self (AlbertForPreTraining): The current instance of the AlbertForPreTraining class.
 
         Returns:
-            nn.Dense: The output embeddings of the model.
+            nn.Linear: The output embeddings of the model.
 
         Raises:
             None.
@@ -1025,20 +1026,20 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
         """
         return self.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddings: nn.Dense) -> None:
+    def set_output_embeddings(self, new_embeddings: nn.Linear) -> None:
         """
         Set the output embeddings for the AlbertForPreTraining model.
 
         Args:
             self (AlbertForPreTraining): The current instance of the AlbertForPreTraining model.
-            new_embeddings (nn.Dense): The new embeddings to be set as the output embeddings for the model.
-                It should be an instance of nn.Dense representing the new output embeddings.
+            new_embeddings (nn.Linear): The new embeddings to be set as the output embeddings for the model.
+                It should be an instance of nn.Linear representing the new output embeddings.
 
         Returns:
             None.
 
         Raises:
-            TypeError: If the new_embeddings parameter is not of type nn.Dense.
+            TypeError: If the new_embeddings parameter is not of type nn.Linear.
         """
         self.predictions.decoder = new_embeddings
 
@@ -1057,7 +1058,7 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
         """
         return self.albert.embeddings.word_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1139,13 +1140,13 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
         )
 
 
-class AlbertMLMHead(nn.Cell):
+class AlbertMLMHead(nn.Module):
 
     """
     AlbertMLMHead class represents the MLM (Masked Language Model) head for an ALBERT (A Lite BERT) model in a neural network.
     It includes methods for initializing the MLM head, constructing the prediction scores, and tying the weights.
 
-    This class inherits from the nn.Cell class and implements the following methods:
+    This class inherits from the nn.Module class and implements the following methods:
 
     1. __init__(self, config: AlbertConfig):
 
@@ -1186,14 +1187,14 @@ class AlbertMLMHead(nn.Cell):
         """
         super().__init__()
 
-        self.LayerNorm = nn.LayerNorm([config.embedding_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.embedding_size], eps=config.layer_norm_eps)
         self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
-        self.dense = nn.Dense(config.hidden_size, config.embedding_size)
-        self.decoder = nn.Dense(config.embedding_size, config.vocab_size)
+        self.dense = nn.Linear(config.hidden_size, config.embedding_size)
+        self.decoder = nn.Linear(config.embedding_size, config.vocab_size)
         self.activation = ACT2FN[config.hidden_act]
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the Albert Masked Language Model (MLM) head.
 
@@ -1236,12 +1237,12 @@ class AlbertMLMHead(nn.Cell):
         self.bias = self.decoder.bias
 
 
-class AlbertSOPHead(nn.Cell):
+class AlbertSOPHead(nn.Module):
 
     """
     This class represents the AlbertSOPHead, which is responsible for constructing the sentence-order prediction (SOP) head in an ALBERT (A Lite BERT) model.
 
-    The AlbertSOPHead class inherits from nn.Cell and provides methods for initializing the SOP head and constructing the logits for SOP classification.
+    The AlbertSOPHead class inherits from nn.Module and provides methods for initializing the SOP head and constructing the logits for SOP classification.
 
     Attributes:
         config (AlbertConfig): The configuration object for the ALBERT model.
@@ -1283,9 +1284,9 @@ class AlbertSOPHead(nn.Cell):
         super().__init__()
 
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, pooled_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pooled_output: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs the AlbertSOPHead by applying dropout and classifier operations on the provided pooled_output.
 
@@ -1341,7 +1342,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_output_embeddings(self) -> nn.Dense:
+    def get_output_embeddings(self) -> nn.Linear:
         """
         Retrieve the output embeddings from the AlbertForMaskedLM model.
 
@@ -1351,7 +1352,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
                 It is used to access the model's predictions.decoder attribute.
 
         Returns:
-            nn.Dense: The output embeddings of the model.
+            nn.Linear: The output embeddings of the model.
                 These embeddings are used for generating predictions for masked tokens.
 
         Raises:
@@ -1359,13 +1360,13 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
         """
         return self.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddings: nn.Dense) -> None:
+    def set_output_embeddings(self, new_embeddings: nn.Linear) -> None:
         """
         Sets the output embeddings for the AlbertForMaskedLM model.
 
         Args:
             self (AlbertForMaskedLM): The instance of the AlbertForMaskedLM class.
-            new_embeddings (nn.Dense): The new embeddings to be set for the output layer of the model.
+            new_embeddings (nn.Linear): The new embeddings to be set for the output layer of the model.
 
         Returns:
             None.
@@ -1395,7 +1396,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
         """
         return self.albert.embeddings.word_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1520,7 +1521,7 @@ class AlbertForSequenceClassification(AlbertPreTrainedModel):
             3. Sets the `config` attribute of the instance to the `config` parameter.
             4. Creates a new instance of the `AlbertModel` class, named `albert`, using the `config` parameter.
             5. Creates a new instance of the `nn.Dropout` class, named `dropout`, with the dropout probability specified in `config.classifier_dropout_prob`.
-            6. Creates a new instance of the `nn.Dense` class, named `classifier`, with the input size of `config.hidden_size` and the output size of `config.num_labels`.
+            6. Creates a new instance of the `nn.Linear` class, named `classifier`, with the input size of `config.hidden_size` and the output size of `config.num_labels`.
             7. Calls the `post_init` method to perform any additional initialization steps.
 
         Note:
@@ -1532,12 +1533,12 @@ class AlbertForSequenceClassification(AlbertPreTrainedModel):
 
         self.albert = AlbertModel(config)
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1618,7 +1619,7 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
         num_labels (int): The number of labels for the token classification task.
         albert (AlbertModel): The underlying AlbertModel instance for feature extraction.
         dropout (nn.Dropout): Dropout layer for regularization.
-        classifier (nn.Dense): Dense layer for classification.
+        classifier (nn.Linear): Dense layer for classification.
         config (AlbertConfig): The configuration object for the model.
 
     Methods:
@@ -1672,12 +1673,12 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1740,7 +1741,7 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
     Attributes:
         num_labels (int): Number of labels for the classification task.
         albert (AlbertModel): The Albert model used for question answering.
-        qa_outputs (nn.Dense): A dense layer for computing logits for start and end positions.
+        qa_outputs (nn.Linear): A dense layer for computing logits for start and end positions.
 
     Methods:
         __init__: Initializes the AlbertForQuestionAnswering class with the provided configuration.
@@ -1770,12 +1771,12 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.albert = AlbertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1893,12 +1894,12 @@ class AlbertForMultipleChoice(AlbertPreTrainedModel):
 
         self.albert = AlbertModel(config)
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
