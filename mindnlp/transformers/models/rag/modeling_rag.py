@@ -786,15 +786,15 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         )
 
     @property
-    def retriever(self) -> RagRetriever:
+    def retriever(self):
         return self.rag.retriever
 
     @property
-    def generator(self) -> PreTrainedModel:
+    def generator(self):
         return self.rag.generator
 
     @property
-    def question_encoder(self) -> PreTrainedModel:
+    def question_encoder(self):
         return self.rag.question_encoder
 
     #@torch.no_grad()
@@ -875,8 +875,8 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         ), " At least one of input_ids or context_input_ids must be given"
 
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
-            context_input_ids = self.retriever(
+            question_hidden_states = self.rag.question_encoder(input_ids, attention_mask=attention_mask)[0]
+            context_input_ids = self.rag.retriever(
                 input_ids,
                 question_hidden_states.to(mindspore.float32).numpy(),
                 prefix=self.generator.config.prefix,
@@ -1078,15 +1078,15 @@ class RagTokenForGeneration(RagPreTrainedModel):
         }
 
     @property
-    def retriever(self) -> RagRetriever:
+    def retriever(self):
         return self.rag.retriever
 
     @property
-    def generator(self) -> PreTrainedModel:
+    def generator(self):
         return self.rag.generator
 
     @property
-    def question_encoder(self) -> PreTrainedModel:
+    def question_encoder(self):
         return self.rag.question_encoder
 
     @staticmethod
@@ -1436,8 +1436,8 @@ class RagTokenForGeneration(RagPreTrainedModel):
 
         # retrieve docs
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
-            out = self.retriever(
+            question_hidden_states = self.rag.question_encoder(input_ids, attention_mask=attention_mask)[0]
+            out = self.rag.retriever(
                 input_ids,
                 question_hidden_states.to(mindspore.float32).numpy(),
                 prefix=self.generator.config.prefix,
