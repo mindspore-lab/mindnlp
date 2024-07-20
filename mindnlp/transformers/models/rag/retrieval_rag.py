@@ -23,7 +23,7 @@ import numpy as np
 from datasets import Dataset, load_dataset, load_from_disk
 import faiss
 
-from mindnlp.utils import cached_file, logging, requires_backends, strtobool
+from mindnlp.utils import cached_file, logging, strtobool
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import BatchEncoding
 from .configuration_rag import RagConfig

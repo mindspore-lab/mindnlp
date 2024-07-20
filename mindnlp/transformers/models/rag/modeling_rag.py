@@ -18,6 +18,8 @@ import copy
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, Union
 
+import numpy as np
+
 import mindspore
 from mindspore import nn, ops
 
@@ -1256,6 +1258,88 @@ class RagTokenForGeneration(RagPreTrainedModel):
             generator_cross_attentions=outputs.generator_cross_attentions,
         )
 
+    def _prepare_special_tokens(
+        self,
+        generation_config: GenerationConfig,
+        kwargs_has_attention_mask: Optional[bool] = None,
+    ):
+        """
+        Prepares the special tokens for generation, overwriting the generation config with their processed versions
+        converted to tensor.
+
+        Note that `generation_config` is changed in place and stops being serializable after this method is called.
+        That is no problem if called within `generate` (`generation_config` is a local copy that doesn't leave the
+        function). However, if called outside `generate`, consider creating a copy of `generation_config` first.
+        """
+
+        # Convert special tokens to tensors (if they exist either in kwargs or in self.config)
+        def _tensor_or_none(token_kwargs, token_self):
+
+            token = token_kwargs if token_kwargs is not None else token_self
+            if token is None:
+                return token
+            elif isinstance(token, mindspore.Tensor):
+                return token
+
+            return mindspore.tensor(token, dtype=mindspore.int64)
+
+        bos_token_id = _tensor_or_none(
+            generation_config.bos_token_id, self.generation_config.bos_token_id
+        )
+        eos_token_id = _tensor_or_none(
+            generation_config.eos_token_id, self.generation_config.eos_token_id
+        )
+        pad_token_id = _tensor_or_none(
+            generation_config.pad_token_id, self.generation_config.pad_token_id
+        )
+        decoder_start_token_id = _tensor_or_none(
+            generation_config.decoder_start_token_id, self.generation_config.decoder_start_token_id
+        )
+
+        # for BC we also try to get `decoder_start_token_id` or `bos_token_id` (#30892)
+        if self.config.is_encoder_decoder:
+            decoder_start_token_id = decoder_start_token_id if decoder_start_token_id is not None else bos_token_id
+
+        # We can have more than one eos token. Always treat it as a 1D tensor (when it exists).
+        if eos_token_id is not None and eos_token_id.ndim == 0:
+            eos_token_id = eos_token_id.unsqueeze(0)
+
+        # Set pad token if unset (and there are conditions to do so)
+        if pad_token_id is None and eos_token_id is not None:
+            if kwargs_has_attention_mask is not None and not kwargs_has_attention_mask:
+                logger.warning(
+                    "The attention mask and the pad token id were not set. As a consequence, you may observe "
+                    "unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results."
+                )
+            pad_token_id = eos_token_id[0]
+            logger.warning(f"Setting `pad_token_id` to `eos_token_id`:{pad_token_id} for open-end generation.")
+
+        # we can't infer attn mask if pad token is set to be eos token in model's generation config
+        if eos_token_id is not None and np.isin(element=eos_token_id.numpy().tolist(), test_elements=pad_token_id.numpy().tolist()).any():
+            if kwargs_has_attention_mask is not None and not kwargs_has_attention_mask:
+                logger.warning_once(
+                    "The attention mask is not set and cannot be inferred from input because pad token is same as eos token."
+                    "As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` "
+                    "to obtain reliable results."
+                )
+
+        # Sanity checks/warnings
+        if self.config.is_encoder_decoder and decoder_start_token_id is None:
+            raise ValueError(
+                "`decoder_start_token_id` or `bos_token_id` has to be defined for encoder-decoder generation."
+            )
+        if eos_token_id is not None and (ops.is_floating_point(eos_token_id) or (eos_token_id < 0).any()):
+            logger.warning(
+                f"`eos_token_id` should consist of positive integers, but is {eos_token_id}. Your generation will not "
+                "stop until the maximum length is reached. Depending on other flags, it may even crash."
+            )
+
+        # Update generation config with the updated special tokens tensors
+        generation_config.bos_token_id = bos_token_id
+        generation_config.eos_token_id = eos_token_id.numpy().tolist()
+        generation_config.pad_token_id = pad_token_id
+        generation_config.decoder_start_token_id = decoder_start_token_id
+
     #@torch.no_grad()
     @mindspore._no_grad()
     def generate(
@@ -1344,7 +1428,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
         model_kwargs = generation_config.update(**kwargs)  # All unused kwargs must be model kwargs
 
         kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
-        # self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
 
         # set default parameters
         n_docs = n_docs if n_docs is not None else self.config.n_docs
@@ -1505,8 +1589,8 @@ class RagTokenForGeneration(RagPreTrainedModel):
         def _mask_pads(ll, smooth_obj):
             pad_mask = target.eq(self.config.generator.pad_token_id)
             if pad_mask.any():
-                ll.masked_fill_(pad_mask, 0.0)
-                smooth_obj.masked_fill_(pad_mask, 0.0)
+                ll = ll.masked_fill(pad_mask, 0.0)
+                smooth_obj = smooth_obj.masked_fill(pad_mask, 0.0)
             return ll.squeeze(-1), smooth_obj.squeeze(-1)
 
         rag_logprobs = self.marginalize(seq_logits, doc_scores, n_docs)

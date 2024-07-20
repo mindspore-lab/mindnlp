@@ -72,6 +72,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("data2vec-text", "Data2VecTextConfig"),
         ("data2vec-audio","Data2VecAudioConfig"),
         ("deit", "DeiTConfig"),
+        ("dpr","DPRConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
         ("detr", "DetrConfig"),

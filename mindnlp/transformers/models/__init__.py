@@ -159,6 +159,7 @@ from . import (
     qdqbert,
     qwen2,
     qwen2_moe,
+    rag,
     reformer,
     rembert,
     resnet,
@@ -361,6 +362,7 @@ from .pop2piano import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .rag import *
 from .reformer import *
 from .rembert import *
 from .resnet import *
@@ -563,6 +565,7 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(rag.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)

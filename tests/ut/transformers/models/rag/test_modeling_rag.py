@@ -65,7 +65,7 @@ if is_mindspore_available():
         RagTokenizer,
     )
     from mindnlp.transformers.modeling_outputs import BaseModelOutput
-
+mindspore.set_context(device_target="CPU")
 
 def _assert_tensors_equal(a, b, atol=1e-12, prefix=""):
     """If tensors not close, or a and b arent both tensors, raise a nice Assertion error."""
@@ -840,7 +840,8 @@ class RagModelIntegrationTests(unittest.TestCase):
         # Expected outputs as given by model at integration time.
         EXPECTED_OUTPUT_TEXT_1 = "\"She's My Kind of Girl"
         EXPECTED_OUTPUT_TEXT_2 = "\"She's My Kind of Love"
-
+        # print(output_text_1)
+        # print(output_text_2)
         self.assertEqual(output_text_1, EXPECTED_OUTPUT_TEXT_1)
         self.assertEqual(output_text_2, EXPECTED_OUTPUT_TEXT_2)
 
