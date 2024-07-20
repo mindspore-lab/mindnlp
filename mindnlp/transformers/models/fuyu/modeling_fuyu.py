@@ -129,14 +129,13 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
             raise ValueError(
                 f"Batch sizes must match! Got {len(continuous_embeddings)=} and {word_embeddings.shape[0]=}"
             )
-
         output_embeddings = word_embeddings.copy()
         for batch_idx in range(word_embeddings.shape[0]):
             # First, find the positions of all the non-negative values in image_patch_input_indices, those are the
             # positions in word_embeddings that we want to replace with content from continuous_embeddings.
 
             # dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0, as_tuple=True)[0]
-            dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0)[0]
+            dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0).reshape(-1)
 
             # Next look up those indices in image_patch_input_indices to find the indices in continuous_embeddings that we
             # want to use to replace the values in word_embeddings.
@@ -195,7 +194,6 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
         >>> print(generation_text[0])
         A blue bus parked on the side of a road.
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

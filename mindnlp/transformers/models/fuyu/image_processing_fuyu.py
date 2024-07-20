@@ -574,7 +574,7 @@ class FuyuImageProcessor(BaseImageProcessor):
         num_patches = num_patches_per_dim_h * num_patches_per_dim_w
         return num_patches
 
-    def patchify_image(self, image: "torch.Tensor", patch_size: Optional[Dict[str, int]] = None) -> "torch.Tensor":
+    def patchify_image(self, image: "mindspore.Tensor", patch_size: Optional[Dict[str, int]] = None) -> "mindspore.Tensor":
         """
         Convert an image into a tensor of patches.
 
@@ -594,7 +594,7 @@ class FuyuImageProcessor(BaseImageProcessor):
         batch_size, channels, _, _ = image.shape
         unfolded_along_height = image.unfold(2, patch_height, patch_height)
         patches = unfolded_along_height.unfold(3, patch_width, patch_width)
-        patches = patches.contiguous()
+        # patches = patches.contiguous()
         patches = patches.view(batch_size, channels, -1, patch_height, patch_width)
         patches = patches.permute(0, 2, 3, 4, 1)
         patches = patches.reshape(batch_size, -1, channels * patch_height * patch_width)
@@ -653,11 +653,11 @@ class FuyuImageProcessor(BaseImageProcessor):
                         # math.ceil(torch.tensor(300).cuda() / 30) == 11
                         new_h = min(
                             image_height,
-                            math.ceil(image_unpadded_h[batch_index, subseq_index] / patch_height) * patch_height,
+                            math.ceil(image_unpadded_h[batch_index, subseq_index].to(mindspore.float32) / patch_height) * patch_height,
                         )
                         new_w = min(
                             image_width,
-                            math.ceil(image_unpadded_w[batch_index, subseq_index] / patch_width) * patch_width,
+                            math.ceil(image_unpadded_w[batch_index, subseq_index].to(mindspore.float32) / patch_width) * patch_width,
                         )
                         image = image[:, :new_h, :new_w]
                         image_height, image_width = new_h, new_w

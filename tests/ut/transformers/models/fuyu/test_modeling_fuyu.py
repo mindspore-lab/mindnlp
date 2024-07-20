@@ -41,6 +41,7 @@ if is_mindspore_available():
 
     from mindnlp.transformers import FuyuForCausalLM
 
+mindspore.set_context(device_target="CPU")
 
 class FuyuModelTester:
     def __init__(
@@ -324,9 +325,9 @@ class FuyuModelIntegrationTest(unittest.TestCase):
         processor = self.default_processor
         model = self.default_model
 
-        url = "https://huggingface.co/datasets/hf-internal-testing/fixtures-captioning/resolve/main/bus.png"
-        image = Image.open(io.BytesIO(requests.get(url).content))
-        # image = Image.open("/home/wuzhirong/MINDSPORE/mindnlp_fuyu/tests/ut/transformers/models/fuyu/bus.png")
+        # url = "https://hf-mirror.com/adept/fuyu-8b/resolve/main/bus.png"
+        # image = Image.open(io.BytesIO(requests.get(url).content))
+        image = Image.open("/home/wuzhirong/new_mindspore/mindnlp_fuyu/tests/ut/transformers/models/fuyu/bus.png")
 
         text_prompt_coco_captioning = "Generate a coco-style caption.\n"
 

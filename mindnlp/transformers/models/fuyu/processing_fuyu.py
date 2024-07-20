@@ -382,7 +382,6 @@ class FuyuProcessor(ProcessorMixin):
             batched_keys.append("attention_mask")
         for key in batched_keys:
             batched_inputs[key] = ops.cat(batched_inputs[key], axis=0)
-
         return batched_inputs
 
     def get_sample_encoding(
@@ -558,7 +557,6 @@ class FuyuProcessor(ProcessorMixin):
         for prompt, scale_factor, image_unpadded_height, image_unpadded_width, tensor_batch_image in zip(
             prompts, scale_factors, image_unpadded_heights, image_unpadded_widths, tensor_batch_images
         ):
-            # print(image_unpadded_height,image_unpadded_width)
             sample_encoding = self.get_sample_encoding(
                 prompts=[prompt],
                 scale_factors=[scale_factor],
@@ -612,8 +610,8 @@ class FuyuProcessor(ProcessorMixin):
             start_id = self.tokenizer.convert_tokens_to_ids(start_token)
             end_id = self.tokenizer.convert_tokens_to_ids(end_token)
 
-            starting_positions = (tokens == start_id).nonzero(as_tuple=True)[0]
-            ending_positions = (tokens == end_id).nonzero(as_tuple=True)[0]
+            starting_positions = (tokens == start_id).nonzero().reshape(-1)
+            ending_positions = (tokens == end_id).nonzero().reshape(-1)
 
             if ops.any(starting_positions) and ops.any(ending_positions):
                 return (starting_positions[0], ending_positions[0])
