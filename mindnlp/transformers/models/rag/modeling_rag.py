@@ -378,7 +378,8 @@ class RagPreTrainedModel(PreTrainedModel):
                 question_encoder.config, generator.config, **kwargs
             )
 
-        return cls(question_encoder=question_encoder, generator=generator, config=config, retriever=retriever)
+        # return cls(question_encoder=question_encoder, generator=generator, config=config, retriever=retriever)
+        return cls(config=config)
 
 class RagModel(RagPreTrainedModel):
     def __init__(
@@ -785,15 +786,15 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         )
 
     @property
-    def retriever(self):
+    def retriever(self) -> RagRetriever:
         return self.rag.retriever
 
     @property
-    def generator(self):
+    def generator(self) -> PreTrainedModel:
         return self.rag.generator
 
     @property
-    def question_encoder(self):
+    def question_encoder(self) -> PreTrainedModel:
         return self.rag.question_encoder
 
     #@torch.no_grad()
@@ -1077,15 +1078,15 @@ class RagTokenForGeneration(RagPreTrainedModel):
         }
 
     @property
-    def retriever(self):
+    def retriever(self) -> RagRetriever:
         return self.rag.retriever
 
     @property
-    def generator(self):
+    def generator(self) -> PreTrainedModel:
         return self.rag.generator
 
     @property
-    def question_encoder(self):
+    def question_encoder(self) -> PreTrainedModel:
         return self.rag.question_encoder
 
     @staticmethod
