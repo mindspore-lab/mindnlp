@@ -21,7 +21,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
+from mindspore import ops
 
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
@@ -1010,7 +1010,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
     @staticmethod
     def _cat_and_pad(tensors, pad_token_id):
         output = (
-            ops.full((sum([t.shape[0] for t in tensors]), max([t.shape[1] for t in tensors])),pad_token_id)
+            ops.full((sum((t.shape[0] for t in tensors)), max((t.shape[1] for t in tensors))),pad_token_id)
         )
         ind = 0
         for t in tensors:
@@ -1118,7 +1118,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
         doc_logprobs = ops.log_softmax(doc_scores, axis=1)
         log_prob_sum = seq_logprobs + doc_logprobs.unsqueeze(-1).unsqueeze(-1)
         return ops.logsumexp(log_prob_sum, axis=1)
-    
+
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
