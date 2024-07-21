@@ -28,8 +28,9 @@ from addict import Dict as ADDict
 
 import mindspore
 from mindspore import ops
+from mindspore.common.api import _no_grad
 
-from mindnlp.utils import ModelOutput, logging, ExplicitEnum, no_grad
+from mindnlp.utils import ModelOutput, logging, ExplicitEnum
 from .configuration_utils import GenerationConfig
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
 from ..cache_utils import StaticCache
@@ -737,7 +738,7 @@ class GenerationMixin:
         from name
         """
         can_retrieve_inputs = model_kwargs.get(name, None) is not None and name in set(
-            inspect.signature(self.construct).parameters.keys()
+            inspect.signature(self.forward).parameters.keys()
         )
 
         if can_retrieve_inputs and inputs is not None:
@@ -844,7 +845,7 @@ class GenerationMixin:
             for argument, value in model_kwargs.items()
             if not any(argument.startswith(p) for p in irrelevant_prefix)
         }
-        encoder_signature = set(inspect.signature(encoder.construct).parameters)
+        encoder_signature = set(inspect.signature(encoder.forward).parameters)
         encoder_accepts_wildcard = "kwargs" in encoder_signature or "model_kwargs" in encoder_signature
         if not encoder_accepts_wildcard:
             encoder_kwargs = {
@@ -1523,7 +1524,7 @@ class GenerationMixin:
 
         return model_kwargs
 
-    @no_grad
+    @_no_grad()
     def generate(
         self,
         inputs: Optional[mindspore.Tensor] = None,
@@ -1686,7 +1687,7 @@ class GenerationMixin:
         else:
             model_kwargs["use_cache"] = generation_config.use_cache
 
-        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.construct).parameters.keys())
+        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.forward).parameters.keys())
         requires_attention_mask = "encoder_outputs" not in model_kwargs
 
         if model_kwargs.get("attention_mask", None) is None and requires_attention_mask and accepts_attention_mask:
@@ -1802,7 +1803,7 @@ class GenerationMixin:
                 raise ValueError("assisted generate requires `use_cache=True`")
 
             assistant_accepts_encoder_outputs = "encoder_outputs" in set(
-                inspect.signature(assistant_model.construct).parameters.keys()
+                inspect.signature(assistant_model.forward).parameters.keys()
             )
 
             # 11. If the assistant model is an encoder-decoder, prepare its encoder outputs
@@ -2077,6 +2078,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
+    @_no_grad()
     def contrastive_search(
         self,
         input_ids: mindspore.Tensor,
@@ -4491,7 +4493,7 @@ class GenerationMixin:
 
         # check if assistant model accepts encoder_outputs
         assistant_accepts_encoder_outputs = "encoder_outputs" in set(
-            inspect.signature(assistant_model.construct).parameters.keys()
+            inspect.signature(assistant_model.forward).parameters.keys()
         )
 
         # init values

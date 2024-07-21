@@ -235,6 +235,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "deepseek_v2",
+            (
+                "LlamaTokenizerFast",
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            )
+        ),
+        (
             "distilbert",
             (
                 "DistilBertTokenizer",
@@ -379,13 +386,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("jukebox", ("JukeboxTokenizer", None)),
-        # (
-        #     "kosmos-2",
-        #     (
-        #         "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
-        #         "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
-        #     ),
-        # ),
+        (
+            "kosmos-2",
+            (
+                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         (
             "layoutlm",
             (
@@ -810,6 +817,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("tapex", ("TapexTokenizer", None)),
         ("transfo-xl", ("TransfoXLTokenizer", None)),
         (
+                "udop",
+                (
+                    "UdopTokenizer" if is_sentencepiece_available() else None,
+                    "UdopTokenizerFast" if is_tokenizers_available() else None,
+                ),
+            ),
+        (
             "umt5",
             (
                 "T5Tokenizer" if is_sentencepiece_available() else None,
@@ -1064,13 +1078,13 @@ class AutoTokenizer:
     def __init__(self):
         """
         This method initializes an instance of the AutoTokenizer class.
-        
+
         Args:
             self: The instance of the AutoTokenizer class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method,
                 an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the

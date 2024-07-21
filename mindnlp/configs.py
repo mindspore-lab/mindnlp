@@ -16,8 +16,11 @@
 Global configs
 """
 import os
+from packaging import version
 import mindspore
 
+DEVICE_TARGET = mindspore.get_context('device_target')
+USE_PYBOOST = version.parse(mindspore.__version__) >= version.parse('2.3.0') and DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 
 WEIGHTS_NAME = "mindspore.ckpt"

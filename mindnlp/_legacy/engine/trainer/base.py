@@ -24,7 +24,6 @@ from mindspore import save_checkpoint
 from mindspore.context import K_CONTEXT
 from mindspore.dataset.engine import Dataset, TakeDataset
 
-from mindnlp.injection import set_global_fp16
 from mindnlp._legacy.abc import Callback, Metric
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
@@ -457,7 +456,6 @@ as gradient checking and automatic mixed precision (AMP) level.
         """set amp"""
         self.amp_level = level
         self.network = auto_mixed_precision(self.network, level)
-        set_global_fp16(True)
         if loss_scaler is None:
             logger.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
             self.loss_scaler = StaticLossScaler(2 ** 10)

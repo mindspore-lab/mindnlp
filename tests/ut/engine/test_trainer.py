@@ -34,6 +34,7 @@ import numpy as np
 from parameterized import parameterized
 from requests.exceptions import HTTPError
 
+import mindnlp
 from mindnlp.engine import (
     IntervalStrategy,
     TrainerCallback,
@@ -812,7 +813,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         dummy_input = mindspore.Tensor([[1, 0, 1]])
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
-
         self.assertFalse(np.allclose(emb1.asnumpy(), emb2.asnumpy()), "Neftune noise is not applied!")
 
         # redefine the model
@@ -831,7 +831,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hook) == 0)
 
         trainer.model.set_train(False)
-
         # Check that we get identical embeddings just in case
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
@@ -2068,7 +2067,7 @@ if is_mindspore_available():
     optim_test_params = [
         (
             TrainingArguments(optim=OptimizerNames.ADAMW, output_dir="None"),
-            mindspore.experimental.optim.AdamW,
+            mindnlp.core.optim.AdamW,
             default_adam_kwargs,
         ),
         # (
