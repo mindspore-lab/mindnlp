@@ -29,10 +29,10 @@ from tqdm.autonotebook import tqdm
 import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
-from mindspore import ops, Tensor, Parameter
+from mindspore import Tensor, Parameter
 from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
 from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
@@ -142,7 +142,7 @@ class CellUtilMixin:
                     ops.ones((batch_size, seq_length, prefix_seq_len), dtype=causal_mask.dtype),
                     causal_mask,
                 ],
-                axis=-1,
+                dim=-1,
             )
 
         extended_attention_mask = causal_mask[:, None, :, :] * attention_mask[:, None, None, :]
@@ -1205,12 +1205,12 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                         use_replace = True
 
                     if use_replace:
-                        if isinstance(new_param, Parameter):
+                        if isinstance(new_param, Parameter) and isinstance(param, Parameter):
                             new_param.name = param.name
                             new_param.requires_grad = param.requires_grad
                             replace_references(param, new_param)
                         else:
-                            replace_references(param, Parameter(new_param, requires_grad=param.requires_grad, name=param.name))
+                            replace_references(param, Parameter(new_param, requires_grad=param.requires_grad))
                     else:
                         param.assign_value(new_param)
                     keys_unexpected.remove(param_name)
@@ -1825,7 +1825,7 @@ class PoolerEndLogits(nn.Module):
             start_states = hidden_states.gather_elements(-2, start_positions)  # shape (bsz, 1, hsz)
             start_states = start_states.broadcast_to((-1, slen, -1))  # shape (bsz, slen, hsz)
 
-        x = self.dense_0(ops.cat([hidden_states, start_states], axis=-1))
+        x = self.dense_0(ops.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
         x = self.LayerNorm(x)
         x = self.dense_1(x).squeeze(-1)
@@ -1912,7 +1912,7 @@ class PoolerAnswerClass(nn.Module):
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
-        x = self.dense_0(ops.cat([start_states, cls_token_state], axis=-1))
+        x = self.dense_0(ops.cat([start_states, cls_token_state], dim=-1))
         x = self.activation(x)
         x = self.dense_1(x).squeeze(-1)
 
@@ -2037,13 +2037,13 @@ class SQuADHead(nn.Module):
 
         # during inference, compute the end logits based on beam search
         _, slen, hsz = hidden_states.shape
-        start_log_probs = ops.softmax(start_logits, axis=-1)  # shape (bsz, slen)
+        start_log_probs = ops.softmax(start_logits, dim=-1)  # shape (bsz, slen)
 
         start_top_log_probs, start_top_index = ops.topk(
             start_log_probs, self.start_n_top, dim=-1
         )  # shape (bsz, start_n_top)
         start_top_index_exp = start_top_index.unsqueeze(-1).broadcast_to((-1, -1, hsz))  # shape (bsz, start_n_top, hsz)
-        start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
+        start_states = ops.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
         start_states = start_states.unsqueeze(1).broadcast_to((-1, slen, -1, -1))  # shape (bsz, slen, start_n_top, hsz)
 
         hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
@@ -2051,7 +2051,7 @@ class SQuADHead(nn.Module):
         )  # shape (bsz, slen, start_n_top, hsz)
         p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
         end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-        end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
+        end_log_probs = ops.softmax(end_logits, dim=1)  # shape (bsz, slen, start_n_top)
 
         end_top_log_probs, end_top_index = ops.topk(
             end_log_probs, self.end_n_top, dim=1

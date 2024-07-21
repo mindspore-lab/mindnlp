@@ -22,10 +22,12 @@ import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops, Parameter, Tensor
+from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn
+from mindnlp.configs import USE_PYBOOST
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -89,11 +91,13 @@ class LlamaRMSNorm(nn.Module):
             ValueError: If the input hidden_states is not a valid tensor or numpy array.
             RuntimeError: If an error occurs during the normalization process.
         """
+        if USE_PYBOOST:
+            return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        variance = hidden_states.pow(2).mean(-1, True)
-        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
-        return self.weight.astype(input_dtype) * hidden_states.astype(input_dtype)
+        variance = ops.mean(ops.pow(hidden_states, 2), -1, True)
+        hidden_states = ops.mul(hidden_states, ops.rsqrt(variance + self.variance_epsilon))
+        return ops.mul(self.weight.astype(input_dtype), hidden_states.astype(input_dtype))
 
 
 ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
@@ -146,7 +150,7 @@ class LlamaRotaryEmbedding(nn.Module):
         self.max_position_embeddings = max_position_embeddings
         self.base = base
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2).float() / self.dim))
-        self.inv_freq = inv_freq
+        self.register_buffer('inv_freq', inv_freq)
 
         self._set_cos_sin_cache(
             seq_len=max_position_embeddings, dtype=mindspore.float32
@@ -197,9 +201,9 @@ class LlamaRotaryEmbedding(nn.Module):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        emb = ops.cat((freqs, freqs), dim=-1)
+        self.cos_cached = ops.cos(emb).to(dtype)
+        self.sin_cached = ops.sin(emb).to(dtype)
 
     def forward(self, x, seq_len=None):
         """
@@ -229,8 +233,15 @@ class LlamaRotaryEmbedding(nn.Module):
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
 
         return (
-            self.cos_cached[:seq_len].to(dtype=x.dtype),
-            self.sin_cached[:seq_len].to(dtype=x.dtype),
+            # 1. default tensor slice
+            # self.cos_cached[:seq_len].to(dtype=x.dtype),
+            # self.sin_cached[:seq_len].to(dtype=x.dtype),
+            # 2. use stridedslice
+            # ops.getitem(self.cos_cached, slice(None, seq_len, None)).to(dtype=x.dtype),
+            # ops.getitem(self.sin_cached, slice(None, seq_len, None)).to(dtype=x.dtype),
+            # 3. use pyboost narrow
+            ops.narrow(self.cos_cached, 0, 0, seq_len).to(dtype=x.dtype),
+            ops.narrow(self.sin_cached, 0, 0, seq_len).to(dtype=x.dtype),
         )
 
 
@@ -273,13 +284,13 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
         """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
-        t = t / self.scaling_factor
+        t = ops.div(t, self.scaling_factor)
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        emb = ops.cat((freqs, freqs), dim=-1)
+        self.cos_cached = ops.cos(emb).to(dtype)
+        self.sin_cached = ops.sin(emb).to(dtype)
 
 
 class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
@@ -335,17 +346,21 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        emb = ops.cat((freqs, freqs), dim=-1)
+        self.cos_cached = ops.cos(emb).to(dtype)
+        self.sin_cached = ops.sin(emb).to(dtype)
 
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
+    # 0. use default tensor slice
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2 :]
-    (x1, x2) = x.tensor_split(2, axis=-1)
-    return ops.cat((-x2, x1), axis=x.ndim-1)
+    # 1. use tensor_split
+    # (x1, x2) = x.tensor_split(2, axis=-1)
+    # 2. use pyboost split
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
+    return ops.cat((-x2, x1), dim=x.ndim-1)
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
@@ -371,10 +386,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-    sin = sin[position_ids].unsqueeze(unsqueeze_dim)
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
+    # cos = cos[position_ids].unsqueeze(unsqueeze_dim)
+    # sin = sin[position_ids].unsqueeze(unsqueeze_dim)
+    cos = F.embedding(position_ids, cos).unsqueeze(unsqueeze_dim)
+    sin = F.embedding(position_ids, sin).unsqueeze(unsqueeze_dim)
+    q_embed = ops.add(ops.mul(q, cos), ops.mul(rotate_half(q), sin))
+    k_embed = ops.add(ops.mul(k, cos), ops.mul(rotate_half(k), sin))
     return q_embed, k_embed
 
 
@@ -460,13 +477,13 @@ class LlamaMLP(nn.Module):
             down_proj_slices = self.down_proj.weight.split(slices, axis=1)
 
             gate_proj = ops.cat(
-                [ops.dense(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], axis=-1
+                [F.linear(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1
             )
-            up_proj = ops.cat([ops.dense(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], axis=-1)
+            up_proj = ops.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
 
             intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, axis=2)
             down_proj = [
-                ops.dense(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
+                F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]
             down_proj = sum(down_proj)
         else:
@@ -483,7 +500,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
+    hidden_states = ops.broadcast_to(hidden_states[:, :, None, :, :], (batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -597,7 +614,7 @@ class LlamaAttention(nn.Module):
         Raises:
             None
         """
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(ops.view(tensor, bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
         self,
@@ -641,23 +658,23 @@ class LlamaAttention(nn.Module):
             key_slices = self.k_proj.weight.split(key_value_slicing, axis=0)
             value_slices = self.v_proj.weight.split(key_value_slicing, axis=0)
 
-            query_states = [ops.dense(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
-            query_states = ops.cat(query_states, axis=-1)
+            query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
+            query_states = ops.cat(query_states, dim=-1)
 
-            key_states = [ops.dense(hidden_states, key_slices[i]) for i in range(self.config.pretraining_tp)]
-            key_states = ops.cat(key_states, axis=-1)
+            key_states = [F.linear(hidden_states, key_slices[i]) for i in range(self.config.pretraining_tp)]
+            key_states = ops.cat(key_states, dim=-1)
 
-            value_states = [ops.dense(hidden_states, value_slices[i]) for i in range(self.config.pretraining_tp)]
-            value_states = ops.cat(value_states, axis=-1)
+            value_states = [F.linear(hidden_states, value_slices[i]) for i in range(self.config.pretraining_tp)]
+            value_states = ops.cat(value_states, dim=-1)
 
         else:
             query_states = self.q_proj(hidden_states)
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        query_states = ops.transpose(ops.view(query_states, bsz, q_len, self.num_heads, self.head_dim), 1, 2)
+        key_states = ops.transpose(ops.view(key_states, bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
+        value_states = ops.transpose(ops.view(value_states, bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -667,15 +684,15 @@ class LlamaAttention(nn.Module):
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         past_key_value = (key_states, value_states) if use_cache else None
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = ops.div(ops.matmul(query_states, ops.transpose(key_states, 2, 3)), math.sqrt(self.head_dim))
 
         if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
@@ -691,8 +708,8 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -701,14 +718,14 @@ class LlamaAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
 
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         if self.config.pretraining_tp > 1:
             attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, axis=2)
             o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, axis=1)
-            attn_output = sum(ops.dense(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
+            attn_output = sum(F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
         else:
             attn_output = self.o_proj(attn_output)
 
@@ -1337,8 +1354,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         hidden_states = outputs[0]
         if self.config.pretraining_tp > 1:
             lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.config.pretraining_tp, dim=0)
-            logits = [ops.dense(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
-            logits = ops.cat(logits, axis=-1)
+            logits = [F.linear(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
+            logits = ops.cat(logits, dim=-1)
         else:
             logits = self.lm_head(hidden_states)
         logits = logits.float()
@@ -1352,7 +1369,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1405,7 +1422,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = ops.cumsum(attention_mask.long(), -1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1638,13 +1655,13 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1656,6 +1673,7 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+
 
 __all__ = [
     "LlamaForCausalLM",
