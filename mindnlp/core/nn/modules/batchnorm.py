@@ -3,7 +3,6 @@ from typing import Optional
 import mindspore
 from mindspore import ops, Tensor, Parameter
 from mindspore.common.initializer import initializer
-import mindspore.mint.nn.functional
 
 from mindnlp.configs import USE_PYBOOST
 from .module import Module

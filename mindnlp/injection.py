@@ -173,14 +173,6 @@ ops.Primitive.__call__ = _op_call
 
 # For all backend
 # For functional api
-# matmul
-# dense
-def dense(input, weight, bias=None):
-    """patched dense"""
-    dense_ = _get_cache_prim(ops.Dense)()
-    return dense_(input, weight, bias)
-
-ops.dense = dense
 # einsum
 ops.einsum = einsum
 
@@ -326,33 +318,6 @@ def std_mean(input, axis=None, *, correction=1, keepdims=False):
 
 ops.std_mean = std_mean
 
-# masked_fill
-def masked_fill(inputs, mask, value):
-    """patched masked_fill"""
-    masked_value = ops.fill(inputs.dtype, inputs.shape, value)
-    return ops.select(mask, masked_value, inputs)
-
-def _masked_fill(self, mask, value):
-    r"""
-    Fills elements of the input with a specified value, based on a provided mask.
-    
-    Args:
-        self: The object instance.
-        mask (Tensor): A boolean mask tensor of the same shape as the input.
-            Only the elements where the mask is True will be filled with the specified value.
-        value (Any): The value to fill the masked elements with. It can be of any type.
-    
-    Returns:
-        None
-    
-    Raises:
-        None
-    """
-    return masked_fill(self, mask, value)
-
-ops.masked_fill = masked_fill
-Tensor.masked_fill = _masked_fill
-StubTensor.masked_fill = _masked_fill
 
 # ops.std
 def std(input, axis=None, ddof=0, keepdims=False):

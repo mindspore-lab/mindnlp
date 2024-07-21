@@ -1,11 +1,8 @@
 """activation"""
-import mindspore
 from mindspore import Tensor
-from mindspore import ops
-import mindspore.mint.nn.functional
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
+from .. import functional as F
 
 class GELU(Module):
     r"""Applies the Gaussian Error Linear Units function:
@@ -42,9 +39,7 @@ class GELU(Module):
         self.approximate = approximate
 
     def forward(self, input: Tensor) -> Tensor:
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.gelu(input, approximate=self.approximate)
-        return ops.gelu(input, approximate=self.approximate)
+        return F.gelu(input, approximate=self.approximate)
 
     def extra_repr(self) -> str:
         return f'approximate={repr(self.approximate)}'
@@ -77,15 +72,11 @@ class ReLU(Module):
         >>> output = torch.cat((m(input), m(-input)))
     """
     def forward(self, input: Tensor) -> Tensor:
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.relu(input)
-        return ops.relu(input)
+        return F.relu(input)
 
 class Tanh(Module):
     def forward(self, input: Tensor) -> Tensor:
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.tanh(input)
-        return ops.tanh(input)
+        return F.tanh(input)
 
 class Sigmoid(Module):
     r"""Applies the Sigmoid function element-wise.
@@ -108,6 +99,19 @@ class Sigmoid(Module):
     """
 
     def forward(self, input: Tensor) -> Tensor:
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.sigmoid(input)
-        return ops.sigmoid(input)
+        return F.sigmoid(input)
+
+
+class SiLU(Module):
+    def forward(self, input):
+        return F.silu(input)
+
+
+class Mish(Module):
+    def forward(self, input):
+        return F.mish(input)
+
+
+class ReLU6(Module):
+    def forward(self, input):
+        return F.relu6(input)

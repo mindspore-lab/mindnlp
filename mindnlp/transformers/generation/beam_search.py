@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
+from mindnlp.core import ops
 
 from .beam_constraints import Constraint, ConstraintListState
 
@@ -275,9 +275,9 @@ class BeamSearchScorer(BeamScorer):
                 f"{self.group_size} is expected by the beam scorer."
             )
 
-        next_beam_scores = ops.zeros((batch_size, self.group_size), dtype=next_scores.dtype)
-        next_beam_tokens = ops.zeros((batch_size, self.group_size), dtype=next_tokens.dtype)
-        next_beam_indices = ops.zeros((batch_size, self.group_size), dtype=next_indices.dtype)
+        next_beam_scores = ops.zeros(batch_size, self.group_size, dtype=next_scores.dtype)
+        next_beam_tokens = ops.zeros(batch_size, self.group_size, dtype=next_tokens.dtype)
+        next_beam_indices = ops.zeros(batch_size, self.group_size, dtype=next_indices.dtype)
 
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
@@ -430,9 +430,9 @@ class BeamSearchScorer(BeamScorer):
         # prepare for adding eos
         sent_lengths_max = sent_lengths.max().asnumpy().item() + 1
         sent_max_len = min(sent_lengths_max, max_length) if max_length is not None else sent_lengths_max
-        decoded: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), dtype=input_ids.dtype)
+        decoded: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
         if len(best_indices) > 0 and best_indices[0] is not None:
-            indices: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), dtype=input_ids.dtype)
+            indices: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
         else:
             indices = None
 
@@ -688,9 +688,9 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 f"{self.group_size} is expected by the beam scorer."
             )
 
-        next_beam_scores = ops.zeros((batch_size, self.group_size), dtype=next_scores.dtype)
-        next_beam_tokens = ops.zeros((batch_size, self.group_size), dtype=next_tokens.dtype)
-        next_beam_indices = ops.zeros((batch_size, self.group_size), dtype=next_indices.dtype)
+        next_beam_scores = ops.zeros(batch_size, self.group_size, dtype=next_scores.dtype)
+        next_beam_tokens = ops.zeros(batch_size, self.group_size, dtype=next_tokens.dtype)
+        next_beam_indices = ops.zeros(batch_size, self.group_size, dtype=next_indices.dtype)
 
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
@@ -826,7 +826,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         sidx, eidx = batch_idx * orig_len, (batch_idx + 1) * orig_len
         this_batch_input_ids = input_ids[sidx:eidx]
         this_batch_token_scores = vocab_scores[sidx:eidx]
-        full_hypotheses = ops.cat((input_ids[sent_beam_indices], sent_beam_tokens.unsqueeze(-1)), axis=-1)
+        full_hypotheses = ops.cat((input_ids[sent_beam_indices], sent_beam_tokens.unsqueeze(-1)), dim=-1)
 
         # need to make new hypothesis that advance the constraints
         track_new = {
@@ -1034,10 +1034,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         sent_lengths_max = sent_lengths.max().asnumpy().item() + 1
 
         sent_max_len = min(sent_lengths_max, max_length) if max_length is not None else sent_lengths_max
-        decoded: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), input_ids.dtype)
+        decoded: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
 
         if len(best_indices) > 0 and best_indices[0] is not None:
-            indices: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), input_ids.dtype)
+            indices: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
         else:
             indices = None
 

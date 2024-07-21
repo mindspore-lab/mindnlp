@@ -1,6 +1,40 @@
 """nn functional"""
+import mindspore.mint.nn.functional
 import numpy as np
+import mindspore
 from mindspore import ops
+from mindnlp.configs import USE_PYBOOST
+
+def gelu(input, approximate='none'):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.gelu(input, approximate)
+    return ops.gelu(input, approximate)
+
+def relu(input):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.relu(input)
+    return ops.relu(input)
+
+def tanh(input):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.tanh(input)
+    return ops.tanh(input)
+
+def sigmoid(input):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.sigmoid(input)
+    return ops.sigmoid(input)
+
+def silu(input):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.silu(input)
+    return ops.silu(input)
+
+def mish(input):
+    return ops.mish(input)
+
+def relu6(input):
+    return ops.relu6(input)
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
@@ -51,3 +85,38 @@ def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count
         output_array = ops.sum(windows, dim=-1) / valid_counts
 
     return output_array
+
+def dropout(input, p=0.5, training=True):
+    if USE_PYBOOST:
+        return mindspore.mint.dropout(input, p, training)
+    return ops.dropout(input, p, training)
+
+dense_ = ops.Dense()
+def linear(input, weight, bias=None):
+    if USE_PYBOOST:
+        return mindspore.mint.linear(input, weight, bias)
+    return dense_(input, weight, bias)
+
+def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean'):
+    return ops.cross_entropy(input, target, weight, ignore_index, reduction)
+
+def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
+    return ops.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
+
+def log_softmax(input, dim=-1):
+    return ops.log_softmax(input, dim)
+
+def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
+    if USE_PYBOOST:
+        return mindspore.ops.auto_generate.gen_ops_prim.embedding_op(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
+    return ops.gather(weight, input, 0)
+
+def rms_norm(input, weight, eps=1e-5):
+    return ops.rms_norm(input, weight, eps)[0]
+
+def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
+    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
+        query, key, cos, sin, position_ids, cos_format
+    )
