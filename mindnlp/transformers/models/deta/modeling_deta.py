@@ -303,7 +303,7 @@ class DetaObjectDetectionOutput(ModelOutput):
 
 
 def _get_clones(module, N):
-    return nn.CellList([copy.deepcopy(module) for i in range(N)])
+    return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 
 def inverse_sigmoid(x, eps=1e-5):
@@ -372,7 +372,7 @@ def replace_batch_norm(model):
         model (torch.nn.Module):
             input model
     """
-    for name, cell in model.name_cells().items():
+    for name, cell in model.cells_and_names():
         if isinstance(cell, nn.BatchNorm2d):
             new_cell = DetaFrozenBatchNorm2d(cell.num_features)
 
@@ -381,10 +381,10 @@ def replace_batch_norm(model):
             new_cell.running_mean.data = cell.running_mean.copy()
             new_cell.running_var.data = cell.running_var.copy()
 
-            model._cells[name] = new_cell
+            #model._cells[name] = new_cell
 
-        if len(list(cell.cells())) > 0:
-            replace_batch_norm(cell)
+        #if len(list(cell.cells())) > 0:
+        #    replace_batch_norm(cell)
 
 
 class DetaBackboneWithPositionalEncodings(nn.Module):
@@ -830,10 +830,10 @@ class DetaMultiheadAttention(nn.Module):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(
@@ -1302,7 +1302,7 @@ class DetaEncoder(DetaPreTrainedModel):
         super().__init__(config)
 
         self.dropout = config.dropout
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [DetaEncoderLayer(config) for _ in range(config.encoder_layers)]
         )
         self.gradient_checkpointing = False
@@ -1461,7 +1461,7 @@ class DetaDecoder(DetaPreTrainedModel):
         super().__init__(config)
 
         self.dropout = config.dropout
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [DetaDecoderLayer(config) for _ in range(config.decoder_layers)]
         )
         self.gradient_checkpointing = False
@@ -1664,31 +1664,30 @@ class DetaModel(DetaPreTrainedModel):
             for _ in range(num_backbone_outs):
                 in_channels = intermediate_channel_sizes[_]
                 input_proj_list.append(
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(in_channels, config.d_model, kernel_size=1),
                         nn.GroupNorm(32, config.d_model),
                     )
                 )
             for _ in range(config.num_feature_levels - num_backbone_outs):
                 input_proj_list.append(
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(
                             in_channels,
                             config.d_model,
                             kernel_size=3,
                             stride=2,
                             padding=1,
-                            pad_mode="pad",
                         ),
                         nn.GroupNorm(32, config.d_model),
                     )
                 )
                 in_channels = config.d_model
-            self.input_proj = nn.CellList(input_proj_list)
+            self.input_proj = nn.ModuleList(input_proj_list)
         else:
-            self.input_proj = nn.CellList(
+            self.input_proj = nn.ModuleList(
                 [
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(
                             intermediate_channel_sizes[-1],
                             config.d_model,
@@ -2207,8 +2206,8 @@ class DetaForObjectDetection(DetaPreTrainedModel):
                 )
             )
 
-            self.class_embed = nn.CellList([self.class_embed for _ in range(num_pred)])
-            self.bbox_embed = nn.CellList([self.bbox_embed for _ in range(num_pred)])
+            self.class_embed = nn.ModuleList([self.class_embed for _ in range(num_pred)])
+            self.bbox_embed = nn.ModuleList([self.bbox_embed for _ in range(num_pred)])
             self.model.decoder.bbox_embed = None
         if config.two_stage:
             # hack implementation for two-stage
@@ -2720,7 +2719,7 @@ class DetaMLPPredictionHead(nn.Module):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])]
         )
 
