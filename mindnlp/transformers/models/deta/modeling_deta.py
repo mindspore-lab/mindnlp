@@ -23,7 +23,6 @@ from typing import Dict, List, Optional, Tuple, Union
 import mindspore as ms
 
 from mindspore import ops, Tensor
-from mindnlp.core import nn
 from mindspore.common.initializer import (
     initializer,
     Uniform,
@@ -31,6 +30,7 @@ from mindspore.common.initializer import (
     Normal,
     Constant,
 )
+from mindnlp.core import nn
 from mindnlp.modules.functional import finfo
 
 from .image_processing_deta import batched_nms

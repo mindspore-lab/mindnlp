@@ -37,12 +37,12 @@ from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor
 
-
 if is_mindspore_available():
     import mindspore as ms
     from mindspore import ops
     from mindnlp.transformers import DetaForObjectDetection, DetaModel
 
+ms.set_context(pynative_synchronize=True)
 
 if is_vision_available():
     from PIL import Image

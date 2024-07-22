@@ -17,9 +17,9 @@
 from typing import Optional
 
 import mindspore
-from mindnlp.core import nn
 from mindspore import ops
 from mindspore.common.initializer import initializer, HeNormal
+from mindnlp.core import nn
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
