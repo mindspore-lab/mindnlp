@@ -17,8 +17,9 @@
 from typing import Optional
 
 import mindspore
-from mindspore import nn, ops
-from mindspore.common.initializer import HeNormal
+from mindspore import ops
+from mindspore.common.initializer import initializer, HeNormal
+from mindnlp.core import nn
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -47,12 +48,12 @@ _IMAGE_CLASS_CHECKPOINT = "microsoft/resnet-50"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "tiger cat"
 
 
-class ResNetConvLayer(nn.Cell):
+class ResNetConvLayer(nn.Module):
 
     """
     The ResNetConvLayer class represents a convolutional layer used in the ResNet neural network architecture. 
     
-    This class inherits from the nn.Cell class and is designed to process input data through a series of operations
+    This class inherits from the nn.Module class and is designed to process input data through a series of operations
     including convolution, normalization, and activation.
     
     Attributes:
@@ -65,7 +66,7 @@ class ResNetConvLayer(nn.Cell):
         __init__:
             Initializes the ResNetConvLayer with the specified parameters.
 
-        construct:
+        forward:
             Applies the convolutional layer, normalization, and activation to the input tensor and returns the processed tensor.
     """
     def __init__(
@@ -91,15 +92,14 @@ class ResNetConvLayer(nn.Cell):
         super().__init__()
         self.convolution = nn.Conv2d(
             in_channels, out_channels,
-            kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, has_bias=False,
-            pad_mode='pad'
+            kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, bias=False
         )
         self.normalization = nn.BatchNorm2d(out_channels)
         self.activation = ACT2FN[activation] if activation is not None else nn.Identity()
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method 'construct' in the class 'ResNetConvLayer'.
+        Method 'forward' in the class 'ResNetConvLayer'.
 
         Args:
             self: Instance of the ResNetConvLayer class.
@@ -128,7 +128,7 @@ class ResNetConvLayer(nn.Cell):
         return hidden_state
 
 
-class ResNetEmbeddings(nn.Cell):
+class ResNetEmbeddings(nn.Module):
     """
     ResNet Embeddings (stem) composed of a single aggressive convolution.
     """
@@ -155,12 +155,12 @@ class ResNetEmbeddings(nn.Cell):
         self.embedder = ResNetConvLayer(
             config.num_channels, config.embedding_size, kernel_size=7, stride=2, activation=config.hidden_act
         )
-        self.pooler = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, pad_mode='pad')
+        self.pooler = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.num_channels = config.num_channels
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Constructs the embeddings for a given set of pixel values.
+        forwards the embeddings for a given set of pixel values.
 
         Args:
             self (ResNetEmbeddings): An instance of the ResNetEmbeddings class.
@@ -189,7 +189,7 @@ class ResNetEmbeddings(nn.Cell):
         return embedding
 
 
-class ResNetShortCut(nn.Cell):
+class ResNetShortCut(nn.Module):
     """
     ResNet shortcut, used to project the residual features to the correct size. If needed, it is also used to
     downsample the input using `stride=2`.
@@ -217,16 +217,16 @@ class ResNetShortCut(nn.Cell):
             None.
         """
         super().__init__()
-        self.convolution = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, has_bias=False, pad_mode='valid')
+        self.convolution = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
         self.normalization = nn.BatchNorm2d(out_channels)
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Constructs a hidden state tensor using convolution and normalization operations.
+        forwards a hidden state tensor using convolution and normalization operations.
 
         Args:
             self (ResNetShortCut): The instance of the ResNetShortCut class.
-            input (mindspore.Tensor): The input tensor for the construction process.
+            input (mindspore.Tensor): The input tensor for the forwardion process.
 
         Returns:
             mindspore.Tensor: A tensor representing the hidden state after applying convolution and normalization.
@@ -239,7 +239,7 @@ class ResNetShortCut(nn.Cell):
         return hidden_state
 
 
-class ResNetBasicLayer(nn.Cell):
+class ResNetBasicLayer(nn.Module):
     """
     A classic ResNet's residual layer composed by two `3x3` convolutions.
     """
@@ -265,15 +265,15 @@ class ResNetBasicLayer(nn.Cell):
         self.shortcut = (
             ResNetShortCut(in_channels, out_channels, stride=stride) if should_apply_shortcut else nn.Identity()
         )
-        self.layer = nn.SequentialCell(
+        self.layer = nn.Sequential(
             ResNetConvLayer(in_channels, out_channels, stride=stride),
             ResNetConvLayer(out_channels, out_channels, activation=None),
         )
         self.activation = ACT2FN[activation]
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
-        Constructs a ResNet basic layer by applying a series of operations to the input hidden state.
+        forwards a ResNet basic layer by applying a series of operations to the input hidden state.
 
         Args:
             self (ResNetBasicLayer): An instance of the ResNetBasicLayer class.
@@ -293,7 +293,7 @@ class ResNetBasicLayer(nn.Cell):
         return hidden_state
 
 
-class ResNetBottleNeckLayer(nn.Cell):
+class ResNetBottleNeckLayer(nn.Module):
     """
     A classic ResNet's bottleneck layer composed by three `3x3` convolutions.
 
@@ -334,7 +334,7 @@ class ResNetBottleNeckLayer(nn.Cell):
         self.shortcut = (
             ResNetShortCut(in_channels, out_channels, stride=stride) if should_apply_shortcut else nn.Identity()
         )
-        self.layer = nn.SequentialCell(
+        self.layer = nn.Sequential(
             ResNetConvLayer(
                 in_channels, reduces_channels, kernel_size=1, stride=stride if downsample_in_bottleneck else 1
             ),
@@ -343,9 +343,9 @@ class ResNetBottleNeckLayer(nn.Cell):
         )
         self.activation = ACT2FN[activation]
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
-        Constructs a ResNet bottleneck layer.
+        forwards a ResNet bottleneck layer.
 
         Args:
             self (ResNetBottleNeckLayer): An instance of the ResNetBottleNeckLayer class.
@@ -365,7 +365,7 @@ class ResNetBottleNeckLayer(nn.Cell):
         return hidden_state
 
 
-class ResNetStage(nn.Cell):
+class ResNetStage(nn.Module):
     """
     A ResNet stage composed by stacked layers.
     """
@@ -409,20 +409,20 @@ class ResNetStage(nn.Cell):
             )
         else:
             first_layer = layer(in_channels, out_channels, stride=stride, activation=config.hidden_act)
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             first_layer, *[layer(out_channels, out_channels, activation=config.hidden_act) for _ in range(depth - 1)]
         )
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Constructs the hidden state of the ResNet stage based on the given input.
+        forwards the hidden state of the ResNet stage based on the given input.
 
         Args:
             self (ResNetStage): An instance of the ResNetStage class.
-            input (mindspore.Tensor): The input tensor for constructing the hidden state.
+            input (mindspore.Tensor): The input tensor for forwarding the hidden state.
 
         Returns:
-            mindspore.Tensor: The constructed hidden state tensor.
+            mindspore.Tensor: The forwarded hidden state tensor.
 
         Raises:
             None.
@@ -433,14 +433,14 @@ class ResNetStage(nn.Cell):
         return hidden_state
 
 
-class ResNetEncoder(nn.Cell):
+class ResNetEncoder(nn.Module):
 
     """
     ResNetEncoder is a class that represents a Residual Neural Network (ResNet) encoder.
-    It is a subclass of nn.Cell and is used for constructing the encoder part of a ResNet model.
+    It is a subclass of nn.Module and is used for forwarding the encoder part of a ResNet model.
 
     Attributes:
-        stages (nn.CellList): A list of ResNetStage instances representing the different stages of the ResNet encoder.
+        stages (nn.ModuleList): A list of ResNetStage instances representing the different stages of the ResNet encoder.
 
     Methods:
         __init__:
@@ -451,8 +451,8 @@ class ResNetEncoder(nn.Cell):
             - config (ResNetConfig): An instance of ResNetConfig class containing the configuration parameters
             for the ResNet encoder.
 
-        construct:
-            Constructs the ResNet encoder.
+        forward:
+            forwards the ResNet encoder.
 
             Args:
 
@@ -490,7 +490,7 @@ class ResNetEncoder(nn.Cell):
             None.
         """
         super().__init__()
-        self.stages = nn.CellList([])
+        self.stages = nn.ModuleList([])
         # based on `downsample_in_first_stage` the first layer of the first stage may or may not downsample the input
         self.stages.append(
             ResNetStage(
@@ -505,11 +505,11 @@ class ResNetEncoder(nn.Cell):
         for (in_channels, out_channels), depth in zip(in_out_channels, config.depths[1:]):
             self.stages.append(ResNetStage(config, in_channels, out_channels, depth=depth))
 
-    def construct(
+    def forward(
         self, hidden_state: mindspore.Tensor, output_hidden_states: bool = False, return_dict: bool = True
     ) -> BaseModelOutputWithNoAttention:
         """
-        Constructs the ResNetEncoder by processing the hidden state through the defined stages.
+        forwards the ResNetEncoder by processing the hidden state through the defined stages.
 
         Args:
             self (ResNetEncoder): The instance of the ResNetEncoder class.
@@ -574,48 +574,22 @@ class ResNetPreTrainedModel(PreTrainedModel):
             ValueError: If the module's weight and bias initialization fails.
         """
         if isinstance(module, nn.Conv2d):
-            module.weight.initialize(HeNormal(mode='fan_out', nonlinearity='relu'))
+            module.weight.set_data(initializer(HeNormal(), module.weight.shape, module.weight.dtype))
+            #module.weight.initialize(HeNormal(mode='fan_out', nonlinearity='relu'))
         elif isinstance(module, (nn.BatchNorm2d, nn.GroupNorm)):
-            module.weight.initialize('ones')
-            module.bias.initialize('zeros')
-
+            module.weight.set_data(
+                initializer(
+                    "zeros",
+                    module.bias.shape,
+                    module.bias.dtype,
+                )
+            )
+            module.weight.set_data(
+                initializer("ones", module.weight.shape, module.weight.dtype)
+            )
 
 class ResNetModel(ResNetPreTrainedModel):
-
-    """
-    ResNetModel is a class that represents a ResNet model for image processing tasks.
-    This class inherits from ResNetPreTrainedModel and includes methods for initializing the model and constructing
-    its forward pass.
-
-    Attributes:
-        config: The configuration parameters for the ResNetModel.
-        embedder: The ResNetEmbeddings module used for embedding input pixel values.
-        encoder: The ResNetEncoder module used for encoding embedded features.
-        pooler: The nn.AdaptiveAvgPool2d module used for pooling the final hidden state.
-
-    Methods:
-        __init__: Initializes the ResNetModel with the given configuration.
-        construct: Constructs the forward pass of the model, generating output hidden states and a pooled output.
-
-    Returns:
-        BaseModelOutputWithPoolingAndNoAttention: An output object containing the last hidden state, pooled output,
-            and optional hidden states.
-    """
     def __init__(self, config):
-        """
-        Initializes a ResNetModel instance with the provided configuration.
-
-        Args:
-            self (ResNetModel): The instance of the ResNetModel class.
-            config (dict): A dictionary containing configuration parameters for the model.
-                This configuration should include necessary settings for embedding, encoding, and pooling.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__(config)
         self.config = config
         self.embedder = ResNetEmbeddings(config)
@@ -624,11 +598,11 @@ class ResNetModel(ResNetPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BaseModelOutputWithPoolingAndNoAttention:
         """
-        Constructs a ResNet model.
+        forwards a ResNet model.
 
         Args:
             self: The object instance.
@@ -690,12 +664,12 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
     Attributes:
         num_labels (int): The number of labels for the classification task.
         resnet (ResNetModel): The ResNet model used for feature extraction.
-        classifier (nn.SequentialCell): The classifier module for final classification.
+        classifier (nn.Sequential): The classifier module for final classification.
         config: Configuration settings for the model.
 
     Methods:
         __init__: Initializes the ResNetForImageClassification model with the given configuration.
-        construct: Constructs the model for image classification, taking pixel values, labels, and optional
+        forward: forwards the model for image classification, taking pixel values, labels, and optional
             parameters as input and returning the classification output.
 
     Parameters:
@@ -737,14 +711,14 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
         self.num_labels = config.num_labels
         self.resnet = ResNetModel(config)
         # classification head
-        self.classifier = nn.SequentialCell(
+        self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Dense(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity(),
+            nn.Linear(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity(),
         )
         # initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
@@ -811,23 +785,9 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
 
     Methods:
         __init__: Initializes the ResNetBackbone instance with the given configuration.
-        construct: Constructs the backbone and returns the output.
+        forward: forwards the backbone and returns the output.
     """
     def __init__(self, config):
-        """
-        Initialize the ResNetBackbone class with the provided configuration.
-
-        Args:
-            self (ResNetBackbone): The instance of the ResNetBackbone class.
-            config (Config): An object containing configuration parameters for the ResNetBackbone.
-                It includes settings such as embedding size, hidden layer sizes, and other backbone configurations.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__(config)
         super()._init_backbone(config)
 
@@ -838,37 +798,9 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
         # initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BackboneOutput:
-        """
-
-        Returns:
-            BackboneOutput
-
-        Example:
-            ```python
-            >>> from transformers import AutoImageProcessor, AutoBackbone
-            >>> import torch
-            >>> from PIL import Image
-            >>> import requests
-            ...
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            ...
-            >>> processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
-            >>> model = AutoBackbone.from_pretrained(
-            ...     "microsoft/resnet-50", out_features=["stage1", "stage2", "stage3", "stage4"]
-            ... )
-            ...
-            >>> inputs = processor(image, return_tensors="pt")
-            ...
-            >>> outputs = model(**inputs)
-            >>> feature_maps = outputs.feature_maps
-            >>> list(feature_maps[-1].shape)
-            [1, 2048, 7, 7]
-            ```
-        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
