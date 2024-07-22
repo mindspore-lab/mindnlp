@@ -27,9 +27,12 @@ from typing import Optional, List, Callable, Dict, Any, Tuple, Union
 from addict import Dict as ADDict
 
 import mindspore
-from mindspore import ops
+from mindspore.common.api import _no_grad
 
-from mindnlp.utils import ModelOutput, logging, ExplicitEnum, no_grad
+
+from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import ModelOutput, logging, ExplicitEnum
 from .configuration_utils import GenerationConfig
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
 from ..cache_utils import StaticCache
@@ -260,6 +263,7 @@ class SampleEncoderDecoderOutput(ModelOutput):
     decoder_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     cross_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+
 
 @dataclass
 class BeamSampleDecoderOnlyOutput(ModelOutput):
@@ -711,7 +715,7 @@ class GenerationMixin:
         if self.config.is_encoder_decoder and encoder_outputs is not None:
             # make dummy input_ids with value -100, as a sanity check ensuring that they won't be used for encoding
             shape = encoder_outputs.last_hidden_state.shape[:-1]
-            return ops.ones(shape, dtype=mindspore.int64) * -100
+            return ops.ones(*shape, dtype=mindspore.int64) * -100
 
         # If there is some tensor in `model_kwargs`, we can infer the batch size from it. This is helpful with
         # soft-prompting or in multimodal implementations built on top of decoder-only language models.
@@ -722,12 +726,12 @@ class GenerationMixin:
                 break
 
         if "inputs_embeds" in model_kwargs:
-            return ops.ones((batch_size, 0), dtype=mindspore.int64)
+            return ops.ones(batch_size, 0, dtype=mindspore.int64)
 
         if bos_token_id is None:
             raise ValueError("`bos_token_id` has to be defined when no `input_ids` are provided.")
 
-        return ops.ones((batch_size, 1), dtype=mindspore.int64) * bos_token_id
+        return ops.ones(batch_size, 1, dtype=mindspore.int64) * bos_token_id
 
     def _can_retrieve_inputs_from_name(
         self, inputs: Optional[mindspore.Tensor], name: str, model_kwargs: Dict[str, mindspore.Tensor]
@@ -737,7 +741,7 @@ class GenerationMixin:
         from name
         """
         can_retrieve_inputs = model_kwargs.get(name, None) is not None and name in set(
-            inspect.signature(self.construct).parameters.keys()
+            inspect.signature(self.forward).parameters.keys()
         )
 
         if can_retrieve_inputs and inputs is not None:
@@ -799,7 +803,7 @@ class GenerationMixin:
         Returns:
             mindspore.Tensor: The attention mask tensor generated based on the input parameters.
                 It is a 2D tensor of the same shape as the input tensor, with data type int64.
-        
+
         Raises:
             ValueError: If the input tensor shape is not 2D or the data type is not int64 or float32.
             ValueError: If the pad_token_id is provided and found in the input tensor.
@@ -814,14 +818,14 @@ class GenerationMixin:
         # Check if input is input_ids and padded -> only then is attention_mask defined
         if is_input_ids and is_pad_token_in_inputs and is_pad_token_not_equal_to_eos_token_id:
             return inputs.ne(pad_token_id).long()
-        return ops.ones(inputs.shape[:2], dtype=mindspore.float32)
+        return ops.ones(*inputs.shape[:2], dtype=mindspore.float32)
 
     def _prepare_encoder_decoder_kwargs_for_generation(
         self, inputs_tensor: mindspore.Tensor, model_kwargs, model_input_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Prepares encoder-decoder keyword arguments for generation.
-        
+
         Args:
             self (GenerationMixin): The instance of the GenerationMixin class.
             inputs_tensor (mindspore.Tensor): The input tensor for the model generation.
@@ -831,7 +835,7 @@ class GenerationMixin:
         
         Returns:
             Dict[str, Any]: A dictionary containing the prepared encoder-decoder keyword arguments for model generation.
-        
+
         Raises:
             None.
         """
@@ -844,7 +848,7 @@ class GenerationMixin:
             for argument, value in model_kwargs.items()
             if not any(argument.startswith(p) for p in irrelevant_prefix)
         }
-        encoder_signature = set(inspect.signature(encoder.construct).parameters)
+        encoder_signature = set(inspect.signature(encoder.forward).parameters)
         encoder_accepts_wildcard = "kwargs" in encoder_signature or "model_kwargs" in encoder_signature
         if not encoder_accepts_wildcard:
             encoder_kwargs = {
@@ -908,12 +912,12 @@ class GenerationMixin:
             isinstance(decoder_start_token_id, mindspore.Tensor)
             and (decoder_input_ids[:, 0] != decoder_start_token_id[:, 0]).all().item()
         ):
-            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], axis=-1)
+            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], dim=-1)
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 decoder_attention_mask = ops.cat(
                     (ops.ones_like(decoder_attention_mask)[:, :1], decoder_attention_mask),
-                    axis=-1,
+                    dim=-1,
                 )
                 model_kwargs["decoder_attention_mask"] = decoder_attention_mask
 
@@ -1050,22 +1054,22 @@ class GenerationMixin:
         # update token_type_ids with last value
         if "token_type_ids" in model_kwargs:
             token_type_ids = model_kwargs["token_type_ids"]
-            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], axis=-1)
+            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], dim=-1)
 
         if not is_encoder_decoder:
             # update attention mask
             if "attention_mask" in model_kwargs:
                 attention_mask = model_kwargs["attention_mask"]
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], axis=-1
+                    [attention_mask, ops.ones(attention_mask.shape[0], 1, dtype=attention_mask.dtype)], dim=-1
                 )
         else:
             # update decoder attention mask
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 model_kwargs["decoder_attention_mask"] = ops.cat(
-                    [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
-                    axis=-1,
+                    [decoder_attention_mask, ops.ones(decoder_attention_mask.shape[0], 1, dtype=decoder_attention_mask.dtype)],
+                    dim=-1,
                 )
 
         return model_kwargs
@@ -1485,8 +1489,8 @@ class GenerationMixin:
             raise ValueError("Cannot extend attention mask to a length less than it already is")
 
         model_kwargs[key] = ops.cat(
-            [mask, mask.new_ones((mask.shape[0], mask_extension_length), dtype=mask.dtype)],
-            axis=-1,
+            [mask, ops.ones(mask.shape[0], mask_extension_length, dtype=mask.dtype)],
+            dim=-1,
         )
 
         return model_kwargs
@@ -1518,12 +1522,12 @@ class GenerationMixin:
         token_type_copies = final_token_type.repeat(1, extension_length)
         model_kwargs["token_type_ids"] = ops.cat(
             [model_kwargs["token_type_ids"], token_type_copies],
-            axis=-1,
+            dim=-1,
         )
 
         return model_kwargs
 
-    @no_grad
+    @_no_grad()
     def generate(
         self,
         inputs: Optional[mindspore.Tensor] = None,
@@ -1686,7 +1690,7 @@ class GenerationMixin:
         else:
             model_kwargs["use_cache"] = generation_config.use_cache
 
-        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.construct).parameters.keys())
+        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.forward).parameters.keys())
         requires_attention_mask = "encoder_outputs" not in model_kwargs
 
         if model_kwargs.get("attention_mask", None) is None and requires_attention_mask and accepts_attention_mask:
@@ -1802,7 +1806,7 @@ class GenerationMixin:
                 raise ValueError("assisted generate requires `use_cache=True`")
 
             assistant_accepts_encoder_outputs = "encoder_outputs" in set(
-                inspect.signature(assistant_model.construct).parameters.keys()
+                inspect.signature(assistant_model.forward).parameters.keys()
             )
 
             # 11. If the assistant model is an encoder-decoder, prepare its encoder outputs
@@ -2077,6 +2081,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
+    @_no_grad()
     def contrastive_search(
         self,
         input_ids: mindspore.Tensor,
@@ -2283,7 +2288,7 @@ class GenerationMixin:
             # degeneration penalty
             logit_for_next_step = logits_processor(input_ids, logit_for_next_step)
             logit_for_next_step = logits_warper(input_ids, logit_for_next_step)
-            next_probs = ops.softmax(logit_for_next_step, axis=-1)
+            next_probs = ops.softmax(logit_for_next_step, dim=-1)
             top_k_probs, top_k_ids = ops.topk(next_probs, dim=-1, k=top_k)
             top_k_ids = top_k_ids.astype(mindspore.int64)
 
@@ -2347,16 +2352,16 @@ class GenerationMixin:
                     all_logits.append(outputs.logits[:, -1, :])
 
                 # stack hidden states
-                next_hidden = ops.stack([all_last_hstates[i] for i in range(top_k)], axis=0)
+                next_hidden = ops.stack([all_last_hstates[i] for i in range(top_k)], dim=0)
                 final_full_hstates = [0 for i in range(len(full_hidden_states))]
                 for layer in range(len(full_hidden_states)):
                     final_full_hstates[layer] = ops.stack(
-                        [ops.squeeze(all_hstates[i][layer], 0) for i in range(top_k)], axis=0
+                        [ops.squeeze(all_hstates[i][layer], 0) for i in range(top_k)], dim=0
                     )
                 full_hidden_states = tuple(final_full_hstates)
 
                 # stack logits
-                logits = ops.cat(all_logits, axis=0)
+                logits = ops.cat(all_logits, dim=0)
 
             else:
                 # compute the candidate tokens by the language model and collect their hidden_states
@@ -2390,9 +2395,9 @@ class GenerationMixin:
             # the degeneration penalty; (4) logits for selecting next top-k candidates; (5) selected tokens scores
             # (model confidence minus degeneration penalty); (6) decoder hidden_states
             next_tokens = top_k_ids[list(range(len(top_k_ids))), selected_idx]
-            next_hidden = ops.stack(ops.split(next_hidden.squeeze(axis=1), top_k))
+            next_hidden = ops.stack(ops.split(ops.squeeze(next_hidden, dim=1), top_k))
             next_hidden = next_hidden[list(range(batch_size)), selected_idx, :]
-            last_hidden_states = ops.cat([last_hidden_states, next_hidden.unsqueeze(1)], axis=1)
+            last_hidden_states = ops.cat([last_hidden_states, next_hidden.unsqueeze(1)], dim=1)
 
             next_decoder_hidden_states = ()
             for layer in full_hidden_states:
@@ -2420,7 +2425,7 @@ class GenerationMixin:
                     items = ()
                     # item is either the key or the value matrix
                     for item in layer:
-                        item = ops.stack(ops.split(item, top_k, axis=0))  # [B, K, num_head, seq_len, esz]
+                        item = ops.stack(ops.split(item, top_k, dim=0))  # [B, K, num_head, seq_len, esz]
                         item = item[list(range(batch_size)), selected_idx, ...]  # [B, num_head, seq_len, esz]
                         items += (item,)
                     new_key_values += (items,)
@@ -2434,11 +2439,12 @@ class GenerationMixin:
                 next_step_decoder_attentions = ()
                 if output_attentions:
                     for layer in outputs.cross_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, axis=0))[list(range(batch_size)), selected_idx, ...]
+                        layer = ops.stack(ops.split(layer, top_k, dim=0))[list(range(batch_size)), selected_idx, ...]
                         next_step_cross_attentions += (layer,)
                     for layer in outputs.decoder_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, axis=0))[list(range(batch_size)), selected_idx, ...]
+                        layer = ops.stack(ops.split(layer, top_k, dim=0))[list(range(batch_size)), selected_idx, ...]
                         next_step_decoder_attentions += (layer,)
+
                 outputs = Seq2SeqLMOutput(
                     past_key_values=next_past_key_values,
                     decoder_hidden_states=next_decoder_hidden_states,
@@ -2449,15 +2455,16 @@ class GenerationMixin:
                 next_step_attentions = ()
                 if output_attentions:
                     for layer in outputs.attentions:
-                        layer = ops.stack(ops.split(layer, top_k, axis=0))[list(range(batch_size)), selected_idx, ...]
+                        layer = ops.stack(ops.split(layer, top_k, dim=0))[list(range(batch_size)), selected_idx, ...]
                         next_step_attentions += (layer,)
+
                 outputs = CausalLMOutputWithPast(
                     past_key_values=next_past_key_values,
                     hidden_states=next_decoder_hidden_states,
                     attentions=next_step_attentions or None,
                 )
-            # contrastive_search main logic end
 
+            # contrastive_search main logic end
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
@@ -2468,7 +2475,7 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             if streamer is not None:
                 streamer.put(next_tokens)
             model_kwargs = self._update_model_kwargs_for_generation(
@@ -2669,7 +2676,9 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(input_ids.shape[0], dtype=mindspore.int64)
 
         this_peer_finished = False  # used by synced_gpus only
+        import time
         while True:
+            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -2714,7 +2723,7 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             if streamer is not None:
                 streamer.put(next_tokens)
             model_kwargs = self._update_model_kwargs_for_generation(
@@ -2724,7 +2733,7 @@ class GenerationMixin:
             # if eos_token was found in one sentence, set sentence to finished
             if eos_token_id_tensor is not None:
                 unfinished_sequences = unfinished_sequences.mul(
-                    next_tokens.tile((eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0)
+                    ops.tile(next_tokens, (eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0)
                 )
 
                 # stop when each sentence is finished
@@ -2737,7 +2746,8 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-
+            t = time.time()
+            print(t - s)
         if streamer is not None:
             streamer.end()
 
@@ -2937,7 +2947,9 @@ class GenerationMixin:
 
         this_peer_finished = False  # used by synced_gpus only
         # auto-regressive generation
+        import time
         while True:
+            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -2978,7 +2990,7 @@ class GenerationMixin:
                     )
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1).astype(mindspore.int64)
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
@@ -2987,7 +2999,7 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             if streamer is not None:
                 streamer.put(next_tokens)
             model_kwargs = self._update_model_kwargs_for_generation(
@@ -3010,6 +3022,8 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
+            t = time.time()
+            print(t - s)
         if streamer is not None:
             streamer.end()
 
@@ -3213,7 +3227,7 @@ class GenerationMixin:
 
         # initialise score of first beam with 0 and the rest with -1e9. This makes sure that only tokens
         # of the first beam are considered to avoid sampling the exact same tokens across all beams.
-        beam_scores = ops.zeros((batch_size, num_beams), dtype=mindspore.float32)
+        beam_scores = ops.zeros(batch_size, num_beams, dtype=mindspore.float32)
         beam_scores[:, 1:] = -1e9
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
@@ -3233,8 +3247,8 @@ class GenerationMixin:
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = outputs.logits[:, -1, :]
-            next_token_scores = ops.log_softmax(
-                next_token_logits, axis=-1
+            next_token_scores = F.log_softmax(
+                next_token_logits, dim=-1
             )  # (batch_size * num_beams, vocab_size)
 
             next_token_scores_processed = logits_processor(input_ids, next_token_scores)
@@ -3289,7 +3303,7 @@ class GenerationMixin:
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], axis=-1)
+            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1)
 
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
@@ -3531,7 +3545,7 @@ class GenerationMixin:
                 model_kwargs["encoder_outputs"].get("hidden_states") if output_hidden_states else None
             )
 
-        beam_scores = ops.zeros((batch_size, num_beams), dtype=mindspore.float32)
+        beam_scores = ops.zeros(batch_size, num_beams, dtype=mindspore.float32)
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
         this_peer_finished = False  # used by synced_gpus only
@@ -3550,8 +3564,8 @@ class GenerationMixin:
 
             next_token_logits = outputs.logits[:, -1, :]
 
-            next_token_scores = ops.log_softmax(
-                next_token_logits, axis=-1
+            next_token_scores = F.log_softmax(
+                next_token_logits, dim=-1
             )  # (batch_size * num_beams, vocab_size)
 
             next_token_scores_processed = logits_processor(input_ids, next_token_scores)
@@ -3582,13 +3596,13 @@ class GenerationMixin:
             vocab_size = next_token_scores.shape[-1]
             next_token_scores = next_token_scores.view(batch_size, num_beams * vocab_size)
 
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
 
             next_tokens = ops.multinomial(probs, num_samples=2 * num_beams)
-            next_token_scores = ops.gather_elements(next_token_scores, -1, next_tokens)
+            next_token_scores = ops.gather(next_token_scores, -1, next_tokens)
 
-            next_token_scores, _indices = ops.sort(next_token_scores, descending=True, axis=1)
-            next_tokens = ops.gather_elements(next_tokens, -1, _indices)
+            next_token_scores, _indices = ops.sort(next_token_scores, descending=True, dim=1)
+            next_tokens = ops.gather(next_tokens, -1, _indices)
             next_indices = ops.div(next_tokens, vocab_size, rounding_mode="floor")
             next_tokens = next_tokens % vocab_size
 
@@ -3606,7 +3620,7 @@ class GenerationMixin:
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1).astype(mindspore.int64)], axis=-1)
+            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1).astype(mindspore.int64)], dim=-1)
 
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
@@ -3898,8 +3912,8 @@ class GenerationMixin:
                 # select outputs of beams of current group only
                 next_token_logits = outputs.logits[batch_group_indices, -1, :]
 
-                next_token_scores = ops.log_softmax(
-                    next_token_logits, axis=-1
+                next_token_scores = F.log_softmax(
+                    next_token_logits, dim=-1
                 )  # (batch_size * group_size, vocab_size)
                 vocab_size = next_token_scores.shape[-1]
 
@@ -3946,7 +3960,7 @@ class GenerationMixin:
                     )
 
                 input_ids[batch_group_indices] = group_input_ids[beam_idx]
-                group_input_ids = ops.cat([group_input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], axis=-1)
+                group_input_ids = ops.cat([group_input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1)
                 current_tokens[batch_group_indices] = group_input_ids[:, -1]
 
                 # (beam_idx // group_size) -> batch_idx
@@ -3975,7 +3989,7 @@ class GenerationMixin:
                         else (outputs.hidden_states,)
                     )
 
-            input_ids = ops.cat([input_ids, current_tokens.unsqueeze(-1)], axis=-1)
+            input_ids = ops.cat([input_ids, current_tokens.unsqueeze(-1)], dim=-1)
 
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
@@ -4225,7 +4239,7 @@ class GenerationMixin:
 
         # initialise score of first beam with 0 and the rest with -1e9. This makes sure that only tokens
         # of the first beam are considered to avoid sampling the exact same tokens across all beams.
-        beam_scores = ops.zeros((batch_size, num_beams), dtype=mindspore.float32)
+        beam_scores = ops.zeros(batch_size, num_beams, dtype=mindspore.float32)
         beam_scores[:, 1:] = -1e9
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
@@ -4245,8 +4259,8 @@ class GenerationMixin:
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = outputs.logits[:, -1, :]
-            next_token_scores = ops.log_softmax(
-                next_token_logits, axis=-1
+            next_token_scores = F.log_softmax(
+                next_token_logits, dim=-1
             )  # (batch_size * num_beams, vocab_size)
 
             next_token_scores_processed = logits_processor(input_ids, next_token_scores)
@@ -4304,7 +4318,7 @@ class GenerationMixin:
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], axis=-1)
+            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
@@ -4491,7 +4505,7 @@ class GenerationMixin:
 
         # check if assistant model accepts encoder_outputs
         assistant_accepts_encoder_outputs = "encoder_outputs" in set(
-            inspect.signature(assistant_model.construct).parameters.keys()
+            inspect.signature(assistant_model.forward).parameters.keys()
         )
 
         # init values
@@ -4599,7 +4613,7 @@ class GenerationMixin:
                         candidate_input_ids, assistant_model_outputs.logits[:, -1, :]
                     )
                 new_token = assistant_model_outputs.logits[:, -1, :].argmax(axis=-1)
-                candidate_input_ids = ops.cat((candidate_input_ids, new_token[:, None]), axis=-1)
+                candidate_input_ids = ops.cat((candidate_input_ids, new_token[:, None]), dim=-1)
 
                 # 1.3. stop assistant generation on EOS
                 if eos_token_id_tensor is not None:
@@ -4643,7 +4657,7 @@ class GenerationMixin:
 
             # 3. Obtain the next tokens from the original model logits.
             if do_sample:
-                probs = ops.softmax(new_logits, axis=-1)
+                probs = ops.softmax(new_logits, dim=-1)
                 selected_tokens = ops.multinomial(probs[0, :, :], num_samples=1).squeeze(1)[None, :]
             else:
                 selected_tokens = new_logits.argmax(axis=-1)
@@ -4652,7 +4666,7 @@ class GenerationMixin:
             # 4. Compare the argmax from the original model logits with the assistant forecasted tokens. We can keep
             # the assistant forecasted tokens until the first mismatch, or until the max length is reached.
             candidate_new_tokens = candidate_input_ids[:, -candidate_length:]
-            n_matches = ((~(candidate_new_tokens == selected_tokens[:, :-1])).cumsum(axis=-1) < 1).sum()
+            n_matches = (ops.cumsum((~(candidate_new_tokens == selected_tokens[:, :-1])), dim=-1) < 1).sum()
 
             # 5. Update variables according to the number of matching assistant tokens. Remember: the token generated
             # by the model after the last candidate match is also valid, as it is generated from a correct sequence.
@@ -4666,7 +4680,7 @@ class GenerationMixin:
 
             # 5.2. Get the valid continuation, after the matching tokens
             valid_tokens = selected_tokens[:, : n_matches + 1]
-            input_ids = ops.cat((input_ids, valid_tokens), axis=-1)
+            input_ids = ops.cat((input_ids, valid_tokens), dim=-1)
             if streamer is not None:
                 streamer.put(valid_tokens)
             new_cur_len = input_ids.shape[-1]
@@ -4780,6 +4794,7 @@ class GenerationMixin:
         else:
             return input_ids
 
+
 def _crop_past_key_values(model, past_key_values, maximum_length):
     """Crops the past key values up to a certain maximum length."""
     new_past = []
@@ -4868,7 +4883,7 @@ def _ranking_fast(
     norm_context_hidden = context_hidden / context_hidden.norm(dim=2, keepdim=True)
     norm_next_hidden = next_hidden / next_hidden.norm(dim=2, keepdim=True)
     cosine_matrix = ops.matmul(norm_context_hidden, norm_next_hidden.swapaxes(1, 2)).squeeze(-1)  # [B*K, S]
-    degeneration_penalty, _ = ops.max(cosine_matrix, axis=-1)  # [B*K]
+    degeneration_penalty, _ = ops.max(cosine_matrix, dim=-1)  # [B*K]
     next_top_k_probs = next_top_k_probs.view(-1)  # [B*K]
     contrastive_score = (1.0 - alpha) * next_top_k_probs - alpha * degeneration_penalty
     contrastive_score = ops.stack(ops.split(contrastive_score, beam_width))  # [B, K]

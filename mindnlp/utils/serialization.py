@@ -710,9 +710,9 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         None: This function does not raise any exceptions.
     '''
     if size == ():
-        size = (1,)
-        stride = (1,)
-    num_elemets = reduce(operator.mul, size)
+        num_elemets = 1
+    else:
+        num_elemets = reduce(operator.mul, size)
     array = storage[storage_offset: storage_offset + num_elemets]
 
     if array.dtype == bfloat16:

@@ -261,7 +261,7 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
     # # Input is 'static_categorical_features' not 'input_ids'
     def test_model_main_input_name(self):
         model_signature = inspect.signature(
-            getattr(AutoformerModel, "construct"))
+            getattr(AutoformerModel, "forward"))
         # The main input is the name of the argument after `self`
         observed_main_input_name = list(model_signature.parameters.keys())[1]
         self.assertEqual(AutoformerModel.main_input_name,
@@ -272,7 +272,7 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

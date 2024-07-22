@@ -20,6 +20,7 @@ import warnings
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import mindspore
 from mindspore import nn, ops, Parameter
+from mindspore.common.api import _no_grad
 
 from mindnlp.utils import logging
 from ...modeling_outputs import (
@@ -206,14 +207,12 @@ class PrefixEncoder(nn.Cell):
 def split_tensor_along_last_dim(
         tensor: mindspore.Tensor,
         num_partitions: int,
-        contiguous_split_chunks: bool = False,
 ) -> List[mindspore.Tensor]:
     """Split a tensor along its last dimension.
 
     Arguments:
         tensor: input tensor.
         num_partitions: number of partitions to split the tensor
-        contiguous_split_chunks: If True, make each chunk contiguous in memory.
 
     Returns:
         A list of Tensors
@@ -223,7 +222,6 @@ def split_tensor_along_last_dim(
     last_dim_size = tensor.shape[last_dim] // num_partitions
     # Split.
     tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
-    # Note: torch.split does not create contiguous tensors by default.
     return tensor_list
 
 
@@ -617,7 +615,7 @@ class CoreAttention(nn.Cell):
         # Raw attention scores. [b * np, sq, sk]
         matmul_result = ops.bmm(
             query_layer.swapaxes(0, 1),  # [b * np, sq, hn]
-            key_layer.swapaxes(0, 1).swapaxes(1, 2),  # [b * np, hn, sk]
+            key_layer.permute(1, 2, 0),  # [b * np, hn, sk]
         ) * (1.0 / self.norm_factor)
 
         # change view to [b, np, sq, sk]
@@ -633,8 +631,8 @@ class CoreAttention(nn.Cell):
         if self.coeff is not None:
             attention_scores = attention_scores * self.coeff
         if attention_mask is None and attention_scores.shape[2] == attention_scores.shape[3]:
-            attention_mask = ops.ones(output_size[0], 1, output_size[2], output_size[3], dtype=mindspore.bool_)
-            attention_mask = attention_mask.tril()
+            attention_mask = ops.ones(output_size[0], 1, output_size[2], output_size[3], dtype=mindspore.int32)
+            attention_mask = attention_mask.tril().bool()
             attention_mask = ~attention_mask
         if attention_mask is not None:
             attention_scores = attention_scores.masked_fill(attention_mask, float("-inf"))
@@ -1719,7 +1717,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1),
+            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
                                      ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
@@ -1828,6 +1826,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             inputs = tokenizer([prompt], return_tensors="ms")
         return inputs
 
+    @_no_grad()
     def chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 8192, num_beams=1,
              do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None, **kwargs):
         """
@@ -1870,6 +1869,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         history = history + [(query, response)]
         return response, history
 
+    @_no_grad()
     def stream_chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, past_key_values=None,
                     max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
                     return_past_key_values=False, **kwargs):
@@ -1931,6 +1931,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 else:
                     yield response, new_history
 
+    @_no_grad()
     def stream_generate(
             self,
             input_ids,

@@ -13,3 +13,4 @@
 # limitations under the License.
 # ============================================================================
 """mindnlp nn"""
+from .modules import *

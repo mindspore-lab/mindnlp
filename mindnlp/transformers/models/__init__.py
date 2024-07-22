@@ -67,12 +67,14 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    deepseek_v2,
     detr,
     deit,
     dinov2,
     distilbert,
     donut,
     dpr,
+    dpt,
     efficientnet,
     efficientformer,
     electra,
@@ -106,8 +108,10 @@ from . import (
     instructblip,
     ibert,
     jetmoe,
+    kosmos2,
     layoutlm,
     layoutlmv2,
+    layoutlmv3,
     led,
     lilt,
     llama,
@@ -118,6 +122,7 @@ from . import (
     lxmert,
     mamba,
     marian,
+    markuplm,
     m2m_100,
     mask2former,
     mbart,
@@ -147,6 +152,7 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    perceiver,
     persimmon,
     phi,
     phi3,
@@ -185,6 +191,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    udop,
     upernet,
     umt5,
     unispeech_sat,
@@ -209,9 +216,11 @@ from . import (
     xlm,
     xlm_roberta,
     xlm_roberta_xl,
+    xlm_prophetnet,
     xlnet,
     xmod,
     vilt,
+    yolos,
 )
 
 from .owlv2 import *
@@ -264,12 +273,14 @@ from .data2vec import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .deepseek_v2 import *
 from .detr import *
 from .deit import *
 from .dinov2 import *
 from .distilbert import *
 from .donut import *
 from .dpr import *
+from .dpt import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -303,8 +314,10 @@ from .hubert import *
 from .imagegpt import *
 from .instructblip import *
 from .jetmoe import *
+from .kosmos2 import *
 from .layoutlm import *
 from .layoutlmv2 import *
+from .layoutlmv3 import *
 from .led import *
 from .lilt import *
 from .llama import *
@@ -312,10 +325,11 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
-from .m2m_100 import *
 from .lxmert import *
+from .m2m_100 import *
 from .mamba import *
 from .marian import *
+from .markuplm import *
 from .mask2former import *
 from .mbart import *
 from .mbart50 import *
@@ -344,6 +358,7 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .perceiver import *
 from .persimmon import *
 from .phi import *
 from .phi3 import *
@@ -382,6 +397,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .udop import *
 from .upernet import *
 from .unispeech_sat import *
 from .univnet import *
@@ -406,9 +422,12 @@ from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
+from .xlm_prophetnet import *
 from .xlnet import *
 from .umt5 import *
 from .xmod import *
+from .yolos import *
+
 
 
 __all__ = []
@@ -461,12 +480,14 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(dinov2.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
+__all__.extend(dpt.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
@@ -500,8 +521,10 @@ __all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
+__all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+__all__.extend(layoutlmv3.__all__)
 __all__.extend(led.__all__)
 __all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
@@ -509,10 +532,11 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
-__all__.extend(m2m_100.__all__)
 __all__.extend(lxmert.__all__)
+__all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
+__all__.extend(markuplm.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(mbart50.__all__)
@@ -541,6 +565,7 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(perceiver.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
@@ -579,6 +604,7 @@ __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
@@ -603,6 +629,8 @@ __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
+__all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(yolos.__all__)

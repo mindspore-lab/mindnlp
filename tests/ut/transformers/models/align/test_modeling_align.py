@@ -42,7 +42,6 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
 
     from mindnlp.transformers import (
         AlignModel,
@@ -51,6 +50,7 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.align.modeling_align import ALIGN_PRETRAINED_MODEL_ARCHIVE_LIST
 
+mindspore.set_context(pynative_synchronize=True)
 
 if is_vision_available():
     from PIL import Image
@@ -170,7 +170,7 @@ class AlignVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -556,4 +556,5 @@ class AlignModelIntegrationTest(unittest.TestCase):
             (inputs.input_ids.shape[0], inputs.pixel_values.shape[0]),
         )
         expected_logits = mindspore.tensor([[9.7093, 3.4679]])
+        print(outputs.logits_per_image.asnumpy())
         self.assertTrue(np.allclose(outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-3))

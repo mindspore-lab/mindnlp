@@ -22,8 +22,8 @@ import inspect
 import logging
 from typing import List, Iterable, Union, Optional, Callable, Tuple, Dict
 import mindspore
-from mindspore import ops
 import numpy as np
+from mindnlp.core import ops
 
 
 class LogitsProcessor:
@@ -230,7 +230,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores.scatter_(1, self.encoder_input_ids, score)
+        scores = ops.scatter(scores, 1, self.encoder_input_ids, score)
         return scores
 
 
@@ -282,12 +282,12 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
             The repetition penalty factor is controlled by the 'penalty' attribute of the RepetitionPenaltyLogitsProcessor instance.
         """
         input_ids = ops.where(input_ids >= scores.shape[1], input_ids - scores.shape[1], input_ids)
-        score = ops.gather_elements(scores, 1, input_ids)
+        score = ops.gather(scores, 1, input_ids)
 
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores = ops.tensor_scatter_elements(scores, input_ids, score, axis=1)
+        scores = ops.scatter(scores, 1, input_ids, score)
         return scores
 
 
@@ -1395,7 +1395,7 @@ class TopPLogitsWarper(LogitsWarper):
             self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
         # scores = ops.select(ops.isneginf(scores), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min), scores)
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
-        cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
+        cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
         sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
@@ -1404,7 +1404,7 @@ class TopPLogitsWarper(LogitsWarper):
         sorted_indices_to_remove = sorted_indices_to_remove.astype(mindspore.int32)
 
         # scatter sorted tensors to original indexing
-        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+        indices_to_remove = ops.scatter(sorted_indices_to_remove, 1, sorted_indices, sorted_indices_to_remove)
         scores = scores.masked_fill(indices_to_remove.astype(mindspore.bool_), self.filter_value)
         return scores
 
@@ -1535,14 +1535,14 @@ class TypicalLogitsWarper(LogitsWarper):
         shifted_scores = ops.abs((-normalized) - ent)
         sorted_scores, sorted_indices = ops.sort(shifted_scores, descending=False)
         sorted_logits = scores.gather(-1, sorted_indices)
-        cumulative_probs = sorted_logits.softmax(axis=-1).cumsum(axis=-1)
+        cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative mass above the threshold
         last_ind = (cumulative_probs < self.mass).axis(dim=1)
         last_ind.clamp_(max=sorted_scores.shape[-1] - 1)
         sorted_indices_to_remove = sorted_scores > sorted_scores.gather(1, last_ind.view(-1, 1))
         sorted_indices_to_remove[..., : self.min_tokens_to_keep] = 0
-        indices_to_remove = ops.tensor_scatter_elements(sorted_indices_to_remove, sorted_indices, sorted_indices_to_remove, axis=1)
+        indices_to_remove = ops.scatter(sorted_indices_to_remove, 1, sorted_indices, sorted_indices_to_remove)
 
         scores = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores
@@ -1633,7 +1633,7 @@ class EpsilonLogitsWarper(LogitsWarper):
             None.
         '''
         # Determine which indices to remove
-        probabilities = ops.softmax(scores, axis=-1)
+        probabilities = ops.softmax(scores, dim=-1)
         indices_to_remove = probabilities < self.epsilon
 
         # Keep the words with the 'min_tokens_to_keep'-highest probabilities
@@ -2060,10 +2060,10 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
                     self.unconditional_context["attention_mask"],
                     ops.ones_like(input_ids[:, -1:], dtype=mindspore.int64),
                 ],
-                axis=1,
+                dim=1,
             )
             if not self.unconditional_context["use_cache"]:
-                input_ids = ops.cat([self.unconditional_context["input_ids"], input_ids[:, -1:]], axis=1)
+                input_ids = ops.cat([self.unconditional_context["input_ids"], input_ids[:, -1:]], dim=1)
             else:
                 input_ids = input_ids[:, -1:]
             self.unconditional_context["input_ids"] = input_ids
@@ -2300,13 +2300,13 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
             None
         """
         if self.min_eos_p:
-            probs = ops.softmax(scores.float(), axis=-1)
+            probs = ops.softmax(scores.float(), dim=-1)
             # create scores full of -inf except for the eos_token_id
             early_stop_scores = ops.ones_like(scores) * -float("inf")
             early_stop_scores[:, self.eos_token_id] = scores[:, self.eos_token_id]
 
             do_early_stop = probs[:, self.eos_token_id] > self.min_eos_p
-            do_early_stop = ops.any(do_early_stop, axis=1, keep_dims=True)
+            do_early_stop = ops.any(do_early_stop, dim=1, keepdim=True)
             scores = ops.where(do_early_stop, early_stop_scores, scores)
 
         return scores
