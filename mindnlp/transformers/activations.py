@@ -278,7 +278,7 @@ ACT2CLS = {
     """
     'relu': nn.ReLU,
     'gelu': nn.GELU,
-    'gelu_new': nn.GELU,
+    'gelu_new': (nn.GELU, {'approximate': 'tanh'}),
     'gelu_approximate': nn.GELU,
     'gelu_pytorch_tanh': nn.GELU,
     "swish": nn.SiLU,
