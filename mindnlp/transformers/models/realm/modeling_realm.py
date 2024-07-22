@@ -823,7 +823,7 @@ class RealmPreTrainedModel(PreTrainedModel):
                 if len(input_shape) > 2:
                     tensor = tensor.view((-1, input_shape[-1]))
                 flattened_inputs.append(tensor)
-        return tuple(flattened_inputs)
+        return flattened_inputs
 
 
 class RealmBertModel(RealmPreTrainedModel):
@@ -1150,6 +1150,7 @@ class RealmScorer(RealmPreTrainedModel):
         )
 
         # [batch_size * num_candidates, candidate_seq_len]
+        # pylint: disable=unbalanced-tuple-unpacking
         (flattened_input_ids, flattened_attention_mask, flattened_token_type_ids) = self._flatten_inputs(
             candidate_input_ids, candidate_attention_mask, candidate_token_type_ids
         )
@@ -1263,6 +1264,7 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
                 "You have to specify `relevance_score` when `labels` is specified in order to compute loss."
             )
 
+        # pylint: disable=unbalanced-tuple-unpacking
         (flattened_input_ids, flattened_attention_mask, flattened_token_type_ids) = self._flatten_inputs(
             input_ids, attention_mask, token_type_ids
         )
