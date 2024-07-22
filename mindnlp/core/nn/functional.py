@@ -1,4 +1,5 @@
 """nn functional"""
+import mindspore.mint.nn.functional
 import numpy as np
 import mindspore
 from mindspore import ops
@@ -119,3 +120,8 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
         query, key, cos, sin, position_ids, cos_format
     )
+
+def pad(input, pad, mode='constant', value=0.0):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.pad(input, pad, mode, value)
+    return ops.pad(input, pad, mode, value)

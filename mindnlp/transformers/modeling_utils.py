@@ -33,6 +33,7 @@ from mindspore import Tensor, Parameter
 from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
@@ -586,7 +587,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             else:
                 # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
                 if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
-                    new_bias = ops.pad(
+                    new_bias = F.pad(
                         output_embeddings.bias.data,
                         (0, output_embeddings.weight.shape[0] -
                         output_embeddings.bias.shape[0]),
