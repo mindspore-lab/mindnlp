@@ -17,10 +17,10 @@
 import os
 from typing import Optional, Union
 
-import numpy as np
-import os
 os.environ['HF_ENDPOINT']='https://hf-mirror.com'
 from huggingface_hub import hf_hub_download
+
+import numpy as np
 
 from mindnlp.utils import logging
 from mindnlp.transformers.models.auto.tokenization_auto import AutoTokenizer

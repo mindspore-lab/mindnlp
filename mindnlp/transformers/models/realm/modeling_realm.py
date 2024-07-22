@@ -120,7 +120,7 @@ class RealmSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ( "relative_key" ,"relative_key_query"):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -182,7 +182,7 @@ class RealmSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ( "relative_key" , "relative_key_query"):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
                 position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
