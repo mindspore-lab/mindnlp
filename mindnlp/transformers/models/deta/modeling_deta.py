@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore as ms
-
+from mindspore import dtype as mstype
 from mindspore import ops, Tensor
 from mindspore.common.initializer import (
     initializer,
@@ -2031,7 +2031,6 @@ class DetaModel(DetaPreTrainedModel):
                         0.9,
                     )
                     keep_inds = pre_nms_inds[post_nms_inds]
-
                     if len(keep_inds) < self.two_stage_num_proposals:
                         print(
                             f"[WARNING] nms proposals ({len(keep_inds)}) < {self.two_stage_num_proposals}, running"
@@ -3061,8 +3060,10 @@ def subsample_labels(
     num_neg = min(negative.numel(), num_neg)
 
     # randomly select positive and negative examples
-    perm1 = ops.randperm(positive.numel())[:num_pos]
-    perm2 = ops.randperm(negative.numel())[:num_neg]
+    seed = 0
+    offset = 0
+    perm1 = ops.randperm(int(positive.numel()),seed, offset, dtype=mstype.int64)[:num_pos]
+    perm2 = ops.randperm(int(negative.numel()),seed, offset, dtype=mstype.int64)[:num_neg]
 
     pos_idx = positive[perm1]
     neg_idx = negative[perm2]

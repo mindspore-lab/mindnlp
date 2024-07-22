@@ -93,10 +93,10 @@ def batched_nms(
     """
     # Benchmarks that drove the following thresholds are at
     # https://github.com/pytorch/vision/issues/1311#issuecomment-781329339
-    if boxes.numel() > (4000 if ms.get_context("device_target") == "CPU" else 20000):
-        return _batched_nms_vanilla(boxes, scores, idxs, iou_threshold)
-    else:
-        return _batched_nms_coordinate_trick(boxes, scores, idxs, iou_threshold)
+    #if boxes.numel() > (4000 if ms.get_context("device_target") == "CPU" else 20000):
+    #    return _batched_nms_vanilla(boxes, scores, idxs, iou_threshold)
+    #else:
+    return _batched_nms_coordinate_trick(boxes, scores, idxs, iou_threshold)
 
 
 def _batched_nms_coordinate_trick(
