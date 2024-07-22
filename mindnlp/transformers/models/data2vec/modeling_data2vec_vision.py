@@ -557,7 +557,7 @@ class Data2VecVisionRelativePositionBias(nn.Cell):
             self.window_size[0] * self.window_size[1] + 1, self.window_size[0] * self.window_size[1] + 1, -1
         )  # Wh*Ww,Wh*Ww,nH
 
-        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        relative_position_bias = relative_position_bias.permute(2, 0, 1)  # nH, Wh*Ww, Wh*Ww
         if interpolate_pos_encoding:
             relative_position_bias = ops.interpolate(
                 relative_position_bias.unsqueeze(1),
@@ -601,6 +601,7 @@ class Data2VecVisionEncoder(nn.Cell):
         output_attentions: bool = False,
         output_hidden_states: bool = False,
         interpolate_pos_encoding: bool = False,
+        resolution: Optional[Tuple[int]] = None,
         return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
         all_hidden_states = () if output_hidden_states else None
@@ -618,17 +619,28 @@ class Data2VecVisionEncoder(nn.Cell):
                     hidden_states,
                     layer_head_mask,
                     output_attentions,
+
                 )
             else:
+                height, width = resolution
+                window_size = (height // self.config.patch_size, width // self.config.patch_size)
                 relative_position_bias = (
-                    self.relative_position_bias(interpolate_pos_encoding, hidden_states.shape[1])
+                    self.relative_position_bias(
+                        window_size, interpolate_pos_encoding=interpolate_pos_encoding, dim_size=hidden_states.shape[1]
+                    )
                     if self.relative_position_bias is not None
                     else None
                 )
+                print(relative_position_bias)
                 layer_outputs = layer_module(
-                    hidden_states, layer_head_mask, output_attentions, relative_position_bias, interpolate_pos_encoding
+                    hidden_states,
+                    layer_head_mask,
+                    output_attentions,
+                    relative_position_bias,
+                    interpolate_pos_encoding,
+                    resolution,
                 )
-
+            print(layer_outputs)
             hidden_states = layer_outputs[0]
 
             if output_attentions:
@@ -636,7 +648,7 @@ class Data2VecVisionEncoder(nn.Cell):
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
-
+        print(all_hidden_states)
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
         return BaseModelOutput(
@@ -658,6 +670,7 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
     _no_split_modules = ["Data2VecVisionLayer"]
+    _keys_to_ignore_on_load_unexpected = [r".*relative_position_index.*"]
 
     def _init_weights(self, cell):
         """Initialize the weights"""
@@ -665,7 +678,7 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
+                                             cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
@@ -675,14 +688,8 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
 
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-            if hasattr(cell, "weight") and cell.weight is not None:
-                cell.weight.set_data(
-                    initializer("ones", cell.weight.shape, cell.weight.dtype)
-                )
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 DATA2VEC_VISION_START_DOCSTRING = r"""
@@ -777,11 +784,13 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
             Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        #print(output_attentions)
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        #print(output_hidden_states)
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        #print(return_dict)
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
 
@@ -791,22 +800,27 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-
+        #print(head_mask)
         embedding_output, (patch_height, patch_width) = self.embeddings(
             pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
         )
-
+        resolution = pixel_values.shape[2:]
+        print(resolution)
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            resolution=resolution,
             interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
+        print(encoder_outputs)
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+
+
 
         if not return_dict:
             head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
@@ -873,6 +887,7 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        #print(pixel_values)
         outputs = self.data2vec_vision(
             pixel_values,
             head_mask=head_mask,
@@ -881,6 +896,7 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
+        print(len(outputs))
 
         pooled_output = outputs.pooler_output if return_dict else outputs[1]
 

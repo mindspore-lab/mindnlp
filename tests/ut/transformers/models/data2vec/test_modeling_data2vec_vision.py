@@ -329,10 +329,10 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
             BeitImageProcessor.from_pretrained("facebook/data2vec-vision-base-ft1k") if is_vision_available() else None
         )
 
-  #  @slow
+    #@slow
     def test_inference_image_classification_head_imagenet_1k(self):
+        print()
         model = Data2VecVisionForImageClassification.from_pretrained("facebook/data2vec-vision-base-ft1k")
-
 
         image_processor = self.default_image_processor
         image = prepare_img()
@@ -343,12 +343,14 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
         logits = outputs.logits
 
         # verify the logits
-        expected_shape = ops.Size((1, 1000))
+        expected_shape = ((1, 1000))
         self.assertEqual(logits.shape, expected_shape)
 
         expected_slice = Tensor([0.3277, -0.1395, 0.0911])
-
-        self.assertTrue(np.allclose(logits[0, :3], expected_slice.asnumpy(), atol=1e-4))
+        print()
+        print(logits[0, :3].asnumpy())
+        print(expected_slice.asnumpy())
+        self.assertTrue(np.allclose(logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
         expected_top2 = [model.config.label2id[i] for i in ["remote control, remote", "tabby, tabby cat"]]
         self.assertEqual(logits[0].topk(2).indices.cpu().tolist(), expected_top2)
@@ -374,5 +376,5 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
         # successfully and produce the expected output.
         outputs = model(pixel_values, interpolate_pos_encoding=True)
 
-        expected_shape = ops.Size((1, 1801, 768))
+        expected_shape = ((1, 1801, 768))
         self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
