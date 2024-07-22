@@ -40,13 +40,13 @@ def any(input, dim=None, keepdim=False):
     return ops.any(input, dim, keepdim)
 
 # max
-def max(input, dim, keepdim=False):
+def max(input, dim=None, keepdim=False):
     if USE_PYBOOST:
         return mindspore.mint.max(input, dim, keepdim)
     return ops.max(input, dim, keepdim)
 
 # min
-def min(input, dim, keepdim=False):
+def min(input, dim=None, keepdim=False):
     if USE_PYBOOST:
         return mindspore.mint.min(input, dim, keepdim)
     return ops.min(input, dim, keepdim)

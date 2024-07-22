@@ -19,10 +19,11 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, SequenceClassifierOutput
@@ -138,7 +139,7 @@ class ASTEmbeddings(nn.Module):
 
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)
         distillation_tokens = self.distillation_token.expand(batch_size, -1, -1)
-        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), dim=1)
         embeddings = embeddings + self.position_embeddings
         embeddings = self.dropout(embeddings)
 
@@ -315,7 +316,7 @@ class ASTSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -467,7 +468,7 @@ class ASTAttention(nn.Module):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
@@ -1164,13 +1165,13 @@ class ASTForAudioClassification(ASTPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

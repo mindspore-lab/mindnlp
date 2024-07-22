@@ -21,7 +21,7 @@ from mindspore.common.initializer import initializer, TruncatedNormal, Constant
 import mindspore
 from mindnlp.utils import logging
 
-from ...activations import ACT2CLS
+from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
     ImageClassifierOutputWithNoAttention,
@@ -237,8 +237,7 @@ class SwiftFormerMlp(nn.Cell):
         self.fc1 = nn.Conv2d(
             in_features, hidden_features, 1, pad_mode="pad", has_bias=True
         )
-        act_layer = ACT2CLS["gelu_new"]
-        self.act = act_layer()
+        self.act = ACT2FN["gelu_new"]
         # if isinstance(config.hidden_act, str):
         #     self.act_layer = ACT2CLS[config.hidden_act]
         # else:

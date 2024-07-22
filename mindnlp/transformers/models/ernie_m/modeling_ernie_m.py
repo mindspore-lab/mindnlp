@@ -410,7 +410,7 @@ class ErnieMAttention(nn.Cell):
         self.self_attn.q_proj = prune_linear_layer(self.self_attn.q_proj, index)
         self.self_attn.k_proj = prune_linear_layer(self.self_attn.k_proj, index)
         self.self_attn.v_proj = prune_linear_layer(self.self_attn.v_proj, index)
-        self.out_proj = prune_linear_layer(self.out_proj, index, axis=1)
+        self.out_proj = prune_linear_layer(self.out_proj, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self_attn.num_attention_heads = self.self_attn.num_attention_heads - len(heads)

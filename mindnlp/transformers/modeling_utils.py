@@ -33,6 +33,7 @@ from mindspore import Tensor, Parameter
 from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
@@ -108,7 +109,6 @@ def set_initialized_submodules(model: nn.Module, state_dict_keys):
             module._is_initialized = True
         else:
             not_initialized_submodules[module_name] = module
-
     return not_initialized_submodules
 
 
@@ -586,7 +586,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             else:
                 # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
                 if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
-                    new_bias = ops.pad(
+                    new_bias = F.pad(
                         output_embeddings.bias.data,
                         (0, output_embeddings.weight.shape[0] -
                         output_embeddings.bias.shape[0]),
@@ -649,7 +649,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
 
         self.set_input_embeddings(new_embeddings)
-        self.get_input_embeddings().weight.data_sync(True)
+        # self.get_input_embeddings().weight.data_sync(True)
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
             new_num_tokens = new_embeddings.weight.shape[0]
@@ -1168,6 +1168,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             add_prefix_to_model = has_prefix_module and not expects_prefix_module
 
             for pname_in_net, param in model.state_dict().items():
+                print(pname_in_net)
                 if add_prefix_to_model:
                     param_name = prefix + '.' + pname_in_net
                 elif remove_prefix_from_model:

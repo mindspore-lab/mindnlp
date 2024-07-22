@@ -23,9 +23,9 @@ class QuickGELUActivation(nn.Module):
     """
     Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Constructs the QuickGELU activation function.
+        forwards the QuickGELU activation function.
         
         Args:
             self (QuickGELUActivation): The instance of the QuickGELUActivation class.
@@ -76,9 +76,9 @@ class ClippedGELUActivation(nn.Module):
         self.min = min
         self.max = max
 
-    def construct(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         r"""
-        Constructs a ClippedGELUActivation function with input clipping.
+        forwards a ClippedGELUActivation function with input clipping.
         
         Args:
             self: ClippedGELUActivation
@@ -121,9 +121,9 @@ class AccurateGELUActivation(nn.Module):
         super().__init__()
         self.precomputed_constant = math.sqrt(2 / math.pi)
 
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        This method 'construct' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU)
+        This method 'forward' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU)
         activation function to the input tensor.
         
         Args:
@@ -151,9 +151,9 @@ class MishActivation(nn.Module):
     See Mish: A Self-Regularized Non-Monotonic Activation Function (Misra., https://arxiv.org/abs/1908.08681). Also
     visit the official repository for the paper: https://github.com/digantamisra98/Mish
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Constructs a Mish activation function on the input tensor.
+        forwards a Mish activation function on the input tensor.
         
         Args:
             self (MishActivation): An instance of the MishActivation class.
@@ -179,9 +179,9 @@ class LinearActivation(nn.Module):
     """
     Applies the linear activation function, i.e. forwarding input directly to output.
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Construct method in the LinearActivation class.
+        forward method in the LinearActivation class.
         
         Args:
             self (object): The instance of the LinearActivation class.
@@ -203,9 +203,9 @@ class LaplaceActivation(nn.Module):
 
     Inspired by squared relu, but with bounded range and gradient for better stability
     """
-    def construct(self, input, mu=0.707107, sigma=0.282095):
+    def forward(self, input, mu=0.707107, sigma=0.282095):
         r"""
-        This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation
+        This method 'forward' in the class 'LaplaceActivation' performs a Laplace activation function transformation
         on the input data.
         
         Args:
@@ -230,9 +230,9 @@ class ReLUSquaredActivation(nn.Module):
     """
     Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
     """
-    def construct(self, input):
+    def forward(self, input):
         r"""
-        Constructs the ReLU squared activation of the input.
+        forwards the ReLU squared activation of the input.
         
         Args:
             self (object): Instance of the ReLUSquaredActivation class.
@@ -278,7 +278,7 @@ ACT2CLS = {
     """
     'relu': nn.ReLU,
     'gelu': nn.GELU,
-    'gelu_new': nn.GELU,
+    'gelu_new': (nn.GELU, {'approximate': 'tanh'}),
     'gelu_approximate': nn.GELU,
     'gelu_pytorch_tanh': nn.GELU,
     "swish": nn.SiLU,

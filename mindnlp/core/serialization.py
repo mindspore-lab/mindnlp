@@ -30,7 +30,7 @@ def save_checkpoint(save_obj, ckpt_file_name):
     Save checkpoint to a specified file.
     """
     if isinstance(save_obj, Module):
-        data_list = get_data_list(save_obj.parameters_dict())
+        data_list = get_data_list(save_obj.state_dict())
     elif isinstance(save_obj, dict):
         data_list = get_data_list(save_obj)
     else:

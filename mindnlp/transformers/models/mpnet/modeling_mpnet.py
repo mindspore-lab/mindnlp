@@ -330,7 +330,7 @@ class MPNetAttention(nn.Cell):
         self.attn.q = prune_linear_layer(self.attn.q, index)
         self.attn.k = prune_linear_layer(self.attn.k, index)
         self.attn.v = prune_linear_layer(self.attn.v, index)
-        self.attn.o = prune_linear_layer(self.attn.o, index, axis=1)
+        self.attn.o = prune_linear_layer(self.attn.o, index, dim=1)
 
         self.attn.num_attention_heads = self.attn.num_attention_heads - len(heads)
         self.attn.all_head_size = self.attn.attention_head_size * self.attn.num_attention_heads

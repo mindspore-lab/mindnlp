@@ -23,10 +23,11 @@ from functools import partial
 
 import numpy as np
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, XavierUniform
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -169,7 +170,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     Raises:
         None.
     '''
-    return ops.cross_entropy(logits, ops.arange(len(logits)), label_smoothing=0.1)
+    return F.cross_entropy(logits, ops.arange(len(logits)), label_smoothing=0.1)
 
 
 def align_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
@@ -877,7 +878,7 @@ class AlignTextEmbeddings(nn.Module):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.register_buffer('position_ids', ops.arange(config.max_position_embeddings).expand((1, -1)))
-        self.register_buffer('token_type_ids', ops.zeros(self.position_ids.shape, dtype=mindspore.int64))
+        self.register_buffer('token_type_ids', ops.zeros(*self.position_ids.shape, dtype=mindspore.int64))
 
     def forward(
         self,
@@ -923,7 +924,7 @@ class AlignTextEmbeddings(nn.Module):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -1154,7 +1155,7 @@ class AlignTextSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1321,7 +1322,7 @@ class AlignTextAttention(nn.Module):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -2084,7 +2085,7 @@ class AlignTextModel(AlignPreTrainedModel):
         batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length)))
+            attention_mask = ops.ones(batch_size, seq_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
@@ -2092,7 +2093,7 @@ class AlignTextModel(AlignPreTrainedModel):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -2209,7 +2210,7 @@ class AlignVisionModel(AlignPreTrainedModel):
         # Final pooling layer
         if config.pooling_type == "mean":
             # self.pooler = nn.AvgPool2d(config.hidden_dim, ceil_mode=True)
-            self.pooler = partial(ops.mean, axis=(2,3), keep_dims=True)
+            self.pooler = partial(ops.mean, dim=(2,3), keepdim=True)
         elif config.pooling_type == "max":
             self.pooler = nn.MaxPool2d(config.hidden_dim, ceil_mode=True)
         else:

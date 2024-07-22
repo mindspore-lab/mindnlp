@@ -294,7 +294,7 @@ class AlbertAttention(nn.Module):
         self.query = prune_linear_layer(self.query, index)
         self.key = prune_linear_layer(self.key, index)
         self.value = prune_linear_layer(self.value, index)
-        self.dense = prune_linear_layer(self.dense, index, axis=1)
+        self.dense = prune_linear_layer(self.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.num_attention_heads = self.num_attention_heads - len(heads)

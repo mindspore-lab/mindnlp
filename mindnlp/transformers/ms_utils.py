@@ -75,7 +75,7 @@ class Conv1D(nn.Module):
         return x
 
 
-def prune_conv1d_layer(layer, index, axis=1):
+def prune_conv1d_layer(layer, index, dim=1):
     """
     Prune a Conv1D layer to keep only entries in index. A Conv1D work as a Linear layer (see e.g. BERT) but the weights
     are transposed.
@@ -90,13 +90,13 @@ def prune_conv1d_layer(layer, index, axis=1):
     Returns:
         [`~mindspore_utils.Conv1D`]: The pruned layer as a new layer with `requires_grad=True`.
     """
-    gama_l = layer.weight.index_select(axis, index)
-    if axis == 0:
+    gama_l = layer.weight.index_select(dim, index)
+    if dim == 0:
         beta_l = layer.bias
     else:
         beta_l = layer.bias[index]
     new_size = list(layer.weight.shape)
-    new_size[axis] = len(index)
+    new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
     new_layer.weight = gama_l.copy()
@@ -130,7 +130,7 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
     index = ops.arange(len(mask), dtype=mindspore.int64)[mask]
     return heads, index
 
-def prune_linear_layer(layer, index, axis=0):
+def prune_linear_layer(layer, index, dim=0):
     """
     Prune a linear layer to keep only entries in index.
     Used to remove heads.
@@ -143,14 +143,14 @@ def prune_linear_layer(layer, index, axis=0):
     Returns:
         `mindspore.nn.Linear`: The pruned layer as a new layer with `requires_grad=True`.
     """
-    W = layer.weight.index_select(axis, index).copy()
+    W = layer.weight.index_select(dim, index).copy()
     if layer.bias is not None:
-        if axis == 1:
+        if dim == 1:
             b = layer.bias.copy()
         else:
             b = layer.bias[index].copy()
     new_size = list(layer.weight.shape)
-    new_size[axis] = len(index)
+    new_size[dim] = len(index)
     new_layer = nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None)
     new_layer.weight.requires_grad = False
     new_layer.weight.set_data(W)
