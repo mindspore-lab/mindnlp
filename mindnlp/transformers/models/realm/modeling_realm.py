@@ -1398,8 +1398,11 @@ class RealmReader(RealmPreTrainedModel):
         sequence_output = outputs[0]
 
         # [reader_beam_size, num_candidates], [num_candidates], [num_candidates]
+        # reader_logits, candidate_starts, candidate_ends = self.qa_outputs(
+        #     sequence_output, block_mask[0 : self.config.reader_beam_size]
+        # )
         reader_logits, candidate_starts, candidate_ends = self.qa_outputs(
-            sequence_output, block_mask[0 : self.config.reader_beam_size]
+            sequence_output, block_mask[0 : self.config.reader_beam_size].to(mindspore.int64)
         )
         # [searcher_beam_size, 1]
         retriever_logits = ops.unsqueeze(relevance_score[0 : self.config.reader_beam_size], -1)
@@ -1504,10 +1507,10 @@ class RealmForOpenQA(RealmPreTrainedModel):
         #         size=(config.num_block_records, config.retriever_proj_size),
         #         dtype=mindspore.float32,
         #     )
-        self.block_emb = ops.zeros(
+        self.block_emb=mindspore.Parameter(ops.zeros(
                 (config.num_block_records, config.retriever_proj_size),
                 dtype=mindspore.float32,
-            )
+            ))
         self.retriever = retriever
 
         self.post_init()
@@ -1517,16 +1520,6 @@ class RealmForOpenQA(RealmPreTrainedModel):
         if self.training:
             return self.config.searcher_beam_size
         return self.config.reader_beam_size
-
-    def block_embedding_to(self, device):
-        """Send `self.block_emb` to a specific device.
-
-        Args:
-            device (`str` or `torch.device`):
-                The device to which `self.block_emb` will be sent.
-        """
-
-        self.block_emb = self.block_emb
 
     def construct(
         self,
@@ -1576,13 +1569,14 @@ class RealmForOpenQA(RealmPreTrainedModel):
 
         # CPU computation starts.
         # [1, block_emb_size]
-        batch_scores = ops.einsum("BD,QD->QB", self.block_emb, question_projection)
+        # batch_scores = ops.einsum("BD,QD->QB", self.block_emb.value(), question_projection)
+        batch_scores = mindspore.Tensor(np.einsum("BD,QD->QB", self.block_emb.value().numpy(), question_projection.numpy()))
         # [1, searcher_beam_size]
         _, retrieved_block_ids = ops.topk(batch_scores, k=self.searcher_beam_size, dim=-1)
         # [searcher_beam_size]
         retrieved_block_ids = retrieved_block_ids.squeeze()
         # [searcher_beam_size, projection_size]
-        retrieved_block_emb = ops.index_select(self.block_emb, axis=0, index=retrieved_block_ids)
+        retrieved_block_emb = ops.index_select(self.block_emb.value(), axis=0, index=retrieved_block_ids)
         # CPU computation ends.
 
         # Retrieve possible answers
@@ -1590,15 +1584,24 @@ class RealmForOpenQA(RealmPreTrainedModel):
             retrieved_block_ids, input_ids, answer_ids, max_length=self.config.reader_seq_len
         )
 
-        concat_inputs = concat_inputs
         block_mask = concat_inputs.special_tokens_mask.type(mindspore.bool_)
         # block_mask.logical_not_().logical_and_(concat_inputs.token_type_ids.type(mindspore.bool_))
         block_mask = block_mask.logical_not().logical_and(concat_inputs.token_type_ids.type(mindspore.bool_))
 
+        # if has_answers is not None:
+        #     has_answers = mindspore.Tensor(has_answers, dtype=mindspore.bool_)
+        #     start_pos = mindspore.Tensor(start_pos, dtype=mindspore.int64)
+        #     end_pos = mindspore.Tensor(end_pos, dtype=mindspore.int64)
         if has_answers is not None:
             has_answers = mindspore.Tensor(has_answers, dtype=mindspore.bool_)
-            start_pos = mindspore.Tensor(start_pos, dtype=mindspore.int64)
-            end_pos = mindspore.Tensor(end_pos, dtype=mindspore.int64)
+            if np.array(start_pos).ndim>1 and np.array(start_pos).size==0 :
+                start_pos = None
+            else:
+                start_pos = mindspore.Tensor(start_pos, dtype=mindspore.int64)
+            if np.array(end_pos).ndim>1 and np.array(end_pos).size==0 :
+                end_pos = None
+            else:
+                end_pos = mindspore.Tensor(end_pos, dtype=mindspore.int64)
 
         # [searcher_beam_size]
         retrieved_logits = ops.einsum(
@@ -1618,7 +1621,8 @@ class RealmForOpenQA(RealmPreTrainedModel):
         )
 
         predicted_block = concat_inputs.input_ids[reader_output.block_idx]
-        predicted_answer_ids = predicted_block[reader_output.start_pos : reader_output.end_pos + 1]
+        # predicted_answer_ids = predicted_block[reader_output.start_pos : reader_output.end_pos + 1]
+        predicted_answer_ids = predicted_block[reader_output.start_pos[0] : reader_output.end_pos[0] + 1]
 
         if not return_dict:
             return reader_output, predicted_answer_ids
