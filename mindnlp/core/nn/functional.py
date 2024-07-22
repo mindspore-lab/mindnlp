@@ -1,5 +1,4 @@
 """nn functional"""
-import mindspore.mint.nn.functional
 import numpy as np
 import mindspore
 from mindspore import ops
