@@ -372,7 +372,7 @@ def replace_batch_norm(model):
         model (torch.nn.Module):
             input model
     """
-    for name, cell in model.cells_and_names():
+    for name, cell in model.named_children():
         if isinstance(cell, nn.BatchNorm2d):
             new_cell = DetaFrozenBatchNorm2d(cell.num_features)
 
@@ -381,10 +381,10 @@ def replace_batch_norm(model):
             new_cell.running_mean.data = cell.running_mean.copy()
             new_cell.running_var.data = cell.running_var.copy()
 
-            #model._cells[name] = new_cell
+            model._modules[name] = new_cell
 
-        #if len(list(cell.cells())) > 0:
-        #    replace_batch_norm(cell)
+        if len(list(cell.children())) > 0:
+            replace_batch_norm(cell)
 
 
 class DetaBackboneWithPositionalEncodings(nn.Module):
