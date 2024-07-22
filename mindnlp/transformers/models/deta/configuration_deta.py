@@ -28,10 +28,8 @@ class DetaConfig(PretrainedConfig):
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the DETA
     [SenseTime/deformable-detr](https://huggingface.co/SenseTime/deformable-detr) architecture.
-
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
-
     Args:
         backbone_config (`PretrainedConfig` or `dict`, *optional*, defaults to `ResNetConfig()`):
             The configuration of the backbone model.
@@ -123,18 +121,13 @@ class DetaConfig(PretrainedConfig):
         disable_custom_kernels (`bool`, *optional*, defaults to `True`):
             Disable the use of custom CUDA and CPU kernels. This option is necessary for the ONNX export, as custom
             kernels are not supported by PyTorch ONNX export.
-
     Examples:
-
     ```python
     >>> from transformers import DetaConfig, DetaModel
-
     >>> # Initializing a DETA SenseTime/deformable-detr style configuration
     >>> configuration = DetaConfig()
-
     >>> # Initializing a model (with random weights) from the SenseTime/deformable-detr style configuration
     >>> model = DetaModel(configuration)
-
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
@@ -199,16 +192,26 @@ class DetaConfig(PretrainedConfig):
             raise ValueError("You can't specify both `backbone` and `backbone_config`.")
 
         if backbone_config is None and backbone is None:
-            logger.info("`backbone_config` is `None`. Initializing the config with the default `ResNet` backbone.")
-            backbone_config = CONFIG_MAPPING["resnet"](out_features=["stage2", "stage3", "stage4"])
+            logger.info(
+                "`backbone_config` is `None`. Initializing the config with the default `ResNet` backbone."
+            )
+            backbone_config = CONFIG_MAPPING["resnet"](
+                out_features=["stage2", "stage3", "stage4"]
+            )
         else:
             if isinstance(backbone_config, dict):
                 backbone_model_type = backbone_config.pop("model_type")
                 config_class = CONFIG_MAPPING[backbone_model_type]
                 backbone_config = config_class.from_dict(backbone_config)
 
-        if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
-            raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
+        if (
+            backbone_kwargs is not None
+            and backbone_kwargs
+            and backbone_config is not None
+        ):
+            raise ValueError(
+                "You can't specify both `backbone_kwargs` and `backbone_config`."
+            )
 
         self.backbone_config = backbone_config
         self.backbone = backbone
@@ -265,5 +268,6 @@ class DetaConfig(PretrainedConfig):
     @property
     def hidden_size(self) -> int:
         return self.d_model
+
 
 __all__ = ["DetaConfig"]

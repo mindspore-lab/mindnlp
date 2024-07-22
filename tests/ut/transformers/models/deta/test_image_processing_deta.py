@@ -164,7 +164,7 @@ class DetaImageProcessingTest(
         )
         self.assertEqual(image_processor.do_pad, True)
 
-    @slow
+    # @slow
     def test_call_pytorch_with_coco_detection_annotations(self):
         # prepare image and target
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
@@ -250,7 +250,7 @@ class DetaImageProcessingTest(
             )
         )
 
-    @slow
+    # @slow
     def test_call_pytorch_with_coco_panoptic_annotations(self):
         # prepare image, target and masks_path
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
@@ -349,7 +349,7 @@ class DetaImageProcessingTest(
             )
         )
 
-    @slow
+    # @slow
     # Copied from tests.models.detr.test_image_processing_detr.DetrImageProcessingTest.test_batched_coco_detection_annotations with Detr->Deta
     def test_batched_coco_detection_annotations(self):
         image_0 = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")

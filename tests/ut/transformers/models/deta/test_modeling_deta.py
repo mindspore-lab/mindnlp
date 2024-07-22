@@ -595,7 +595,7 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         pass
 
     # Inspired by tests.test_modeling_common.ModelTesterMixin.test_tied_weights_keys
-    @unittest.skip(reason="Model doesn't use tied weights")
+    # @unittest.skip(reason="Model doesn't use tied weights")
     def test_tied_weights_keys(self):
         for model_class in self.all_model_classes:
             # We need to pass model class name to correctly initialize the config.
@@ -655,7 +655,8 @@ def prepare_img():
 
 
 @require_vision
-@slow
+# @slow
+# @unittest.skip("Unsupported for batched_nms")
 class DetaModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
@@ -719,7 +720,6 @@ class DetaModelIntegrationTests(unittest.TestCase):
         expected_scores = ms.Tensor([0.6392, 0.6276, 0.5546, 0.5260, 0.4706])
         expected_labels = [75, 17, 17, 75, 63]
         expected_slice_boxes = ms.Tensor([40.5866, 73.2107, 176.1421, 117.1751])
-
         self.assertTrue(
             np.allclose(
                 results["scores"].asnumpy(), expected_scores.asnumpy(), atol=1e-4
@@ -732,6 +732,7 @@ class DetaModelIntegrationTests(unittest.TestCase):
             )
         )
 
+    @slow
     def test_inference_object_detection_head_swin_backbone(self):
         model = DetaForObjectDetection.from_pretrained(
             "jozhang97/deta-swin-large", from_pt=True
@@ -779,10 +780,20 @@ class DetaModelIntegrationTests(unittest.TestCase):
             )
         )
 
+        expected_shape_boxes = (1, 300, 4)
+        self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
+        self.assertTrue(
+            np.allclose(
+                outputs.pred_boxes[0, :3, :3].asnumpy(),
+                expected_boxes.asnumpy(),
+                atol=1e-4,
+            )
+        )
         # verify postprocessing
         results = image_processor.post_process_object_detection(
             outputs, threshold=0.3, target_sizes=[image.size[::-1]]
         )[0]
+
         expected_scores = ms.Tensor([0.6831, 0.6826, 0.5684, 0.5464, 0.4392])
         expected_labels = [17, 17, 75, 75, 63]
         expected_slice_boxes = ms.Tensor([345.8478, 23.6754, 639.8562, 372.8265])
