@@ -655,7 +655,7 @@ def prepare_img():
 
 
 @require_vision
-# @slow
+@slow
 # @unittest.skip("Unsupported for batched_nms")
 class DetaModelIntegrationTests(unittest.TestCase):
     @cached_property
