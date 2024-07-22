@@ -16,7 +16,7 @@ flake8: noqa
 '''
 
 from typing import TYPE_CHECKING
-from trl.import_utils import _LazyModule, is_diffusers_available, OptionalDependencyNotAvailable
+from ..import_utils import _LazyModule, is_diffusers_available, OptionalDependencyNotAvailable
 
 _import_structure = {
     "modeling_base": ["PreTrainedModelWrapper", "create_reference_model"],
