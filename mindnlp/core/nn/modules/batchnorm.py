@@ -39,8 +39,8 @@ class _NormBase(Module):
         self.weight = Parameter(initializer('ones', (num_features,)), 'weight', affine)
         self.bias = Parameter(initializer('zeros', (num_features,)), 'bias', affine)
         if self.track_running_stats:
-            self.register_buffer('running_mean', Parameter(initializer('zeros', (num_features,)), 'running_mean', False))
-            self.register_buffer('running_var', Parameter(initializer('ones', (num_features,)), 'running_mean', False))
+            self.register_buffer('running_mean', ops.zeros(num_features,))
+            self.register_buffer('running_var', ops.ones(num_features,))
             self.running_mean: Optional[Tensor]
             self.running_var: Optional[Tensor]
             self.register_buffer('num_batches_tracked',

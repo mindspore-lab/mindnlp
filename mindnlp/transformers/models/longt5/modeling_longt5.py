@@ -460,7 +460,7 @@ class LongT5Attention(nn.Cell):
         self.q = prune_linear_layer(self.q, index)
         self.k = prune_linear_layer(self.k, index)
         self.v = prune_linear_layer(self.v, index)
-        self.o = prune_linear_layer(self.o, index, axis=1)
+        self.o = prune_linear_layer(self.o, index, dim=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.inner_dim = self.key_value_proj_dim * self.n_heads

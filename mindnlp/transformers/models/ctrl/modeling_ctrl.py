@@ -110,7 +110,7 @@ class MultiHeadAttention(nn.Cell):
         self.Wq = prune_linear_layer(self.Wq, index)
         self.Wk = prune_linear_layer(self.Wk, index)
         self.Wv = prune_linear_layer(self.Wv, index)
-        self.dense = prune_linear_layer(self.dense, index, axis=1)
+        self.dense = prune_linear_layer(self.dense, index, dim=1)
 
         # Update hyper params
         self.num_heads = self.num_heads - len(heads)

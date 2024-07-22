@@ -120,7 +120,10 @@ def ceil(input):
     return ops.ceil(input)
 
 # clamp
-
+def clamp(input, min=None, max=None):
+    if USE_PYBOOST:
+        return mindspore.mint.clamp(input, min, max)
+    return ops.clamp(input, min, max)
 
 # clip
 

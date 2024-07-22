@@ -22,10 +22,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -219,7 +219,7 @@ class AutoformerFeatureEmbedder(nn.Module):
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
             cat_feature_slices = ops.chunk(
-                features, self.num_features, axis=-1)
+                features, self.num_features, dim=-1)
         else:
             cat_feature_slices = [features]
 
@@ -228,7 +228,7 @@ class AutoformerFeatureEmbedder(nn.Module):
                 embed(cat_feature_slice.squeeze(-1))
                 for embed, cat_feature_slice in zip(self.embedders, cat_feature_slices)
             ],
-            axis=-1,
+            dim=-1,
         )
 
 
@@ -389,7 +389,7 @@ class AutoformerMeanScaler(nn.Module):
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ts_sum.sum(axis=0)
+            batch_sum = ops.sum(ts_sum, dim=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
@@ -403,7 +403,7 @@ class AutoformerMeanScaler(nn.Module):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = scale.squeeze(axis=self.dim)
+            scale = scale.squeeze(dim=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
@@ -453,9 +453,9 @@ class AutoformerNOPScaler(nn.Module):
         Raises:
             None
         '''
-        scale = ops.ones_like(data).mean(axis=self.dim, keepdims=self.keepdim)
+        scale = ops.ones_like(data).mean(dim=self.dim, keepdims=self.keepdim)
         loc = ops.zeros_like(data).mean(
-            axis=self.dim, keepdims=self.keepdim)
+            dim=self.dim, keepdims=self.keepdim)
         return data, loc, scale
 
 
@@ -479,9 +479,9 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     if weights is not None:
         weighted_tensor = ops.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
         sum_weights = ops.clamp(weights.sum(
-            axis=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
-    return input_tensor.mean(axis=dim)
+            dim=dim) if dim else weights.sum(), min=1.0)
+        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
+    return input_tensor.mean(dim=dim)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
@@ -618,7 +618,7 @@ class AutoformerSeriesDecompositionLayer(nn.Module):
         num_of_pads = (self.kernel_size - 1) // 2
         front = x[:, 0:1, :].tile((1, num_of_pads, 1))
         end = x[:, -1:, :].tile((1, num_of_pads, 1))
-        x_padded = ops.cat([front, x, end], axis=1)
+        x_padded = ops.cat([front, x, end], dim=1)
 
         # calculate the trend and seasonal part of the series
         x_trend = self.avg(x_padded.transpose(0, 2, 1)).transpose(0, 2, 1)
@@ -668,7 +668,7 @@ class AutoformerLayernorm(nn.Module):
             None.
         """
         x_hat = self.layernorm(x)
-        bias = ops.mean(x_hat, axis=1).unsqueeze(1).tile((1, x.shape[1], 1))
+        bias = ops.mean(x_hat, dim=1).unsqueeze(1).tile((1, x.shape[1], 1))
         return x_hat - bias
 
 
@@ -802,8 +802,8 @@ class AutoformerAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -831,39 +831,16 @@ class AutoformerAttention(nn.Module):
         if queries_time_length > values_time_length:
             query_states = query_states[:, : (queries_time_length - values_time_length), :]
             zeros = ops.zeros_like(query_states).float()
-            value_states = ops.cat([value_states, zeros], axis=1)
-            key_states = ops.cat([key_states, zeros], axis=1)
+            value_states = ops.cat([value_states, zeros], dim=1)
+            key_states = ops.cat([key_states, zeros], dim=1)
         else:
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        try:
-            query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
-            key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
-            attn_weights = query_states_fft * ops.conj(key_states_fft)
-            attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
-        except:
-            rfft_net = ops.FFTWithSize(signal_ndim=3, inverse=False, real=True)
-            if query_states.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - query_states.shape[1]), 0)
-                query_states = pad2d(query_states)
-            else:
-                query_states = query_states[:,:tgt_len,:]
-            query_states_fft = rfft_net(query_states)
-            if key_states.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - key_states.shape[1]), 0)
-                key_states = pad2d(key_states)
-            else:
-                key_states = key_states[:,:tgt_len,:]
-            key_states_fft = rfft_net(key_states)
-            attn_weights = query_states_fft * ops.conj(key_states_fft)
-            irfft_net = ops.FFTWithSize(signal_ndim=3, inverse=True, real=True)
-            if attn_weights.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - attn_weights.shape[1]), 0)
-                attn_weights = pad2d(attn_weights)
-            else:
-                attn_weights = attn_weights[:, :tgt_len, :]
-            attn_weights = irfft_net(attn_weights)
+        query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
+        key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
+        attn_weights = query_states_fft * ops.conj(key_states_fft)
+        attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
         src_len = key_states.shape[1]
         channel = key_states.shape[2]
 
@@ -907,13 +884,13 @@ class AutoformerAttention(nn.Module):
         # find top k autocorrelations delays
         top_k = int(self.autocorrelation_factor * math.log(time_length))
         autocorrelations_mean_on_head_channel = ops.mean(
-            autocorrelations, axis=(1, -1))  # bsz x tgt_len
+            autocorrelations, dim=(1, -1))  # bsz x tgt_len
         if self.training:
             autocorrelations_mean_on_bsz = ops.mean(
-                autocorrelations_mean_on_head_channel, axis=0)
+                autocorrelations_mean_on_head_channel, dim=0)
             _, top_k_delays_index = ops.topk(autocorrelations_mean_on_bsz, top_k)
             top_k_autocorrelations = ops.stack(
-                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], axis=-1
+                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], dim=-1
             )
         else:
             top_k_autocorrelations, top_k_delays_index = ops.topk(
@@ -921,7 +898,7 @@ class AutoformerAttention(nn.Module):
             )
 
         top_k_autocorrelations = ops.softmax(
-            top_k_autocorrelations, axis=-1)  # bsz x top_k
+            top_k_autocorrelations, dim=-1)  # bsz x top_k
 
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
@@ -940,7 +917,7 @@ class AutoformerAttention(nn.Module):
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).tile(
                     (self.num_heads, tgt_len, channel)
                 )
-                value_states_roll_delay = ops.gather_elements(
+                value_states_roll_delay = ops.gather(
                     tmp_values, dim=1, index=tmp_delay)
             else:
                 value_states_roll_delay = value_states.roll(shifts=-int(top_k_delays_index[i]), dims=1)
@@ -1035,7 +1012,7 @@ class AutoformerEncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         # added layer norm here as an improvement
         hidden_states = self.self_attn_layer_norm(hidden_states)
@@ -1043,9 +1020,9 @@ class AutoformerEncoderLayer(nn.Module):
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, _ = self.decomp2(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
@@ -1181,7 +1158,7 @@ class AutoformerDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend1 = self.decomp1(hidden_states)
         # added layer norm here as an improvement
@@ -1203,7 +1180,7 @@ class AutoformerDecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states, trend2 = self.decomp2(hidden_states)
             # added layer norm here as an improvement
@@ -1215,9 +1192,9 @@ class AutoformerDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend3 = self.decomp3(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
@@ -1374,7 +1351,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -1574,7 +1551,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             inputs_embeds.shape, past_key_values_length=self.config.context_length - self.config.label_length
         )
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1780,7 +1757,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
             lagged_values.append(sequence[:, begin_index:end_index, ...])
 
         # return as stacked tensor in the feature dimension
-        return ops.stack(lagged_values, axis=-1)
+        return ops.stack(lagged_values, dim=-1)
 
     def create_network_inputs(
         self,
@@ -1830,7 +1807,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                     past_time_features[:, self._past_length - self.config.context_length :, ...],
                     future_time_features,
                 ),
-                axis=1,
+                dim=1,
             )
             if future_values is not None
             else past_time_features[:, self._past_length - self.config.context_length :, ...]
@@ -1845,7 +1822,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
-            (ops.cat((past_values, future_values), axis=1) - loc) / scale
+            (ops.cat((past_values, future_values), dim=1) - loc) / scale
             if future_values is not None
             else (past_values - loc) / scale
         )
@@ -1853,18 +1830,18 @@ class AutoformerModel(AutoformerPreTrainedModel):
         # static features
         log_abs_loc = loc.abs().log1p() if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        static_feat = ops.cat((log_abs_loc, log_scale), axis=1)
+        static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
 
         if static_real_features is not None:
-            static_feat = ops.cat((static_real_features, static_feat), axis=1)
+            static_feat = ops.cat((static_real_features, static_feat), dim=1)
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
-            static_feat = ops.cat((embedded_cat, static_feat), axis=1)
+            static_feat = ops.cat((embedded_cat, static_feat), dim=1)
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_feat.shape[1], -1))
 
         # all features
-        features = ops.cat((expanded_static_feat, time_feat), axis=-1)
+        features = ops.cat((expanded_static_feat, time_feat), dim=-1)
 
         # lagged features
         subsequences_length = (
@@ -1968,7 +1945,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                     transformer_inputs[:, : self.config.context_length, ...],
                     temporal_features[:, : self.config.context_length, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
             encoder_outputs = self.encoder(
                 inputs_embeds=enc_input,
@@ -1994,7 +1971,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
             )
             mean = (
                 ops.mean(
-                    transformer_inputs[:, : self.config.context_length, ...], axis=1)
+                    transformer_inputs[:, : self.config.context_length, ...], dim=1)
                 .unsqueeze(1)
                 .tile((1, self.config.prediction_length, 1))
             )
@@ -2003,18 +1980,18 @@ class AutoformerModel(AutoformerPreTrainedModel):
             decoder_input = ops.cat(
                 (
                     ops.cat(
-                        (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
+                        (seasonal_input[:, -self.config.label_length:, ...], zeros), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
             trend_init = ops.cat(
                 (
                     ops.cat(
-                        (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
+                        (trend_input[:, -self.config.label_length:, ...], mean), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
 
             decoder_outputs = self.decoder(
@@ -2228,7 +2205,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
                 loss_weights = future_observed_mask
             else:
                 loss_weights, _ = future_observed_mask.min(
-                    axis=-1, keepdims=False)
+                    dim=-1, keepdims=False)
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
@@ -2369,25 +2346,25 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, axis=0)
+        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
         repeated_scale = scale.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         repeated_past_values = (
             past_values.repeat_interleave(
-                repeats=num_parallel_samples, axis=0) - repeated_loc
+                repeats=num_parallel_samples, dim=0) - repeated_loc
         ) / repeated_scale
 
-        time_features = ops.cat((past_time_features, future_time_features), axis=1)
+        time_features = ops.cat((past_time_features, future_time_features), dim=1)
 
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_features.shape[1], -1))
-        features = ops.cat((expanded_static_feat, time_features), axis=-1)
+        features = ops.cat((expanded_static_feat, time_features), dim=-1)
         repeated_features = features.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         lagged_sequence = self.model.get_lagged_subsequences(
             sequence=repeated_past_values, subsequences_length=self.config.context_length
@@ -2396,25 +2373,25 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
-        mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
+        mean = ops.mean(reshaped_lagged_sequence, dim=1).unsqueeze(
             1).tile((1, self.config.prediction_length, 1))
         zeros = ops.zeros(reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2])
 
         decoder_input = ops.cat(
             (
                 ops.cat(
-                    (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
+                    (seasonal_input[:, -self.config.label_length:, ...], zeros), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
         trend_init = ops.cat(
             (
                 ops.cat(
-                    (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
+                    (trend_input[:, -self.config.label_length:, ...], mean), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
         decoder_outputs = decoder(
             trend=trend_init, inputs_embeds=decoder_input, encoder_hidden_states=repeated_enc_last_hidden

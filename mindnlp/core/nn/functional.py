@@ -96,8 +96,6 @@ def linear(input, weight, bias=None):
         return mindspore.mint.linear(input, weight, bias)
     return dense_(input, weight, bias)
 
-def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean'):
-    return ops.cross_entropy(input, target, weight, ignore_index, reduction)
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
     if USE_PYBOOST:
@@ -119,3 +117,11 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
         query, key, cos, sin, position_ids, cos_format
     )
+
+def pad(input, pad, mode='constant', value=0.0):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.pad(input, pad, mode, value)
+    return ops.pad(input, pad, mode, value)
+
+def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)

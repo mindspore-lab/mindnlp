@@ -20,10 +20,11 @@ from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops, Parameter, Tensor
+from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -63,7 +64,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     Raises:
         None.
     """
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 def clip_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
@@ -178,8 +179,8 @@ class AltRobertaEmbeddings(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.register_buffer('position_ids', ops.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer('token_type_ids', ops.zeros(*self.position_ids.shape, dtype=mindspore.int64))
 
         # End copy
         self.padding_idx = config.pad_token_id
@@ -234,7 +235,7 @@ class AltRobertaEmbeddings(nn.Module):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -413,8 +414,8 @@ class AltRobertaSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -463,7 +464,7 @@ class AltRobertaSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -622,7 +623,7 @@ class AltRobertaAttention(nn.Module):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -1282,7 +1283,7 @@ class AltCLIPAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -1294,7 +1295,7 @@ class AltCLIPAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1666,7 +1667,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.register_buffer('position_ids', ops.arange(self.num_positions).expand((1, -1)))
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -1692,7 +1693,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -2096,7 +2097,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
@@ -2104,7 +2105,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -2116,7 +2117,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -2415,7 +2416,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
 
         self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
         self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
-        self.logit_scale = Parameter(mindspore.tensor([self.config.logit_scale_init_value]))
+        self.logit_scale = Parameter(mindspore.tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2620,7 +2621,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 __all__ = [
