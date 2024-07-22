@@ -823,7 +823,7 @@ class RealmPreTrainedModel(PreTrainedModel):
                 if len(input_shape) > 2:
                     tensor = tensor.view((-1, input_shape[-1]))
                 flattened_inputs.append(tensor)
-        return flattened_inputs
+        return tuple(flattened_inputs)
 
 
 class RealmBertModel(RealmPreTrainedModel):

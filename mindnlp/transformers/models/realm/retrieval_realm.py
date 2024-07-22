@@ -17,7 +17,6 @@
 import os
 from typing import Optional, Union
 
-os.environ['HF_ENDPOINT']='https://hf-mirror.com'
 from huggingface_hub import hf_hub_download
 
 import numpy as np
@@ -25,6 +24,7 @@ import numpy as np
 from mindnlp.utils import logging
 from mindnlp.transformers.models.auto.tokenization_auto import AutoTokenizer
 
+os.environ['HF_ENDPOINT']='https://hf-mirror.com'
 
 _REALM_BLOCK_RECORDS_FILENAME = "block_records.npy"
 
