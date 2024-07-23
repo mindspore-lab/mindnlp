@@ -712,7 +712,7 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["Data2VecVisionLayer"]
     _keys_to_ignore_on_load_unexpected = [r".*relative_position_index.*"]
 
-    '''def _init_weights(self, module):
+    def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -729,9 +729,9 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
             module.weight.set_data(Tensor(weight, module.weight.dtype))
         elif isinstance(module, nn.LayerNorm):
             module.weight.set_data(initializer('ones', module.weight.shape, module.weight.dtype))
-            module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))'''
+            module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
     
-    def _init_weights(self, module):
+    '''def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -746,7 +746,7 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
                 module.weight.data[module.padding_idx].zero_()
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            module.weight.data.fill_(1.0)'''
 
 DATA2VEC_VISION_START_DOCSTRING = r"""
     This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
