@@ -76,7 +76,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaModel"),
         ("decision_transformer", "DecisionTransformerModel"),
         ("deberta-v2", "DebertaV2Model"),
-        ("deepseek_v2", "DeekseekV2Model"),
+        ("deepseek_v2", "DeepseekV2Model"),
         ("deta", "DetaModel"),
         ("detr", "DetrModel"),
         ("dinov2", "Dinov2Model"),

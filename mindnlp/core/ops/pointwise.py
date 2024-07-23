@@ -416,7 +416,7 @@ def sinh(input):
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.softmax(input, dim, dtype=dtype)
-    return ops.softmax(input, dim, dtype)
+    return ops.softmax(input, dim, dtype=dtype)
 
 # sqrt
 def sqrt(input):

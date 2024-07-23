@@ -43,7 +43,10 @@ def any(input, dim=None, keepdim=False):
 def max(input, dim=None, keepdim=False):
     if USE_PYBOOST:
         return mindspore.mint.max(input, dim, keepdim)
-    return ops.max(input, dim, keepdim)
+    out = ops.max(input, dim, keepdim)
+    if dim is None:
+        return out[0]
+    return out
 
 # min
 def min(input, dim=None, keepdim=False):
@@ -87,7 +90,7 @@ def nanmedian(input, dim=-1, keepdim=False):
 def prod(input, dim, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.prod(input, dim, keepdim, dtype=dtype)
-    return ops.prod(input, dim, keepdim, dtype=dtype)
+    return ops.prod(input, dim, keepdim).to(dtype)
 
 # quantile
 def quantile(input, q, dim=None, keepdim=False, *, interpolation='linear'):
