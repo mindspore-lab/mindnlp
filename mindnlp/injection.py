@@ -39,7 +39,6 @@ from mindspore.common.parameter import PARAMETER_NAME_DEFAULT
 
 from mindnlp._legacy.functional import einsum
 from .utils.logging import get_logger
-from .amp import OP_WHITE_LIST, OP_BLACK_LIST, get_global_amp
 
 LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
 LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
@@ -136,40 +135,6 @@ def _get_unflatten_size(input_shape, dim, sizes):
     out_shape = input_shape[:_dim] + tuple(sizes) + input_shape[_dim + 1:]
     return out_shape
 
-old_op_call = ops.Primitive.__call__
-def _op_call(self, *args):
-    r"""
-    This function modifies the input arguments based on a global flag and predefined white/black lists before calling the original function 'old_op_call'. 
-    
-    Args:
-        self: An instance of the class containing the method.
-        
-    Returns:
-        None: This function does not return any value directly, but it may return the outputs of the 'old_op_call' function.
-    
-    Raises:
-        No specific exceptions are raised within this function.
-    """
-    GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
-
-    if GLOBAL_AMP:
-        if GLOBAL_AMP and self.__class__.__name__ in OP_WHITE_LIST:
-            args = [arg.astype(GLOBAL_AMP_DTYPE) if isinstance(arg, Tensor) \
-                    else arg for arg in args]
-        elif GLOBAL_AMP and self.__class__.__name__ in OP_BLACK_LIST:
-            args = [arg.astype(mindspore.float32) if isinstance(arg, Tensor) \
-                    else arg for arg in args]
-        else:
-            return old_op_call(self, *args)
-
-        outputs = old_op_call(self, *args)
-
-        return outputs
-
-    return old_op_call(self, *args)
-
-
-ops.Primitive.__call__ = _op_call
 
 # For all backend
 # For functional api

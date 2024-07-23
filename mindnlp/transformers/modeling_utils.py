@@ -1168,7 +1168,6 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             add_prefix_to_model = has_prefix_module and not expects_prefix_module
 
             for pname_in_net, param in model.state_dict().items():
-                print(pname_in_net)
                 if add_prefix_to_model:
                     param_name = prefix + '.' + pname_in_net
                 elif remove_prefix_from_model:

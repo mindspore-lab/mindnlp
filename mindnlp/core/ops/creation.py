@@ -11,10 +11,13 @@ def from_numpy(ndarray):
 # frombuffer
 
 # zeros
+_zeros = ops.Zeros()
 def zeros(*size, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.zeros(size, dtype=dtype)
-    return ops.zeros(size, dtype)
+    if dtype is None:
+        dtype = mindspore.float32
+    return _zeros(size, dtype)
 
 # zeros_like
 def zeros_like(input, *, dtype=None):
@@ -23,10 +26,13 @@ def zeros_like(input, *, dtype=None):
     return ops.zeros_like(input, dtype=dtype)
 
 # ones
+_ones = ops.Ones()
 def ones(*size, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.ones(size, dtype=dtype)
-    return ops.ones(size, dtype)
+    if dtype is None:
+        dtype = mindspore.float32
+    return _ones(size, dtype)
 
 # ones_like
 def ones_like(input, *, dtype=None):
