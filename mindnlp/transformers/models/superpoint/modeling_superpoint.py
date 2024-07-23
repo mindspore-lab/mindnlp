@@ -17,20 +17,18 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import mindspore
-from mindspore import ops 
-from mindnlp.core import nn
+from mindspore import ops
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
 )
 from .configuration_superpoint import SuperPointConfig
-
-
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
 
 
 logger = logging.get_logger(__name__)
@@ -243,7 +241,6 @@ class SuperPointInterestPointDecoder(nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            
             bias=True,
         )
         self.conv_score_b = nn.Conv2d(
