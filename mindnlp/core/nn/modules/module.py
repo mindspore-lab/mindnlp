@@ -274,7 +274,7 @@ class Module:
             param_applied = fn(param)
 
             assert isinstance(param, Parameter)
-            out_param = Parameter(param_applied, param.requires_grad)
+            out_param = Parameter(param_applied, requires_grad=param.requires_grad)
             self._parameters[key] = out_param
 
         for key, buf in self._buffers.items():

@@ -867,6 +867,7 @@ class GenerationTesterMixin:
             )
             beam_kwargs, beam_scorer = self._get_beam_scorer_and_kwargs(input_ids.shape[0], max_length)
 
+            print(input_ids)
             # check `generate()` and `beam_search()` are equal
             output_generate, output_beam_search = self._beam_search_generate(
                 model=model,

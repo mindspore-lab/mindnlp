@@ -372,7 +372,8 @@ def reciprocal(input):
     return ops.reciprocal(input)
 
 # remainder
-
+def remainder(input, other):
+    return ops.remainder(input, other)
 
 # round
 def round(input):

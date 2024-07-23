@@ -10,3 +10,4 @@ from .conv import Conv2d, Conv1d, ConvTranspose2d
 from .padding import ZeroPad2d, ConstantPad2d, ConstantPad1d, ConstantPad3d
 from .batchnorm import BatchNorm2d
 from .pooling import AdaptiveAvgPool2d, AvgPool1d, MaxPool2d
+from .flatten import Unflatten, Flatten

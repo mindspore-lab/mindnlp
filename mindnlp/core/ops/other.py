@@ -563,10 +563,14 @@ def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=
 # trace
 
 # tril
+def tril(input, diagonal=0):
+    return ops.tril(input, diagonal)
 
 # tril_indices
 
 # triu
+def triu(input, diagonal=0):
+    return ops.triu(input, diagonal)
 
 # triu_indices
 
@@ -587,3 +591,6 @@ def unflatten(x, dim, sizes):
 
 
 # resolve_neg
+
+def masked_fill(input, mask, value):
+    return ops.masked_fill(input, mask, value)

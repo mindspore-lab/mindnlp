@@ -125,3 +125,13 @@ def pad(input, pad, mode='constant', value=0.0):
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+
+def softmax(input, dim=-1, *, dtype=None):
+    if USE_PYBOOST:
+        return mindspore.mint.softmax(input, dim, dtype=dtype)
+    return ops.softmax(input, dim, dtype=dtype)
+
+def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if USE_PYBOOST:
+        return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
+    return ops.layer_norm(input, normalized_shape, weight, bias, eps)
