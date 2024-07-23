@@ -210,6 +210,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvForCausalLM"),
         ("splinter", "SplinterForPreTraining"),
         ("squeezebert", "SqueezeBertForMaskedLM"),
+        ("superpoint","SuperPointPreTrainedModel"),
         ("switch_transformers", "SwitchTransformersForConditionalGeneration"),
         ("roc_bert", "RoCBertForPreTraining"),
         ("unispeech-sat", "UniSpeechSatForPreTraining"),

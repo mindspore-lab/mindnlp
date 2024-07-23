@@ -101,6 +101,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("segformer", "SegformerImageProcessor"),
         # ("seggpt", "SegGptImageProcessor"),
         # ("siglip", "SiglipImageProcessor"),
+        ("superpoint","SuperPointImageProcessor"),
         ("swiftformer", "ViTImageProcessor"),
         ("swin", "ViTImageProcessor"),
         # ("swin2sr", "Swin2SRImageProcessor"),

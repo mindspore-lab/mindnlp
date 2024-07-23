@@ -155,6 +155,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("splinter", "SplinterConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
+        ("superpoint","SuperPointConfig"),
         ("swin", "SwinConfig"),
         ("swiftformer", "SwiftFormerConfig"),
         ("switch_transformers", "SwitchTransformersConfig"),
