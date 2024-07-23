@@ -62,6 +62,8 @@ def clone(input):
 def cumsum(input, dim, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.cumsum(input, dim, dtype)
+    if input.dtype == mindspore.bool_:
+        input = input.to(mindspore.int32)
     return ops.cumsum(input, dim, dtype)
 
 # diag

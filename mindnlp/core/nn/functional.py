@@ -2,6 +2,8 @@
 import numpy as np
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
+
 from mindnlp.configs import USE_PYBOOST
 
 def gelu(input, approximate='none'):
@@ -134,4 +136,5 @@ def softmax(input, dim=-1, *, dtype=None):
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if USE_PYBOOST:
         return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
-    return ops.layer_norm(input, normalized_shape, weight, bias, eps)
+    _layer_norm = _get_cache_prim(ops.LayerNorm)(-1, -1, epsilon=eps)
+    return _layer_norm(input, weight, bias)[0]
