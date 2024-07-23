@@ -182,6 +182,7 @@ from . import (
     splinter,
     squeezebert,
     starcoder2,
+    superpoint,
     swiftformer,
     swin,
     switch_transformers,
@@ -389,6 +390,7 @@ from .stablelm import *
 from .splinter import *
 from .squeezebert import *
 from .starcoder2 import *
+from .superpoint import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
@@ -597,6 +599,7 @@ __all__.extend(stablelm.__all__)
 __all__.extend(splinter.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
+__all__.extend(superpoint.__all__)
 __all__.extend(swiftformer.__all__)
 __all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
