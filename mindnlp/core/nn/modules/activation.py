@@ -115,3 +115,7 @@ class Mish(Module):
 class ReLU6(Module):
     def forward(self, input):
         return F.relu6(input)
+
+class ELU(Module):
+    def forward(self, input):
+        return F.elu(input)

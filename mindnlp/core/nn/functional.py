@@ -1,4 +1,5 @@
 """nn functional"""
+import mindspore.mint.nn.functional
 import numpy as np
 import mindspore
 from mindspore import ops
@@ -36,6 +37,11 @@ def mish(input):
 
 def relu6(input):
     return ops.relu6(input)
+
+def elu(input, alpha=1.0):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.elu(input, alpha)
+    return ops.elu(input, alpha)
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """

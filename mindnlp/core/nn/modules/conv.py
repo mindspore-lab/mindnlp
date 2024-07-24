@@ -392,75 +392,115 @@ class _ConvTransposeNd(_ConvNd):
             ret = res
         return ret
 
-# class ConvTranspose1d(_ConvTransposeNd):
-#     """Applies a 1D transposed convolution operator over an input image
-#     composed of several input planes.
+class ConvTranspose1d(_ConvTransposeNd):
+    """Applies a 1D transposed convolution operator over an input image
+    composed of several input planes.
 
-#     This module can be seen as the gradient of Conv1d with respect to its input.
-#     It is also known as a fractionally-strided convolution or
-#     a deconvolution (although it is not an actual deconvolution operation).
+    This module can be seen as the gradient of Conv1d with respect to its input.
+    It is also known as a fractionally-strided convolution or
+    a deconvolution (although it is not an actual deconvolution operation).
 
-#     | :attr:`stride` controls the stride for the cross-correlation.
-#     | If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
-#       for :attr:`padding` number of points.
-#     | If :attr:`output_padding` is non-zero, then the output is implicitly zero-padded on one side
-#       for :attr:`output_padding` number of points.
-#     | :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
-#       It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
-#     | :attr:`groups` controls the connections between inputs and outputs. `in_channels` and `out_channels`
-#       must both be divisible by `groups`.
-#     |       At groups=1, all inputs are convolved to all outputs.
-#     |       At groups=2, the operation becomes equivalent to having two conv layers
-#                  side by side, each seeing half the input channels,
-#                  and producing half the output channels, and both subsequently concatenated.
-#             At groups=`in_channels`, each input channel is convolved with its own set of filters
-#                  (of size `out_channels // in_channels`).
+    | :attr:`stride` controls the stride for the cross-correlation.
+    | If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+      for :attr:`padding` number of points.
+    | If :attr:`output_padding` is non-zero, then the output is implicitly zero-padded on one side
+      for :attr:`output_padding` number of points.
+    | :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
+      It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    | :attr:`groups` controls the connections between inputs and outputs. `in_channels` and `out_channels`
+      must both be divisible by `groups`.
+    |       At groups=1, all inputs are convolved to all outputs.
+    |       At groups=2, the operation becomes equivalent to having two conv layers
+                 side by side, each seeing half the input channels,
+                 and producing half the output channels, and both subsequently concatenated.
+            At groups=`in_channels`, each input channel is convolved with its own set of filters
+                 (of size `out_channels // in_channels`).
 
-#     .. note::
+    .. note::
 
-#          Depending of the size of your kernel, several (of the last)
-#          columns of the input might be lost, because it is a valid `cross-correlation`_,
-#          and not a full `cross-correlation`_.
-#          It is up to the user to add proper padding.
+         Depending of the size of your kernel, several (of the last)
+         columns of the input might be lost, because it is a valid `cross-correlation`_,
+         and not a full `cross-correlation`_.
+         It is up to the user to add proper padding.
 
-#     Args:
-#         in_channels (int): Number of channels in the input image
-#         out_channels (int): Number of channels produced by the convolution
-#         kernel_size (int or tuple): Size of the convolving kernel
-#         stride (int or tuple, optional): Stride of the convolution
-#         padding (int or tuple, optional): Zero-padding added to both sides of the input
-#         output_padding (int or tuple, optional): Zero-padding added to one side of the output
-#         groups (int, optional): Number of blocked connections from input channels to output channels
-#         bias (bool, optional): If True, adds a learnable bias to the output
-#         dilation (int or tuple, optional): Spacing between kernel elements
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution
+        padding (int or tuple, optional): Zero-padding added to both sides of the input
+        output_padding (int or tuple, optional): Zero-padding added to one side of the output
+        groups (int, optional): Number of blocked connections from input channels to output channels
+        bias (bool, optional): If True, adds a learnable bias to the output
+        dilation (int or tuple, optional): Spacing between kernel elements
 
-#     Shape:
-#         - Input: :math:`(N, C_{in}, L_{in})`
-#         - Output: :math:`(N, C_{out}, L_{out})` where
-#           :math:`L_{out} = (L_{in} - 1) * stride - 2 * padding + kernel\_size + output\_padding`
+    Shape:
+        - Input: :math:`(N, C_{in}, L_{in})`
+        - Output: :math:`(N, C_{out}, L_{out})` where
+          :math:`L_{out} = (L_{in} - 1) * stride - 2 * padding + kernel\_size + output\_padding`
 
-#     Attributes:
-#         weight (Tensor): the learnable weights of the module of shape
-#                          (in_channels, out_channels, kernel_size[0], kernel_size[1])
-#         bias (Tensor):   the learnable bias of the module of shape (out_channels)
-#     """
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+                         (in_channels, out_channels, kernel_size[0], kernel_size[1])
+        bias (Tensor):   the learnable bias of the module of shape (out_channels)
+    """
 
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-#                  padding=0, output_padding=0, groups=1, bias=True, dilation=1):
-#         kernel_size = _single(kernel_size)
-#         stride = _single(stride)
-#         padding = _single(padding)
-#         dilation = _single(dilation)
-#         output_padding = _single(output_padding)
-#         super(ConvTranspose1d, self).__init__(
-#             in_channels, out_channels, kernel_size, stride, padding, dilation,
-#             True, output_padding, groups, bias)
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode: str = 'zeros'):
+        kernel_size = _single(kernel_size)
+        stride = _single(stride)
+        padding = _single(padding)
+        dilation = _single(dilation)
+        output_padding = _single(output_padding)
+        super(ConvTranspose1d, self).__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            True, output_padding, groups, bias, padding_mode)
 
-#     def forward(self, input, output_size=None):
-#         output_padding = self._output_padding(input, output_size)
-#         return F.conv_transpose1d(
-#             input, self.weight, self.bias, self.stride, self.padding,
-#             output_padding, self.groups, self.dilation)
+        pad_mode = 'pad'
+        pad = padding
+        if isinstance(padding, tuple):
+            pad = (0, 0, padding[0], padding[0])
+        elif isinstance(padding, int):
+            pad = (0, 0) + (padding,) * 2
+        if not isinstance(padding, (int, tuple)):
+            pad_mode = padding
+            pad = (0,) * 4
+
+        # cause Conv2DTranspose's out_channel refers to Conv2D's out_channel.
+        self.conv2d_transpose = ops.Conv2DTranspose(out_channel=self.out_channels,
+                                                    kernel_size=(1,) + self.kernel_size,
+                                                    mode=1,
+                                                    pad_mode=pad_mode,
+                                                    pad=pad,
+                                                    stride=(1,) + self.stride,
+                                                    dilation=(1,) + self.dilation,
+                                                    group=self.groups)
+        self.h_add = _deconv_output_length(pad_mode, 1, 1, 1, pad[0] + pad[1])
+        self.w_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[2] + pad[3])
+
+    def forward(self, input, output_size=None):
+        if self.padding_mode != 'zeros':
+            raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
+
+        assert isinstance(self.padding, tuple)
+        # One cannot replace List by Tuple or Sequence in "_output_padding" because
+        # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
+        num_spatial_dims = 1
+        output_padding = self._output_padding(
+            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
+        input = ops.expand_dims(input, 2)
+        n, _, h, w = input.shape
+        conv2d_trans_ret = self.conv2d_transpose(input, self.weight.expand_dims(2),
+                                                 (n, self.out_channels,
+                                                  h + self.h_add,
+                                                  w * self.stride[0] + self.w_add))
+        if self.bias is not None:
+            conv2d_trans_ret = ops.bias_add(conv2d_trans_ret, self.bias)
+
+        conv2d_trans_ret = conv2d_trans_ret.squeeze(2)
+        conv2d_trans_ret = ops.pad(conv2d_trans_ret, (0,) + output_padding, value=0.)
+        return conv2d_trans_ret
 
 
 def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, padding):

@@ -49,6 +49,9 @@ def gather(input, dim, index):
         return mindspore.mint.gather(input, dim, index)
     return ops.gather_elements(input, dim, index)
 
+def gather_nd(input, indices):
+    return ops.gather_nd(input, indices)
+
 # hsplit
 
 

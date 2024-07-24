@@ -52,6 +52,8 @@ def range(start=0, end=None, step=1, dtype=None):
 
 # linspace
 def linspace(start, end, steps, *, dtype=None):
+    if dtype is None:
+        dtype = mindspore.float32
     return ops.linspace(start, end, steps).to(dtype)
 
 # logspace

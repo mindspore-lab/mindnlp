@@ -82,6 +82,8 @@ def nanmedian(input, dim=-1, keepdim=False):
 
 
 # norm
+def norm(input, p='fro', dim=None, keepdim=False, dtype=None):
+    return ops.norm(input, p, dim, keepdim, dtype=dtype)
 
 # nansum
 

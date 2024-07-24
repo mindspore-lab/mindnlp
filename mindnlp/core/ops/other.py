@@ -551,6 +551,8 @@ def meshgrid(*tensors, indexing=None):
 
 
 # repeat_interleave
+def repeat_interleave(input, repeats, dim=None):
+    return ops.repeat_elements(input, repeats, dim)
 
 # roll
 

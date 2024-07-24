@@ -24,6 +24,7 @@ from typing import List, Iterable, Union, Optional, Callable, Tuple, Dict
 import mindspore
 import numpy as np
 from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
 
 
 class LogitsProcessor:
@@ -225,7 +226,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
             TypeError: If the input_ids or scores are not instances of mindspore.Tensor.
             RuntimeError: If there is an issue with the scatter operation during processing.
         """
-        score = ops.gather_elements(scores, 1, self.encoder_input_ids)
+        score = ops.gather(scores, 1, self.encoder_input_ids)
 
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
@@ -1281,7 +1282,7 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
         Raises:
             None
         """
-        scores = ops.log_softmax(scores, axis=-1)
+        scores = F.log_softmax(scores, dim=-1)
         return scores
 
 
@@ -1527,7 +1528,7 @@ class TypicalLogitsWarper(LogitsWarper):
             RuntimeError: If an error occurs during the warping process.
         """
         # calculate entropy
-        normalized = ops.log_softmax(scores, axis=-1)
+        normalized = F.log_softmax(scores, dim=-1)
         p = ops.exp(normalized)
         ent = -(normalized * p).nansum(-1, keepdim=True)
 
@@ -2095,13 +2096,13 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         Raises:
             None.
         """
-        scores = ops.log_softmax(scores, axis=-1)
+        scores = F.log_softmax(scores, dim=-1)
         if self.guidance_scale == 1:
             return scores
 
         logits = self.get_unconditional_logits(input_ids)
 
-        unconditional_logits = ops.log_softmax(logits[:, -1], axis=-1)
+        unconditional_logits = F.log_softmax(logits[:, -1], dim=-1)
         out = self.guidance_scale * (scores - unconditional_logits) + unconditional_logits
         return out
 
@@ -2233,9 +2234,9 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                 scores[:, last_allowed + 1 :] = -float("inf")
 
         # if sum of probability over timestamps is above any other token, sample timestamp
-        logprobs = ops.log_softmax(scores.float(), axis=-1)
+        logprobs = F.log_softmax(scores.float(), dim=-1)
         for k in range(input_ids.shape[0]):
-            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(axis=-1)
+            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(dim=-1)
             max_text_token_logprob = logprobs[k, : self.timestamp_begin].max()
             if not ops.isnan(timestamp_logprob) and timestamp_logprob > max_text_token_logprob:
                 scores[k, : self.timestamp_begin] = -float("inf")
@@ -2408,7 +2409,7 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
 
         Note:
-            This method assumes that the 'split' function splits the tensor into two parts along the first dimension (axis=0).
+            This method assumes that the 'split' function splits the tensor into two parts along the first dimension (dim=0).
         """
         # simple check to make sure we have compatible batch sizes between our
         # logits scores (cond + uncond) and input ids (cond only)
@@ -2419,6 +2420,6 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
                 f"batch size {scores.shape[0]} for the logits and {input_ids.shape[0]} for the input ids."
             )
         unguided_bsz = scores.shape[0] // 2
-        cond_logits, uncond_logits = scores.split(unguided_bsz, axis=0)
+        cond_logits, uncond_logits = scores.split(unguided_bsz, dim=0)
         scores_processed = uncond_logits + (cond_logits - uncond_logits) * self.guidance_scale
         return scores_processed

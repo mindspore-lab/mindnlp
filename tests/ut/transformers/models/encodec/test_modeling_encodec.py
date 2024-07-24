@@ -2,22 +2,20 @@
 
 import copy
 import inspect
-import os
-import tempfile
 import unittest
 from typing import Dict, List, Tuple
 
 import numpy as np
-from datasets import Audio, load_dataset
+
 
 from mindnlp.utils.testing_utils import (
     is_mindspore_available,
     require_mindspore,
     slow,
 )
-
 from mindnlp.transformers import EncodecModel, EncodecConfig
 from mindnlp.transformers.models.encodec import EncodecFeatureExtractor
+from datasets import Audio, load_dataset
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -184,7 +182,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
