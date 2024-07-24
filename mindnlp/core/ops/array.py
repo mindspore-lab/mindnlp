@@ -56,7 +56,8 @@ def gather_nd(input, indices):
 
 
 # hstack
-
+def hstack(tensors):
+    return ops.hstack(tensors)
 
 # index_add
 
@@ -122,8 +123,7 @@ def select(input, dim, index):
 # scatter
 def scatter(input, dim, index, src):
     if USE_PYBOOST:
-        reduce = mindspore.ops.auto_generate.gen_arg_handler.str_to_enum('Scatter', 'reduce', "none")
-        return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, reduce)
+        return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 3)
     return ops.tensor_scatter_elements(input, index, src, dim)
 
 # diagonal_scatter

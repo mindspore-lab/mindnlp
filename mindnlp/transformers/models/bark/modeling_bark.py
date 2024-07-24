@@ -1226,7 +1226,7 @@ class BarkCoarseModel(BarkCausalModel):
         )
         output_lengths = ops.round(output_lengths * coarse_generation_config.n_coarse_codebooks).int()
 
-        max_generated_len = ops.max(output_lengths)[0].item()
+        max_generated_len = ops.max(output_lengths).item()
 
         batch_size = semantic_output.shape[0]
 

@@ -2676,9 +2676,7 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(input_ids.shape[0], dtype=mindspore.int64)
 
         this_peer_finished = False  # used by synced_gpus only
-        import time
         while True:
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -2746,8 +2744,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-            t = time.time()
-            print(t - s)
         if streamer is not None:
             streamer.end()
 
@@ -2947,9 +2943,7 @@ class GenerationMixin:
 
         this_peer_finished = False  # used by synced_gpus only
         # auto-regressive generation
-        import time
         while True:
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -3022,8 +3016,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-            t = time.time()
-            print(t - s)
         if streamer is not None:
             streamer.end()
 

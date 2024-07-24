@@ -91,7 +91,7 @@ class LlamaRMSNorm(nn.Module):
             ValueError: If the input hidden_states is not a valid tensor or numpy array.
             RuntimeError: If an error occurs during the normalization process.
         """
-        if USE_PYBOOST:
+        if not self.training and USE_PYBOOST:
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
