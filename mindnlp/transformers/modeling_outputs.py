@@ -1333,9 +1333,9 @@ class ImageSuperResolutionOutput(ModelOutput):
 
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
-            Reconstruction loss.
-        reconstruction (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-           Reconstructed images, possibly upscaled.
+            Reforwardion loss.
+        reforwardion (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
+           Reforwarded images, possibly upscaled.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
             when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
@@ -1350,7 +1350,7 @@ class ImageSuperResolutionOutput(ModelOutput):
             heads.
     """
     loss: Optional[mindspore.Tensor] = None
-    reconstruction: mindspore.Tensor = None
+    reforwardion: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
@@ -1725,9 +1725,9 @@ class MaskedImageModelingOutput(ModelOutput):
 
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `bool_masked_pos` is provided):
-            Reconstruction loss.
-        reconstruction (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-           Reconstructed / completed images.
+            Reforwardion loss.
+        reforwardion (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
+           Reforwarded / completed images.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
             when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
@@ -1740,7 +1740,7 @@ class MaskedImageModelingOutput(ModelOutput):
             the self-attention heads.
     """
     loss: Optional[mindspore.Tensor] = None
-    reconstruction: mindspore.Tensor = None
+    reforwardion: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 

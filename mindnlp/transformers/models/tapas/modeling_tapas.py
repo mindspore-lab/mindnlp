@@ -21,7 +21,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, MaskedLMOutput, SequenceClassifierOutput
@@ -78,7 +78,7 @@ class TableQuestionAnsweringOutput(ModelOutput):
 
 
 
-class TapasEmbeddings(nn.Cell):
+class TapasEmbeddings(nn.Module):
     """
     Construct the embeddings from word, position and token_type embeddings. Same as BertEmbeddings but with a number of
     additional token type embeddings to encode tabular structure.
@@ -105,7 +105,7 @@ class TapasEmbeddings(nn.Cell):
 
         self.config = config
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -154,7 +154,7 @@ class TapasEmbeddings(nn.Cell):
         return embeddings
 
 
-class TapasSelfAttention(nn.Cell):
+class TapasSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -167,9 +167,9 @@ class TapasSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.is_decoder = config.is_decoder
@@ -179,7 +179,7 @@ class TapasSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -223,7 +223,7 @@ class TapasSelfAttention(nn.Cell):
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in TapasModel construct() function)
+            # Apply the attention mask is (precomputed for all layers in TapasModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -250,21 +250,21 @@ class TapasSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class TapasSelfOutput(nn.Cell):
+class TapasSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasAttention(nn.Cell):
+class TapasAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = TapasSelfAttention(config)
@@ -290,8 +290,8 @@ class TapasAttention(nn.Cell):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    # Copied from transformers.models.bert.modeling_bert.BertAttention.construct
-    def construct(
+    # Copied from transformers.models.bert.modeling_bert.BertAttention.forward
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -316,37 +316,37 @@ class TapasAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class TapasIntermediate(nn.Cell):
+class TapasIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
-class TapasOutput(nn.Cell):
+class TapasOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasLayer(nn.Cell):
+class TapasLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -361,8 +361,8 @@ class TapasLayer(nn.Cell):
         self.intermediate = TapasIntermediate(config)
         self.output = TapasOutput(config)
 
-    # Copied from transformers.models.bert.modeling_bert.BertLayer.construct
-    def construct(
+    # Copied from transformers.models.bert.modeling_bert.BertLayer.forward
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -434,14 +434,14 @@ class TapasLayer(nn.Cell):
         return layer_output
 
 
-class TapasEncoder(nn.Cell):
+class TapasEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -498,13 +498,13 @@ class TapasEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class TapasPooler(nn.Cell):
+class TapasPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -514,17 +514,17 @@ class TapasPooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Tapas
-class TapasPredictionHeadTransform(nn.Cell):
+class TapasPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -532,14 +532,14 @@ class TapasPredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Tapas
-class TapasLMPredictionHead(nn.Cell):
+class TapasLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = TapasPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size), name='bias')
 
@@ -549,19 +549,19 @@ class TapasLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Tapas
-class TapasOnlyMLMHead(nn.Cell):
+class TapasOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = TapasLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -579,7 +579,7 @@ class TapasPreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
@@ -597,7 +597,7 @@ TAPAS_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
     library implements for all its models (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
-    This model is also a Pyops [ops.nn.Cell](https://pyops.org/docs/stable/nn.html#ops.nn.Cell) subclass.
+    This model is also a Pyops [ops.nn.Module](https://pyops.org/docs/stable/nn.html#ops.nn.Module) subclass.
     Use it as a regular Pyops Module and refer to the Pyops documentation for all matter related to general usage
     and behavior.
     Parameters:
@@ -679,7 +679,7 @@ class TapasModel(TapasPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -806,7 +806,7 @@ class TapasForMaskedLM(TapasPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -913,12 +913,12 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
 
         # aggregation head
         if config.num_aggregation_labels > 0:
-            self.aggregation_classifier = nn.Dense(config.hidden_size, config.num_aggregation_labels)
+            self.aggregation_classifier = nn.Linear(config.hidden_size, config.num_aggregation_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1216,12 +1216,12 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
 
         self.tapas = TapasModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1841,7 +1841,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
         cell_selection_preference (`float`):
             Preference for cell selection in ambiguous cases.
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Labels per token. aggregation_classifier (`ops.nn.Dense`): Aggregation head
+            Labels per token. aggregation_classifier (`ops.nn.Linear`): Aggregation head
     Returns:
         aggregate_mask (`mindspore.Tensor` of shape `(batch_size,)`): A mask set to 1 for examples that should use
         aggregation functions.

@@ -21,7 +21,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops, nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -54,11 +56,11 @@ GPT2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class GPT2Attention(nn.Cell):
+class GPT2Attention(nn.Module):
 
     """
     The `GPT2Attention` class represents the attention mechanism used in the GPT-2 model.
-    It is a subclass of the `nn.Cell` class.
+    It is a subclass of the `nn.Module` class.
     
     Summary:
         This class implements the attention mechanism in GPT-2, which is used for self-attention within the model
@@ -91,7 +93,7 @@ class GPT2Attention(nn.Cell):
         `_upcast_and_reordered_attn`: Performs attention calculations for cross-attention.
         `_split_heads`: Splits the `hidden_size` dimension into `attn_head_size` and `num_heads`.
         `_merge_heads`: Merges the `attn_head_size` and `num_heads` dimensions into `hidden_size`.
-        `construct`: Constructs the attention mechanism.
+        `forward`: Constructs the attention mechanism.
 
     Please note that this class does not include method signatures or any other code.
     The provided information is a summary of the class and its attributes and methods.
@@ -328,7 +330,7 @@ class GPT2Attention(nn.Cell):
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -340,7 +342,7 @@ class GPT2Attention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]:
         """
-        This method 'construct' in the class 'GPT2Attention' is responsible for constructing the attention mechanism
+        This method 'forward' in the class 'GPT2Attention' is responsible for forwarding the attention mechanism
         for GPT-2 model.
 
         Args:
@@ -404,14 +406,14 @@ class GPT2Attention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class GPT2MLP(nn.Cell):
+class GPT2MLP(nn.Module):
 
     """
     This class represents a multi-layer perceptron (MLP) component of the GPT-2 model.
     It is used to process the hidden states in the model architecture.
 
-    The GPT2MLP class inherits from the nn.Cell class and contains methods for initializing the MLP and
-    constructing the hidden states.
+    The GPT2MLP class inherits from the nn.Module class and contains methods for initializing the MLP and
+    forwarding the hidden states.
 
     Attributes:
         c_fc (Conv1D): A 1D convolutional layer used for intermediate processing of the hidden states.
@@ -421,7 +423,7 @@ class GPT2MLP(nn.Cell):
 
     Methods:
         __init__: Initializes the GPT2MLP with the given intermediate size and configuration.
-        construct: Constructs the hidden states by applying the specified operations on the input hidden states.
+        forward: Constructs the hidden states by applying the specified operations on the input hidden states.
 
     """
     def __init__(self, intermediate_size, config):
@@ -450,7 +452,7 @@ class GPT2MLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
         Constructs a GPT2MLP model by applying a series of operations on the input hidden states.
 
@@ -475,7 +477,7 @@ class GPT2MLP(nn.Cell):
             ```python
             >>> model = GPT2MLP()
             >>> hidden_states = (tensor1, tensor2)
-            >>> output = model.construct(hidden_states)
+            >>> output = model.forward(hidden_states)
             ```
         """
         hidden_states = self.c_fc(hidden_states)
@@ -485,12 +487,12 @@ class GPT2MLP(nn.Cell):
         return hidden_states
 
 
-class GPT2Block(nn.Cell):
+class GPT2Block(nn.Module):
 
     """
     This class represents a single block of the GPT2 (Generative Pretrained Transformer 2) model.
 
-    GPT2Block is a subclass of nn.Cell and contains the following attributes:
+    GPT2Block is a subclass of nn.Module and contains the following attributes:
 
     - ln_1: A LayerNorm module for layer normalization.
     - attn: An instance of the GPT2Attention class for self-attention mechanism.
@@ -503,7 +505,7 @@ class GPT2Block(nn.Cell):
 
     Methods:
         __init__: Initializes the GPT2Block instance with the given configuration and optional layer index.
-        construct:
+        forward:
             Performs the forward pass of the GPT2Block.
 
             Parameters:
@@ -570,7 +572,7 @@ class GPT2Block(nn.Cell):
 
         self.mlp = GPT2MLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -673,7 +675,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -751,7 +753,7 @@ class GPT2Model(GPT2PreTrainedModel):
 
     """
     This class represents a GPT-2 model for natural language processing tasks. It includes methods for initializing
-    the model, setting input embeddings, pruning model heads, and constructing the model for inference or training.
+    the model, setting input embeddings, pruning model heads, and forwarding the model for inference or training.
     The model consists of multiple GPT2Blocks organized in layers to process input sequences and generate output
     representations. The GPT2Model class inherits from the GPT2PreTrainedModel class, which provides additional
     functionality and pretrained weights for fine-tuning or transfer learning tasks.
@@ -761,7 +763,7 @@ class GPT2Model(GPT2PreTrainedModel):
         get_input_embeddings: Returns the input embeddings used by the model.
         set_input_embeddings: Sets new input embeddings for the model.
         _prune_heads: Prunes specific attention heads in the model based on the provided dictionary.
-        construct: Constructs the GPT-2 model for inference or training with various input options and returns
+        forward: Constructs the GPT-2 model for inference or training with various input options and returns
             the model output.
 
     Attributes:
@@ -794,7 +796,7 @@ class GPT2Model(GPT2PreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
+        self.h = nn.ModuleList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
@@ -852,7 +854,7 @@ class GPT2Model(GPT2PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1077,12 +1079,12 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     GPT-2 architecture.
 
     This class provides methods for initializing the model, getting and setting the output embeddings, preparing inputs 
-    for generation, and constructing the model. It also includes a static method for reordering the cache when using 
+    for generation, and forwarding the model. It also includes a static method for reordering the cache when using 
     beam search or beam sampling.
 
     Attributes:
         transformer: A GPT2Model instance representing the GPT-2 transformer model.
-        lm_head: A nn.Dense layer representing the output layer of the language model.
+        lm_head: A nn.Linear layer representing the output layer of the language model.
 
     Methods:
         __init__: Initializes the GPT2LMHeadModel.
@@ -1090,7 +1092,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         set_output_embeddings: Sets the lm_head output embeddings.
         prepare_inputs_for_generation: 
             Prepares inputs for generation by adjusting the input_ids, token_type_ids, attention_mask, and position_ids.
-        construct: Constructs the GPT2LMHeadModel and returns the model outputs.
+        forward: Constructs the GPT2LMHeadModel and returns the model outputs.
         _reorder_cache: Reorders the past_key_values cache based on the beam_idx for beam search or beam sampling.
 
     Note:
@@ -1117,7 +1119,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1230,7 +1232,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
 
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1319,7 +1321,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
     and multiple choice classification.
 
     The class includes methods for initializing the model, setting and getting output embeddings, preparing inputs for
-    text generation, and constructing the model for inference or training. It also provides a method for reordering
+    text generation, and forwarding the model for inference or training. It also provides a method for reordering
     cache during beam search or beam sampling.
 
     Note that this class inherits from GPT2PreTrainedModel, which is a base class for all GPT-2 models in the
@@ -1349,7 +1351,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         config = copy.deepcopy(config)
         config.num_labels = 1
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
 
         # Initialize weights and apply final processing
@@ -1447,7 +1449,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1573,12 +1575,12 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     GPT2ForSequenceClassification represents a GPT-2 model fine-tuned for sequence classification tasks.
     This class inherits from GPT2PreTrainedModel.
 
-    The GPT2ForSequenceClassification class provides a method 'construct' for constructing the sequence classification
-    model. The 'construct' method accepts input tensors such as input_ids, past_key_values, attention_mask,
+    The GPT2ForSequenceClassification class provides a method 'forward' for forwarding the sequence classification
+    model. The 'forward' method accepts input tensors such as input_ids, past_key_values, attention_mask,
     token_type_ids, position_ids, head_mask, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states,
     and return_dict.
 
-    The 'construct' method returns a tuple containing the sequence classification loss, logits, past_key_values,
+    The 'forward' method returns a tuple containing the sequence classification loss, logits, past_key_values,
     hidden_states, and attentions. If the return_dict parameter is set to False, the output is a tuple of pooled_logits
     and transformer_outputs. The sequence classification loss is computed based on the given labels and the model
     configuration.
@@ -1587,7 +1589,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     configuration, number of labels, GPT2Model transformer, and score.
 
     Labels for computing the sequence classification/regression loss can be provided as a mindspore.Tensor of shape
-    (batch_size,) in the 'construct' method. Indices for the labels should be in the range [0,
+    (batch_size,) in the 'forward' method. Indices for the labels should be in the range [0,
     config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed (Mean-Square loss).
     If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
 
@@ -1613,12 +1615,12 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1718,10 +1720,10 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
 
     """
     This class represents a GPT-2 model for token classification, inheriting from GPT2PreTrainedModel.
-    It includes methods for initialization and construction of the model for token classification tasks.
+    It includes methods for initialization and forwardion of the model for token classification tasks.
     The model utilizes a transformer architecture with configurable dropout and classifier layers for classification
     or regression loss computation based on the number of labels specified in the configuration.
-    The construct method processes input data through the transformer, applies dropout, generates logits using the
+    The forward method processes input data through the transformer, applies dropout, generates logits using the
     classifier layer, and computes the loss if labels are provided. The method returns the loss and output
     based on the specified return format.
     """
@@ -1760,12 +1762,12 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1836,7 +1838,7 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
 
     Methods:
         __init__: Initializes the GPT2ForQuestionAnswering instance.
-        construct: Constructs the GPT2ForQuestionAnswering model and performs question answering.
+        forward: Constructs the GPT2ForQuestionAnswering model and performs question answering.
 
     The GPT2ForQuestionAnswering class provides the following functionality:
 
@@ -1849,7 +1851,7 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
 
     - Construction:
 
-        - The 'construct' method constructs the GPT2ForQuestionAnswering model.
+        - The 'forward' method forwards the GPT2ForQuestionAnswering model.
         - The method takes several input tensors as parameters, such as 'input_ids', 'attention_mask', 'token_type_ids', etc.
         - It also takes optional parameters like 'start_positions', 'end_positions', 'output_attentions',
         'output_hidden_states', and 'return_dict'.
@@ -1883,12 +1885,12 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

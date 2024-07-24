@@ -553,7 +553,7 @@ class _open_buffer_reader(_opener):
     A class representing an open buffer reader for reading files.
     
     This class is a subclass of _opener and provides functionality for reading files from a buffer. 
-    The class's constructor takes a buffer as input and initializes the buffer for reading. 
+    The class's forwardor takes a buffer as input and initializes the buffer for reading. 
     It also performs a check to ensure that the buffer is seekable before proceeding with reading operations.
     """
     def __init__(self, buffer):

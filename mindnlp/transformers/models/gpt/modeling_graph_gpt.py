@@ -19,8 +19,9 @@
 """MindNLP gpt model"""
 import numpy as np
 import mindspore
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
@@ -31,7 +32,7 @@ from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_ind
 from ...activations import ACT2FN
 
 
-class MLP(nn.Cell):
+class MLP(nn.Module):
     r"""
     GPT MLP
 	"""
@@ -57,7 +58,7 @@ class MLP(nn.Cell):
         self.act = ACT2FN[config.afn]
         self.dropout = Dropout(p=config.resid_pdrop)
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the output of the MLP (Multi-Layer Perceptron) for a given input.
         
@@ -92,7 +93,7 @@ class MLP(nn.Cell):
             ```python
             >>> mlp = MLP()
             >>> input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
-            >>> mlp.construct(input_tensor)
+            >>> mlp.forward(input_tensor)
             ```
         """
         h = self.act(self.c_fc(x))
@@ -100,7 +101,7 @@ class MLP(nn.Cell):
         return self.dropout(h2)
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     r"""
     GPT Attention
     """
@@ -213,7 +214,7 @@ class Attention(nn.Cell):
             return x.transpose(0, 2, 3, 1)
         return x.transpose(0, 2, 1, 3)
 
-    def construct(self, x, attention_mask=None, head_mask=None):
+    def forward(self, x, attention_mask=None, head_mask=None):
         """
         Constructs the attention mechanism in the Attention class.
 
@@ -247,7 +248,7 @@ class Attention(nn.Cell):
         return outputs
 
 
-class Block(nn.Cell):
+class Block(nn.Module):
     r"""
     GPT Block
     """
@@ -274,7 +275,7 @@ class Block(nn.Cell):
         self.mlp = MLP(4 * nx, config)
         self.ln_2 = nn.LayerNorm((nx,), epsilon=config.layer_norm_epsilon)
 
-    def construct(self, x, attention_mask=None, head_mask=None):
+    def forward(self, x, attention_mask=None, head_mask=None):
         """
         Construct a block by applying attention, normalization, and multi-layer perceptron operations on the input tensor.
 
@@ -312,7 +313,7 @@ class GPTPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -362,7 +363,7 @@ class GPTModel(GPTPreTrainedModel):
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
         self.drop = Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
+        self.h = nn.ModuleList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
         self.position_ids = ops.arange(config.n_positions)
 
         self.n_layer = self.config.n_layer
@@ -388,7 +389,7 @@ class GPTModel(GPTPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
             self,
             input_ids=None,
             attention_mask=None,
@@ -398,7 +399,7 @@ class GPTModel(GPTPreTrainedModel):
             inputs_embeds=None,
     ):
         """
-        This method constructs the GPT model based on the provided input parameters.
+        This method forwards the GPT model based on the provided input parameters.
 
         Args:
             self: The instance of the class.
@@ -501,7 +502,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         super().__init__(config)
         self.config = config
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
 
     def get_output_embeddings(self):
         """
@@ -515,7 +516,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -616,7 +617,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         self.config = config
         config.num_labels = 1
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
         self.post_init()
 
@@ -632,7 +633,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -749,7 +750,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         self.config = config
         self.num_labels = config.num_labels
         self.transformer = GPTModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
 
         self.pad_token_id = self.config.pad_token_id
         problem_type = config.problem_type
@@ -766,7 +767,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
                 self.problem_type = "multi_label_classification"
                 self.loss = nn.BCEWithLogitsLoss()
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,

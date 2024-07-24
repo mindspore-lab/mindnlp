@@ -426,7 +426,7 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             None.
 
         Note:
-            The vocabulary file will be saved in the specified directory with the filename constructed using the provided
+            The vocabulary file will be saved in the specified directory with the filename forwarded using the provided
             filename_prefix (if any) and the default vocabulary file name ('vocab.txt'). If the save_directory is not a valid
             directory, the vocabulary file will be saved with the provided save_directory as the filename.
 

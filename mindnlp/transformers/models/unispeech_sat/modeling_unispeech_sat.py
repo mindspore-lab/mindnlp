@@ -21,8 +21,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, HeNormal, Normal, Uniform
 
@@ -30,9 +31,6 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from mindnlp.modules import functional
-from mindnlp.modules.functional import finfo
-from mindnlp.modules.functional.weight_norm import weight_norm
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -244,7 +242,7 @@ def _compute_mask_indices(
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2NoLayerNormConvLayer with Wav2Vec2->UniSpeechSat
-class UniSpeechSatNoLayerNormConvLayer(nn.Cell):
+class UniSpeechSatNoLayerNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -260,14 +258,14 @@ class UniSpeechSatNoLayerNormConvLayer(nn.Cell):
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2LayerNormConvLayer with Wav2Vec2->UniSpeechSat
-class UniSpeechSatLayerNormConvLayer(nn.Cell):
+class UniSpeechSatLayerNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -284,7 +282,7 @@ class UniSpeechSatLayerNormConvLayer(nn.Cell):
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
 
         hidden_states = hidden_states.swapaxes(-2, -1)
@@ -296,7 +294,7 @@ class UniSpeechSatLayerNormConvLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2GroupNormConvLayer with Wav2Vec2->UniSpeechSat
-class UniSpeechSatGroupNormConvLayer(nn.Cell):
+class UniSpeechSatGroupNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -314,7 +312,7 @@ class UniSpeechSatGroupNormConvLayer(nn.Cell):
 
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
@@ -322,7 +320,7 @@ class UniSpeechSatGroupNormConvLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PositionalConvEmbedding with Wav2Vec2->UniSpeechSat
-class UniSpeechSatPositionalConvEmbedding(nn.Cell):
+class UniSpeechSatPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -339,7 +337,7 @@ class UniSpeechSatPositionalConvEmbedding(nn.Cell):
         self.padding = UniSpeechSatSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = hidden_states.swapaxes(1, 2)
 
         hidden_states = self.conv(hidden_states)
@@ -351,19 +349,19 @@ class UniSpeechSatPositionalConvEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2SamePadLayer with Wav2Vec2->UniSpeechSat
-class UniSpeechSatSamePadLayer(nn.Cell):
+class UniSpeechSatSamePadLayer(nn.Module):
     def __init__(self, num_conv_pos_embeddings):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         if self.num_pad_remove > 0:
             hidden_states = hidden_states[:, :, : -self.num_pad_remove]
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureEncoder with Wav2Vec2->UniSpeechSat
-class UniSpeechSatFeatureEncoder(nn.Cell):
+class UniSpeechSatFeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
@@ -382,7 +380,7 @@ class UniSpeechSatFeatureEncoder(nn.Cell):
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
-        self.conv_layers = nn.CellList(conv_layers)
+        self.conv_layers = nn.ModuleList(conv_layers)
         self.gradient_checkpointing = False
         self._requires_grad = True
 
@@ -391,7 +389,7 @@ class UniSpeechSatFeatureEncoder(nn.Cell):
             param.requires_grad = False
         self._requires_grad = False
 
-    def construct(self, input_values):
+    def forward(self, input_values):
         hidden_states = input_values[:, None]
 
         # make sure hidden_states require grad for gradient_checkpointing
@@ -422,14 +420,14 @@ class UniSpeechSatFeatureExtractor(UniSpeechSatFeatureEncoder):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureProjection with Wav2Vec2->UniSpeechSat
-class UniSpeechSatFeatureProjection(nn.Cell):
+class UniSpeechSatFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
-        self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
+        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p=config.feat_proj_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # non-projected hidden states are needed for quantization
         norm_hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.projection(norm_hidden_states)
@@ -438,7 +436,7 @@ class UniSpeechSatFeatureProjection(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->UniSpeechSat
-class UniSpeechSatAttention(nn.Cell):
+class UniSpeechSatAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -467,15 +465,15 @@ class UniSpeechSatAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             key_value_states: Optional[mindspore.Tensor] = None,
@@ -603,21 +601,21 @@ UNISPEECHSAT_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeedForward with Wav2Vec2->UniSpeechSat
-class UniSpeechSatFeedForward(nn.Cell):
+class UniSpeechSatFeedForward(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(p=config.activation_dropout)
 
-        self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.intermediate_dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-        self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.output_dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = self.intermediate_dropout(hidden_states)
@@ -629,7 +627,7 @@ class UniSpeechSatFeedForward(nn.Cell):
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayer with Wav2Vec2->UniSpeechSat,
 # WAV2VEC2->UNISPEECHSAT
-class UniSpeechSatEncoderLayer(nn.Cell):
+class UniSpeechSatEncoderLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.attention = UNISPEECHSAT_ATTENTION_CLASSES[config._attn_implementation](
@@ -644,7 +642,7 @@ class UniSpeechSatEncoderLayer(nn.Cell):
         self.feed_forward = UniSpeechSatFeedForward(config)
         self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         attn_residual = hidden_states
         hidden_states, attn_weights, _ = self.attention(
             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
@@ -665,7 +663,7 @@ class UniSpeechSatEncoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2AttnAdapterLayer with Wav2Vec2->UniSpeechSat
-class UniSpeechSatAttnAdapterLayer(nn.Cell):
+class UniSpeechSatAttnAdapterLayer(nn.Module):
     def __init__(self, config):
         """
         Implements adapter modules directly with 3D tensor weight as parameters and without using CellList to speed
@@ -676,11 +674,11 @@ class UniSpeechSatAttnAdapterLayer(nn.Cell):
         self.hidden_dim = config.hidden_size
 
         self.norm = nn.LayerNorm(self.hidden_dim)
-        self.linear_1 = nn.Dense(self.hidden_dim, self.input_dim)
+        self.linear_1 = nn.Linear(self.hidden_dim, self.input_dim)
         self.act_fn = nn.ReLU()
-        self.linear_2 = nn.Dense(self.input_dim, self.hidden_dim)
+        self.linear_2 = nn.Linear(self.input_dim, self.hidden_dim)
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         hidden_states = self.norm(hidden_states)
 
         hidden_states = self.linear_1(hidden_states)
@@ -692,7 +690,7 @@ class UniSpeechSatAttnAdapterLayer(nn.Cell):
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayerStableLayerNorm with
 # Wav2Vec2->UniSpeechSat, WAV2VEC2->UNISPEECHSAT
-class UniSpeechSatEncoderLayerStableLayerNorm(nn.Cell):
+class UniSpeechSatEncoderLayerStableLayerNorm(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.attention = UNISPEECHSAT_ATTENTION_CLASSES[config._attn_implementation](
@@ -711,7 +709,7 @@ class UniSpeechSatEncoderLayerStableLayerNorm(nn.Cell):
         else:
             self.adapter_layer = None
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -738,18 +736,18 @@ class UniSpeechSatEncoderLayerStableLayerNorm(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Encoder with Wav2Vec2->UniSpeechSat
-class UniSpeechSatEncoder(nn.Cell):
+class UniSpeechSatEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechSatPositionalConvEmbedding(config)
         self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList([UniSpeechSatEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([UniSpeechSatEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -825,20 +823,20 @@ class UniSpeechSatEncoder(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderStableLayerNorm with Wav2Vec2->UniSpeechSat
-class UniSpeechSatEncoderStableLayerNorm(nn.Cell):
+class UniSpeechSatEncoderStableLayerNorm(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechSatPositionalConvEmbedding(config)
         self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [UniSpeechSatEncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
-    def construct(
+    def forward(
             self,
             hidden_states,
             attention_mask=None,
@@ -915,7 +913,7 @@ class UniSpeechSatEncoderStableLayerNorm(nn.Cell):
         )
 
 
-class UniSpeechSatGumbelVectorQuantizer(nn.Cell):
+class UniSpeechSatGumbelVectorQuantizer(nn.Module):
     """
     Vector quantization using gumbel softmax. See [CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -938,7 +936,7 @@ class UniSpeechSatGumbelVectorQuantizer(nn.Cell):
                       dtype=mindspore.float32),
             name="codevectors"
         )
-        self.weight_proj = nn.Dense(config.hidden_size, self.num_groups * self.num_vars)
+        self.weight_proj = nn.Linear(config.hidden_size, self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
@@ -949,7 +947,7 @@ class UniSpeechSatGumbelVectorQuantizer(nn.Cell):
         perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         batch_size, sequence_length, hidden_size = hidden_states.shape
 
         # project to codevector dim
@@ -1022,7 +1020,7 @@ class UniSpeechSatPreTrainedModel(PreTrainedModel):
                                                         cell.projection.weight.shape, cell.projection.weight.dtype))
             cell.projection.bias.set_data(initializer(Uniform(k),
                                                       cell.projection.bias.shape, cell.projection.bias.dtype))
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0),
                                              cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
@@ -1151,7 +1149,7 @@ class UniSpeechSatModel(UniSpeechSatPreTrainedModel):
 
         return hidden_states
 
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1268,12 +1266,12 @@ class UniSpeechSatForPreTraining(UniSpeechSatPreTrainedModel):
         self.dropout_features = nn.Dropout(p=config.feat_quantizer_dropout)
 
         self.quantizer = UniSpeechSatGumbelVectorQuantizer(config)
-        self.project_q = nn.Dense(config.codevector_dim, config.proj_codevector_dim)
-        self.project_hid = nn.Dense(config.hidden_size, config.proj_codevector_dim)
+        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
+        self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
 
         self.dropout = nn.Dropout(p=config.final_dropout)
 
-        self.speaker_proj = nn.Dense(config.hidden_size, config.codevector_dim)
+        self.speaker_proj = nn.Linear(config.hidden_size, config.codevector_dim)
         self.label_embeddings_concat = mindspore.Parameter(ops.zeros((config.num_clusters, config.codevector_dim),
                                                                      dtype=mindspore.float32),
                                                            name="label_embeddings_concat")
@@ -1330,7 +1328,7 @@ class UniSpeechSatForPreTraining(UniSpeechSatPreTrainedModel):
         logits = logits / temperature
         return logits
 
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1471,7 +1469,7 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
         output_hidden_size = (
             config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
-        self.lm_head = nn.Dense(output_hidden_size, config.vocab_size)
+        self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1526,7 +1524,7 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
         for param in self.unispeech_sat.parameters():
             param.requires_grad = False
 
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1684,8 +1682,8 @@ class UniSpeechSatForSequenceClassification(UniSpeechSatPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers, name="layer_weights")
-        self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
-        self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
+        self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
+        self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1725,7 +1723,7 @@ class UniSpeechSatForSequenceClassification(UniSpeechSatPreTrainedModel):
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with
     # Wav2Vec2->UniSpeechSat, wav2vec2->unispeech_sat
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1864,7 +1862,7 @@ class UniSpeechSatForAudioFrameClassification(UniSpeechSatPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers, name="layer_weights")
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.num_labels = config.num_labels
 
         self.init_weights()
@@ -1896,7 +1894,7 @@ class UniSpeechSatForAudioFrameClassification(UniSpeechSatPreTrainedModel):
         for param in self.unispeech_sat.parameters():
             param.requires_grad = False
 
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1998,7 +1996,7 @@ class UniSpeechSatForAudioFrameClassification(UniSpeechSatPreTrainedModel):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.AMSoftmaxLoss
-class AMSoftmaxLoss(nn.Cell):
+class AMSoftmaxLoss(nn.Module):
     def __init__(self, input_dim, num_labels, scale=30.0, margin=0.4):
         super(AMSoftmaxLoss, self).__init__()
         self.scale = scale
@@ -2007,7 +2005,7 @@ class AMSoftmaxLoss(nn.Cell):
         self.weight = mindspore.Parameter(ops.randn(input_dim, num_labels), requires_grad=True, name="weight")
         self.loss = nn.CrossEntropyLoss()
 
-    def construct(self, hidden_states, labels):
+    def forward(self, hidden_states, labels):
         labels = labels.flatten()
         weight = functional.normalize(self.weight, dim=0)
         hidden_states = functional.normalize(hidden_states, dim=1)
@@ -2022,7 +2020,7 @@ class AMSoftmaxLoss(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.TDNNLayer
-class TDNNLayer(nn.Cell):
+class TDNNLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.tdnn_dim[layer_id - 1] if layer_id > 0 else config.tdnn_dim[layer_id]
@@ -2030,11 +2028,11 @@ class TDNNLayer(nn.Cell):
         self.kernel_size = config.tdnn_kernel[layer_id]
         self.dilation = config.tdnn_dilation[layer_id]
 
-        self.kernel = nn.Dense(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
+        self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
         self.activation = nn.ReLU()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        # for backward compatibility, we keep nn.Dense but call F.conv1d for speed up
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        # for backward compatibility, we keep nn.Linear but call F.conv1d for speed up
         hidden_states = hidden_states.swapaxes(1, 2)
         weight = self.kernel.weight.view(self.out_conv_dim, self.kernel_size, self.in_conv_dim).swapaxes(1, 2)
         hidden_states = ops.conv1d(hidden_states, weight, self.kernel.bias, dilation=self.dilation)
@@ -2070,13 +2068,13 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers, name="layer_weights")
-        self.projector = nn.Dense(config.hidden_size, config.tdnn_dim[0])
+        self.projector = nn.Linear(config.hidden_size, config.tdnn_dim[0])
 
         tdnn_layers = [TDNNLayer(config, i) for i in range(len(config.tdnn_dim))]
-        self.tdnn = nn.CellList(tdnn_layers)
+        self.tdnn = nn.ModuleList(tdnn_layers)
 
-        self.feature_extractor = nn.Dense(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
-        self.classifier = nn.Dense(config.xvector_output_dim, config.xvector_output_dim)
+        self.feature_extractor = nn.Linear(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
+        self.classifier = nn.Linear(config.xvector_output_dim, config.xvector_output_dim)
 
         self.objective = AMSoftmaxLoss(config.xvector_output_dim, config.num_labels)
 
@@ -2123,7 +2121,7 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
 
         return input_lengths
 
-    def construct(
+    def forward(
             self,
             input_values: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,

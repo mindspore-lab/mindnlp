@@ -20,7 +20,9 @@ from functools import partial
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import ops, nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 from ....utils import is_scipy_available
 from ...activations import ACT2FN
@@ -82,7 +84,7 @@ def fftn(x):
     return out
 
 
-class FNetEmbeddings(nn.Cell):
+class FNetEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -103,7 +105,7 @@ class FNetEmbeddings(nn.Cell):
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
         # NOTE: This is the project layer and will be needed. The original code allows for different embedding and different model dimensions.
-        self.projection = nn.Dense(config.hidden_size, config.hidden_size)
+        self.projection = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
@@ -113,7 +115,7 @@ class FNetEmbeddings(nn.Cell):
 
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None
     ):
         if input_ids is not None:
@@ -126,7 +128,7 @@ class FNetEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -153,7 +155,7 @@ class FNetEmbeddings(nn.Cell):
         return embeddings
 
 
-class FNetBasicFourierTransform(nn.Cell):
+class FNetBasicFourierTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
         self._init_fourier_transform(config)
@@ -183,7 +185,7 @@ class FNetBasicFourierTransform(nn.Cell):
         else:
             self.fourier_transform = fftn
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # NOTE: We do not use torch.vmap as it is not integrated into PyTorch stable versions.
         # Interested users can modify the code to use vmap from the nightly versions, getting the vmap from here:
         # https://pytorch.org/docs/master/generated/torch.vmap.html. Note that fourier transform methods will need
@@ -193,25 +195,25 @@ class FNetBasicFourierTransform(nn.Cell):
         return (outputs,)
 
 
-class FNetBasicOutput(nn.Cell):
+class FNetBasicOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.LayerNorm(input_tensor + hidden_states)
         return hidden_states
 
 
-class FNetFourierTransform(nn.Cell):
+class FNetFourierTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = FNetBasicFourierTransform(config)
         self.output = FNetBasicOutput(config)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         self_outputs = self.self(hidden_states)
         fourier_output = self.output(self_outputs[0].astype(ms.float32), hidden_states)
         # print("1111111111111", hidden_states)
@@ -220,39 +222,39 @@ class FNetFourierTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->FNet
-class FNetIntermediate(nn.Cell):
+class FNetIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->FNet
-class FNetOutput(nn.Cell):
+class FNetOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class FNetLayer(nn.Cell):
+class FNetLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -261,7 +263,7 @@ class FNetLayer(nn.Cell):
         self.intermediate = FNetIntermediate(config)
         self.output = FNetOutput(config)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         self_fourier_outputs = self.fourier(hidden_states)
         fourier_output = self_fourier_outputs[0]
 
@@ -282,16 +284,16 @@ class FNetLayer(nn.Cell):
         return layer_output
 
 
-class FNetEncoder(nn.Cell):
+class FNetEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [FNetLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(self, hidden_states, output_hidden_states=False, return_dict=True):
+    def forward(self, hidden_states, output_hidden_states=False, return_dict=True):
         all_hidden_states = () if output_hidden_states else None
 
         for i, layer_module in enumerate(self.layer):
@@ -319,13 +321,13 @@ class FNetEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->FNet
-class FNetPooler(nn.Cell):
+class FNetPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -335,10 +337,10 @@ class FNetPooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->FNet
-class FNetPredictionHeadTransform(nn.Cell):
+class FNetPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -347,26 +349,26 @@ class FNetPredictionHeadTransform(nn.Cell):
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class FNetLMPredictionHead(nn.Cell):
+class FNetLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = FNetPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
 
         self.bias = ms.Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
@@ -376,35 +378,35 @@ class FNetLMPredictionHead(nn.Cell):
         self.bias = self.decoder.bias
 
 
-class FNetOnlyMLMHead(nn.Cell):
+class FNetOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = FNetLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyNSPHead with Bert->FNet
-class FNetOnlyNSPHead(nn.Cell):
+class FNetOnlyNSPHead(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPreTrainingHeads with Bert->FNet
-class FNetPreTrainingHeads(nn.Cell):
+class FNetPreTrainingHeads(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = FNetLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -422,7 +424,7 @@ class FNetPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.set_data(
@@ -483,7 +485,7 @@ class FNetForPreTrainingOutput(ModelOutput):
 
 
 FNET_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -554,7 +556,7 @@ class FNetModel(FNetPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embeddings.word_embeddings = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -654,7 +656,7 @@ class FNetForPreTraining(FNetPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -756,7 +758,7 @@ class FNetForMaskedLM(FNetPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -817,7 +819,7 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -907,12 +909,12 @@ class FNetForSequenceClassification(FNetPreTrainedModel):
         self.fnet = FNetModel(config)
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -981,12 +983,12 @@ class FNetForMultipleChoice(FNetPreTrainedModel):
 
         self.fnet = FNetModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -1064,12 +1066,12 @@ class FNetForTokenClassification(FNetPreTrainedModel):
         self.fnet = FNetModel(config)
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -1122,12 +1124,12 @@ class FNetForQuestionAnswering(FNetPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.fnet = FNetModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,

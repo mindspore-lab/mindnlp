@@ -17,9 +17,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import ops, nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.modules.functional.weight_norm import weight_norm, remove_weight_norm
 from mindnlp.utils import logging
 from ...modeling_utils import ModelOutput, PreTrainedModel
 from .configuration_univnet import UnivNetConfig
@@ -50,7 +51,7 @@ class UnivNetModelOutput(ModelOutput):
     waveform_lengths: ms.Tensor = None
 
 
-class UnivNetKernelPredictorResidualBlock(nn.Cell):
+class UnivNetKernelPredictorResidualBlock(nn.Module):
     """
     Implementation of the residual block for the kernel predictor network inside each location variable convolution
     block (LVCBlock).
@@ -90,7 +91,7 @@ class UnivNetKernelPredictorResidualBlock(nn.Cell):
             has_bias=True,
         )
 
-    def construct(self, hidden_states: ms.Tensor):
+    def forward(self, hidden_states: ms.Tensor):
         # hidden_states should have shape (batch_size, channels, seq_length)
         residual = hidden_states
         hidden_states = self.dropout(hidden_states)
@@ -109,7 +110,7 @@ class UnivNetKernelPredictorResidualBlock(nn.Cell):
         remove_weight_norm(self.conv2)
 
 
-class UnivNetKernelPredictor(nn.Cell):
+class UnivNetKernelPredictor(nn.Module):
     """
     Implementation of the kernel predictor network which supplies the kernel and bias for the location variable
     convolutional layers (LVCs) in each UnivNet LVCBlock.
@@ -165,7 +166,7 @@ class UnivNetKernelPredictor(nn.Cell):
             has_bias=True,
         )
 
-        self.resblocks = nn.CellList(
+        self.resblocks = nn.ModuleList(
             [
                 UnivNetKernelPredictorResidualBlock(config)
                 for _ in range(self.num_blocks)
@@ -189,7 +190,7 @@ class UnivNetKernelPredictor(nn.Cell):
             has_bias=True,
         )
 
-    def construct(self, spectrogram: ms.Tensor):
+    def forward(self, spectrogram: ms.Tensor):
         """
         Maps a conditioning log-mel spectrogram to a tensor of convolutional kernels and biases, for use in location
         variable convolutional layers. Note that the input spectrogram should have shape (batch_size, input_channels,
@@ -250,7 +251,7 @@ class UnivNetKernelPredictor(nn.Cell):
         remove_weight_norm(self.bias_conv)
 
 
-class UnivNetLvcResidualBlock(nn.Cell):
+class UnivNetLvcResidualBlock(nn.Module):
     """
     Implementation of the location variable convolution (LVC) residual block for the UnivNet residual network.
 
@@ -287,7 +288,7 @@ class UnivNetLvcResidualBlock(nn.Cell):
             has_bias=True,
         )
 
-    def construct(self, hidden_states, kernel, bias, hop_size=256):
+    def forward(self, hidden_states, kernel, bias, hop_size=256):
         residual = hidden_states
         hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
         hidden_states = self.conv(hidden_states)
@@ -377,7 +378,7 @@ class UnivNetLvcResidualBlock(nn.Cell):
         remove_weight_norm(self.conv)
 
 
-class UnivNetLvcBlock(nn.Cell):
+class UnivNetLvcBlock(nn.Module):
     """
     Implementation of the location variable convolution (LVC) residual block of the UnivNet residual block. Includes a
     `UnivNetKernelPredictor` inside to predict the kernels and biases of the LVC layers.
@@ -424,14 +425,14 @@ class UnivNetLvcBlock(nn.Cell):
             config, self.kernel_size, self.num_blocks
         )
 
-        self.resblocks = nn.CellList(
+        self.resblocks = nn.ModuleList(
             [
                 UnivNetLvcResidualBlock(config, self.kernel_size, self.dilations[i])
                 for i in range(self.num_blocks)
             ]
         )
 
-    def construct(self, hidden_states: ms.Tensor, spectrogram: ms.Tensor):
+    def forward(self, hidden_states: ms.Tensor, spectrogram: ms.Tensor):
         # hidden_states: (batch_size, hidden_channels, seq_length)
         # spectrogram: (batch_size, cond_channels, cond_length)
         hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
@@ -466,7 +467,7 @@ UNIVNET_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -535,7 +536,7 @@ class UnivNetModel(PreTrainedModel):
             hop_length = hop_length * stride
             hop_lengths.append(hop_length)
 
-        self.resblocks = nn.CellList(
+        self.resblocks = nn.ModuleList(
             [
                 UnivNetLvcBlock(
                     config,
@@ -557,7 +558,7 @@ class UnivNetModel(PreTrainedModel):
     def set_input_embeddings(self, value):
         x = value
 
-    def construct(
+    def forward(
         self,
         input_features: ms.Tensor,
         noise_sequence: Optional[ms.Tensor] = None,
@@ -671,7 +672,7 @@ class UnivNetModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(module, (nn.Dense, nn.Conv1d, nn.Conv1dTranspose)):
+        if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv1dTranspose)):
             module.weight.set_data(
                 initializer(
                     Normal(sigma=self.config.initializer_range, mean=0.0),

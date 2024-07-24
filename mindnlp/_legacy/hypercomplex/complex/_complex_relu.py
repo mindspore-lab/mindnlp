@@ -19,7 +19,7 @@ from mindspore import ops as P
 from ..utils import get_x_and_y as get_real_and_imag, to_2channel as to_complex
 
 
-class ReLU(nn.Cell):
+class ReLU(nn.Module):
     r"""
     Rectified Linear Unit activation function for complex-valued input.
 
@@ -49,7 +49,7 @@ class ReLU(nn.Cell):
         """Initialize ReLU."""
         super().__init__()
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Constructs a Tensor using the ReLU activation function.
         
@@ -63,7 +63,7 @@ class ReLU(nn.Cell):
         Raises:
             None.
         
-        The `construct` method applies the ReLU activation function on the input Tensor `u`. 
+        The `forward` method applies the ReLU activation function on the input Tensor `u`. 
         If the data type of `u` is `mindspore.complex64`, the method splits the complex numbers into their real and imaginary parts using the `get_real_and_imag` function. 
         Then, the ReLU function is applied separately on the real and imaginary parts using the `P.relu` function.
         Finally, the real and imaginary parts are combined back into a complex number using the `to_complex` function and the original data type of `u`.

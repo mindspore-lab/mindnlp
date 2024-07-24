@@ -15,7 +15,6 @@
 """modules init"""
 import mindspore
 from mindnlp.utils import less_min_pynative_first
-from mindnlp._legacy.nn import transformer
 from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf, rnns, \
     accumulator
 from mindnlp.modules.attentions import ScaledDotAttention, SelfAttention, \

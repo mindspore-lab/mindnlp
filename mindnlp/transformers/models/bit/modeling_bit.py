@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, HeNormal
 
 from ...activations import ACT2FN
@@ -150,7 +150,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
             self.pad = None
         self.eps = eps
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs a weighted standardized convolutional operation.
 
@@ -207,7 +207,7 @@ class BitGroupNormActivation(nn.GroupNorm):
         else:
             self.activation = nn.Identity()
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs the hidden state of the BitGroupNormActivation.
 
@@ -227,7 +227,7 @@ class BitGroupNormActivation(nn.GroupNorm):
         return hidden_state
 
 
-class DynamicPad2d(nn.Cell):
+class DynamicPad2d(nn.Module):
     r"""
     A module that wraps dynamic padding of any input, given the parameters of the convolutional layer and the input
     hidden states.
@@ -313,7 +313,7 @@ class DynamicPad2d(nn.Cell):
         return input
 
 
-class BitMaxPool2d(nn.Cell):
+class BitMaxPool2d(nn.Module):
     """Tensorflow like 'SAME' wrapper for 2D max pooling"""
     def __init__(
         self,
@@ -362,7 +362,7 @@ class BitMaxPool2d(nn.Cell):
         else:
             self.pad = nn.Identity()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs a BitMaxPool2d object.
 
@@ -391,7 +391,7 @@ class BitMaxPool2d(nn.Cell):
         )
 
 
-class BitEmbeddings(nn.Cell):
+class BitEmbeddings(nn.Module):
     """
     BiT Embeddings (stem) composed of a single aggressive convolution.
     """
@@ -435,7 +435,7 @@ class BitEmbeddings(nn.Cell):
 
         self.num_channels = config.num_channels
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the bit embeddings for the given pixel values.
 
@@ -454,7 +454,7 @@ class BitEmbeddings(nn.Cell):
                 Raises a ValueError if the number of channels does not match.
 
         Returns:
-            mindspore.Tensor: The constructed bit embeddings tensor.
+            mindspore.Tensor: The forwarded bit embeddings tensor.
 
         Raises:
             ValueError: If the channel dimension of the pixel values does not match with the one set in the configuration.
@@ -498,7 +498,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->Bit
-class BitDropPath(nn.Cell):
+class BitDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
@@ -517,7 +517,7 @@ class BitDropPath(nn.Cell):
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a new tensor by applying drop path regularization to the given hidden states.
 
@@ -544,7 +544,7 @@ class BitDropPath(nn.Cell):
             ```python
             >>> drop_path = BitDropPath()
             >>> hidden_states = mindspore.Tensor(np.random.randn(32, 64, 256), mindspore.float32)
-            >>> output = drop_path.construct(hidden_states)
+            >>> output = drop_path.forward(hidden_states)
             ```
         """
         return drop_path(hidden_states, self.drop_prob, self.training)
@@ -588,7 +588,7 @@ def make_div(value, divisor=8):
     return new_value
 
 
-class BitPreActivationBottleneckLayer(nn.Cell):
+class BitPreActivationBottleneckLayer(nn.Module):
     """Pre-activation (v2) bottleneck block.
     Follows the implementation of "Identity Mappings in Deep Residual Networks":
     https://github.com/KaimingHe/resnet-1k-layers/blob/master/resnet-pre-act.lua
@@ -662,9 +662,9 @@ class BitPreActivationBottleneckLayer(nn.Cell):
 
         self.drop_path = BitDropPath(drop_path_rate) if drop_path_rate > 0 else nn.Identity()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        The 'construct' method initializes the BitPreActivationBottleneckLayer class.
+        The 'forward' method initializes the BitPreActivationBottleneckLayer class.
 
         Args:
             self (object): The instance of the BitPreActivationBottleneckLayer class.
@@ -693,7 +693,7 @@ class BitPreActivationBottleneckLayer(nn.Cell):
         return hidden_states + shortcut
 
 
-class BitBottleneckLayer(nn.Cell):
+class BitBottleneckLayer(nn.Module):
     """Non Pre-activation bottleneck block, equivalent to V1.5/V1b bottleneck. Used for ViT Hybrid."""
     def __init__(
         self,
@@ -766,10 +766,10 @@ class BitBottleneckLayer(nn.Cell):
 
         self.activation = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        The 'construct' method in the class 'BitBottleneckLayer' performs a series of operations on
-        the input 'hidden_states' to construct a new hidden state and returns the result.
+        The 'forward' method in the class 'BitBottleneckLayer' performs a series of operations on
+        the input 'hidden_states' to forward a new hidden state and returns the result.
 
         Args:
             self: The instance of the BitBottleneckLayer class.
@@ -804,10 +804,10 @@ class BitBottleneckLayer(nn.Cell):
         return hidden_states
 
 
-class BitDownsampleConv(nn.Cell):
+class BitDownsampleConv(nn.Module):
 
     """
-    This class represents a BitDownsampleConv module in a neural network. It is a subclass of nn.Cell.
+    This class represents a BitDownsampleConv module in a neural network. It is a subclass of nn.Module.
 
     BitDownsampleConv applies down-sampling to the input tensor using a combination of weight-standardized convolution
     and bit group normalization activation.
@@ -833,7 +833,7 @@ class BitDownsampleConv(nn.Cell):
                 - preact (bool, optional): If True, nn.Identity is used for normalization,
                 otherwise BitGroupNormActivation is used. Defaults to True.
 
-        construct(self, x):
+        forward(self, x):
             Applies down-sampling to the input tensor x by performing weight-standardized convolution followed by normalization.
 
             Args:
@@ -879,7 +879,7 @@ class BitDownsampleConv(nn.Cell):
             else BitGroupNormActivation(config, num_channels=out_channels, apply_activation=False)
         )
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the BitDownsampleConv object.
 
@@ -896,7 +896,7 @@ class BitDownsampleConv(nn.Cell):
         return self.norm(self.conv(x))
 
 
-class BitStage(nn.Cell):
+class BitStage(nn.Module):
     """
     A ResNet v2 stage composed by stacked layers.
     """
@@ -980,7 +980,7 @@ class BitStage(nn.Cell):
 
         return stride, drop_path_rate, is_first_layer
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct method in the BitStage class.
 
@@ -1003,14 +1003,14 @@ class BitStage(nn.Cell):
         return hidden_state
 
 
-class BitEncoder(nn.Cell):
+class BitEncoder(nn.Module):
 
     """
-    The `BitEncoder` class is a subclass of `nn.Cell` and represents an encoder module for the Bit model.
+    The `BitEncoder` class is a subclass of `nn.Module` and represents an encoder module for the Bit model.
     It is responsible for encoding the input hidden state through a series of stages.
 
     Attributes:
-        stages (nn.CellList): A list of BitStage instances representing each stage of the encoder.
+        stages (nn.ModuleList): A list of BitStage instances representing each stage of the encoder.
 
 
     Methods:
@@ -1020,7 +1020,7 @@ class BitEncoder(nn.Cell):
         _get_updated_hyperparameters:
             Calculates and returns the updated hyperparameters for the given stage.
 
-        construct:
+        forward:
             Constructs the encoder module by iterating through each stage and applying them to the input hidden state.
 
     """
@@ -1045,7 +1045,7 @@ class BitEncoder(nn.Cell):
             None.
         """
         super().__init__()
-        self.stages = nn.CellList([])
+        self.stages = nn.ModuleList([])
 
         prev_chs = config.embedding_size
 
@@ -1106,7 +1106,7 @@ class BitEncoder(nn.Cell):
             stride = 1
         return out_channels, stride, dilation
 
-    def construct(
+    def forward(
         self, hidden_state: mindspore.Tensor, output_hidden_states: bool = False, return_dict: bool = True
     ) -> BaseModelOutputWithNoAttention:
         """
@@ -1186,7 +1186,7 @@ class BitModel(BitPreTrainedModel):
     """
     The BitModel class represents a model for processing pixel values using Bit embeddings and encoding techniques.
     It inherits from the BitPreTrainedModel and includes methods for initialization and
-    constructing the model output with pooling and no attention.
+    forwarding the model output with pooling and no attention.
 
     Attributes:
         config: The configuration for the model.
@@ -1197,7 +1197,7 @@ class BitModel(BitPreTrainedModel):
 
     Methods:
         __init__(self, config): Initializes the BitModel with the provided configuration.
-        construct(self, pixel_values, output_hidden_states, return_dict): Constructs the model output with pooling
+        forward(self, pixel_values, output_hidden_states, return_dict): Constructs the model output with pooling
             and no attention based on the input pixel values and optional flags for outputting hidden states and
             using a return dictionary.
     """
@@ -1230,7 +1230,7 @@ class BitModel(BitPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BaseModelOutputWithPoolingAndNoAttention:
         """
@@ -1243,7 +1243,7 @@ class BitModel(BitPreTrainedModel):
             return_dict (bool, optional): Whether to return the output as a dictionary. Defaults to None.
 
         Returns:
-            BaseModelOutputWithPoolingAndNoAttention: An object containing the constructed BitModel output,
+            BaseModelOutputWithPoolingAndNoAttention: An object containing the forwarded BitModel output,
                 including the last hidden state, pooled output, and hidden states.
 
         Raises:
@@ -1297,7 +1297,7 @@ class BitForImageClassification(BitPreTrainedModel):
         __init__:
             Initializes the BitForImageClassification instance with the given configuration.
 
-        construct:
+        forward:
             Constructs the image classifier model with optional inputs and returns the output with or without attention.
 
             Parameters:
@@ -1331,12 +1331,12 @@ class BitForImageClassification(BitPreTrainedModel):
         # classification head
         self.classifier = nn.SequentialCell(
             nn.Flatten(),
-            nn.Dense(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity(),
+            nn.Linear(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity(),
         )
         # initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
@@ -1394,7 +1394,7 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
     The BitBackbone class has the following methods:
 
     - __init__(self, config): Initializes the BitBackbone instance with the provided configuration.
-    - construct(self, pixel_values, output_hidden_states, return_dict): Constructs the backbone model and returns the feature maps and hidden states.
+    - forward(self, pixel_values, output_hidden_states, return_dict): Constructs the backbone model and returns the feature maps and hidden states.
 
     Example:
         ```python
@@ -1443,7 +1443,7 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
         # initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BackboneOutput:
         """

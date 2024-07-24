@@ -32,7 +32,7 @@ class SentenceTransformer(nn.SequentialCell):
     def __init__(
             self,
             model_name_or_path: Optional[str] = None,
-            modules: Optional[Iterable[nn.Cell]] = None,
+            modules: Optional[Iterable[nn.Module]] = None,
             device: Optional[str] = None,
             prompts: Optional[Dict[str, str]] = None,
             default_prompt_name: Optional[str] = None,
@@ -175,7 +175,7 @@ class SentenceTransformer(nn.SequentialCell):
             features = self.tokenize(sentences_batch)
             features.update(extra_features)
 
-            out_features = self.construct(features)
+            out_features = self.forward(features)
 
             out_features["sentence_embedding"] = truncate_embeddings(
                 out_features["sentence_embedding"], self.truncate_dim

@@ -16,7 +16,8 @@
 JetMoE Experts.
 """
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Uniform, initializer
 
 def compute_gating(k: int, num_experts: int, top_k_gates: mindspore.Tensor, top_k_indices: mindspore.Tensor):
@@ -46,19 +47,19 @@ def compute_gating(k: int, num_experts: int, top_k_gates: mindspore.Tensor, top_
     return batch_gates, batch_index, expert_size, index_sorted_experts
 
 
-class ParallelExperts(nn.Cell):
+class ParallelExperts(nn.Module):
 
     """
     Represents a module for parallel experts within a neural network architecture. 
     
-    This class inherits from nn.Cell and provides functionality for parallel processing of inputs by multiple experts. 
+    This class inherits from nn.Module and provides functionality for parallel processing of inputs by multiple experts. 
     The ParallelExperts module initializes with the specified number of experts, input size, and output size. 
     It includes methods for the forward pass operation to process input tensors through the experts and generate an output tensor.
     
     Methods:
     - __init__(self, num_experts, input_size, output_size): Initializes the ParallelExperts module with the given parameters.
     - extra_repr(self): Returns a string representation of the module with details on num_experts, input_size, and output_size.
-    - construct(self, inputs, expert_size): Performs the forward pass operation by splitting input tensors among experts,
+    - forward(self, inputs, expert_size): Performs the forward pass operation by splitting input tensors among experts,
       applying operations for each expert using the weight parameters, and concatenating the outputs to form the final result tensor.
     """
     def __init__(self, num_experts, input_size, output_size) -> None:
@@ -99,7 +100,7 @@ class ParallelExperts(nn.Cell):
             self.num_experts, self.input_size, self.output_size
         )
 
-    def construct(self, inputs, expert_size):
+    def forward(self, inputs, expert_size):
         """
         Forward pass of the ParallelExperts module.
 

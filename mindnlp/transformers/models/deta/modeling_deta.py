@@ -31,7 +31,6 @@ from mindspore.common.initializer import (
     Constant,
 )
 from mindnlp.core import nn
-from mindnlp.modules.functional import finfo
 
 from .image_processing_deta import batched_nms
 
@@ -1060,7 +1059,7 @@ class DetaDecoderLayer(nn.Module):
             n_points=config.decoder_n_points,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        # feedconstruct neural networks
+        # feedforward neural networks
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)

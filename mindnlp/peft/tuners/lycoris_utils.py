@@ -21,7 +21,9 @@ from typing import Any, Optional, Union
 
 import warnings
 import mindspore
-from mindspore import ops, nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from tqdm import tqdm
 
 from mindnlp.peft.config import PeftConfig
@@ -70,7 +72,7 @@ class LycorisLayer(BaseTunerLayer):
     # adapter_layer_names needs to be defined on the child class
     other_param_names = ("r", "alpha", "scaling", "rank_dropout", "module_dropout")
 
-    def __init__(self, base_layer: nn.Cell) -> None:
+    def __init__(self, base_layer: nn.Module) -> None:
         self.base_layer = base_layer
         self.r = {}
         self.alpha = {}
@@ -199,7 +201,7 @@ class LycorisTuner(BaseTuner):
     A base tuner for LyCORIS like adapters
     """
     prefix: str
-    layers_mapping: dict[type[nn.Cell], type[LycorisLayer]]
+    layers_mapping: dict[type[nn.Module], type[LycorisLayer]]
 
     # def __init__(self, model, config, adapter_name):
     #     super().__init__(model, config, adapter_name)
@@ -220,7 +222,7 @@ class LycorisTuner(BaseTuner):
         self,
         config: LycorisConfig,
         adapter_name: str,
-        target: Union[LycorisLayer, nn.Cell],
+        target: Union[LycorisLayer, nn.Module],
         target_name,
         parent,
         current_key,
@@ -228,7 +230,7 @@ class LycorisTuner(BaseTuner):
 
     @classmethod
     def _create_new_module(
-        cls, config: LycorisConfig, adapter_name: str, target: nn.Cell, **kwargs
+        cls, config: LycorisConfig, adapter_name: str, target: nn.Module, **kwargs
     ) -> LycorisLayer:
         # Find corresponding subtype of provided target module
         new_module_cls = None
@@ -262,7 +264,7 @@ class LycorisTuner(BaseTuner):
             target_base_layer = target
         if isinstance(target_base_layer, nn.Conv2d):
             new_module = new_module_cls(target, adapter_name=adapter_name, **kwargs)
-        elif isinstance(target_base_layer, nn.Dense):
+        elif isinstance(target_base_layer, nn.Linear):
             new_module = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         else:
             supported_modules = ", ".join(
@@ -275,7 +277,7 @@ class LycorisTuner(BaseTuner):
 
         return new_module
 
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         for n, p in model.parameters_and_names():
             if self.prefix not in n:
                 p.requires_grad = False
@@ -370,7 +372,7 @@ class LycorisTuner(BaseTuner):
         progressbar: bool = False,
         safe_merge: bool = False,
         adapter_names: Optional[list[str]] = None,
-    ) -> nn.Cell:
+    ) -> nn.Module:
         r"""
         This method merges the adapter layers into the base model. This is needed if someone wants to use the base
         model as a standalone model.
@@ -390,7 +392,7 @@ class LycorisTuner(BaseTuner):
             progressbar=progressbar, safe_merge=safe_merge, adapter_names=adapter_names
         )
 
-    def unload(self) -> nn.Cell:
+    def unload(self) -> nn.Module:
         """
         Gets back the base model by removing all the lora modules without merging. This gives back the original base
         model.

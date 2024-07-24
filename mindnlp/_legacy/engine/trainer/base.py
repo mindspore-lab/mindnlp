@@ -70,8 +70,8 @@ class Trainer:
     def __init__(self,
                  network,
                  args=None,
-                 loss_fn: Optional[nn.Cell] = None,
-                 optimizer: Optional[nn.Cell] = None,
+                 loss_fn: Optional[nn.Module] = None,
+                 optimizer: Optional[nn.Module] = None,
                  train_dataset: Optional[Dataset] = None,
                  eval_dataset: Optional[Dataset] = None,
                  metrics: Optional[Metric] = None,
@@ -82,10 +82,10 @@ class Trainer:
         
         Args:
             self: The instance of the 'Trainer' class.
-            network: An object of type 'nn.Cell' representing the neural network model.
+            network: An object of type 'nn.Module' representing the neural network model.
             args: An optional argument of type 'None' or any other type. It is used for additional configuration purposes.
-            loss_fn: An optional argument of type 'nn.Cell' representing the loss function used for training the model.
-            optimizer: An optional argument of type 'nn.Cell' representing the optimizer used for updating the model's parameters.
+            loss_fn: An optional argument of type 'nn.Module' representing the loss function used for training the model.
+            optimizer: An optional argument of type 'nn.Module' representing the optimizer used for updating the model's parameters.
             train_dataset: An optional argument of type 'Dataset' representing the training dataset.
             eval_dataset: An optional argument of type 'Dataset' representing the evaluation dataset.
             metrics: An optional argument of type 'Metric' representing the evaluation metrics used for monitoring the model's performance.
@@ -383,9 +383,9 @@ as gradient checking and automatic mixed precision (AMP) level.
         self.earlystop = run_context.earlystop
 
     def _data_process(self, data, tgt_columns):
-        """Process data match the network construct"""
+        """Process data match the network forward"""
         # prepare input dataset.
-        sig = signature(self.network.construct)
+        sig = signature(self.network.forward)
         net_args = sig.parameters
 
         inputs = {}

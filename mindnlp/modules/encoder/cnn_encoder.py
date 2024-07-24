@@ -14,8 +14,9 @@
 # ============================================================================
 """CNN encoder modules"""
 
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindnlp._legacy.abc import EncoderBase
 
 class CNNEncoder(EncoderBase):
@@ -83,13 +84,13 @@ class CNNEncoder(EncoderBase):
         self.num_filter = convs[0].out_channels
         self.ngram_filter_sizes = len(convs)
 
-        self.convs = nn.CellList(convs)
+        self.convs = nn.ModuleList(convs)
         self.pool = nn.AdaptiveMaxPool1d(output_size=1)
 
         maxpool_output_axis = self.num_filter * self.ngram_filter_sizes
 
         if self.output_axis:
-            self.projection_layer = nn.Dense(maxpool_output_axis, self.output_axis)
+            self.projection_layer = nn.Linear(maxpool_output_axis, self.output_axis)
         else:
             self.projection_layer = None
             self.output_axis = maxpool_output_axis
@@ -102,7 +103,7 @@ class CNNEncoder(EncoderBase):
         """Returns the dimension of the output vector"""
         return self.output_axis
 
-    def construct(self, src_token, src_length=None, mask=None):
+    def forward(self, src_token, src_length=None, mask=None):
         """Construct function of CNNEncoder.
 
         Args:

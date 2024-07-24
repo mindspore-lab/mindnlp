@@ -293,7 +293,7 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             If the 'sp_model_kwargs' attribute is not present in the serialized state, it is initialized as an empty dictionary.
 
             The SentencePieceProcessor object 'self.sp_model' is initialized using the 'spm.SentencePieceProcessor' class.
-            The 'self.sp_model_kwargs' dictionary is passed as keyword arguments to the SentencePieceProcessor constructor.
+            The 'self.sp_model_kwargs' dictionary is passed as keyword arguments to the SentencePieceProcessor forwardor.
 
             Finally, the sentencepiece model is loaded into the SentencePieceProcessor object using 'self.sentencepiece_model_ckpt'.
 

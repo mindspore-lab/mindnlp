@@ -24,7 +24,9 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging, get_default_dtype
@@ -82,17 +84,17 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Qwen2
-class Qwen2RMSNorm(nn.Cell):
+class Qwen2RMSNorm(nn.Module):
 
     """
-    Qwen2RMSNorm is a custom normalization layer that inherits from nn.Cell. It is equivalent to T5LayerNorm and is
+    Qwen2RMSNorm is a custom normalization layer that inherits from nn.Module. It is equivalent to T5LayerNorm and is
     designed to normalize the input hidden states.
 
     This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing.
     The normalization process involves scaling the hidden states based on the calculated variance and the provided
     weight parameter.
 
-    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the
+    The forward method takes hidden_states as input and performs the normalization operation, ensuring that the
     output matches the input data type. The normalized hidden_states are then multiplied by the weight parameter to
     produce the final output.
 
@@ -107,7 +109,7 @@ class Qwen2RMSNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the RMS normalization of hidden states.
 
@@ -131,10 +133,10 @@ class Qwen2RMSNorm(nn.Cell):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Qwen2
-class Qwen2RotaryEmbedding(nn.Cell):
+class Qwen2RotaryEmbedding(nn.Module):
 
     """
-    Represents a Qwen2RotaryEmbedding module that inherits from nn.Cell. This module implements the Qwen2Rotary
+    Represents a Qwen2RotaryEmbedding module that inherits from nn.Module. This module implements the Qwen2Rotary
     embedding as described in the code.
 
     Attributes:
@@ -144,11 +146,11 @@ class Qwen2RotaryEmbedding(nn.Cell):
 
     Methods:
         _set_cos_sin_cache: Sets the cosine and sine cache for the given sequence length and data type.
-        construct(: Constructs the Qwen2Rotary embedding for the input with optional sequence length.
+        forward(: Constructs the Qwen2Rotary embedding for the input with optional sequence length.
 
     Note:
         The Qwen2RotaryEmbedding module provides functionality for Qwen2Rotary embedding calculation, including setting
-        cosine and sine cache and constructing the embedding.
+        cosine and sine cache and forwarding the embedding.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -209,7 +211,7 @@ class Qwen2RotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Constructs the Qwen2RotaryEmbedding for the given input tensor 'x' and sequence length 'seq_len'.
 
@@ -276,24 +278,24 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralMLP with Mistral->Qwen2
-class Qwen2MLP(nn.Cell):
+class Qwen2MLP(nn.Module):
 
     """
     Qwen2MLP is a Python class that represents a multi-layer perceptron (MLP) with specific configurations for gate, up,
-    and down projections. This class inherits from nn.Cell and is designed to be used in neural network models for
+    and down projections. This class inherits from nn.Module and is designed to be used in neural network models for
     deep learning applications.
 
     Attributes:
         config: A configuration object containing settings for the hidden size and intermediate size of the MLP.
         hidden_size: An integer representing the size of the hidden layer in the MLP.
         intermediate_size: An integer representing the size of the intermediate layer in the MLP.
-        gate_proj: An instance of nn.Dense for projecting input data to the intermediate size with no bias.
-        up_proj: An instance of nn.Dense for projecting input data to the intermediate size with no bias.
-        down_proj: An instance of nn.Dense for projecting data from the intermediate size back to the hidden size with no bias.
+        gate_proj: An instance of nn.Linear for projecting input data to the intermediate size with no bias.
+        up_proj: An instance of nn.Linear for projecting input data to the intermediate size with no bias.
+        down_proj: An instance of nn.Linear for projecting data from the intermediate size back to the hidden size with no bias.
         act_fn: An activation function determined by the configuration settings.
 
     Methods:
-        construct: A method that takes input data x and performs the forward pass through the MLP using the
+        forward: A method that takes input data x and performs the forward pass through the MLP using the
             defined projections and activation function.
 
     Note:
@@ -323,12 +325,12 @@ class Qwen2MLP(nn.Cell):
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a new object using the Qwen2MLP class.
 
@@ -342,11 +344,11 @@ class Qwen2MLP(nn.Cell):
         Raises:
             None.
 
-        This method constructs a new object by performing a series of operations on the input data 'x'.
+        This method forwards a new object by performing a series of operations on the input data 'x'.
         It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result.
         The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'.
         Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'.
-        The constructed object is returned as None.
+        The forwarded object is returned as None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -364,7 +366,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class Qwen2Attention(nn.Cell):
+class Qwen2Attention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
@@ -412,10 +414,10 @@ class Qwen2Attention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
 
         self.rotary_emb = Qwen2RotaryEmbedding(
             self.head_dim,
@@ -423,7 +425,7 @@ class Qwen2Attention(nn.Cell):
             base=self.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -433,7 +435,7 @@ class Qwen2Attention(nn.Cell):
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method constructs the Qwen2Attention layer.
+        This method forwards the Qwen2Attention layer.
 
         Args:
             self: The instance of the class.
@@ -535,11 +537,11 @@ QWEN2_ATTENTION_CLASSES = {
 }
 
 
-class Qwen2DecoderLayer(nn.Cell):
+class Qwen2DecoderLayer(nn.Module):
 
     """
-    Qwen2DecoderLayer is a class representing a single layer of the Qwen2 decoder. It inherits from nn.Cell and
-    contains methods for initializing the layer and constructing the layer's operations.
+    Qwen2DecoderLayer is a class representing a single layer of the Qwen2 decoder. It inherits from nn.Module and
+    contains methods for initializing the layer and forwarding the layer's operations.
 
     Attributes:
         hidden_size (int): The size of the hidden state.
@@ -550,7 +552,7 @@ class Qwen2DecoderLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the Qwen2DecoderLayer with the given configuration and layer index.
-        construct:
+        forward:
             Applies the layer operations to the input hidden_states and returns the resulting output tensor along with
             optional additional tensors, such as attention weights and present key value.
 
@@ -590,7 +592,7 @@ class Qwen2DecoderLayer(nn.Cell):
         self.input_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -664,7 +666,7 @@ class Qwen2PreTrainedModel(PreTrainedModel):
 
     Details:
         The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell.
-        If it is of type nn.Dense, it sets the weight data using the initializer function.
+        If it is of type nn.Linear, it sets the weight data using the initializer function.
         The initializer function takes the following parameters:
 
         - Normal(self.config.initializer_range): A normal distribution initializer with the specified range.
@@ -702,7 +704,7 @@ class Qwen2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
@@ -752,7 +754,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Qwen2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -798,7 +800,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -941,10 +943,10 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
     """
     This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel.
     The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting input and output
-    embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
+    embeddings, setting and getting the decoder, forwarding the model, and preparing inputs for generation.
 
     To initialize an instance of the Qwen2ForCausalLM class, a configuration object should be passed as a parameter
-    to the constructor. The model's architecture and settings are defined by this configuration.
+    to the forwardor. The model's architecture and settings are defined by this configuration.
 
     The Qwen2ForCausalLM class has the following methods:
 
@@ -955,7 +957,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
     - `set_output_embeddings`: Sets the output embeddings of the model to the given new_embeddings.
     - `set_decoder`: Sets the decoder of the model to the given decoder.
     - `get_decoder`: Returns the decoder of the model.
-    - `construct`: Constructs the model using the provided input arguments.
+    - `forward`: Constructs the model using the provided input arguments.
     This method returns a tuple of outputs, including the logits and optionally the loss, past key values,
     hidden states, and attentions.
     - `prepare_inputs_for_generation`: Prepares the inputs for generation. This method takes input_ids, past_key_values,
@@ -990,7 +992,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         >>> # Construct the model
         >>> input_ids = [1, 2, 3]
         >>> attention_mask = [1, 1, 1]
-        >>> outputs = model.construct(input_ids=input_ids, attention_mask=attention_mask)
+        >>> outputs = model.forward(input_ids=input_ids, attention_mask=attention_mask)
         ...
         >>> # Prepare inputs for generation
         >>> input_ids = [4, 5, 6]
@@ -1025,7 +1027,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         super().__init__(config)
         self.model = Qwen2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1147,7 +1149,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1347,7 +1349,7 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
     """
     Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from
     Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting
-    and setting input embeddings, and constructing the model for sequence classification.
+    and setting input embeddings, and forwarding the model for sequence classification.
 
     Attributes:
         num_labels (int): The number of labels for sequence classification.
@@ -1356,7 +1358,7 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         __init__: Initializes the sequence classification model with the given configuration.
         get_input_embeddings: Retrieves the input embeddings from the model.
         set_input_embeddings: Sets the input embeddings for the model.
-        construct: Constructs the sequence classification
+        forward: Constructs the sequence classification
             model with the specified inputs and returns the sequence classifier output with past values.
 
     Args:
@@ -1404,7 +1406,7 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Qwen2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1441,7 +1443,7 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

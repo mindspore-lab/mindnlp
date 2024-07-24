@@ -25,10 +25,9 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore as ms
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -52,7 +51,7 @@ _CONFIG_FOR_DOC = "PersimmonConfig"
 
 
 #  Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding with Mixtral->Persimmon
-class PersimmonRotaryEmbedding(nn.Cell):
+class PersimmonRotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
 
@@ -77,7 +76,7 @@ class PersimmonRotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -174,14 +173,14 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 
 
 # Copied from transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXMLP with GPTNeoX->Persimmon
-class PersimmonMLP(nn.Cell):
+class PersimmonMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense_h_to_4h = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.dense_4h_to_h = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense_h_to_4h = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.dense_4h_to_h = nn.Linear(config.intermediate_size, config.hidden_size)
         self.act = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense_h_to_4h(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dense_4h_to_h(hidden_states)
@@ -189,7 +188,7 @@ class PersimmonMLP(nn.Cell):
 
 
 
-class PersimmonAttention(nn.Cell):
+class PersimmonAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: PersimmonConfig, layer_idx: Optional[int] = None):
@@ -216,8 +215,8 @@ class PersimmonAttention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.query_key_value = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=True)
-        self.dense = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
+        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, has_bias=True)
+        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
         self.qk_layernorm = config.qk_layernorm
 
         if self.qk_layernorm:
@@ -274,7 +273,7 @@ class PersimmonAttention(nn.Cell):
         fused_qkv = fused_qkv.view(batch_size, seq_length, self.num_heads, 3, self.head_dim)
         return fused_qkv[..., 0, :], fused_qkv[..., 1, :], fused_qkv[..., 2, :]
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -373,7 +372,7 @@ class PersimmonAttention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class PersimmonDecoderLayer(nn.Cell):
+class PersimmonDecoderLayer(nn.Module):
     def __init__(self, config: PersimmonConfig, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -383,7 +382,7 @@ class PersimmonDecoderLayer(nn.Cell):
         self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -457,7 +456,7 @@ class PersimmonPreTrainedModel(PreTrainedModel):
     _supports_cache_class = True
 
     def _init_weights(self, cell):
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -483,7 +482,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [PersimmonDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.final_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
@@ -498,7 +497,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -707,7 +706,7 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
         super().__init__(config)
         self.model = PersimmonModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -738,7 +737,7 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
 
 
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -898,7 +897,7 @@ class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = PersimmonModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -909,7 +908,7 @@ class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1008,7 +1007,7 @@ class PersimmonForTokenClassification(PersimmonPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.score = nn.Dense(config.hidden_size, config.num_labels)
+        self.score = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1019,7 +1018,7 @@ class PersimmonForTokenClassification(PersimmonPreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,

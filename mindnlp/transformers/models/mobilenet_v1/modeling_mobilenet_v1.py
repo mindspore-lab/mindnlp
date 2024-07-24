@@ -17,7 +17,7 @@
 from typing import Optional, Union
 
 import mindspore as ms
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 
 from mindspore.common.initializer import initializer, Normal
 
@@ -59,7 +59,7 @@ def apply_tf_padding(features: ms.Tensor, conv_layer: nn.Conv2d) -> ms.Tensor:
     return ops.pad(features, padding, "constant", 0.0)
 
 
-class MobileNetV1ConvLayer(nn.Cell):
+class MobileNetV1ConvLayer(nn.Module):
     def __init__(
         self,
         config: MobileNetV1Config,
@@ -114,7 +114,7 @@ class MobileNetV1ConvLayer(nn.Cell):
         else:
             self.activation = None
 
-    def construct(self, features: ms.Tensor) -> ms.Tensor:
+    def forward(self, features: ms.Tensor) -> ms.Tensor:
         if self.config.tf_padding:
             features = apply_tf_padding(features, self.convolution)
 
@@ -139,9 +139,9 @@ class MobileNetV1PreTrainedModel(PreTrainedModel):
     _no_split_modules = []
     _keys_to_ignore_on_load_unexpected = [r'num_batches_tracked']
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
 
             cell.weight.set_data(initializer(Normal(mean= 0.0 ,sigma = self.config.initializer_range),
                                                             cell.weight.shape,cell.weight.dtype))
@@ -170,7 +170,7 @@ class MobileNetV1Model(MobileNetV1PreTrainedModel):
 
         strides = [1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
 
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         for i in range(13):
             in_channels = out_channels
 
@@ -206,7 +206,7 @@ class MobileNetV1Model(MobileNetV1PreTrainedModel):
     def _prune_heads(self, heads_to_prune):
         raise NotImplementedError
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -260,13 +260,13 @@ class MobileNetV1ForImageClassification(MobileNetV1PreTrainedModel):
 
         # Classifier head
         self.dropout = nn.Dropout(p = config.classifier_dropout_prob)
-        self.classifier = nn.Dense(last_hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(last_hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_hidden_states: Optional[bool] = None,

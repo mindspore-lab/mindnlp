@@ -179,7 +179,7 @@ class AltRobertaEmbeddings(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.register_buffer('position_ids', ops.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer('position_ids', ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1)))
         self.register_buffer('token_type_ids', ops.zeros(*self.position_ids.shape, dtype=mindspore.int64))
 
         # End copy
@@ -207,7 +207,7 @@ class AltRobertaEmbeddings(nn.Module):
             past_key_values_length (int): The length of past key values. Default is 0.
 
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor.
+            mindspore.Tensor: The forwarded embeddings tensor.
 
         Raises:
             None.
@@ -226,13 +226,13 @@ class AltRobertaEmbeddings(nn.Module):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
@@ -265,7 +265,7 @@ class AltRobertaEmbeddings(nn.Module):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return ops.broadcast_to(position_ids.unsqueeze(0), (input_shape))
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfAttention with Roberta->AltRoberta
@@ -294,7 +294,7 @@ class AltRobertaSelfAttention(nn.Module):
         swapaxes_for_scores:
             Reshapes the input tensor 'x' to prepare it for calculating attention scores.
 
-        construct:
+        forward:
             Constructs the self-attention mechanism using the given input tensors and masks.
             Calculates attention scores, applies position embeddings, and produces the final context layer.
             Supports optional parameters for handling cross-attention, caching key-value pairs, and outputting attention scores.
@@ -369,7 +369,7 @@ class AltRobertaSelfAttention(nn.Module):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         '''
-        This method constructs the self-attention mechanism for the AltRoberta model.
+        This method forwards the self-attention mechanism for the AltRoberta model.
 
         Args:
             self: The object instance.
@@ -501,7 +501,7 @@ class AltRobertaSelfOutput(nn.Module):
         dropout (nn.Dropout): The dropout module.
 
     Methods:
-        construct:
+        forward:
             Applies the self-attention output module to the given hidden states and input tensor.
 
     Example:
@@ -510,7 +510,7 @@ class AltRobertaSelfOutput(nn.Module):
         >>> self_output = AltRobertaSelfOutput(config)
         >>> hidden_states = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
         >>> input_tensor = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
-        >>> output = self_output.construct(hidden_states, input_tensor)
+        >>> output = self_output.forward(hidden_states, input_tensor)
         ```
     """
     def __init__(self, config):
@@ -536,7 +536,7 @@ class AltRobertaSelfOutput(nn.Module):
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output of the self-attention mechanism in the AltRoberta model.
+        This method forwards the output of the self-attention mechanism in the AltRoberta model.
 
         Args:
             self (AltRobertaSelfOutput): The instance of the AltRobertaSelfOutput class.
@@ -544,7 +544,7 @@ class AltRobertaSelfOutput(nn.Module):
             input_tensor (mindspore.Tensor): The tensor representing the input to the current layer.
 
         Returns:
-            mindspore.Tensor: Returns a tensor representing the constructed hidden states after self-attention mechanism.
+            mindspore.Tensor: Returns a tensor representing the forwarded hidden states after self-attention mechanism.
 
         Raises:
             None
@@ -560,7 +560,7 @@ class AltRobertaAttention(nn.Module):
     '''
     The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model.
     This class inherits from nn.Module and includes methods for initializing the attention mechanism, pruning
-    attention heads, and constructing the attention output.
+    attention heads, and forwarding the attention output.
 
     Attributes:
         config: The configuration parameters for the attention mechanism.
@@ -569,7 +569,7 @@ class AltRobertaAttention(nn.Module):
     Methods:
         __init__: Initializes the AltRobertaAttention class.
         prune_heads: Prunes the specified attention heads from the attention mechanism.
-        construct: Constructs the attention output using the given inputs.
+        forward: Constructs the attention output using the given inputs.
 
     Note:
         The class inherits from nn.Module and is designed for use in the AltRoberta model.
@@ -641,7 +641,7 @@ class AltRobertaAttention(nn.Module):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        This method constructs the attention mechanism for the AltRoberta model.
+        This method forwards the attention mechanism for the AltRoberta model.
 
         Args:
             self (AltRobertaAttention): The current instance of the AltRobertaAttention class.
@@ -680,14 +680,14 @@ class AltRobertaIntermediate(nn.Module):
     """
     Represents the intermediate layer for an alternative implementation of the Roberta model.
 
-    This class inherits from nn.Module and contains methods to initialize and construct the intermediate layer.
+    This class inherits from nn.Module and contains methods to initialize and forward the intermediate layer.
 
     Attributes:
         config (obj): Configuration object for the intermediate layer.
 
     Methods:
         __init__: Initializes the AltRobertaIntermediate class with the provided configuration.
-        construct: Constructs the intermediate layer using the given hidden states tensor.
+        forward: Constructs the intermediate layer using the given hidden states tensor.
 
     """
     def __init__(self, config):
@@ -718,7 +718,7 @@ class AltRobertaIntermediate(nn.Module):
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method to construct hidden states in the AltRobertaIntermediate class.
+        Method to forward hidden states in the AltRobertaIntermediate class.
 
         Args:
             self: Instance of the AltRobertaIntermediate class.
@@ -743,7 +743,7 @@ class AltRobertaOutput(nn.Module):
     """
     Represents the output of an alternative Roberta model.
 
-    This class inherits from nn.Module and includes methods for initializing the class and constructing the output tensor
+    This class inherits from nn.Module and includes methods for initializing the class and forwarding the output tensor
     based on the input hidden states and input tensor.
     The output tensor is obtained by applying dense layers, dropout, and layer normalization to the input hidden states
     and input tensor.
@@ -755,7 +755,7 @@ class AltRobertaOutput(nn.Module):
 
     Methods:
         __init__: Initializes the AltRobertaOutput class with the given configuration.
-        construct: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
+        forward: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
 
     """
     def __init__(self, config):
@@ -779,7 +779,7 @@ class AltRobertaOutput(nn.Module):
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output of the alternative Roberta model.
+        This method forwards the output of the alternative Roberta model.
 
         Args:
             self (AltRobertaOutput): The instance of the AltRobertaOutput class.
@@ -815,7 +815,7 @@ class AltRobertaLayer(nn.Module):
         output (AltRobertaOutput): The output module used in the layer.
 
     Methods:
-        construct:
+        forward:
             Constructs the layer by applying attention, intermediate, and output operations.
         feed_forward_chunk:
             Applies the feed-forward operations on the attention output.
@@ -968,12 +968,12 @@ class AltRobertaEncoder(nn.Module):
 
     """
     The 'AltRobertaEncoder' class is responsible for encoding input data using a variation of the Roberta model.
-    This class inherits from the 'nn.Module' class and provides methods to construct the encoder and generate the output based on the input.
+    This class inherits from the 'nn.Module' class and provides methods to forward the encoder and generate the output based on the input.
 
     The class consists of an initialization method that takes a configuration object as input and sets up the encoder layers.
-    The 'construct' method takes various input tensors and optional parameters to construct the encoder output based on the Roberta model's architecture.
+    The 'forward' method takes various input tensors and optional parameters to forward the encoder output based on the Roberta model's architecture.
 
-    The 'construct' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations.
+    The 'forward' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations.
     It also handles gradient checkpointing during training if enabled.
     The method returns the encoder output in the form of a tuple or a custom 'BaseModelOutputWithPastAndCrossAttentions' object based on the specified return dict option.
 
@@ -1018,7 +1018,7 @@ class AltRobertaEncoder(nn.Module):
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
         """
-        This method constructs the AltRobertaEncoder by processing the input hidden states and optional parameters to generate the output.
+        This method forwards the AltRobertaEncoder by processing the input hidden states and optional parameters to generate the output.
 
         Args:
             self: The instance of the AltRobertaEncoder class.
@@ -1122,9 +1122,9 @@ class AltRobertaPooler(nn.Module):
 
     This class inherits from the nn.Module module and provides a custom pooler layer for an alternative implementation of the RoBERTa model.
 
-    The AltRobertaPooler class initializes with a configuration object and includes methods to construct the pooler layer.
-    The constructor initializes the dense layer and activation function.
-    The construct method takes hidden_states as input, extracts the first token tensor, applies the dense layer,
+    The AltRobertaPooler class initializes with a configuration object and includes methods to forward the pooler layer.
+    The forwardor initializes the dense layer and activation function.
+    The forward method takes hidden_states as input, extracts the first token tensor, applies the dense layer,
     applies the activation function, and returns the pooled output.
 
     This class is designed to be used as part of a custom RoBERTa model implementation and provides
@@ -1329,7 +1329,7 @@ class AltCLIPMLP(nn.Module):
 
     Methods:
         __init__: Initializes a new instance of the AltCLIPMLP class.
-        construct: Constructs the forward pass of the MLP.
+        forward: Constructs the forward pass of the MLP.
 
     """
     def __init__(self, config):
@@ -1361,7 +1361,7 @@ class AltCLIPMLP(nn.Module):
         """
         Construct the AltCLIPMLP model.
 
-        This method takes in a tensor of hidden states and applies linear transformations and activation functions to construct the AltCLIPMLP model.
+        This method takes in a tensor of hidden states and applies linear transformations and activation functions to forward the AltCLIPMLP model.
 
         Args:
             self (AltCLIPMLP): An instance of the AltCLIPMLP class.
@@ -1396,7 +1396,7 @@ class AltCLIPEncoderLayer(nn.Module):
         layer_norm2 (nn.LayerNorm): A layer normalization operation applied after the feed-forward neural network operation.
 
     Methods:
-        construct(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
+        forward(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
             Applies the AltCLIPEncoderLayer operations to the input hidden states.
 
             Args:
@@ -1413,7 +1413,7 @@ class AltCLIPEncoderLayer(nn.Module):
                     If output_attentions is True, the tuple also contains the attention weights tensor.
 
     Note:
-        The construct method performs the following operations in order:
+        The forward method performs the following operations in order:
 
         1. Applies layer normalization to the input hidden states.
         2. Performs the self-attention operation using the self_attn instance.
@@ -1610,7 +1610,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
     A class representing the alternate vision embeddings for CLIP (Contrastive Language-Image Pre-training) models in MindSpore.
 
     This class extends the nn.Module module and is used to generate embeddings for images in the CLIP model architecture.
-    The embeddings are constructed based on the input pixel values using a combination of class embedding, patch embedding, and position embedding.
+    The embeddings are forwarded based on the input pixel values using a combination of class embedding, patch embedding, and position embedding.
 
     Attributes:
         config (AltCLIPVisionConfig): The configuration object containing parameters for the embeddings.
@@ -1625,7 +1625,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
         position_ids (mindspore.Tensor): The tensor containing position indices.
 
     Methods:
-        construct:
+        forward:
             Constructs the embeddings for the input pixel values by combining class embedding, patch embedding, and position embedding.
 
     Returns:
@@ -1667,7 +1667,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.register_buffer('position_ids', ops.arange(self.num_positions).expand((1, -1)))
+        self.register_buffer('position_ids', ops.broadcast_to(ops.arange(self.num_positions), ((1, -1))))
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -1679,7 +1679,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
                 The shape of the tensor is (batch_size, channels, height, width).
 
         Returns:
-            mindspore.Tensor: A tensor containing the constructed embeddings.
+            mindspore.Tensor: A tensor containing the forwarded embeddings.
                 The shape of the tensor is (batch_size, num_patches + 1, embed_dim),
                 where num_patches is the number of patches extracted from the images and
                 embed_dim is the dimension of the embedding.
@@ -1692,7 +1692,7 @@ class AltCLIPVisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1))
         embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
@@ -1773,12 +1773,12 @@ class AltCLIPVisionTransformer(nn.Module):
     This class represents a vision transformer model for the Alternative Contrastive Learning for Image and Text (AltCLIP) framework.
     It encapsulates the functionality to process visual inputs using the AltCLIP vision transformer architecture.
 
-    The AltCLIPVisionTransformer class inherits from the nn.Module class and consists of methods for initialization and construction.
+    The AltCLIPVisionTransformer class inherits from the nn.Module class and consists of methods for initialization and forwardion.
 
     The __init__ method initializes the AltCLIPVisionTransformer with the provided AltCLIPVisionConfig.
     It sets up the embeddings, encoder, and layer normalization components required for processing visual inputs.
 
-    The construct method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output.
+    The forward method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output.
     It also handles the optional arguments for controlling the output format.
 
     For more details on the AltCLIPVisionTransformer model and its usage, refer to the AltCLIPVisionTransformer documentation and examples.
@@ -1858,7 +1858,7 @@ class AltCLIPVisionModel(AltCLIPPreTrainedModel):
     """
     The 'AltCLIPVisionModel' class represents a vision model for the AltCLIP framework.
     It inherits from the 'AltCLIPPreTrainedModel' class and contains methods for initializing the model, obtaining input
-    embeddings, and constructing the model output.
+    embeddings, and forwarding the model output.
     The 'AltCLIPVisionModel' class is designed to work with image inputs and provides flexibility in handling output attentions, hidden states, and return
     dictionaries.
     It supports the use of pre-trained models and enables easy integration with image processing pipelines.
@@ -2102,7 +2102,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
@@ -2169,8 +2169,8 @@ class AltCLIPTextModel(AltCLIPPreTrainedModel):
     """
     Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically
     tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods for initializing the
-    model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference.
-    The 'construct' method takes various input tensors and optional parameters and returns the model's output,
+    model, getting and setting input embeddings, resizing token embeddings, and forwarding the model for inference.
+    The 'forward' method takes various input tensors and optional parameters and returns the model's output,
     including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
 
     Example:
@@ -2346,13 +2346,13 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
     AltCLIPModel
     Represents an alternative implementation of the Contrastive Language-Image Pretraining (CLIP) model.
 
-    This class inherits from the `AltCLIPPreTrainedModel` class and includes methods to obtain text and image features, as well as to construct the final output.
+    This class inherits from the `AltCLIPPreTrainedModel` class and includes methods to obtain text and image features, as well as to forward the final output.
 
     The `AltCLIPModel` class includes the following methods:
 
     - get_text_features: Returns the text embeddings obtained by applying the projection layer to the pooled output of `AltCLIPTextModel`.
     - get_image_features: Returns the image embeddings obtained by applying the projection layer to the pooled output of `AltCLIPVisionModel`.
-    - construct: Constructs the final output, including image-text similarity scores and label probabilities.
+    - forward: Constructs the final output, including image-text similarity scores and label probabilities.
 
     Example:
         ```python

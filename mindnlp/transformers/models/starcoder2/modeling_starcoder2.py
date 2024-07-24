@@ -25,7 +25,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging, get_default_dtype
@@ -70,19 +71,19 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Starcoder2
-class Starcoder2RotaryEmbedding(nn.Cell):
+class Starcoder2RotaryEmbedding(nn.Module):
 
     """
     The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural
-    network models. This class inherits from the nn.Cell class.
+    network models. This class inherits from the nn.Module class.
     
-    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions,
+    The class's forwardor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions,
     maximum position embeddings, and base value for the rotary embedding. It computes the inverse frequency and sets
     the cosine and sine cache for positional encoding.
 
     The _set_cos_sin_cache method sets the cosine and sine cache based on the maximum sequence length and data type.
 
-    The construct method applies the positional encoding to the input tensor based on the sequence length and returns
+    The forward method applies the positional encoding to the input tensor based on the sequence length and returns
     the cosine and sine embeddings.
 
     Note:
@@ -144,7 +145,7 @@ class Starcoder2RotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Construct and return the cosine and sine embeddings for the given sequence length.
 
@@ -216,12 +217,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class Starcoder2MLP(nn.Cell):
+class Starcoder2MLP(nn.Module):
 
     '''
     A class representing a multi-layer perceptron (MLP) for Starcoder2 model.
 
-    This class inherits from nn.Cell and implements the construction of the MLP for the Starcoder2 model.
+    This class inherits from nn.Module and implements the forwardion of the MLP for the Starcoder2 model.
     The MLP consists of fully connected layers with activation functions and residual dropout.
 
     Attributes:
@@ -231,7 +232,7 @@ class Starcoder2MLP(nn.Cell):
         __init__:
             Initializes the Starcoder2MLP with the given configuration.
 
-        construct:
+        forward:
             Constructs the multi-layer perceptron using the provided hidden states.
 
     '''
@@ -252,14 +253,14 @@ class Starcoder2MLP(nn.Cell):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Dense(embed_dim, config.intermediate_size, has_bias=config.use_bias)
-        self.c_proj = nn.Dense(config.intermediate_size, embed_dim, has_bias=config.use_bias)
+        self.c_fc = nn.Linear(embed_dim, config.intermediate_size, has_bias=config.use_bias)
+        self.c_proj = nn.Linear(config.intermediate_size, embed_dim, has_bias=config.use_bias)
         self.act = ACT2FN[config.hidden_act]
         self.residual_dropout = config.residual_dropout
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
-        This method constructs the forward pass of the Starcoder2MLP model.
+        This method forwards the forward pass of the Starcoder2MLP model.
 
         Args:
             self (Starcoder2MLP): The instance of the Starcoder2MLP class.
@@ -292,7 +293,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class Starcoder2Attention(nn.Cell):
+class Starcoder2Attention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
@@ -342,10 +343,10 @@ class Starcoder2Attention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=self.use_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=self.use_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=self.use_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=self.use_bias)
 
         self.rotary_emb = Starcoder2RotaryEmbedding(
             self.head_dim,
@@ -353,7 +354,7 @@ class Starcoder2Attention(nn.Cell):
             base=self.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -364,7 +365,7 @@ class Starcoder2Attention(nn.Cell):
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method constructs the Starcoder2Attention layer.
+        This method forwards the Starcoder2Attention layer.
 
         Args:
             self (Starcoder2Attention): The instance of the Starcoder2Attention layer.
@@ -467,11 +468,11 @@ STARCODER2_ATTENTION_CLASSES = {
 }
 
 
-class Starcoder2DecoderLayer(nn.Cell):
+class Starcoder2DecoderLayer(nn.Module):
 
     """
     The Starcoder2DecoderLayer class represents a single layer of the Starcoder2 decoder model.
-    This class inherits from nn.Cell and implements the operations required for the decoder layer.
+    This class inherits from nn.Module and implements the operations required for the decoder layer.
 
     Attributes:
         hidden_size (int): The size of the hidden state in the layer.
@@ -481,7 +482,7 @@ class Starcoder2DecoderLayer(nn.Cell):
         post_attention_layernorm (nn.LayerNorm): The layer normalization applied after the attention mechanism.
 
     Methods:
-        construct:
+        forward:
             Applies the operations of the decoder layer to the input hidden states and returns the output along with
             optional values based on the provided arguments.
 
@@ -529,7 +530,7 @@ class Starcoder2DecoderLayer(nn.Cell):
         self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
 
     # Copied from transformers.models.mistral.modeling_mistral.MistralDecoderLayer.forward
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -591,7 +592,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     This class represents a Starcoder2PreTrainedModel, which is a subclass of PreTrainedModel.
 
     The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells.
-    The initialization process depends on the type of the cell. If the cell is an instance of nn.Dense, the weights are
+    The initialization process depends on the type of the cell. If the cell is an instance of nn.Linear, the weights are
     initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range`
     attribute of the configuration. If the cell has a bias, the bias is initialized with zeros.
 
@@ -600,7 +601,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     If the cell has a padding index, the weight corresponding to the padding index is set to 0.
 
     Note:
-        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense
+        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Linear
         or nn.Embedding.
 
     Please refer to the source code for more details on the implementation.
@@ -615,7 +616,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
@@ -665,7 +666,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.embedding_dropout = config.embedding_dropout
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Starcoder2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         # self._attn_implementation = config._attn_implementation
@@ -706,7 +707,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -736,7 +737,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             return_dict (bool, optional): Flag to indicate whether to return a dictionary. Defaults to None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The constructed model output.
+            Union[Tuple, BaseModelOutputWithPast]: The forwarded model output.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified, or if neither of them is specified.
@@ -861,7 +862,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
     It inherits from the Starcoder2PreTrainedModel.
 
     This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings,
-    set the decoder, get the decoder, construct the model with various optional inputs, prepare inputs for generation,
+    set the decoder, get the decoder, forward the model with various optional inputs, prepare inputs for generation,
     and reorder the cache.
 
     Example:
@@ -900,7 +901,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.model = Starcoder2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1013,7 +1014,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1220,9 +1221,9 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
     """
     This class represents a sequence classification model based on Starcoder2 architecture.
     It inherits functionality from Starcoder2PreTrainedModel.
-    The class includes methods for initializing the model, getting and setting input embeddings, and constructing
+    The class includes methods for initializing the model, getting and setting input embeddings, and forwarding
     the model for sequence classification.
-    The 'construct' method takes various input parameters like input_ids, attention_mask, position_ids, etc.,
+    The 'forward' method takes various input parameters like input_ids, attention_mask, position_ids, etc.,
     and returns the sequence classifier output.
     It supports computing loss based on different problem types such as regression, single-label classification,
     and multi-label classification.
@@ -1246,7 +1247,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Starcoder2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1285,7 +1286,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

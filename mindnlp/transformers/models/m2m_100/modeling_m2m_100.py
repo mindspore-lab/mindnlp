@@ -18,12 +18,10 @@ import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops
-import mindspore.ops.functional as F
-from mindspore import nn
-from mindspore import Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer,Normal
-from mindnlp.modules.functional import finfo
 from mindnlp.utils import (
     logging,
 )
@@ -84,11 +82,11 @@ class M2M100ScaledWordEmbedding(nn.Embedding):
         super().__init__(vocab_size, embedding_dim, padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, input_ids: mindspore.Tensor):
-        return super().construct(input_ids) * self.embed_scale
+    def forward(self, input_ids: mindspore.Tensor):
+        return super().forward(input_ids) * self.embed_scale
 
 
-class M2M100SinusoidalPositionalEmbedding(nn.Cell):
+class M2M100SinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -131,7 +129,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
         return emb#.to(ops.get_default_dtype())
 
     #@mindspore.no_grad()
-    def construct(
+    def forward(
         self, input_ids: mindspore.Tensor = None, inputs_embeds: mindspore.Tensor = None, past_key_values_length: int = 0
     ):
         if input_ids is not None:
@@ -168,7 +166,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->M2M100
-class M2M100Attention(nn.Cell):
+class M2M100Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -197,15 +195,15 @@ class M2M100Attention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -340,7 +338,7 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->M2M100, MBART->M2M100
-class M2M100EncoderLayer(nn.Cell):
+class M2M100EncoderLayer(nn.Module):
     def __init__(self, config: M2M100Config):
         super().__init__()
         self.embed_dim = config.d_model
@@ -355,11 +353,11 @@ class M2M100EncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -416,7 +414,7 @@ M2M100_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer with MBart->M2M100, MBART->M2M100
-class M2M100DecoderLayer(nn.Cell):
+class M2M100DecoderLayer(nn.Module):
     def __init__(self, config: M2M100Config):
         super().__init__()
         self.embed_dim = config.d_model
@@ -442,11 +440,11 @@ class M2M100DecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -545,7 +543,7 @@ class M2M100PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std),cell.weight.shape,cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer("zeros",cell.bias.shape,cell.bias.dtype))
@@ -608,14 +606,14 @@ class M2M100Encoder(M2M100PreTrainedModel):
             embed_dim,
             self.padding_idx,
         )
-        self.layers = nn.CellList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -778,14 +776,14 @@ class M2M100Decoder(M2M100PreTrainedModel):
             config.d_model,
             self.padding_idx,
         )
-        self.layers = nn.CellList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1041,7 +1039,7 @@ class M2M100Model(M2M100PreTrainedModel):
         return self.decoder
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1123,7 +1121,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
     def __init__(self, config: M2M100Config):
         super().__init__(config)
         self.model = M2M100Model(config)
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1141,7 +1139,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
         self.lm_head = new_embeddings
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

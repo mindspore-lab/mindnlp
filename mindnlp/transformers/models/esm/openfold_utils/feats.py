@@ -134,7 +134,7 @@ def build_template_angle_feat(template_feats: Dict[str, mindspore.Tensor]) -> mi
             - 'template_torsion_angles_mask': A tensor representing the mask for template torsion angles.
     
     Returns:
-        mindspore.Tensor: The template angle feature tensor constructed by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
+        mindspore.Tensor: The template angle feature tensor forwarded by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
 sin and cosine, and template torsion angles mask.
     
     Raises:
@@ -247,7 +247,7 @@ def build_extra_msa_feat(batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor
             - 'extra_deletion_value': Tensor containing values of deletions in MSA sequences.
     
     Returns:
-        mindspore.Tensor: A concatenated tensor containing additional MSA features constructed from the input batch data.
+        mindspore.Tensor: A concatenated tensor containing additional MSA features forwarded from the input batch data.
     
     Raises:
         None

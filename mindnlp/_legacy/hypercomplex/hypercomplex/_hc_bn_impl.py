@@ -22,7 +22,7 @@ from mindspore.common.parameter import Parameter
 from mindspore.common.tensor import Tensor
 
 
-class _BatchNormImpl(nn.Cell):
+class _BatchNormImpl(nn.Module):
     r"""
     The interface of the implementor part of batch normalization layer on the second-order hypercomplex numbers.
 

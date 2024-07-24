@@ -19,7 +19,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
@@ -45,7 +46,7 @@ logger = logging.get_logger(__name__)
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEmbeddings with Roberta->Xmod
-class XmodEmbeddings(nn.Cell):
+class XmodEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -77,7 +78,7 @@ class XmodEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         if position_ids is None:
@@ -94,7 +95,7 @@ class XmodEmbeddings(nn.Cell):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -136,7 +137,7 @@ class XmodEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfAttention with Roberta->Xmod
-class XmodSelfAttention(nn.Cell):
+class XmodSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -149,9 +150,9 @@ class XmodSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -168,7 +169,7 @@ class XmodSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -270,22 +271,22 @@ class XmodSelfAttention(nn.Cell):
         return outputs
 
 
-class XmodSelfOutput(nn.Cell):
+class XmodSelfOutput(nn.Module):
     # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfOutput.__init__
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = hidden_states + input_tensor
         return hidden_states
 
 
-class XmodAttention(nn.Cell):
+class XmodAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = XmodSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -312,7 +313,7 @@ class XmodAttention(nn.Cell):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -342,43 +343,43 @@ class XmodAttention(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaIntermediate
-class XmodIntermediate(nn.Cell):
+class XmodIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class XmodAdapter(nn.Cell):
+class XmodAdapter(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.bottleneck_size = config.hidden_size // config.adapter_reduction_factor
-        self.dense1 = nn.Dense(config.hidden_size, self.bottleneck_size)
-        self.dense2 = nn.Dense(self.bottleneck_size, config.hidden_size)
+        self.dense1 = nn.Linear(config.hidden_size, self.bottleneck_size)
+        self.dense2 = nn.Linear(self.bottleneck_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.adapter_act_fn = ACT2FN[config.hidden_act]
         else:
             self.adapter_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         hidden_states = self.dense1(hidden_states)
         hidden_states = self.adapter_act_fn(hidden_states)
         hidden_states = self.dense2(hidden_states)
         return hidden_states
 
 
-class XmodOutput(nn.Cell):
+class XmodOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.ln_before_adapter = config.ln_before_adapter
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -387,11 +388,11 @@ class XmodOutput(nn.Cell):
         else:
             self.adapter_layer_norm = None
         self.adapter_reuse_layer_norm = config.adapter_reuse_layer_norm
-        self.adapter_modules = nn.CellDict({})
+        self.adapter_modules = nn.ModuleDict({})
         for language in config.languages:
             self.adapter_modules[str(language)] = XmodAdapter(config)
 
-    def construct(self, hidden_states: Tensor, input_tensor: Tensor, lang_ids: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor, input_tensor: Tensor, lang_ids: Tensor) -> Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = hidden_states + input_tensor
@@ -425,7 +426,7 @@ class XmodOutput(nn.Cell):
         return hidden_states
 
 
-class XmodLayer(nn.Cell):
+class XmodLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -441,7 +442,7 @@ class XmodLayer(nn.Cell):
         self.output = XmodOutput(config)
         self.pre_norm = config.pre_norm
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         lang_ids: Tensor,
@@ -520,17 +521,17 @@ class XmodLayer(nn.Cell):
         return self.intermediate(attention_output)
 
 
-class XmodEncoder(nn.Cell):
+class XmodEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([XmodLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([XmodLayer(config) for _ in range(config.num_hidden_layers)])
         self.is_pre_norm = config.pre_norm
         if self.is_pre_norm:
             self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         lang_ids: Tensor,
@@ -622,13 +623,13 @@ class XmodEncoder(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaPooler
-class XmodPooler(nn.Cell):
+class XmodPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -650,7 +651,7 @@ class XmodPreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -744,7 +745,7 @@ class XmodModel(XmodPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -908,7 +909,7 @@ class XmodForCausalLM(XmodPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -1073,7 +1074,7 @@ class XmodForMaskedLM(XmodPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -1133,19 +1134,19 @@ class XmodForMaskedLM(XmodPreTrainedModel):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead
-class XmodLMHead(nn.Cell):
+class XmodLMHead(nn.Module):
     """Roberta Head for masked language modeling."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
         self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
         self.decoder.bias = self.bias
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         x = self.dense(features)
         x = gelu(x)
         x = self.layer_norm(x)
@@ -1177,7 +1178,7 @@ class XmodForSequenceClassification(XmodPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -1253,12 +1254,12 @@ class XmodForMultipleChoice(XmodPreTrainedModel):
 
         self.roberta = XmodModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -1337,12 +1338,12 @@ class XmodForTokenClassification(XmodPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,
@@ -1397,19 +1398,19 @@ class XmodForTokenClassification(XmodPreTrainedModel):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaClassificationHead
-class XmodClassificationHead(nn.Cell):
+class XmodClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
@@ -1426,12 +1427,12 @@ class XmodForQuestionAnswering(XmodPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.roberta = XmodModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         lang_ids: Optional[Tensor] = None,

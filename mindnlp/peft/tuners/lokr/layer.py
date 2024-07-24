@@ -19,12 +19,11 @@ from typing import List, Optional, Union, Any, Set, Tuple
 from abc import abstractmethod
 
 import mindspore as ms
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Zero
 
 # import mindnlp._legacy.functional as F
-from mindnlp._legacy.abc import ParameterDict
-
+from mindnlp.core.nn import ParameterDict
 # from ..import_utils import is_bnb_4bit_available, is_bnb_available
 
 from ..tuners_utils import (
@@ -33,7 +32,7 @@ from ..tuners_utils import (
 )
 
 
-class LoKrLayer(nn.Cell, BaseTunerLayer):
+class LoKrLayer(nn.Module, BaseTunerLayer):
 
     r"""
     LoKrLayer is a custom PyTorch class representing a layer that implements the Locally Kroneckerized Neural Network adaptation technique. This technique allows for adaptive modifications to be made on top of
@@ -72,7 +71,7 @@ the base layer's output. The class provides methods for creating, updating, merg
         - merge: Method to merge active adapter weights into the base weights.
         - unmerge: Method to unmerge all merged adapter layers from the base weights.
         - get_delta_weight: Method to calculate the delta weight for a specific adapter.
-        - construct: Method to construct the output of the layer with adaptive modifications applied.
+        - forward: Method to forward the output of the layer with adaptive modifications applied.
     
     Note:
         This class is intended for advanced neural network adaptation techniques and should be used in conjunction with PyTorch's nn.Module functionalities.
@@ -107,13 +106,13 @@ the base layer's output. The class provides methods for creating, updating, merg
     # List all merged adapters
     merged_adapters: "List[str]" = []
 
-    def __init__(self, base_layer: nn.Cell) -> None:
+    def __init__(self, base_layer: nn.Module) -> None:
         r"""
         This method initializes an instance of the LoKrLayer class.
         
         Args:
             self: The instance of the LoKrLayer class.
-            base_layer (nn.Cell): The base layer used for the LoKrLayer.
+            base_layer (nn.Module): The base layer used for the LoKrLayer.
             
         Returns:
             None: This method does not return any value.
@@ -242,7 +241,7 @@ the base layer's output. The class provides methods for creating, updating, merg
         # is already a list of str
         return self.active_adapter
 
-    def get_base_layer(self) -> nn.Cell:
+    def get_base_layer(self) -> nn.Module:
         """
         (Recursively) get the base_layer.
 
@@ -527,7 +526,7 @@ initialization.
         base_layer = self.get_base_layer()
 
         # Determine shape of LoKr weights
-        if isinstance(base_layer, nn.Dense):
+        if isinstance(base_layer, nn.Linear):
             in_dim, out_dim = base_layer.in_channels, base_layer.out_channels
 
             in_m, in_n = factorization(in_dim, decompose_factor)
@@ -701,7 +700,7 @@ initialization.
 
         return weight
 
-    def construct(self, x: ms.Tensor, *args, **kwargs) -> ms.Tensor:
+    def forward(self, x: ms.Tensor, *args, **kwargs) -> ms.Tensor:
         """
         Constructs the output tensor using the specified input tensor and additional arguments.
         
@@ -710,7 +709,7 @@ initialization.
             x (ms.Tensor): The input tensor to be processed.
             
         Returns:
-            ms.Tensor: The output tensor constructed based on the input tensor and additional arguments.
+            ms.Tensor: The output tensor forwarded based on the input tensor and additional arguments.
         
         Raises:
             TypeError: If the input tensor x is not of type ms.Tensor.
@@ -750,7 +749,7 @@ class Dense(LoKrLayer):
     """LoKr implemented in Dense layer"""
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str = "default",
         r: int = 0,
         alpha: float = 0.0,
@@ -764,7 +763,7 @@ class Dense(LoKrLayer):
         
         Args:
             self: The object itself.
-            base_layer (nn.Cell): The base layer for the adapter.
+            base_layer (nn.Module): The base layer for the adapter.
             adapter_name (str): The name of the adapter. Defaults to 'default'.
             r (int): The value of r for adapter update. Defaults to 0.
             alpha (float): The value of alpha for adapter update. Defaults to 0.0.
@@ -833,7 +832,7 @@ class Conv2d(LoKrLayer):
     """LoKr implemented in Conv2d layer"""
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str = "default",
         r: int = 0,
         alpha: float = 0.0,
@@ -848,7 +847,7 @@ class Conv2d(LoKrLayer):
         
         Args:
             self: The instance of the Conv2d class.
-            base_layer (nn.Cell): The base layer that the adapter will be added on top of.
+            base_layer (nn.Module): The base layer that the adapter will be added on top of.
             adapter_name (str): The name of the adapter. Defaults to 'default'.
             r (int): The value of parameter 'r'.
             alpha (float): The value of parameter 'alpha'.

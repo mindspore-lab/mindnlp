@@ -23,7 +23,7 @@ from mindspore import nn
 from ..utils import get_x_and_y
 
 
-class _DenseImpl(nn.Cell):
+class _DenseImpl(nn.Module):
     r"""
     The interface of the implementor part of dense connected layer on second-order hypercomplex numbers.
 
@@ -57,10 +57,10 @@ class _DenseImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   x: Tensor,
                   y: Tensor) -> Tuple[Tensor, Tensor]:
-        """construct"""
+        """forward"""
 class _BaseDenseImpl(_DenseImpl):
     r"""
     The base implementor part of the dense connected layer for all the hypercomplex numbers of the second order.

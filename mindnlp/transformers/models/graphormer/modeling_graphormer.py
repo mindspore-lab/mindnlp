@@ -23,7 +23,7 @@ from typing import Iterable, Iterator, List, Optional, Tuple, Union
 import numpy as np
 import mindspore as ms
 
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Uniform
@@ -51,7 +51,7 @@ GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
+def quant_noise(module: nn.Module, q_noise: float, block_size: int):
     """
     From:
     https://github.com/facebookresearch/fairseq/blob/dd0079bde7f678b0cd0715cbd0ae68d661b7226d/fairseq/modules/quant_noise.py
@@ -60,7 +60,7 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
     Quantization as described in "Training with Quantization Noise for Extreme Model Compression"
 
     Args:
-        module: nn.Cell
+        module: nn.Module
         q_noise: amount of Quantization Noise
         block_size: size of the blocks for subsequent quantization with iPQ
 
@@ -77,7 +77,7 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
         return module
 
     # supported modules
-    if not isinstance(module, (nn.Dense, nn.Embedding, nn.Conv2d)):
+    if not isinstance(module, (nn.Linear, nn.Embedding, nn.Conv2d)):
         raise NotImplementedError("Module unsupported for quant_noise.")
 
     # test whether module.weight has the right sizes wrt block_size
@@ -139,11 +139,11 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
     return module
 
 
-class LayerDropModuleList(nn.CellList):
+class LayerDropModuleList(nn.ModuleList):
     """
     From:
     https://github.com/facebookresearch/fairseq/blob/dd0079bde7f678b0cd0715cbd0ae68d661b7226d/fairseq/modules/layer_drop.py
-    A LayerDrop implementation based on [`mindspore.nn.CellList`]. LayerDrop as described in
+    A LayerDrop implementation based on [`mindspore.nn.ModuleList`]. LayerDrop as described in
     https://arxiv.org/abs/1909.11556.
 
     We refresh the choice of which layers to drop every time we iterate over the LayerDropModuleList instance.
@@ -164,15 +164,15 @@ class LayerDropModuleList(nn.CellList):
         p_drop (float): probability of dropping out each layer
         modules (iterable, optional): an iterable of modules to add
     """
-    def __init__(self, p_drop: float, modules: Optional[Iterable[nn.Cell]] = None):
+    def __init__(self, p_drop: float, modules: Optional[Iterable[nn.Module]] = None):
         """
         Initialize a LayerDropModuleList object with the provided parameters.
 
         Args:
             self (object): The current instance of the LayerDropModuleList class.
             p_drop (float): The probability of dropping a module during training. Must be a float value.
-            modules (Optional[Iterable[nn.Cell]]): An optional iterable of neural network modules to be included
-                in the list. Defaults to None if not provided. Each module should be an instance of nn.Cell.
+            modules (Optional[Iterable[nn.Module]]): An optional iterable of neural network modules to be included
+                in the list. Defaults to None if not provided. Each module should be an instance of nn.Module.
 
         Returns:
             None.
@@ -183,7 +183,7 @@ class LayerDropModuleList(nn.CellList):
         super().__init__(modules)
         self.p_drop = p_drop
 
-    def __iter__(self) -> Iterator[nn.Cell]:
+    def __iter__(self) -> Iterator[nn.Module]:
         """
         This method '__iter__' in the class 'LayerDropModuleList' serves as an iterator to iterate through the cells
         within the module list.
@@ -193,7 +193,7 @@ class LayerDropModuleList(nn.CellList):
                 It is used to access the attributes and methods of the class.
 
         Returns:
-            An iterator of type 'Iterator[nn.Cell]' that yields the cells within the module list.
+            An iterator of type 'Iterator[nn.Module]' that yields the cells within the module list.
 
         Raises:
             None.
@@ -204,7 +204,7 @@ class LayerDropModuleList(nn.CellList):
                 yield cell
 
 
-class GraphormerGraphNodeFeature(nn.Cell):
+class GraphormerGraphNodeFeature(nn.Module):
     """
     Compute node features for each node in the graph.
     """
@@ -244,7 +244,7 @@ class GraphormerGraphNodeFeature(nn.Cell):
 
         self.graph_token = nn.Embedding(1, config.hidden_size)
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         in_degree: Tensor,
@@ -284,7 +284,7 @@ class GraphormerGraphNodeFeature(nn.Cell):
         return graph_node_feature
 
 
-class GraphormerGraphAttnBias(nn.Cell):
+class GraphormerGraphAttnBias(nn.Module):
     """
     Compute attention bias for each head.
     """
@@ -322,7 +322,7 @@ class GraphormerGraphAttnBias(nn.Cell):
 
         self.graph_token_virtual_distance = nn.Embedding(1, config.num_attention_heads)
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         attn_bias: Tensor,
@@ -331,7 +331,7 @@ class GraphormerGraphAttnBias(nn.Cell):
         attn_edge_type: Tensor,
     ) -> Tensor:
         """
-        This method constructs the graph attention bias tensor for the Graphormer model.
+        This method forwards the graph attention bias tensor for the Graphormer model.
 
         Args:
             self: The instance of the GraphormerGraphAttnBias class.
@@ -344,7 +344,7 @@ class GraphormerGraphAttnBias(nn.Cell):
             attn_edge_type (Tensor): The attention edge type tensor. Should have the same shape as input_edges.
 
         Returns:
-            Tensor: The constructed graph attention bias tensor after performing the specified operations.
+            Tensor: The forwarded graph attention bias tensor after performing the specified operations.
 
         Raises:
             ValueError: If the input shapes of input_nodes, attn_bias, spatial_pos, input_edges, or attn_edge_type are
@@ -400,7 +400,7 @@ class GraphormerGraphAttnBias(nn.Cell):
         return graph_attn_bias
 
 
-class GraphormerMultiheadAttention(nn.Cell):
+class GraphormerMultiheadAttention(nn.Module):
     """Multi-headed attention.
 
     See "Attention Is All You Need" for more details.
@@ -454,23 +454,23 @@ class GraphormerMultiheadAttention(nn.Cell):
             raise AssertionError("Self-attention requires query, key and value to be of the same size.")
 
         self.k_proj = quant_noise(
-            nn.Dense(self.kdim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(self.kdim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.v_proj = quant_noise(
-            nn.Dense(self.vdim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(self.vdim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.q_proj = quant_noise(
-            nn.Dense(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
 
         self.out_proj = quant_noise(
-            nn.Dense(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
@@ -496,7 +496,7 @@ class GraphormerMultiheadAttention(nn.Cell):
         if self.out_proj.bias is not None:
             self.out_proj.bias.set_data(init_zero(self.out_proj.bias))
 
-    def construct(
+    def forward(
         self,
         query: Tensor,
         key: Optional[Tensor],
@@ -622,7 +622,7 @@ class GraphormerMultiheadAttention(nn.Cell):
         return attn_weights
 
 
-class GraphormerGraphEncoderLayer(nn.Cell):
+class GraphormerGraphEncoderLayer(nn.Module):
     """
     Graphormer Graph Encoder Layer
     """
@@ -689,13 +689,13 @@ class GraphormerGraphEncoderLayer(nn.Cell):
 
     def build_fc(
         self, input_dim: int, output_dim: int, q_noise: float, qn_block_size: int
-    ) -> Union[nn.Cell, nn.Dense, nn.Embedding, nn.Conv2d]:
+    ) -> Union[nn.Module, nn.Linear, nn.Embedding, nn.Conv2d]:
         """
         Build function
         """
-        return quant_noise(nn.Dense(input_dim, output_dim), q_noise, qn_block_size)
+        return quant_noise(nn.Linear(input_dim, output_dim), q_noise, qn_block_size)
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         self_attn_bias: Optional[Tensor] = None,
@@ -738,7 +738,7 @@ class GraphormerGraphEncoderLayer(nn.Cell):
         return input_nodes, attn
 
 
-class GraphormerGraphEncoder(nn.Cell):
+class GraphormerGraphEncoder(nn.Module):
     """
     Graphormer Graph Encoder
     """
@@ -789,7 +789,7 @@ class GraphormerGraphEncoder(nn.Cell):
 
         if config.q_noise > 0:
             self.quant_noise = quant_noise(
-                nn.Dense(self.embedding_dim, self.embedding_dim, has_bias=False),
+                nn.Linear(self.embedding_dim, self.embedding_dim, has_bias=False),
                 config.q_noise,
                 config.qn_block_size,
             )
@@ -807,7 +807,7 @@ class GraphormerGraphEncoder(nn.Cell):
         if self.layerdrop > 0.0:
             self.layers = LayerDropModuleList(p_drop=self.layerdrop)
         else:
-            self.layers = nn.CellList([])
+            self.layers = nn.ModuleList([])
         self.layers.extend([GraphormerGraphEncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
         # Apply initialization of model params after building the model
@@ -820,7 +820,7 @@ class GraphormerGraphEncoder(nn.Cell):
                 for par in mod.parameters():
                     par.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         input_edges: Tensor,
@@ -915,7 +915,7 @@ class GraphormerGraphEncoder(nn.Cell):
         return inner_states, graph_rep
 
 
-class GraphormerDecoderHead(nn.Cell):
+class GraphormerDecoderHead(nn.Module):
     """
     Graphormer Decoder Head
     """
@@ -937,10 +937,10 @@ class GraphormerDecoderHead(nn.Cell):
         super().__init__()
         # num_classes should be 1 for regression, or the number of classes for classification
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
-        self.classifier = nn.Dense(embedding_dim, num_classes, has_bias=False)
+        self.classifier = nn.Linear(embedding_dim, num_classes, has_bias=False)
         self.num_classes = num_classes
 
-    def construct(self, input_nodes: Tensor, **kwargs) -> Tensor:
+    def forward(self, input_nodes: Tensor, **kwargs) -> Tensor:
         """
         Construct the GraphormerDecoderHead.
 
@@ -970,11 +970,11 @@ class GraphormerPreTrainedModel(PreTrainedModel):
     main_input_name_nodes = "input_nodes"
     main_input_name_edges = "input_edges"
 
-    def init_graphormer_params(self, module: Union[nn.Dense, nn.Embedding, GraphormerMultiheadAttention]):
+    def init_graphormer_params(self, module: Union[nn.Linear, nn.Embedding, GraphormerMultiheadAttention]):
         """
         Initialize the weights specific to the Graphormer Model.
         """
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
@@ -999,7 +999,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         """
         Initialize the weights
         """
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
             cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
             if cell.has_bias:
@@ -1077,7 +1077,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
         # Remove head is set to true during fine-tuning
         self.load_softmax = not getattr(config, "remove_head", False)
 
-        self.lm_head_transform_weight = nn.Dense(config.embedding_dim, config.embedding_dim)
+        self.lm_head_transform_weight = nn.Linear(config.embedding_dim, config.embedding_dim)
         self.activation_fn = ACT2FN[config.activation_fn]
         self.layer_norm = nn.LayerNorm([config.embedding_dim])
 
@@ -1089,7 +1089,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
         """
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         input_edges: Tensor,
@@ -1188,7 +1188,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_nodes: Tensor,
         input_edges: Tensor,

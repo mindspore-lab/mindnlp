@@ -16,10 +16,11 @@ import math
 from typing import Any
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import HeUniform, Zero, initializer
 
-from mindnlp._legacy.abc import ParameterDict
+from mindnlp.core.nn import ParameterDict
+
 from mindnlp.peft.tuners.tuners_utils import BaseTunerLayer
 
 from .config import PolyConfig
@@ -32,20 +33,20 @@ class PolyLayer(BaseTunerLayer):
     # All names of other parameters that may contain adapter-related parameters
     other_param_names = ("r", "n_tasks", "n_skills", "n_splits")
 
-    def __init__(self, base_layer: nn.Cell, **kwargs):
+    def __init__(self, base_layer: nn.Module, **kwargs):
         self.base_layer = base_layer
         self.r = {}
         self.n_tasks = {}
         self.n_skills = {}
         self.n_splits = {}
         self.poly_type = {}
-        self.poly_router = nn.CellDict()
+        self.poly_router = nn.ModuleDict()
         self.poly_lora_A = ParameterDict()
         self.poly_lora_B = ParameterDict()
         self.kwargs = kwargs
 
         base_layer = self.get_base_layer()
-        if isinstance(base_layer, nn.Dense):
+        if isinstance(base_layer, nn.Linear):
             in_channels, out_channels = base_layer.in_channels, base_layer.out_channels
         else:
             raise ValueError(f"Unsupported layer type {type(base_layer)}")
@@ -90,7 +91,7 @@ class PolyLayer(BaseTunerLayer):
 
     def reset_poly_parameters(self, adapter_name, init_weights):
         if adapter_name in self.poly_lora_A.keys():
-            # initialize A the same way as the default for nn.Dense
+            # initialize A the same way as the default for nn.Linear
             # https://github.com/microsoft/mttl/blob/ce4ca51dbca73be656feb9b3e5233633e3c5dec7/mttl/models/poly.py#L269
             n_splits, n_skills, d, r = self.poly_lora_A[adapter_name].shape
             for skill in range(n_skills):
@@ -112,7 +113,7 @@ class PolyLayer(BaseTunerLayer):
                 )
 
             else:
-                # initialize B the same way as the default for nn.Dense
+                # initialize B the same way as the default for nn.Linear
                 n_splits, n_skills, r, d = self.poly_lora_B[adapter_name].shape
                 for skill in range(n_skills):
                     for split in range(n_splits):
@@ -128,7 +129,7 @@ class PolyLayer(BaseTunerLayer):
             self.poly_router[adapter_name].reset()
 
 
-class Dense(nn.Cell, PolyLayer):
+class Dense(nn.Module, PolyLayer):
     # Lora implemented in a dense layer
     def __init__(
         self,
@@ -143,7 +144,7 @@ class Dense(nn.Cell, PolyLayer):
         self._active_adapter = adapter_name
         self.update_layer(adapter_name, poly_config)
 
-    def construct(
+    def forward(
         self,
         x: mindspore.Tensor,
         *args: Any,

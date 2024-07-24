@@ -144,6 +144,10 @@ def scatter_add(input, dim, index, src):
 # scatter_reduce
 
 
+# scatter_nd_update
+def scatter_nd_update(input, indices, update):
+    return ops.scatter_nd_update(input, indices, update)
+
 # split
 def split(tensor, split_size_or_sections, dim=0):
     if USE_PYBOOST:

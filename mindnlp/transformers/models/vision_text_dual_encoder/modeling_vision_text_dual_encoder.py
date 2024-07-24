@@ -17,7 +17,8 @@
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
@@ -89,8 +90,8 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         self.text_embed_dim = config.text_config.hidden_size
         self.projection_dim = config.projection_dim
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, has_bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, has_bias=False)
         self.logit_scale = Parameter(ms.tensor(self.config.logit_scale_init_value))
 
     def get_text_features(
@@ -176,7 +177,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,

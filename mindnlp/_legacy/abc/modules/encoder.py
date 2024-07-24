@@ -14,11 +14,12 @@
 # ============================================================================
 """Encoder basic model"""
 
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 
 
-class EncoderBase(nn.Cell):
+
+class EncoderBase(nn.Module):
     r"""
     Basic class for encoders
 
@@ -42,7 +43,7 @@ class EncoderBase(nn.Cell):
         super().__init__()
         self.embedding = embedding
 
-    def construct(self, src_token, src_length=None):
+    def forward(self, src_token, src_length=None):
         """
         Construct method.
 
@@ -52,7 +53,7 @@ class EncoderBase(nn.Cell):
             mask (Tensor): Its elements identify whether the corresponding input token is padding or not.
                 If True, not padding token. If False, padding token. Defaults to None.
         """
-        raise NotImplementedError("Model must implement the construct method")
+        raise NotImplementedError("Model must implement the forward method")
 
     def reorder_encoder_out(self, encoder_out, new_order):
         """

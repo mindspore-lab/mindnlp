@@ -19,10 +19,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.modules.functional import finfo
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -84,17 +84,17 @@ class BlenderbotSmallLearnedPositionalEmbedding(nn.Embedding):
         """
         super().__init__(num_embeddings, embedding_dim)
 
-    def construct(self, input_ids_shape, past_key_values_length: int = 0):
+    def forward(self, input_ids_shape, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().construct(positions)
+        return super().forward(positions)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->BlenderbotSmall
-class BlenderbotSmallAttention(nn.Cell):
+class BlenderbotSmallAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -142,10 +142,10 @@ class BlenderbotSmallAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -165,7 +165,7 @@ class BlenderbotSmallAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -286,14 +286,14 @@ class BlenderbotSmallAttention(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartEncoderLayer with Bart->BlenderbotSmall, BART->BLENDERBOT_SMALL
-class BlenderbotSmallEncoderLayer(nn.Cell):
+class BlenderbotSmallEncoderLayer(nn.Module):
 
     """
     This class represents a single layer of the BlenderbotSmall model encoder.
     The layer consists of self-attention mechanism followed by feedforward neural network blocks with
     layer normalization and residual connections.
 
-    The class initializes the encoder layer with configuration parameters and defines a 'construct' method that
+    The class initializes the encoder layer with configuration parameters and defines a 'forward' method that
     processes the input hidden states through the self-attention mechanism and feedforward neural network blocks.
     The method also includes functionality for dropout, layer normalization, and handling of attention masks and
     head masks.
@@ -303,7 +303,7 @@ class BlenderbotSmallEncoderLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the encoder layer with the provided configuration settings.
-        construct:
+        forward:
             Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks,
             with optional attention outputs.
 
@@ -346,11 +346,11 @@ class BlenderbotSmallEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -408,13 +408,13 @@ BLENDERBOT_SMALL_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.bart.modeling_bart.BartDecoderLayer with Bart->BlenderbotSmall, BART->BLENDERBOT_SMALL
-class BlenderbotSmallDecoderLayer(nn.Cell):
+class BlenderbotSmallDecoderLayer(nn.Module):
 
     """
     BlenderbotSmallDecoderLayer represents a single layer of the BlenderbotSmallDecoder.
     It performs self-attention, cross-attention with an encoder, and feed-forward neural network operations.
 
-    This class inherits from nn.Cell and implements the functionality required for processing inputs
+    This class inherits from nn.Module and implements the functionality required for processing inputs
     in the BlenderbotSmallDecoder.
 
     Attributes:
@@ -473,11 +473,11 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -577,7 +577,7 @@ class BlenderbotSmallPreTrainedModel(PreTrainedModel):
     and generating dummy inputs for testing purposes.
 
     To initialize the weights, the `_init_weights` method is called with a specified `cell` object.
-    If the `cell` is of type `nn.Dense`, the weights are initialized using the normal distribution with a
+    If the `cell` is of type `nn.Linear`, the weights are initialized using the normal distribution with a
     standard deviation of `self.config.init_std`.
     If the `cell` has biases, they are initialized to zeros.
     If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a
@@ -600,7 +600,7 @@ class BlenderbotSmallPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
@@ -690,14 +690,14 @@ class BlenderbotSmallEncoder(BlenderbotSmallPreTrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList([BlenderbotSmallEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([BlenderbotSmallEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(embed_dim)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -867,7 +867,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList([BlenderbotSmallDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([BlenderbotSmallDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -926,7 +926,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1172,7 +1172,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             set_input_embeddings(self, value): Sets the shared input embeddings.
             get_encoder(self): Returns the encoder of the model.
             get_decoder(self): Returns the decoder of the model.
-            construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, 
+            forward(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, 
                 decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
                 decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): 
                 Constructs the model with the given inputs and returns the output.
@@ -1274,7 +1274,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1373,7 +1373,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
     """
     This class represents a small Blenderbot model for conditional generation tasks. It is designed to generate
     responses based on given inputs in a conversational setting.
-    The class provides methods for initializing the model, resizing token embeddings, constructing the model output,
+    The class provides methods for initializing the model, resizing token embeddings, forwarding the model output,
     preparing inputs for generation, and reordering cache during inference.
     It inherits from BlenderbotSmallPreTrainedModel and includes functionalities such as getting encoder and decoder,
     setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input
@@ -1403,7 +1403,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
         super().__init__(config)
         self.model = BlenderbotSmallModel(config)
         self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1516,7 +1516,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1714,11 +1714,11 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
         super().__init__(config)
         self.decoder = BlenderbotSmallDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         """
         Constructs a BlenderbotSmallDecoderWrapper object.
 
-        This method is used to construct a BlenderbotSmallDecoderWrapper object by calling the `decoder` method
+        This method is used to forward a BlenderbotSmallDecoderWrapper object by calling the `decoder` method
         with the provided arguments and keyword arguments.
 
         Args:
@@ -1741,12 +1741,12 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
     Represents the BlenderbotSmallForCausalLM class, which is designed for causal language modeling with the
     BlenderbotSmall model architecture.
     This class inherits from BlenderbotSmallPreTrainedModel and  provides methods for initializing the model,
-    setting and getting input and output embeddings, setting and getting the decoder, constructing the model,
+    setting and getting input and output embeddings, setting and getting the decoder, forwarding the model,
     and preparing inputs for generation.
     It also includes a method for reordering cache during generation.
-    The class includes detailed information about the arguments and returns for the 'construct' and
+    The class includes detailed information about the arguments and returns for the 'forward' and
     'prepare_inputs_for_generation' methods. Additionally, example usage and expected outputs are provided for
-    the 'construct' method.
+    the 'forward' method.
 
     This class encapsulates the functionality for utilizing the BlenderbotSmall model for causal language modeling
     tasks and provides a comprehensive interface for model manipulation and generation.
@@ -1779,7 +1779,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
         super().__init__(config)
         self.model = BlenderbotSmallDecoderWrapper(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1883,7 +1883,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
         """
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

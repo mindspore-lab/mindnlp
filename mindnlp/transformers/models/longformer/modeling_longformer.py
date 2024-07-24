@@ -21,7 +21,8 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -450,7 +451,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     return incremental_indices.long() + padding_idx
 
 
-class LongformerEmbeddings(nn.Cell):
+class LongformerEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -493,7 +494,7 @@ class LongformerEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         '''
         Constructs the LongformerEmbeddings.
 
@@ -564,14 +565,14 @@ class LongformerEmbeddings(nn.Cell):
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
-class LongformerSelfAttention(nn.Cell):
+class LongformerSelfAttention(nn.Module):
 
     """
     This class represents the self-attention mechanism used in Longformer models.
     It handles the computation of attention scores and outputs for both local and global attention patterns,
-    with support for sliding window attention. Inherits from nn.Cell.
+    with support for sliding window attention. Inherits from nn.Module.
 
-    The class includes methods for initializing the self-attention layer, constructing the attention mechanism,
+    The class includes methods for initializing the self-attention layer, forwarding the attention mechanism,
     padding and processing hidden states, and computing attention outputs based on global indices. It also provides
     functions for matrix multiplication with sliding window attention patterns and handling global attention indices.
 
@@ -616,14 +617,14 @@ class LongformerSelfAttention(nn.Cell):
         self.head_dim = int(config.hidden_size / config.num_attention_heads)
         self.embed_dim = config.hidden_size
 
-        self.query = nn.Dense(config.hidden_size, self.embed_dim)
-        self.key = nn.Dense(config.hidden_size, self.embed_dim)
-        self.value = nn.Dense(config.hidden_size, self.embed_dim)
+        self.query = nn.Linear(config.hidden_size, self.embed_dim)
+        self.key = nn.Linear(config.hidden_size, self.embed_dim)
+        self.value = nn.Linear(config.hidden_size, self.embed_dim)
 
         # separate projection layers for tokens with global attention
-        self.query_global = nn.Dense(config.hidden_size, self.embed_dim)
-        self.key_global = nn.Dense(config.hidden_size, self.embed_dim)
-        self.value_global = nn.Dense(config.hidden_size, self.embed_dim)
+        self.query_global = nn.Linear(config.hidden_size, self.embed_dim)
+        self.key_global = nn.Linear(config.hidden_size, self.embed_dim)
+        self.value_global = nn.Linear(config.hidden_size, self.embed_dim)
 
         self.dropout = config.attention_probs_dropout_prob
 
@@ -640,7 +641,7 @@ class LongformerSelfAttention(nn.Cell):
 
         self.config = config
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1324,22 +1325,22 @@ class LongformerSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class LongformerSelfOutput(nn.Cell):
+class LongformerSelfOutput(nn.Module):
 
     """
     This class represents the Longformer self-attention mechanism used in the Longformer model.
     It is responsible for applying a dense layer, layer normalization, and dropout to the hidden states of the input
     tensor.
 
-    Inherits from: nn.Cell
+    Inherits from: nn.Module
 
     Attributes:
-        dense (nn.Dense): A dense layer that applies a linear transformation to the hidden states.
+        dense (nn.Linear): A dense layer that applies a linear transformation to the hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module that normalizes the hidden states.
         dropout (nn.Dropout): A dropout module that applies dropout regularization to the hidden states.
 
     Methods:
-        construct(hidden_states, input_tensor)
+        forward(hidden_states, input_tensor)
             Applies the Longformer self-attention mechanism to the hidden states and returns the resulting tensor.
 
     """
@@ -1364,24 +1365,24 @@ class LongformerSelfOutput(nn.Cell):
             TypeError: If any of the config parameters are of incorrect type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method 'construct' is a part of the class 'LongformerSelfOutput' and is used to perform a series of
-        operations on the input 'hidden_states' and 'input_tensor' to construct a new tensor.
+        This method 'forward' is a part of the class 'LongformerSelfOutput' and is used to perform a series of
+        operations on the input 'hidden_states' and 'input_tensor' to forward a new tensor.
 
         Args:
             self (LongformerSelfOutput): The instance of the LongformerSelfOutput class.
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
-                It is used as an input for the construction process.
+                It is used as an input for the forwardion process.
             input_tensor (mindspore.Tensor): The input tensor representing additional input.
-                It is used as an input for the construction process.
+                It is used as an input for the forwardion process.
 
         Returns:
-            mindspore.Tensor: The constructed tensor resulting from the operations performed on the
+            mindspore.Tensor: The forwarded tensor resulting from the operations performed on the
                 'hidden_states' and 'input_tensor'.
 
         Raises:
@@ -1393,12 +1394,12 @@ class LongformerSelfOutput(nn.Cell):
         return hidden_states
 
 
-class LongformerAttention(nn.Cell):
+class LongformerAttention(nn.Module):
 
     """
     LongformerAttention class represents a self-attention mechanism specific to Longformer models.
-    This class extends the nn.Cell class and provides methods for initializing, pruning attention heads,
-    and constructing attention outputs.
+    This class extends the nn.Module class and provides methods for initializing, pruning attention heads,
+    and forwarding attention outputs.
 
     Attributes:
         config: Configuration parameters for the LongformerAttention.
@@ -1411,7 +1412,7 @@ class LongformerAttention(nn.Cell):
         prune_heads:
             Prunes the specified attention heads from the self-attention mechanism.
 
-        construct:
+        forward:
             Constructs the attention outputs based on the given inputs and optional masks.
     """
     def __init__(self, config, layer_id=0):
@@ -1477,7 +1478,7 @@ class LongformerAttention(nn.Cell):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1527,18 +1528,18 @@ class LongformerAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class LongformerIntermediate(nn.Cell):
+class LongformerIntermediate(nn.Module):
 
     """
-    This class represents an intermediate layer of the Longformer model. It inherits from the nn.Cell class.
+    This class represents an intermediate layer of the Longformer model. It inherits from the nn.Module class.
 
     Attributes:
-        dense (nn.Dense): A dense neural network layer that maps the input tensor to the hidden size specified in the configuration.
+        dense (nn.Linear): A dense neural network layer that maps the input tensor to the hidden size specified in the configuration.
         intermediate_act_fn (function): The activation function applied to the intermediate hidden states.
 
     Methods:
         __init__: Initializes the LongformerIntermediate instance.
-        construct: Constructs the intermediate layer of the Longformer model.
+        forward: Constructs the intermediate layer of the Longformer model.
 
     """
     def __init__(self, config):
@@ -1556,15 +1557,15 @@ class LongformerIntermediate(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method 'construct' in the class 'LongformerIntermediate'.
+        Method 'forward' in the class 'LongformerIntermediate'.
 
         Args:
             self: Instance of the class LongformerIntermediate.
@@ -1591,19 +1592,19 @@ class LongformerIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
-class LongformerOutput(nn.Cell):
+class LongformerOutput(nn.Module):
 
     """
     Represents the output of the Longformer model, which includes dense, layer normalization, and dropout operations.
 
-    This class inherits from nn.Cell and is used to define the output layer for the Longformer model.
-    It includes methods to initialize the class and construct the output based on the given input tensors.
+    This class inherits from nn.Module and is used to define the output layer for the Longformer model.
+    It includes methods to initialize the class and forward the output based on the given input tensors.
 
     The __init__ method initializes the LongformerOutput class with the provided configuration.
     It sets up the dense layer, layer normalization, and dropout operations based on the configuration parameters.
 
-    The construct method takes hidden_states and input_tensor as input tensors and performs the dense, dropout,
-    and layer normalization operations to construct the output tensor.
+    The forward method takes hidden_states and input_tensor as input tensors and performs the dense, dropout,
+    and layer normalization operations to forward the output tensor.
 
     """
     def __init__(self, config):
@@ -1626,15 +1627,15 @@ class LongformerOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct method in the LongformerOutput class.
 
-        This method performs the construction process and returns the resulting tensor.
+        This method performs the forwardion process and returns the resulting tensor.
 
         Args:
             self: Instance of the LongformerOutput class.
@@ -1644,8 +1645,8 @@ class LongformerOutput(nn.Cell):
                 It is expected to be of type mindspore.Tensor and contains the input data.
 
         Returns:
-            mindspore.Tensor: The resulting tensor after the construction process.
-                It is of type mindspore.Tensor and represents the output of the construction process.
+            mindspore.Tensor: The resulting tensor after the forwardion process.
+                It is of type mindspore.Tensor and represents the output of the forwardion process.
 
         Raises:
             None
@@ -1656,13 +1657,13 @@ class LongformerOutput(nn.Cell):
         return hidden_states
 
 
-class LongformerLayer(nn.Cell):
+class LongformerLayer(nn.Module):
 
     """A class representing a Longformer layer.
 
-    This class inherits from the nn.Cell class and implements a single layer of the Longformer model.
+    This class inherits from the nn.Module class and implements a single layer of the Longformer model.
     The Longformer layer consists of three main components: attention, intermediate, and output. It also
-    provides methods for constructing the layer and performing feed-forward chunking.
+    provides methods for forwarding the layer and performing feed-forward chunking.
 
     Attributes:
         attention (LongformerAttention): The attention module of the layer.
@@ -1673,7 +1674,7 @@ class LongformerLayer(nn.Cell):
 
     Methods:
         __init__: Initializes a new instance of LongformerLayer.
-        construct: Constructs the LongformerLayer
+        forward: Constructs the LongformerLayer
             given the input hidden states and optional masks.
         ff_chunk: Performs feed-forward chunking on the given attention output.
 
@@ -1700,7 +1701,7 @@ class LongformerLayer(nn.Cell):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1711,7 +1712,7 @@ class LongformerLayer(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the Longformer layer.
+        This method forwards the Longformer layer.
 
         Args:
             self (object): The LongformerLayer instance.
@@ -1778,19 +1779,19 @@ class LongformerLayer(nn.Cell):
         return layer_output
 
 
-class LongformerEncoder(nn.Cell):
+class LongformerEncoder(nn.Module):
 
     """
     The `LongformerEncoder` class represents an encoder component of the Longformer model.
     It is used to process input sequences using a stack of Longformer layers.
 
-    This class inherits from `nn.Cell` and initializes with a configuration object `config`.
+    This class inherits from `nn.Module` and initializes with a configuration object `config`.
     The `config` parameter specifies the configuration settings for the LongformerEncoder.
 
     The LongformerEncoder consists of a series of Longformer layers. The number of layers is determined by the
     `config.num_hidden_layers` parameter. Each layer is represented by an instance of the `LongformerLayer` class.
 
-    The `construct` method is responsible for processing the input sequence through the Longformer layers.
+    The `forward` method is responsible for processing the input sequence through the Longformer layers.
     It takes the following parameters:
 
     - `hidden_states`: The input hidden states of the sequence.
@@ -1804,7 +1805,7 @@ class LongformerEncoder(nn.Cell):
     - `output_hidden_states`: A boolean flag indicating whether to output hidden states of each layer.
     - `return_dict`: A boolean flag indicating whether to return the output as a LongformerBaseModelOutput dictionary.
 
-    The `construct` method processes the input sequence through each layer of the LongformerEncoder.
+    The `forward` method processes the input sequence through each layer of the LongformerEncoder.
     It keeps track of the hidden states and attention tensors if the corresponding flags are set.
     If a head mask is provided, it is applied to the respective layer. At the end, the method returns a
     LongformerBaseModelOutput containing the last hidden state, hidden states of all layers, attention tensors,
@@ -1820,7 +1821,7 @@ class LongformerEncoder(nn.Cell):
         >>> config = LongformerConfig(num_hidden_layers=12)
         >>> encoder = LongformerEncoder(config)
         >>> input_hidden_states = ...
-        >>> output = encoder.construct(input_hidden_states)
+        >>> output = encoder.forward(input_hidden_states)
         ```
     """
     def __init__(self, config):
@@ -1845,9 +1846,9 @@ class LongformerEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([LongformerLayer(config, layer_id=i) for i in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([LongformerLayer(config, layer_id=i) for i in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1858,7 +1859,7 @@ class LongformerEncoder(nn.Cell):
         return_dict=True,
     ):
         """
-        This method constructs the LongformerEncoder by processing the provided input parameters.
+        This method forwards the LongformerEncoder by processing the provided input parameters.
 
         Args:
             self: The instance of the LongformerEncoder class.
@@ -1944,21 +1945,21 @@ class LongformerEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class LongformerPooler(nn.Cell):
+class LongformerPooler(nn.Module):
 
     """
     This class represents a LongformerPooler, which is a neural network module for pooling hidden states of a Longformer model.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer used for transforming the input hidden states.
+        dense (nn.Linear): A fully connected layer used for transforming the input hidden states.
         activation (nn.Tanh): An activation function applied after the transformation.
 
     Methods:
         __init__:
             Initializes a new instance of the LongformerPooler class.
 
-        construct:
+        forward:
             Constructs the pooled output tensor based on the given hidden states.
 
     """
@@ -1977,10 +1978,10 @@ class LongformerPooler(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a pooled output tensor from the given hidden states.
 
@@ -2016,7 +2017,7 @@ class LongformerPooler(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead with Roberta->Longformer
-class LongformerLMHead(nn.Cell):
+class LongformerLMHead(nn.Module):
     """Longformer Head for masked language modeling."""
     def __init__(self, config):
         """
@@ -2042,14 +2043,14 @@ class LongformerLMHead(nn.Cell):
                 in the 'config' parameter have invalid values.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
         self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
         self.decoder.bias = self.bias
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         """
         Construct method in the LongformerLMHead class.
 
@@ -2100,7 +2101,7 @@ class LongformerPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -2299,7 +2300,7 @@ class LongformerModel(LongformerPreTrainedModel):
             attention_mask = global_attention_mask + 1
         return attention_mask
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2423,7 +2424,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
     """
     This class represents a Longformer model for masked language modeling tasks. It inherits from the
     LongformerPreTrainedModel class and includes methods for initializing the model, getting and setting output
-    embeddings, and constructing the model for masked language modeling tasks. The construct method accepts various
+    embeddings, and forwarding the model for masked language modeling tasks. The forward method accepts various
     input tensors and optional keyword arguments, and returns the LongformerMaskedLMOutput. The method also includes
     an illustrative example of using the model for mask filling. The class provides detailed explanations for various
     parameters and return values, and includes usage examples for initializing the tokenizer and model, as well as
@@ -2485,7 +2486,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2578,8 +2579,8 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
     LongformerPreTrainedModel class by adding specific methods for sequence classification.
 
     The class includes an initialization method (__init__) that sets up the model with the provided configuration.
-    It also provides a construct method for processing input data and generating classification outputs.
-    The construct method supports various parameters for fine-tuning the model and computing classification losses.
+    It also provides a forward method for processing input data and generating classification outputs.
+    The forward method supports various parameters for fine-tuning the model and computing classification losses.
 
     When using this class, users can pass input data such as input_ids, attention_mask, global_attention_mask, and
     other optional tensors to perform sequence classification. The class handles different types of classification
@@ -2619,7 +2620,7 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2696,7 +2697,7 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
         )
 
 
-class LongformerClassificationHead(nn.Cell):
+class LongformerClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(self, config):
         """
@@ -2718,11 +2719,11 @@ class LongformerClassificationHead(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, hidden_states, **kwargs):
+    def forward(self, hidden_states, **kwargs):
         """Constructs the Longformer classification head.
 
         Args:
@@ -2751,11 +2752,11 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
     This class represents a Longformer model for question answering tasks.
     It inherits from the LongformerPreTrainedModel class.
 
-    The LongformerForQuestionAnswering class contains methods for constructing and running the model.
-    The constructor initializes the model with the given configuration. The model architecture consists of a
+    The LongformerForQuestionAnswering class contains methods for forwarding and running the model.
+    The forwardor initializes the model with the given configuration. The model architecture consists of a
     LongformerModel and a linear layer for question answering.
 
-    The construct method is used to perform question answering on the input data. It takes several input tensors
+    The forward method is used to perform question answering on the input data. It takes several input tensors
     including input_ids, attention_mask, global_attention_mask, head_mask, token_type_ids, position_ids,
     and inputs_embeds. It also takes start_positions and end_positions as optional labels for the start and end
     positions of the answer span. The method returns a tuple of outputs including start_logits and end_logits which
@@ -2796,12 +2797,12 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.longformer = LongformerModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2927,11 +2928,11 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
     LongformerPreTrainedModel and includes methods for model initialization and forward pass to generate token
     classification outputs.
 
-    The class's constructor initializes the LongformerForTokenClassification model with the provided configuration.
+    The class's forwardor initializes the LongformerForTokenClassification model with the provided configuration.
     It sets up the necessary components such as the LongformerModel, dropout layer, and classifier for token
     classification.
 
-    The 'construct' method takes input tensors such as input_ids, attention_mask, token_type_ids, etc.,
+    The 'forward' method takes input tensors such as input_ids, attention_mask, token_type_ids, etc.,
     and returns token classification outputs. It utilizes the Longformer model to generate sequence outputs,
     applies dropout, and passes the output through a classifier to obtain logits. If labels are provided,
     it computes the cross-entropy loss. The method returns a Tuple containing loss and token classification
@@ -2965,12 +2966,12 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
 
         self.longformer = LongformerModel(config, add_pooling_layer=False)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3031,7 +3032,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
     """
     This class represents a Longformer model for multiple choice tasks. It is a subclass of LongformerPreTrainedModel.
 
-    The LongformerForMultipleChoice class includes methods to initialize the model, construct the model,
+    The LongformerForMultipleChoice class includes methods to initialize the model, forward the model,
     and compute the multiple choice classification loss. It also provides a method to retrieve the model output.
 
     Attributes:
@@ -3041,7 +3042,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
 
     Methods:
         __init__: Initializes the LongformerForMultipleChoice model with the given configuration.
-        construct: Constructs the LongformerForMultipleChoice model with the given inputs and returns the model output.
+        forward: Constructs the LongformerForMultipleChoice model with the given inputs and returns the model output.
     """
     def __init__(self, config):
         """
@@ -3063,12 +3064,12 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
 
         self.longformer = LongformerModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,

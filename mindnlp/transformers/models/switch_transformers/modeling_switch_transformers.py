@@ -20,10 +20,10 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.modules.functional import finfo
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -109,7 +109,7 @@ def load_balancing_loss_func(router_probs: mindspore.Tensor, expert_indices: min
     return ops.mean(tokens_per_group_and_expert * router_prob_per_group_and_expert) * (num_experts**2)
 
 
-class SwitchTransformersTop1Router(nn.Cell):
+class SwitchTransformersTop1Router(nn.Module):
     """
     Router using tokens choose top-1 experts assignment.
 
@@ -124,7 +124,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         super().__init__()
         self.num_experts = config.num_experts
         self.expert_capacity = config.expert_capacity
-        self.classifier = nn.Dense(config.hidden_size, self.num_experts, has_bias=config.router_bias)
+        self.classifier = nn.Linear(config.hidden_size, self.num_experts, has_bias=config.router_bias)
         self.jitter_noise = config.router_jitter_noise
         self.ignore_padding_tokens = config.router_ignore_padding_tokens
         self.dtype = getattr(mindspore, config.router_dtype)
@@ -175,7 +175,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         if not (hasattr(self.classifier, "SCB") or hasattr(self.classifier, "CB")):
             self.classifier = self.classifier.to_float(self.dtype)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> Tuple:
+    def forward(self, hidden_states: mindspore.Tensor) -> Tuple:
         r"""
         Generic forward function for every Router class. Each Router expects to have the same input hidden states
         (`hidden_states`) corresponding to the hidden states for each token, the `expert_capacity` corresponding to the
@@ -209,7 +209,7 @@ class SwitchTransformersTop1Router(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerNorm with T5->SwitchTransformers
-class SwitchTransformersLayerNorm(nn.Cell):
+class SwitchTransformersLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Construct a layernorm module in the SwitchTransformers style. No bias and no subtraction of mean.
@@ -218,7 +218,7 @@ class SwitchTransformersLayerNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size), 'weight')
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # SwitchTransformers uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
         # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
         # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
@@ -238,15 +238,15 @@ ALL_LAYERNORM_LAYERS.append(SwitchTransformersLayerNorm)
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseActDense with T5->SwitchTransformers
-class SwitchTransformersDenseActDense(nn.Cell):
+class SwitchTransformersDenseActDense(nn.Module):
     def __init__(self, config: SwitchTransformersConfig):
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -260,22 +260,22 @@ class SwitchTransformersDenseActDense(nn.Cell):
         return hidden_states
 
 
-class SwitchTransformersSparseMLP(nn.Cell):
+class SwitchTransformersSparseMLP(nn.Module):
     r"""
     Implementation of the Switch Transformers Sparse MLP module.
     """
 
-    def __init__(self, config: SwitchTransformersConfig, expert_class: nn.Cell = SwitchTransformersDenseActDense):
+    def __init__(self, config: SwitchTransformersConfig, expert_class: nn.Module = SwitchTransformersDenseActDense):
         super().__init__()
         # Step 1: Get the correct router according to its class
         self.router = SwitchTransformersTop1Router(config)
 
         # Step 2: Get the experts
-        self.experts = nn.CellDict()
+        self.experts = nn.ModuleDict()
         for idx in range(config.num_experts):
             self.experts[f"expert_{idx}"] = expert_class(config)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         r"""
         Hold on, this will be slightly tricky to understand In the correct order, a MoE layer does the following:
 
@@ -302,7 +302,7 @@ class SwitchTransformersSparseMLP(nn.Cell):
         return hidden_states, (router_logits, expert_index)
 
 
-class SwitchTransformersLayerFF(nn.Cell):
+class SwitchTransformersLayerFF(nn.Module):
     r"""
     Switch Transformers Feed Forward layer module. This is a wrapper around the Mixture of Experts module.
 
@@ -327,7 +327,7 @@ class SwitchTransformersLayerFF(nn.Cell):
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(self, hidden_states, output_router_logits):
+    def forward(self, hidden_states, output_router_logits):
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.mlp(forwarded_states)
 
@@ -345,7 +345,7 @@ class SwitchTransformersLayerFF(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5Attention with T5->SwitchTransformers
-class SwitchTransformersAttention(nn.Cell):
+class SwitchTransformersAttention(nn.Module):
     def __init__(self, config: SwitchTransformersConfig, has_relative_attention_bias=False):
         super().__init__()
         self.is_decoder = config.is_decoder
@@ -359,10 +359,10 @@ class SwitchTransformersAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -448,7 +448,7 @@ class SwitchTransformersAttention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -579,7 +579,7 @@ class SwitchTransformersAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerSelfAttention with T5->SwitchTransformers
-class SwitchTransformersLayerSelfAttention(nn.Cell):
+class SwitchTransformersLayerSelfAttention(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
         super().__init__()
         self.SelfAttention = SwitchTransformersAttention(
@@ -588,7 +588,7 @@ class SwitchTransformersLayerSelfAttention(nn.Cell):
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -614,14 +614,14 @@ class SwitchTransformersLayerSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerCrossAttention with T5->SwitchTransformers
-class SwitchTransformersLayerCrossAttention(nn.Cell):
+class SwitchTransformersLayerCrossAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.EncDecAttention = SwitchTransformersAttention(config, has_relative_attention_bias=False)
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -650,12 +650,12 @@ class SwitchTransformersLayerCrossAttention(nn.Cell):
         return outputs
 
 
-class SwitchTransformersBlock(nn.Cell):
+class SwitchTransformersBlock(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False, is_sparse=False):
         super().__init__()
         self.is_decoder = config.is_decoder
         self.is_sparse = is_sparse
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(
             SwitchTransformersLayerSelfAttention(config, has_relative_attention_bias=has_relative_attention_bias)
         )
@@ -664,7 +664,7 @@ class SwitchTransformersBlock(nn.Cell):
 
         self.layer.append(SwitchTransformersLayerFF(config, is_sparse=self.is_sparse))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -908,7 +908,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
 
         sparse_step = config.decoder_sparse_step if self.is_decoder else config.encoder_sparse_step
         config.num_layers = config.num_decoder_layers if self.is_decoder else config.num_layers
-        self.block = nn.CellList()
+        self.block = nn.ModuleList()
         for i in range(config.num_layers):
             is_sparse = (i % sparse_step == 1 or sparse_step == 1) if sparse_step > 0 else False
 
@@ -931,7 +931,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1185,7 +1185,7 @@ class SwitchTransformersModel(SwitchTransformersPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1325,7 +1325,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = SwitchTransformersStack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
 
         self.router_z_loss_coef = config.router_z_loss_coef
         self.router_aux_loss_coef = config.router_aux_loss_coef
@@ -1361,7 +1361,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1661,7 +1661,7 @@ class SwitchTransformersEncoderModel(SwitchTransformersPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

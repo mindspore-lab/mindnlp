@@ -20,7 +20,8 @@ from typing import Union, Optional, Tuple
 from functools import partial
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
@@ -31,7 +32,7 @@ from ...activations import ACT2FN
 
 logger = logging.get_logger(__name__)
 
-class GPTNeoSelfAttention(nn.Cell):
+class GPTNeoSelfAttention(nn.Module):
     """
     GPTNeo SelfAttention.
     """
@@ -82,10 +83,10 @@ class GPTNeoSelfAttention(nn.Cell):
                 f" {self.num_heads})."
             )
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
 
     def _split_heads(self, tensor, num_heads, attn_head_size):
         """
@@ -162,7 +163,7 @@ class GPTNeoSelfAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -172,7 +173,7 @@ class GPTNeoSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the self-attention mechanism for the GPTNeo model.
+        This method forwards the self-attention mechanism for the GPTNeo model.
         
         Args:
             self: The GPTNeoSelfAttention instance.
@@ -225,7 +226,7 @@ class GPTNeoSelfAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class GPTNeoAttention(nn.Cell):
+class GPTNeoAttention(nn.Module):
     """
     GPTNEO Attention.
     """
@@ -258,7 +259,7 @@ class GPTNeoAttention(nn.Cell):
                 f"{config.attention_layers}. Select attn layer types from ['global', 'local'] only."
             )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         layer_past=None,
@@ -301,7 +302,7 @@ class GPTNeoAttention(nn.Cell):
         )
 
 
-class GPTNeoMLP(nn.Cell):
+class GPTNeoMLP(nn.Module):
     """
     GPTNeo MLP.
     """
@@ -323,12 +324,12 @@ class GPTNeoMLP(nn.Cell):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Dense(embed_dim, intermediate_size)
-        self.c_proj = nn.Dense(intermediate_size, embed_dim)
+        self.c_fc = nn.Linear(embed_dim, intermediate_size)
+        self.c_proj = nn.Linear(intermediate_size, embed_dim)
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=float(config.resid_dropout))
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the multi-layer perceptron (MLP) component of the GPT-Neo model.
 
@@ -349,7 +350,7 @@ class GPTNeoMLP(nn.Cell):
         return hidden_states
 
 
-class GPTNeoBlock(nn.Cell):
+class GPTNeoBlock(nn.Module):
     """
     GPTNeo Block.
     """
@@ -378,7 +379,7 @@ class GPTNeoBlock(nn.Cell):
             (hidden_size,), epsilon=config.layer_norm_epsilon)
         self.mlp = GPTNeoMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         layer_past=None,
@@ -388,7 +389,7 @@ class GPTNeoBlock(nn.Cell):
         output_attentions=False,
     ):
         """
-        Method 'construct' in the class 'GPTNeoBlock' constructs the output of a GPTNeo block.
+        Method 'forward' in the class 'GPTNeoBlock' forwards the output of a GPTNeo block.
 
         Args:
             self (class object): The instance of the class.
@@ -451,7 +452,7 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         """
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             cell.weight.set_data(initializer(Normal(
                 sigma=self.config.initializer_range, mean=0.0)), cell.weight.shape, cell.weight.dtype)
             if cell.bias is not None:
@@ -478,11 +479,11 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         self.init_weights()
         self._backward_compatibility_gradient_checkpointing()
 
-    def get_input_embeddings(self) -> "nn.Cell":
+    def get_input_embeddings(self) -> "nn.Module":
         """
         Returns the model's input embeddings.
         """
-    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Module"):
         """
         Set model's input embeddings.
         """
@@ -573,7 +574,7 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
         self.drop = nn.Dropout(p=float(config.embed_dropout))
-        self.h = nn.CellList([GPTNeoBlock(config, layer_id=i)
+        self.h = nn.ModuleList([GPTNeoBlock(config, layer_id=i)
                               for i in range(config.num_layers)])
         self.ln_f = nn.LayerNorm(
             (self.embed_dim,), epsilon=config.layer_norm_epsilon)
@@ -594,7 +595,7 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         past_key_values: Optional[Tuple[Tensor]] = None,
@@ -796,7 +797,7 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPTNeoModel(config)
-        self.lm_head = nn.Dense(
+        self.lm_head = nn.Linear(
             config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
@@ -844,7 +845,7 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         past_key_values: Optional[Tuple[Tensor]] = None,
@@ -942,13 +943,13 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTNeoModel(config)
-        self.score = nn.Dense(config.hidden_size,
+        self.score = nn.Linear(config.hidden_size,
                               self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         past_key_values: Optional[Tuple[Tensor]] = None,

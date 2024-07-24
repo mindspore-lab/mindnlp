@@ -16,7 +16,8 @@
 """crf module"""
 
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
 from mindnlp._legacy.functional import full, arange, where
@@ -29,7 +30,7 @@ def sequence_mask(seq_length, max_length, batch_first=False):
         return result
     return result.swapaxes(0, 1)
 
-class CRF(nn.Cell):
+class CRF(nn.Module):
     """Conditional random field.
 
     This module implements a conditional random field [LMP01]_. The forward computation
@@ -108,14 +109,14 @@ class CRF(nn.Cell):
         """
         return f'{self.__class__.__name__}(num_tags={self.num_tags})'
 
-    def construct(self, emissions, tags=None, seq_length=None):
+    def forward(self, emissions, tags=None, seq_length=None):
         if tags is None:
             return self._decode(emissions, seq_length)
-        return self._construct(emissions, tags, seq_length)
+        return self._forward(emissions, tags, seq_length)
 
-    def _construct(self, emissions, tags=None, seq_length=None):
+    def _forward(self, emissions, tags=None, seq_length=None):
         r"""
-        This method '_construct' in the class 'CRF' is responsible for constructing the conditional random field (CRF) based on the provided emissions, tags, and sequence length.
+        This method '_forward' in the class 'CRF' is responsible for forwarding the conditional random field (CRF) based on the provided emissions, tags, and sequence length.
         
         Args:
             self (object): The instance of the CRF class.
@@ -126,7 +127,7 @@ max_length).
 based on the maximum length of sequences in the batch.
         
         Returns:
-            None: This method does not return any value directly. However, it performs computations to construct the CRF.
+            None: This method does not return any value directly. However, it performs computations to forward the CRF.
         
         Raises:
             ValueError: If the dimensions of emissions and tags are not compatible for the operations.

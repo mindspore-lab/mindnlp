@@ -19,7 +19,7 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging
@@ -43,7 +43,7 @@ _CHECKPOINT_FOR_DOC = "squeezebert/squeezebert-uncased"
 _CONFIG_FOR_DOC = "SqueezeBertConfig"
 
 
-class SqueezeBertEmbeddings(nn.Cell):
+class SqueezeBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -70,7 +70,7 @@ class SqueezeBertEmbeddings(nn.Cell):
             (1, -1)
         )
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None
     ):
         if input_ids is not None:
@@ -97,7 +97,7 @@ class SqueezeBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class MatMulWrapper(nn.Cell):
+class MatMulWrapper(nn.Module):
     """
     Wrapper for ops.matmul(). This makes flop-counting easier to implement. Note that if you directly call
     ops.matmul() in your code, the flop counter will typically ignore the flops of the matmul.
@@ -106,7 +106,7 @@ class MatMulWrapper(nn.Cell):
     def __init__(self):
         super().__init__()
 
-    def construct(self, mat1, mat2):
+    def forward(self, mat1, mat2):
         """
         Here are the typical dimensions found in BERT (the B is optional) mat1.shape: [B, <optional extra dims>, M, K]
         mat2.shape: [B, <optional extra dims>, K, N] output shape: [B, <optional extra dims>, M, N]
@@ -134,13 +134,13 @@ class SqueezeBertLayerNorm(nn.LayerNorm):
             normalized_shape=hidden_size,
             epsilon=epsilon,
         )  # instantiates self.{weight, bias, eps}
-    def construct(self, x):
+    def forward(self, x):
         x = x.permute(0, 2, 1)
-        x = nn.LayerNorm.construct(self, x)
+        x = nn.LayerNorm.forward(self, x)
         return x.permute(0, 2, 1)
 
 
-class ConvDropoutLayerNorm(nn.Cell):
+class ConvDropoutLayerNorm(nn.Module):
     """
     ConvDropoutLayerNorm: Conv, Dropout, LayerNorm
     """
@@ -154,7 +154,7 @@ class ConvDropoutLayerNorm(nn.Cell):
         self.layernorm = SqueezeBertLayerNorm(cout)
         self.dropout = nn.Dropout(p=dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         x = self.conv1d(hidden_states)
         x = self.dropout(x)
         x = x + input_tensor
@@ -162,7 +162,7 @@ class ConvDropoutLayerNorm(nn.Cell):
         return x
 
 
-class ConvActivation(nn.Cell):
+class ConvActivation(nn.Module):
     """
     ConvActivation: Conv, Activation
     """
@@ -174,12 +174,12 @@ class ConvActivation(nn.Cell):
         )
         self.act = ACT2FN[act]
 
-    def construct(self, x):
+    def forward(self, x):
         output = self.conv1d(x)
         return self.act(output)
 
 
-class SqueezeBertSelfAttention(nn.Cell):
+class SqueezeBertSelfAttention(nn.Module):
 
     def __init__(self, config, cin, q_groups=1, k_groups=1, v_groups=1):
         """
@@ -253,7 +253,7 @@ class SqueezeBertSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x
 
-    def construct(self, hidden_states, attention_mask, output_attentions):
+    def forward(self, hidden_states, attention_mask, output_attentions):
         """
         expects hidden_states in [N, C, W] data layout.
 
@@ -270,7 +270,7 @@ class SqueezeBertSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_score = self.matmul_qk(query_layer, key_layer)
         attention_score = attention_score / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in BertModel construct() function)
+        # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         attention_score = attention_score + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -289,7 +289,7 @@ class SqueezeBertSelfAttention(nn.Cell):
         return result
 
 
-class SqueezeBertModule(nn.Cell):
+class SqueezeBertModule(nn.Module):
     def __init__(self, config):
         """
         Args:
@@ -332,7 +332,7 @@ class SqueezeBertModule(nn.Cell):
             dropout_prob=config.hidden_dropout_prob,
         )
 
-    def construct(self, hidden_states, attention_mask, output_attentions):
+    def forward(self, hidden_states, attention_mask, output_attentions):
         att = self.attention(hidden_states, attention_mask, output_attentions)
         attention_output = att["context_layer"]
 
@@ -347,7 +347,7 @@ class SqueezeBertModule(nn.Cell):
         return output_dict
 
 
-class SqueezeBertEncoder(nn.Cell):
+class SqueezeBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -357,11 +357,11 @@ class SqueezeBertEncoder(nn.Cell):
             "before the first SqueezeBertModule."
         )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [SqueezeBertModule(config) for _ in range(config.num_hidden_layers)]
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -392,7 +392,7 @@ class SqueezeBertEncoder(nn.Cell):
                 all_hidden_states += (hidden_states,)
                 hidden_states = hidden_states.permute(0, 2, 1)
 
-            layer_output = layer.construct(
+            layer_output = layer.forward(
                 hidden_states, attention_mask, output_attentions
             )
 
@@ -420,13 +420,13 @@ class SqueezeBertEncoder(nn.Cell):
         )
 
 
-class SqueezeBertPooler(nn.Cell):
+class SqueezeBertPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -435,10 +435,10 @@ class SqueezeBertPooler(nn.Cell):
         return pooled_output
 
 
-class SqueezeBertPredictionHeadTransform(nn.Cell):
+class SqueezeBertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -447,21 +447,21 @@ class SqueezeBertPredictionHeadTransform(nn.Cell):
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class SqueezeBertLMPredictionHead(nn.Cell):
+class SqueezeBertLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = SqueezeBertPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -471,23 +471,23 @@ class SqueezeBertLMPredictionHead(nn.Cell):
     def _tie_weights(self) -> None:
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
-class SqueezeBertOnlyMLMHead(nn.Cell):
+class SqueezeBertOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = SqueezeBertLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
-class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Cell):
+class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Module):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -498,7 +498,7 @@ class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Cell):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -552,7 +552,7 @@ class SqueezeBertModel(SqueezeBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -655,7 +655,7 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -723,12 +723,12 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -813,12 +813,12 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -911,12 +911,12 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -978,12 +978,12 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.transformer = SqueezeBertModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

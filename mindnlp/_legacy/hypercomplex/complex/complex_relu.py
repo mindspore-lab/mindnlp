@@ -19,7 +19,7 @@ from mindspore.ops import operations as P
 from ..utils import get_x_and_y as get_real_and_imag, to_2channel as to_complex
 
 
-class ReLU(nn.Cell):
+class ReLU(nn.Module):
     r"""
     Rectified Linear Unit activation function for complex-valued input.
 
@@ -50,7 +50,7 @@ class ReLU(nn.Cell):
         super().__init__()
         self.relu = P.ReLU()
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Construct a tensor using the ReLU activation function.
         

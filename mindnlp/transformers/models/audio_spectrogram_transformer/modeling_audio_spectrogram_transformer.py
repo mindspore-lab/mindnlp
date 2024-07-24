@@ -137,8 +137,8 @@ class ASTEmbeddings(nn.Module):
         batch_size = input_values.shape[0]
         embeddings = self.patch_embeddings(input_values)
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        distillation_tokens = self.distillation_token.expand(batch_size, -1, -1)
+        cls_tokens = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+        distillation_tokens = ops.broadcast_to(self.distillation_token, (batch_size, -1, -1))
         embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), dim=1)
         embeddings = embeddings + self.position_embeddings
         embeddings = self.dropout(embeddings)

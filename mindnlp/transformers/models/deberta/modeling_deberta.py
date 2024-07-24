@@ -20,11 +20,12 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -64,22 +65,22 @@ DEBERTA_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class ContextPooler(nn.Cell):
+class ContextPooler(nn.Module):
 
     """
     Represents a ContextPooler module used for pooling contextual embeddings in a neural network architecture.
     
-    This class inherits from nn.Cell and provides methods for initializing the pooler, constructing the pooled output based on hidden states,
+    This class inherits from nn.Module and provides methods for initializing the pooler, forwarding the pooled output based on hidden states,
     and retrieving the output dimension. The pooler consists of a dense layer and dropout mechanism for processing hidden states.
     
     Attributes:
-        dense (nn.Dense): A dense layer for transforming input hidden states to pooler hidden size.
+        dense (nn.Linear): A dense layer for transforming input hidden states to pooler hidden size.
         dropout (StableDropout): A dropout layer for stable dropout operations.
         config: Configuration object containing pooler settings.
     
     Methods:
         __init__(config): Initializes the ContextPooler with the given configuration.
-        construct(hidden_states): Constructs the pooled output by processing hidden states.
+        forward(hidden_states): Constructs the pooled output by processing hidden states.
         output_dim: Property that returns the output dimension based on the hidden size in the configuration.
     """
     def __init__(self, config):
@@ -102,11 +103,11 @@ class ContextPooler(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.pooler_hidden_size, config.pooler_hidden_size)
+        self.dense = nn.Linear(config.pooler_hidden_size, config.pooler_hidden_size)
         self.dropout = StableDropout(config.pooler_dropout)
         self.config = config
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Args:
             self (ContextPooler): The instance of the ContextPooler class.
@@ -149,7 +150,7 @@ class ContextPooler(nn.Cell):
         return self.config.hidden_size
 
 
-class XSoftmax(nn.Cell):
+class XSoftmax(nn.Module):
     """
     Masked Softmax which is optimized for saving memory
 
@@ -196,7 +197,7 @@ class XSoftmax(nn.Cell):
         super().__init__()
         self.dim = dim
 
-    def construct(self, input, mask):
+    def forward(self, input, mask):
         """
         Constructs a softmax operation with masking for a given input tensor.
 
@@ -319,7 +320,7 @@ def get_mask(input, local_context):
     return mask, dropout
 
 
-class XDropout(nn.Cell):
+class XDropout(nn.Module):
     """Optimized dropout function to save computation and memory by using mask operation instead of multiplication."""
     def __init__(self, local_ctx):
         """
@@ -340,7 +341,7 @@ class XDropout(nn.Cell):
         self.scale = 0
         self.mask = None
 
-    def construct(self, inputs):
+    def forward(self, inputs):
         """
         Constructs a masked and scaled version of the input tensor using the XDropout method.
 
@@ -368,7 +369,7 @@ class XDropout(nn.Cell):
     #         return grad_output
 
 
-class StableDropout(nn.Cell):
+class StableDropout(nn.Module):
     """
     Optimized dropout module for stabilizing the training
 
@@ -397,7 +398,7 @@ class StableDropout(nn.Cell):
         self.count = 0
         self.context_stack = None
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Call the module
 
@@ -468,7 +469,7 @@ class StableDropout(nn.Cell):
         return self.drop_prob
 
 
-class DebertaLayerNorm(nn.Cell):
+class DebertaLayerNorm(nn.Module):
     """LayerNorm module in the TF style (epsilon inside the square root)."""
     def __init__(self, size, eps=1e-12):
         """
@@ -492,9 +493,9 @@ class DebertaLayerNorm(nn.Cell):
         self.bias = Parameter(ops.zeros(size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs layer normalization for hidden states in a Deberta model.
+        This method forwards layer normalization for hidden states in a Deberta model.
 
         Args:
             self (DebertaLayerNorm): The instance of the DebertaLayerNorm class.
@@ -518,24 +519,24 @@ class DebertaLayerNorm(nn.Cell):
         return y
 
 
-class DebertaSelfOutput(nn.Cell):
+class DebertaSelfOutput(nn.Module):
 
     """
     Represents the output layer for the DeBERTa model, responsible for transforming hidden states and applying normalization and dropout.
 
-    This class inherits from nn.Cell and contains methods to initialize the output layer components,
+    This class inherits from nn.Module and contains methods to initialize the output layer components,
     including dense transformation, layer normalization, and dropout.
-    The 'construct' method takes hidden states and input tensor, applies transformations,
+    The 'forward' method takes hidden states and input tensor, applies transformations,
     and returns the final hidden states after normalization and dropout.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer for transforming hidden states.
+        dense (nn.Linear): A fully connected layer for transforming hidden states.
         LayerNorm (DebertaLayerNorm): Layer normalization applied to the hidden states.
         dropout (StableDropout): Dropout regularization to prevent overfitting.
 
     Methods:
         __init__(self, config): Initializes the output layer components with the given configuration.
-        construct(self, hidden_states, input_tensor):
+        forward(self, hidden_states, input_tensor):
             Applies transformations to hidden states and input tensor to produce final hidden states.
 
     """
@@ -554,15 +555,15 @@ class DebertaSelfOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = DebertaLayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        Method 'construct' in the class 'DebertaSelfOutput'.
+        Method 'forward' in the class 'DebertaSelfOutput'.
 
-        This method constructs the hidden states by applying a series of operations on the input hidden states and the input tensor.
+        This method forwards the hidden states by applying a series of operations on the input hidden states and the input tensor.
 
         Args:
             self:
@@ -595,11 +596,11 @@ class DebertaSelfOutput(nn.Cell):
         return hidden_states
 
 
-class DebertaAttention(nn.Cell):
+class DebertaAttention(nn.Module):
 
     """
     This class represents the DebertaAttention module, which is a component of the DeBERTa model.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to focus on
     different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a
@@ -616,7 +617,7 @@ class DebertaAttention(nn.Cell):
 
             - config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
 
-        construct(self, hidden_states, attention_mask, output_attentions=False, query_states=None, relative_pos=None, rel_embeddings=None):
+        forward(self, hidden_states, attention_mask, output_attentions=False, query_states=None, relative_pos=None, rel_embeddings=None):
             Applies the DebertaAttention mechanism on the input hidden states.
 
             Args:
@@ -659,7 +660,7 @@ class DebertaAttention(nn.Cell):
         self.output = DebertaSelfOutput(config)
         self.config = config
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -709,22 +710,22 @@ class DebertaAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->Deberta
-class DebertaIntermediate(nn.Cell):
+class DebertaIntermediate(nn.Module):
 
     """
     DebertaIntermediate represents an intermediate layer in the DeBERTa neural network architecture for natural
     language processing tasks.
-    This class inherits from nn.Cell and contains methods for initializing the layer and performing computations
+    This class inherits from nn.Module and contains methods for initializing the layer and performing computations
     on hidden states.
     The layer consists of a dense transformation followed by an activation function specified in the configuration.
 
     Attributes:
-        dense (nn.Dense): A dense layer with hidden size and intermediate size specified in the configuration.
+        dense (nn.Linear): A dense layer with hidden size and intermediate size specified in the configuration.
         intermediate_act_fn (function): The activation function applied to the hidden states.
 
     Methods:
         __init__: Initializes the DebertaIntermediate layer with the provided configuration.
-        construct: Applies the dense transformation and activation function to the input hidden states.
+        forward: Applies the dense transformation and activation function to the input hidden states.
 
     """
     def __init__(self, config):
@@ -751,17 +752,17 @@ class DebertaIntermediate(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the intermediate layer of the Deberta model.
         This method takes in the hidden states tensor and applies a series of transformations to it in order to
-        construct the intermediate layer of the Deberta model. The hidden states tensor is first passed through a dense
+        forward the intermediate layer of the Deberta model. The hidden states tensor is first passed through a dense
         layer, followed by an activation function specified by 'intermediate_act_fn'.
         The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
 
@@ -783,7 +784,7 @@ class DebertaIntermediate(nn.Cell):
             ```python
             >>> intermediate_layer = DebertaIntermediate()
             >>> hidden_states = mindspore.Tensor([0.1, 0.2, 0.3])
-            >>> output = intermediate_layer.construct(hidden_states)
+            >>> output = intermediate_layer.forward(hidden_states)
             ```
         """
         hidden_states = self.dense(hidden_states)
@@ -791,14 +792,14 @@ class DebertaIntermediate(nn.Cell):
         return hidden_states
 
 
-class DebertaOutput(nn.Cell):
+class DebertaOutput(nn.Module):
 
     """
     This class represents the output layer of the Deberta model.
-    It inherits from the nn.Cell class and is responsible for applying the final transformations to the hidden states.
+    It inherits from the nn.Module class and is responsible for applying the final transformations to the hidden states.
 
     Attributes:
-        dense (nn.Dense): A dense layer that transforms the hidden states to an intermediate size.
+        dense (nn.Linear): A dense layer that transforms the hidden states to an intermediate size.
         LayerNorm (DebertaLayerNorm): A layer normalization module that normalizes the hidden states.
         dropout (StableDropout): A dropout layer that applies dropout to the hidden states.
         config: The configuration object for the Deberta model.
@@ -811,7 +812,7 @@ class DebertaOutput(nn.Cell):
 
             - config: The configuration object for the Deberta model.
 
-        construct(self, hidden_states, input_tensor):
+        forward(self, hidden_states, input_tensor):
             Applies the final transformations to the hidden states.
 
             Args:
@@ -843,12 +844,12 @@ class DebertaOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = DebertaLayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
         Constructs the output of the Deberta model by performing a series of operations.
 
@@ -870,15 +871,15 @@ class DebertaOutput(nn.Cell):
         return hidden_states
 
 
-class DebertaLayer(nn.Cell):
+class DebertaLayer(nn.Module):
 
     """
     Represents a single layer in the DeBERTa model, containing modules for attention, intermediate processing,
     and output computation.
 
-    This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms,
+    This class inherits from nn.Module and is responsible for processing input hidden states through attention mechanisms,
     intermediate processing, and final output computation.
-    It provides a 'construct' method to perform these operations and return the final layer output.
+    It provides a 'forward' method to perform these operations and return the final layer output.
 
     Attributes:
         attention (DebertaAttention): Module for performing attention mechanism computation.
@@ -886,7 +887,7 @@ class DebertaLayer(nn.Cell):
         output (DebertaOutput): Module for computing final output based on intermediate processed data.
 
     Methods:
-        construct:
+        forward:
             Process the input hidden states through attention, intermediate,
             and output modules to compute the final layer output.
 
@@ -905,7 +906,7 @@ class DebertaLayer(nn.Cell):
             - att_matrix (Tensor, optional): Attention matrix if 'output_attentions' is True. Otherwise, None.
 
     Note:
-        If 'output_attentions' is set to True, the 'construct' method will return both the final layer output and the
+        If 'output_attentions' is set to True, the 'forward' method will return both the final layer output and the
         attention matrix.
     """
     def __init__(self, config):
@@ -928,7 +929,7 @@ class DebertaLayer(nn.Cell):
         self.intermediate = DebertaIntermediate(config)
         self.output = DebertaOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -976,7 +977,7 @@ class DebertaLayer(nn.Cell):
         return layer_output
 
 
-class DebertaEncoder(nn.Cell):
+class DebertaEncoder(nn.Module):
     """Modified BertEncoder with relative position bias support"""
     def __init__(self, config):
         """
@@ -1003,7 +1004,7 @@ class DebertaEncoder(nn.Cell):
             None.
         """
         super().__init__()
-        self.layer = nn.CellList([DebertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([DebertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.relative_attention = getattr(config, "relative_attention", False)
         if self.relative_attention:
             self.max_relative_positions = getattr(config, "max_relative_positions", -1)
@@ -1096,7 +1097,7 @@ class DebertaEncoder(nn.Cell):
             relative_pos = build_relative_position(q, hidden_states.shape[-2])
         return relative_pos
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -1107,7 +1108,7 @@ class DebertaEncoder(nn.Cell):
         return_dict=True,
     ):
         """
-        This method constructs the DebertaEncoder by processing the input hidden states and attention mask.
+        This method forwards the DebertaEncoder by processing the input hidden states and attention mask.
 
         Args:
             self (object): The instance of the DebertaEncoder class.
@@ -1268,7 +1269,7 @@ def pos_dynamic_expand(pos_index, p2c_att, key_layer):
     return pos_index.expand(p2c_att.shape[:2] + (pos_index.shape[-2], key_layer.shape[-2]))
 
 
-class DisentangledSelfAttention(nn.Cell):
+class DisentangledSelfAttention(nn.Module):
     """
     Disentangled self-attention module
 
@@ -1305,7 +1306,7 @@ class DisentangledSelfAttention(nn.Cell):
         self.num_attention_heads = config.num_attention_heads
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
-        self.in_proj = nn.Dense(config.hidden_size, self.all_head_size * 3, has_bias=False)
+        self.in_proj = nn.Linear(config.hidden_size, self.all_head_size * 3, has_bias=False)
         self.q_bias = Parameter(ops.zeros((self.all_head_size), dtype=mindspore.float32))
         self.v_bias = Parameter(ops.zeros((self.all_head_size), dtype=mindspore.float32))
         self.pos_att_type = config.pos_att_type if config.pos_att_type is not None else []
@@ -1314,8 +1315,8 @@ class DisentangledSelfAttention(nn.Cell):
         self.talking_head = getattr(config, "talking_head", False)
 
         if self.talking_head:
-            self.head_logits_proj = nn.Dense(config.num_attention_heads, config.num_attention_heads, has_bias=False)
-            self.head_weights_proj = nn.Dense(config.num_attention_heads, config.num_attention_heads, has_bias=False)
+            self.head_logits_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, has_bias=False)
+            self.head_weights_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, has_bias=False)
 
         if self.relative_attention:
             self.max_relative_positions = getattr(config, "max_relative_positions", -1)
@@ -1324,9 +1325,9 @@ class DisentangledSelfAttention(nn.Cell):
             self.pos_dropout = StableDropout(config.hidden_dropout_prob)
 
             if "c2p" in self.pos_att_type:
-                self.pos_proj = nn.Dense(config.hidden_size, self.all_head_size, has_bias=False)
+                self.pos_proj = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
             if "p2c" in self.pos_att_type:
-                self.pos_q_proj = nn.Dense(config.hidden_size, self.all_head_size)
+                self.pos_q_proj = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = StableDropout(config.attention_probs_dropout_prob)
         self.softmax = XSoftmax(-1)
@@ -1364,7 +1365,7 @@ class DisentangledSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -1533,7 +1534,7 @@ class DisentangledSelfAttention(nn.Cell):
         return score
 
 
-class DebertaEmbeddings(nn.Cell):
+class DebertaEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
@@ -1570,7 +1571,7 @@ class DebertaEmbeddings(nn.Cell):
             self.token_type_embeddings = nn.Embedding(config.type_vocab_size, self.embedding_size)
 
         if self.embedding_size != config.hidden_size:
-            self.embed_proj = nn.Dense(self.embedding_size, config.hidden_size, has_bias=False)
+            self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, has_bias=False)
         self.LayerNorm = DebertaLayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
@@ -1578,7 +1579,7 @@ class DebertaEmbeddings(nn.Cell):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, mask=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, mask=None, inputs_embeds=None):
         """
         Constructs the embeddings for the Deberta model.
 
@@ -1598,7 +1599,7 @@ class DebertaEmbeddings(nn.Cell):
 
         Returns:
             Tensor:
-                A tensor of shape (batch_size, sequence_length, embedding_size) representing the constructed embeddings.
+                A tensor of shape (batch_size, sequence_length, embedding_size) representing the forwarded embeddings.
 
         Raises:
             None.
@@ -1661,7 +1662,7 @@ class DebertaPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -1681,7 +1682,7 @@ class DebertaModel(DebertaPreTrainedModel):
     """
     DebertaModel class represents a DeBERTa model for natural language processing tasks.
     This class inherits functionalities from DebertaPreTrainedModel and implements methods for initializing the model,
-    getting and setting input embeddings, and constructing the model output.
+    getting and setting input embeddings, and forwarding the model output.
 
     Attributes:
         embeddings (DebertaEmbeddings): The embeddings module of the DeBERTa model.
@@ -1694,7 +1695,7 @@ class DebertaModel(DebertaPreTrainedModel):
         get_input_embeddings: Retrieves the word embeddings from the input embeddings.
         set_input_embeddings: Sets new word embeddings for the input embeddings.
         _prune_heads: Prunes heads of the model based on the provided dictionary.
-        construct: Constructs the model output based on the input parameters.
+        forward: Constructs the model output based on the input parameters.
 
     Raises:
         NotImplementedError: If the prune function is called as it is not implemented in the DeBERTa model.
@@ -1774,7 +1775,7 @@ class DebertaModel(DebertaPreTrainedModel):
         """
         raise NotImplementedError("The prune function is not implemented in DeBERTa model.")
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1786,7 +1787,7 @@ class DebertaModel(DebertaPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         """
-        This method constructs a DebertaModel based on the provided input parameters.
+        This method forwards a DebertaModel based on the provided input parameters.
 
         Args:
             self (object): The instance of the DebertaModel class.
@@ -1803,7 +1804,7 @@ class DebertaModel(DebertaPreTrainedModel):
 
         Returns:
             Union[Tuple, BaseModelOutput]: The output value, which can either be a tuple or a BaseModelOutput object,
-                containing the constructed DebertaModel.
+                containing the forwarded DebertaModel.
 
         Raises:
             ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
@@ -1891,15 +1892,15 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
     Methods:
         get_output_embeddings: Retrieves the decoder embeddings used for output predictions.
         set_output_embeddings: Sets new decoder embeddings for output predictions.
-        construct: Constructs the DeBERTa model for masked language modeling, including processing input data,
+        forward: Constructs the DeBERTa model for masked language modeling, including processing input data,
             generating predictions, and computing the masked language modeling loss.
 
-    The 'construct' method takes various input parameters such as input_ids, attention_mask, labels, etc., and returns
+    The 'forward' method takes various input parameters such as input_ids, attention_mask, labels, etc., and returns
     a MaskedLMOutput object containing the loss, prediction scores, hidden states, and attentions.
     It also allows for customization of return types based on the 'return_dict' parameter.
 
     Note:
-        Ensure proper input data formatting as described in the docstring of the 'construct' method for accurate
+        Ensure proper input data formatting as described in the docstring of the 'forward' method for accurate
         predictions and loss computation.
     """
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
@@ -1959,7 +1960,7 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2010,7 +2011,7 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
         )
 
 
-class DebertaPredictionHeadTransform(nn.Cell):
+class DebertaPredictionHeadTransform(nn.Module):
 
     """
     Represents a prediction head transformation module for the DeBERTa model.
@@ -2020,16 +2021,16 @@ class DebertaPredictionHeadTransform(nn.Cell):
 
     Attributes:
         embedding_size (int): The size of the embedding used in the transformation.
-        dense (nn.Dense): The dense layer used for transformation.
+        dense (nn.Linear): The dense layer used for transformation.
         transform_act_fn (function): The activation function used for transformation.
         LayerNorm (nn.LayerNorm): The layer normalization module applied to the hidden states.
 
     Methods:
         __init__: Initializes the DebertaPredictionHeadTransform instance with the given configuration.
-        construct: Constructs the prediction head transformation on the input hidden states.
+        forward: Constructs the prediction head transformation on the input hidden states.
 
     Note:
-        This class inherits from nn.Cell and is designed specifically for the DeBERTa model.
+        This class inherits from nn.Module and is designed specifically for the DeBERTa model.
 
     """
     def __init__(self, config):
@@ -2058,16 +2059,16 @@ class DebertaPredictionHeadTransform(nn.Cell):
         super().__init__()
         self.embedding_size = getattr(config, "embedding_size", config.hidden_size)
 
-        self.dense = nn.Dense(config.hidden_size, self.embedding_size)
+        self.dense = nn.Linear(config.hidden_size, self.embedding_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(self.embedding_size, epsilon=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is defined within the class 'DebertaPredictionHeadTransform' and is responsible for
+        This method 'forward' is defined within the class 'DebertaPredictionHeadTransform' and is responsible for
         processing the hidden states.
 
         Args:
@@ -2089,22 +2090,22 @@ class DebertaPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class DebertaLMPredictionHead(nn.Cell):
+class DebertaLMPredictionHead(nn.Module):
 
     """
     DebertaLMPredictionHead represents the prediction head for language model tasks in a DeBERTa model.
-    This class inherits from nn.Cell.
+    This class inherits from nn.Module.
 
     Attributes:
         transform (DebertaPredictionHeadTransform):
             An instance of DebertaPredictionHeadTransform for transforming hidden states.
         embedding_size (int): The size of the embedding layer, defaults to the hidden size if not specified in config.
-        decoder (nn.Dense): A fully connected layer for decoding hidden states to predict the next token.
+        decoder (nn.Linear): A fully connected layer for decoding hidden states to predict the next token.
         bias (Parameter): The bias parameter for the decoder layer.
 
     Methods:
         __init__: Initializes the DebertaLMPredictionHead with the provided configuration.
-        construct: Constructs the prediction head by applying transformations and decoding the hidden states.
+        forward: Constructs the prediction head by applying transformations and decoding the hidden states.
 
     """
     def __init__(self, config):
@@ -2132,16 +2133,16 @@ class DebertaLMPredictionHead(nn.Cell):
         self.embedding_size = getattr(config, "embedding_size", config.hidden_size)
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(self.embedding_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(self.embedding_size, config.vocab_size, has_bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the prediction head for DebertaLM model.
+        This method forwards the prediction head for DebertaLM model.
 
         Args:
             self (DebertaLMPredictionHead): An instance of the DebertaLMPredictionHead class.
@@ -2159,18 +2160,18 @@ class DebertaLMPredictionHead(nn.Cell):
 
 
 # copied from transformers.models.bert.BertOnlyMLMHead with bert -> deberta
-class DebertaOnlyMLMHead(nn.Cell):
+class DebertaOnlyMLMHead(nn.Module):
 
     """
     This class represents a Deberta Masked Language Model (MLM) head for generating prediction scores from sequence output.
-    It inherits from nn.Cell and contains methods for initializing the MLM head and constructing prediction scores.
+    It inherits from nn.Module and contains methods for initializing the MLM head and forwarding prediction scores.
 
     Attributes:
         predictions: A DebertaLMPredictionHead object for generating prediction scores.
 
     Methods:
         __init__: Initializes the DebertaOnlyMLMHead with the given configuration.
-        construct: Constructs prediction scores from the provided sequence output.
+        forward: Constructs prediction scores from the provided sequence output.
     """
     def __init__(self, config):
         """
@@ -2189,16 +2190,16 @@ class DebertaOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = DebertaLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         """
         Class:
             DebertaOnlyMLMHead
 
         Method:
-            construct
+            forward
 
         Description:
-            This method constructs prediction scores based on the given sequence output.
+            This method forwards prediction scores based on the given sequence output.
 
         Args:
             self: (object) The instance of the DebertaOnlyMLMHead class.
@@ -2221,13 +2222,13 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
     It inherits from DebertaPreTrainedModel and provides functionalities for sequenceclassification using the
     DeBERTa model architecture.
 
-    The class includes methods for initializing the model, getting and setting input embeddings, and constructing
-    the model for sequence classification tasks. The 'construct' method takes input tensors such as  input_ids,
+    The class includes methods for initializing the model, getting and setting input embeddings, and forwarding
+    the model for sequence classification tasks. The 'forward' method takes input tensors such as  input_ids,
     attention_mask, token_type_ids, position_ids, inputs_embeds, and labels to perform sequence classification.
     It utilizes the DeBERTa model, a context pooler, and a classifier to generate logits for the input sequences and
     compute the loss based on the specified problem type.
 
-    The 'construct' method also handles different problem types such as regression, single-label classification,
+    The 'forward' method also handles different problem types such as regression, single-label classification,
     and multi-label classification by adjusting the loss computation accordingly.
     The class provides flexibility in handling various types of sequence classification tasks and supports configurable
     return options.
@@ -2260,7 +2261,7 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
         self.pooler = ContextPooler(config)
         output_dim = self.pooler.output_dim
 
-        self.classifier = nn.Dense(output_dim, num_labels)
+        self.classifier = nn.Linear(output_dim, num_labels)
         drop_out = getattr(config, "cls_dropout", None)
         drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
         self.dropout = StableDropout(drop_out)
@@ -2302,7 +2303,7 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
         """
         self.deberta.set_input_embeddings(new_embeddings)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2395,7 +2396,7 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
 
     Methods:
         `__init__(self, config)`: Initializes the `DebertaForTokenClassification` instance.
-        `construct(self, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)`:
+        `forward(self, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)`:
             Performs the forward pass of the model and returns the output.
 
             Args:
@@ -2441,12 +2442,12 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
 
         self.deberta = DebertaModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2500,11 +2501,11 @@ class DebertaForQuestionAnswering(DebertaPreTrainedModel):
     This class represents a Deberta model for question answering tasks. It inherits functionality from the
     DebertaPreTrainedModel class.
     The DebertaForQuestionAnswering class includes methods for initializing the model with configuration,
-    and for constructing the model by processing input data and producing question answering model outputs.
-    The construct method takes various input tensors such as input_ids, attention_mask, token_type_ids, position_ids,
+    and for forwarding the model by processing input data and producing question answering model outputs.
+    The forward method takes various input tensors such as input_ids, attention_mask, token_type_ids, position_ids,
     and inputs_embeds, and returns QuestionAnsweringModelOutput.
     It also supports optional parameters for controlling the output format and behavior.
-    The class provides detailed documentation for the construct method, including explanations of the input and output
+    The class provides detailed documentation for the forward method, including explanations of the input and output
     parameters and their respective shapes and types.
     Additionally, the class handles the computation of total loss for question answering tasks based on start
     and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
@@ -2527,12 +2528,12 @@ class DebertaForQuestionAnswering(DebertaPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.deberta = DebertaModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

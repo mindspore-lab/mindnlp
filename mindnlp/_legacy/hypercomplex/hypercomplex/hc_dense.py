@@ -30,7 +30,7 @@ from ..utils import get_x_and_y, to_2channel
 TDenseImpl = TypeVar('TDenseImpl', bound=DenseImpl)
 
 
-class Dense(nn.Cell):
+class Dense(nn.Module):
     r"""
     The abstract part of dense connected layer.
 
@@ -45,7 +45,7 @@ class Dense(nn.Cell):
     :math:`\text{bias}` is a hypercomplex bias vector with the same data type as the :math:`inp` created by the layer
     (only if has_bias is True).
 
-    This is not a self-sufficient class. In order to construct a fully connected layer, one should instantiate this
+    This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate this
     class and an implementor class, which acts like a strategy pattern and determine the exact set of hypercomplex
     numbers. That implies the rules of multiplication and therefore affects how a linear transformation works.
 
@@ -164,7 +164,7 @@ class Dense(nn.Cell):
         if x_dtype == mindspore.complex64 and len(x) < 2:
             raise ValueError(f"{msg_prefix} dimension of 'x' should not be less than 2, but got {x}.")
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         """Construct"""
         if self.dtype is not None and self.dtype != u.dtype:
             raise TypeError("dtype must be equal to the data type of the inputs tensor, but got: "

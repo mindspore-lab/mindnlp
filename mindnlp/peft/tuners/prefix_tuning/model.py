@@ -16,9 +16,9 @@
 # with some refactor
 """prefix tuning model"""
 import mindspore
-from mindspore import nn
+from mindnlp.core import nn
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     r"""
     The `mindspore.nn` model to encode the prefix.
 
@@ -82,20 +82,20 @@ class PrefixEncoder(nn.Cell):
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(num_virtual_tokens, token_dim)
             self.transform = nn.SequentialCell(
-                nn.Dense(token_dim, encoder_hidden_size),
+                nn.Linear(token_dim, encoder_hidden_size),
                 nn.Tanh(),
-                nn.Dense(encoder_hidden_size, num_layers * 2 * token_dim),
+                nn.Linear(encoder_hidden_size, num_layers * 2 * token_dim),
             )
         else:
             self.embedding = nn.Embedding(num_virtual_tokens, num_layers * 2 * token_dim)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
-        This method constructs the past key values based on the provided prefix for the PrefixEncoder.
+        This method forwards the past key values based on the provided prefix for the PrefixEncoder.
         
         Args:
             self (PrefixEncoder): The instance of the PrefixEncoder class.
-            prefix (mindspore.Tensor): The input prefix tensor used for constructing past key values.
+            prefix (mindspore.Tensor): The input prefix tensor used for forwarding past key values.
         
         Returns:
             None: This method does not return any value.

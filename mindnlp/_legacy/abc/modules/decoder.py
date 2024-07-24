@@ -17,7 +17,7 @@
 from mindspore import nn
 
 
-class DecoderBase(nn.Cell):
+class DecoderBase(nn.Module):
     r"""
     Basic class for dedcoders
 
@@ -43,7 +43,7 @@ class DecoderBase(nn.Cell):
         self.softmax = nn.Softmax()
         self.log_softmax = nn.LogSoftmax()
 
-    def construct(self, prev_output_tokens, encoder_out=None):
+    def forward(self, prev_output_tokens, encoder_out=None):
         """
         Construct method.
 

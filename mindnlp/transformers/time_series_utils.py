@@ -18,8 +18,6 @@ Time series distributional output classes and utilities.
 """
 from typing import Callable, Dict, Optional, Tuple
 import mindspore
-from mindspore import nn
-from mindspore import ops
 from mindspore.nn.probability.distribution import (
     Distribution,
     Normal,
@@ -30,6 +28,7 @@ from mindspore.nn.probability.distribution import (
     # NegativeBinomial,
 )
 from mindspore.nn.probability.bijector import ScalarAffine as AffineTransform
+from mindnlp.core import nn, ops
 import numpy as np
 
 class AffineTransformed(TransformedDistribution):
@@ -93,7 +92,7 @@ class AffineTransformed(TransformedDistribution):
         return self.variance.sqrt()
 
 
-class ParameterProjection(nn.Cell):
+class ParameterProjection(nn.Module):
     """
     # todo
     """
@@ -117,10 +116,10 @@ class ParameterProjection(nn.Cell):
         """
         super().__init__(**kwargs)
         self.args_dim = args_dim
-        self.proj = nn.CellList([nn.Dense(in_features, dim) for dim in args_dim.values()])
+        self.proj = nn.ModuleList([nn.Linear(in_features, dim) for dim in args_dim.values()])
         self.domain_map = domain_map
 
-    def construct(self, x: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
+    def forward(self, x: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
         """
         Constructs the parameter projection using the provided input tensor.
         
@@ -141,7 +140,7 @@ class ParameterProjection(nn.Cell):
         return self.domain_map(*params_unbounded)
 
 
-class LambdaLayer(nn.Cell):
+class LambdaLayer(nn.Module):
     """
     #todo
     """
@@ -162,7 +161,7 @@ class LambdaLayer(nn.Cell):
         super().__init__()
         self.function = function
 
-    def construct(self, x, *args):
+    def forward(self, x, *args):
         """
         Constructs a LambdaLayer object.
         
@@ -225,11 +224,11 @@ class DistributionOutput:
                 - Purpose: Allows access to the class's variables and methods.
                 - Restrictions: None.
             distr_args:
-                A list of arguments to be passed to the distribution class constructor.
+                A list of arguments to be passed to the distribution class forwardor.
 
                 - Type: list
                 - Purpose: Specifies the arguments required to instantiate the distribution class.
-                - Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
+                - Restrictions: The number and types of arguments must be compatible with the distribution class forwardor.
 
         Returns:
             None:
@@ -263,7 +262,7 @@ class DistributionOutput:
     @property
     def event_shape(self) -> Tuple:
         r"""
-        Shape of each individual event contemplated by the distributions that this object constructs.
+        Shape of each individual event contemplated by the distributions that this object forwards.
         """
         return () if self.dim == 1 else (self.dim,)
 
@@ -271,7 +270,7 @@ class DistributionOutput:
     def event_dim(self) -> int:
         r"""
         Number of event dimensions, i.e., length of the `event_shape` tuple, of the distributions that this object
-        constructs.
+        forwards.
         """
         return len(self.event_shape)
 
@@ -283,7 +282,7 @@ class DistributionOutput:
         """
         return 0.0
 
-    def get_parameter_projection(self, in_features: int) -> nn.Cell:
+    def get_parameter_projection(self, in_features: int) -> nn.Module:
         r"""
         Return the parameter projection layer that maps the input to the appropriate parameters of the distribution.
         """

@@ -86,7 +86,7 @@ class RNNEncoder(EncoderBase):
         if isinstance(rnn, _RNNBase):
             self.static = True
 
-    def construct(self, src_token, src_length=None, mask=None):
+    def forward(self, src_token, src_length=None, mask=None):
         """
         Construct method.
 

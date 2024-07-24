@@ -23,7 +23,7 @@ from mindspore import nn
 from ..utils import get_x_and_y
 
 
-class _ConvImpl(nn.Cell):
+class _ConvImpl(nn.Module):
     r"""
     The interface of the implementor part of convolution layer on second-order hypercomplex numbers.
 
@@ -61,7 +61,7 @@ class _ConvImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   x: Tensor,
                   y: Tensor,

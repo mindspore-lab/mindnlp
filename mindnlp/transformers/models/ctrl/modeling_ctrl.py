@@ -19,7 +19,7 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging
@@ -83,7 +83,7 @@ def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=N
     return output, attention_weights
 
 
-class MultiHeadAttention(nn.Cell):
+class MultiHeadAttention(nn.Module):
     def __init__(self, d_model_size, num_heads):
         super().__init__()
         self.num_heads = num_heads
@@ -91,11 +91,11 @@ class MultiHeadAttention(nn.Cell):
 
         self.depth = int(d_model_size / self.num_heads)
 
-        self.Wq = nn.Dense(d_model_size, d_model_size)
-        self.Wk = nn.Dense(d_model_size, d_model_size)
-        self.Wv = nn.Dense(d_model_size, d_model_size)
+        self.Wq = nn.Linear(d_model_size, d_model_size)
+        self.Wk = nn.Linear(d_model_size, d_model_size)
+        self.Wv = nn.Linear(d_model_size, d_model_size)
 
-        self.dense = nn.Dense(d_model_size, d_model_size)
+        self.dense = nn.Linear(d_model_size, d_model_size)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -121,7 +121,7 @@ class MultiHeadAttention(nn.Cell):
         x = x.reshape((batch_size, -1, self.num_heads, self.depth))
         return x.permute([0, 2, 1, 3])
 
-    def construct(
+    def forward(
         self,
         v,
         k,
@@ -168,11 +168,11 @@ class MultiHeadAttention(nn.Cell):
 
 def point_wise_feed_forward_network(d_model_size, dff):
     return nn.SequentialCell(
-        nn.Dense(d_model_size, dff), nn.ReLU(), nn.Dense(dff, d_model_size)
+        nn.Linear(d_model_size, dff), nn.ReLU(), nn.Linear(dff, d_model_size)
     )
 
 
-class EncoderLayer(nn.Cell):
+class EncoderLayer(nn.Module):
     def __init__(self, d_model_size, num_heads, dff, rate=0.1):
         super().__init__()
 
@@ -185,7 +185,7 @@ class EncoderLayer(nn.Cell):
         self.dropout1 = nn.Dropout(p=rate)
         self.dropout2 = nn.Dropout(p=rate)
 
-    def construct(
+    def forward(
         self,
         x,
         mask,
@@ -231,7 +231,7 @@ class CTRLPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -273,7 +273,7 @@ class CTRLModel(CTRLPreTrainedModel):
         self.w = nn.Embedding(config.vocab_size, config.n_embd)
 
         self.dropout = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList(
+        self.h = nn.ModuleList(
             [
                 EncoderLayer(
                     config.n_embd, config.n_head, config.dff, config.resid_pdrop
@@ -301,7 +301,7 @@ class CTRLModel(CTRLPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].multi_head_attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -474,7 +474,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = CTRLModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=True)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -507,7 +507,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
             "use_cache": use_cache,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -619,12 +619,12 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = CTRLModel(config)
-        self.classifier = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.classifier = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,

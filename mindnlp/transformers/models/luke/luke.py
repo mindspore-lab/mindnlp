@@ -23,8 +23,8 @@ from typing import Callable, Optional, Tuple
 
 import mindspore
 import numpy as np
-from mindspore import nn
-from mindspore import ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal, initializer
 
 from ...modeling_utils import PreTrainedModel
@@ -32,7 +32,7 @@ from .luke_config import LukeConfig
 from ...activations import ACT2FN
 
 
-class LukeEmbeddings(nn.Cell):
+class LukeEmbeddings(nn.Module):
     """
     LukeEmbeddings
     """
@@ -135,7 +135,7 @@ class LukeEmbeddings(nn.Cell):
         return ops.broadcast_to(position_ids.unsqueeze(0), input_shape)
 
 
-class LukeEntityEmbeddings(nn.Cell):
+class LukeEntityEmbeddings(nn.Module):
     """
     LukeEntityEmbeddings
     """
@@ -162,7 +162,7 @@ class LukeEntityEmbeddings(nn.Cell):
 
         self.entity_embeddings = nn.Embedding(config.entity_vocab_size, config.entity_emb_size, padding_idx=0)
         if config.entity_emb_size != config.hidden_size:
-            self.entity_embedding_dense = nn.Dense(config.entity_emb_size, config.hidden_size, has_bias=False)
+            self.entity_embedding_dense = nn.Linear(config.entity_emb_size, config.hidden_size, has_bias=False)
 
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
@@ -215,7 +215,7 @@ class LukeEntityEmbeddings(nn.Cell):
         return embeddings
 
 
-class LukeSelfAttention(nn.Cell):
+class LukeSelfAttention(nn.Module):
     """
     LukeSelfAttention
     """
@@ -261,14 +261,14 @@ class LukeSelfAttention(nn.Cell):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
         self.use_entity_aware_attention = config.use_entity_aware_attention
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         if self.use_entity_aware_attention:
-            self.w2e_query = nn.Dense(config.hidden_size, self.all_head_size)
-            self.e2w_query = nn.Dense(config.hidden_size, self.all_head_size)
-            self.e2e_query = nn.Dense(config.hidden_size, self.all_head_size)
+            self.w2e_query = nn.Linear(config.hidden_size, self.all_head_size)
+            self.e2w_query = nn.Linear(config.hidden_size, self.all_head_size)
+            self.e2e_query = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -398,7 +398,7 @@ class LukeSelfAttention(nn.Cell):
         return outputs
 
 
-class LukeSelfOutput(nn.Cell):
+class LukeSelfOutput(nn.Module):
     """
     LukeSelfOutput
     """
@@ -422,7 +422,7 @@ class LukeSelfOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -450,7 +450,7 @@ class LukeSelfOutput(nn.Cell):
         return hidden_states
 
 
-class LukeAttention(nn.Cell):
+class LukeAttention(nn.Module):
     """
     LukeAttention
     """
@@ -543,7 +543,7 @@ class LukeAttention(nn.Cell):
         return outputs
 
 
-class LukeIntermediate(nn.Cell):
+class LukeIntermediate(nn.Module):
     """
     LukeIntermediate
     """
@@ -568,7 +568,7 @@ class LukeIntermediate(nn.Cell):
             ValueError: If the config parameter is provided but is not in the correct format.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -599,7 +599,7 @@ class LukeIntermediate(nn.Cell):
         return hidden_states
 
 
-class LukeOutput(nn.Cell):
+class LukeOutput(nn.Module):
     """
     LukeOutput
     """
@@ -625,7 +625,7 @@ class LukeOutput(nn.Cell):
             ValueError: If any of the required attributes in the config object are missing or have invalid values.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -662,7 +662,7 @@ class LukeOutput(nn.Cell):
         return hidden_states
 
 
-class LukeLayer(nn.Cell):
+class LukeLayer(nn.Module):
     """
     LukeOutput
     """
@@ -766,7 +766,7 @@ class LukeLayer(nn.Cell):
         return layer_output
 
 
-class LukeEncoder(nn.Cell):
+class LukeEncoder(nn.Module):
     """
     LukeEncoder
     """
@@ -785,7 +785,7 @@ class LukeEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([LukeLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([LukeLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
     def construct(
@@ -885,7 +885,7 @@ class LukeEncoder(nn.Cell):
         }
 
 
-class LukePooler(nn.Cell):
+class LukePooler(nn.Module):
     """
     LukePooler
     """
@@ -908,7 +908,7 @@ class LukePooler(nn.Cell):
                 in the config object.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: Tensor) -> Tensor:
@@ -936,7 +936,7 @@ class LukePooler(nn.Cell):
         return pooled_output
 
 
-class EntityPredictionHeadTransform(nn.Cell):
+class EntityPredictionHeadTransform(nn.Module):
     """
     EntityPredictionHeadTransform
     """
@@ -962,7 +962,7 @@ class EntityPredictionHeadTransform(nn.Cell):
                 within the valid range.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.entity_emb_size)
+        self.dense = nn.Linear(config.hidden_size, config.entity_emb_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -993,7 +993,7 @@ class EntityPredictionHeadTransform(nn.Cell):
 
 
 # 0325==============================
-class EntityPredictionHead(nn.Cell):
+class EntityPredictionHead(nn.Module):
     """
     EntityPredictionHead
     """
@@ -1018,7 +1018,7 @@ class EntityPredictionHead(nn.Cell):
         super().__init__()
         self.config = config
         self.transform = EntityPredictionHeadTransform(config)
-        self.decoder = nn.Dense(config.entity_emb_size, config.entity_vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.entity_emb_size, config.entity_vocab_size, has_bias=False)
         self.bias = mindspore.Parameter(ops.zeros((config.entity_vocab_size,)))
 
     def construct(self, hidden_states):
@@ -1053,7 +1053,7 @@ class LukePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["LukeAttention", "LukeEntityEmbeddings"]
 
-    def get_input_embeddings(self) -> "nn.Cell":
+    def get_input_embeddings(self) -> "nn.Module":
         """
         Method to retrieve the input embeddings for the LukePreTrainedModel.
 
@@ -1063,21 +1063,21 @@ class LukePreTrainedModel(PreTrainedModel):
                 It is used to access the attributes and methods associated with the instance.
 
         Returns:
-            nn.Cell: An object of type nn.Cell.
-                The return value is the input embeddings of the model stored in an nn.Cell object.
+            nn.Module: An object of type nn.Module.
+                The return value is the input embeddings of the model stored in an nn.Module object.
                 This object contains the embeddings that represent the input data for the model.
 
         Raises:
             None
         """
 
-    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Module"):
         """
         This method sets the input embeddings for the LukePreTrainedModel.
 
         Args:
             self (LukePreTrainedModel): The instance of the LukePreTrainedModel class.
-            new_embeddings (nn.Cell): The new input embeddings to be set for the model. It should be an instance of 'nn.Cell'.
+            new_embeddings (nn.Module): The new input embeddings to be set for the model. It should be an instance of 'nn.Module'.
 
         Returns:
             None.
@@ -1116,9 +1116,9 @@ class LukePreTrainedModel(PreTrainedModel):
             None.
         """
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -1396,7 +1396,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     return incremental_indices.astype(mindspore.int64) + padding_idx
 
 
-class LukeLMHead(nn.Cell):
+class LukeLMHead(nn.Module):
     """LukeLMead"""
     def __init__(self, config):
         """
@@ -1419,10 +1419,10 @@ class LukeLMHead(nn.Cell):
             ValueError: If the hidden_size or vocab_size attributes in the config are not positive integers.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
@@ -1660,7 +1660,7 @@ class LukeForEntityClassification(LukePreTrainedModel):
 
         self.num_labels = config.num_labels
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
     def construct(
             self,
@@ -1770,7 +1770,7 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
 
         self.num_labels = config.num_labels
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size * 2, config.num_labels, has_bias=False)
+        self.classifier = nn.Linear(config.hidden_size * 2, config.num_labels, has_bias=False)
 
     def construct(
             self,
@@ -1886,7 +1886,7 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
 
         self.num_labels = config.num_labels
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size * 3, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size * 3, config.num_labels)
 
     def construct(
             self,
@@ -2016,7 +2016,7 @@ class LukeForSequenceClassification(LukePreTrainedModel):
                                   if config.classifier_dropout is not None
                                   else config.hidden_dropout_prob
                                   )
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         self.post_init()
 
@@ -2152,7 +2152,7 @@ class LukeForTokenClassification(LukePreTrainedModel):
                                   if config.classifier_dropout is not None
                                   else config.hidden_dropout_prob
                                   )
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
     def construct(
             self,
@@ -2258,7 +2258,7 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
         self.num_labels = config.num_labels
 
         self.luke = LukeModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
     def construct(
             self,
@@ -2406,7 +2406,7 @@ class LukeForMultipleChoice(LukePreTrainedModel):
                                   if config.classifier_dropout is not None
                                   else config.hidden_dropout_prob
                                   )
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
     def construct(
             self,
