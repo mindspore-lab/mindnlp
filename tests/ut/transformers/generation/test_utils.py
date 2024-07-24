@@ -1247,8 +1247,8 @@ class GenerationTesterMixin:
             # check `generate()` and `constrained_beam_search()` are equal
             # Sample constraints
             if not input_ids.dtype == mindspore.float32:
-                min_id = int(ops.min(input_ids)[0].asnumpy() + 3)
-                max_id = int(ops.max(input_ids)[0].asnumpy())
+                min_id = int(ops.min(input_ids).asnumpy() + 3)
+                max_id = int(ops.max(input_ids).asnumpy())
             else:
                 # otherwise this throws an error for Speech2TextModel since its inputs are floating points
                 min_id = 3

@@ -50,7 +50,10 @@ def rand(*size, dtype=None):
     return ops.rand(*size, dtype=dtype)
 
 # rand_like
-
+def rand_like(input, *, dtype=None):
+    if USE_PYBOOST:
+        return mindspore.mint.rand_like(input, dtype=dtype)
+    return ops.rand_like(input, dtype=dtype)
 
 # randint
 def randint(low, high, size, *, dtype=None):
@@ -67,6 +70,7 @@ def randn(*size, dtype=None):
     return ops.randn(*size, dtype=dtype)
 
 # randn_like
-
+def randn_like(input, *, dtype):
+    return ops.randn_like(input, dtype=dtype)
 
 # randperm

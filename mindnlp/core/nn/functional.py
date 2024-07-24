@@ -107,7 +107,7 @@ def linear(input, weight, bias=None):
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
-    return ops.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
+    return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
 def log_softmax(input, dim=-1):
     return ops.log_softmax(input, dim)
