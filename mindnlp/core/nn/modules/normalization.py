@@ -1,5 +1,6 @@
 """normalization"""
 import numbers
+import math
 import mindspore
 from mindspore import ops, Parameter
 from mindspore.common.initializer import initializer
@@ -147,14 +148,15 @@ class GroupNorm(Module):
         return self._forward(input)
 
     def _forward(self, input):
-        batch, channel, height, width = input.shape
-        input = input.reshape(batch, self.num_groups, -1)
+        input_shape = input.shape
+        input = input.reshape(input_shape[0], self.num_groups, -1)
         mean = ops.mean(input, axis=2, keep_dims=True)
-        var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (channel * height * width / self.num_groups))
+        var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (math.prod(input_shape[1:]) / self.num_groups))
         std = ops.sqrt(var + self.eps)
         input = ops.div(ops.sub(input, mean), std)
-        input = input.reshape(batch, channel, height, width)
-        output = ops.add(input * self.weight.reshape(-1, 1, 1), self.bias.reshape(-1, 1, 1))
+        input = input.reshape(input_shape)
+        output = ops.add(input * self.weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
+                         self.bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
         return output
 
     def extra_repr(self):

@@ -1,9 +1,9 @@
-# mypy: allow-untyped-defs
-import mindspore
+"""hooks"""
 from collections import OrderedDict
 import weakref
 import warnings
 from typing import Any, Tuple
+import mindspore
 
 __all__ = ["RemovableHandle", "unserializable_hook", "warn_if_has_hooks", "BackwardHook"]
 
@@ -169,7 +169,8 @@ class BackwardHook:
         # if not (requires_grad and torch.is_grad_enabled()):
         #     return args, None
 
-        new_tensors = torch.nn.modules._functions.BackwardHookFunction.apply(*tensors)
+        # new_tensors = torch.nn.modules._functions.BackwardHookFunction.apply(*tensors)
+        new_tensors = tensors
         if len(new_tensors) == 0:
             raise RuntimeError("Cannot set Module backward hook for a Module with no input Tensors.")
 

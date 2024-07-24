@@ -466,7 +466,7 @@ class EncodecIntegrationTest(unittest.TestCase):
             )[-1]
 
             # make sure forward and decode gives same result
-            self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec, atol=1e-3))
+            self.assertTrue(np.allclose(input_values_dec.asnumpy(), input_values_enc_dec.asnumpy(), atol=1e-3))
 
             # make sure shape matches
             self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)

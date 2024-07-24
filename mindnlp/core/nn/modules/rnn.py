@@ -21,7 +21,8 @@ import mindspore
 from mindspore import Tensor, Parameter
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
-from mindspore.ops import DynamicGRUV2, LSTM, DynamicRNN, ReverseV2, ReverseSequence
+from mindspore.ops import DynamicGRUV2, DynamicRNN, ReverseV2, ReverseSequence
+from mindspore.ops import LSTM as LSTMOP
 from mindspore.nn.layer.rnn_cells import _rnn_relu_cell, _rnn_tanh_cell, _gru_cell, _lstm_cell
 
 from .module import Module
@@ -265,8 +266,8 @@ class _DynamicLSTMCPUGPU(Module):
                         w_hh.view(-1, 1, 1),
                         bias.view(-1, 1, 1)
                     ))
-            _lstm = _get_cache_prim(LSTM)(input_size, hidden_size, 1, bias, False, 0.0)
-            output, h_n, c_n, _, _ = (
+            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, bias, False, 0.0)
+            output, h_n, c_n, _, _ = _lstm(
                 x,
                 h_0[0].unsqueeze(0),
                 h_0[1].unsqueeze(0),

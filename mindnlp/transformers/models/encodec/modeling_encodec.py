@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal, Uniform
+from mindnlp.core import nn, ops
 
 from mindnlp.utils import ModelOutput, logging
 from mindnlp.core.nn.utils import weight_norm
@@ -1048,7 +1048,7 @@ class EncodecModel(EncodecPreTrainedModel):
         time_vec = ops.linspace(0, 1, frame_length + 2).to(dtype)[1:-1]
         weight = 0.5 - (time_vec - 0.5).abs()
 
-        sum_weight = ops.zeros(*total_size, dtype=dtype)
+        sum_weight = ops.zeros(total_size, dtype=dtype)
         out = ops.zeros(*shape, total_size, dtype=dtype)
         offset: int = 0
 
