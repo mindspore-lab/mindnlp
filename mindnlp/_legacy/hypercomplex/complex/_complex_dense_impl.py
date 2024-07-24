@@ -55,7 +55,7 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -123,7 +123,7 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
         r""" 
@@ -135,7 +135,7 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
             imag (Tensor): A tensor representing the imaginary part of the complex number.
         
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing the real and imaginary parts of the constructed complex tensor.
+            Tuple[Tensor, Tensor]: A tuple containing the real and imaginary parts of the forwarded complex tensor.
         
         Raises:
             None.

@@ -21,11 +21,12 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
-from mindnlp.modules.functional.graph_func import finfo
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -43,7 +44,7 @@ ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 # Adapted from paddlenlp.transformers.ernie_m.modeling.ErnieEmbeddings
-class MSErnieMEmbeddings(nn.Cell):
+class MSErnieMEmbeddings(nn.Module):
     """Construct the embeddings from word and position embeddings."""
     def __init__(self, config):
         """
@@ -77,7 +78,7 @@ class MSErnieMEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.padding_idx = config.pad_token_id
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -98,7 +99,7 @@ class MSErnieMEmbeddings(nn.Cell):
             past_key_values_length (int): The length of past key values. Default is 0.
 
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor.
+            mindspore.Tensor: The forwarded embeddings tensor.
 
         Raises:
             ValueError: If the input_ids and inputs_embeds are both None.
@@ -126,11 +127,11 @@ class MSErnieMEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->ErnieM,self.value->self.v_proj,self.key->self.k_proj,self.query->self.q_proj
-class MSErnieMSelfAttention(nn.Cell):
+class MSErnieMSelfAttention(nn.Module):
 
     """
     The `MSErnieMSelfAttention` class represents a self-attention mechanism for the MS ERNIE model.
-    This class inherits from `nn.Cell`.
+    This class inherits from `nn.Module`.
 
     This class implements the self-attention mechanism, which is a crucial component in natural language processing
     tasks like machine translation and text summarization. The self-attention mechanism allows the model to weigh the
@@ -138,7 +139,7 @@ class MSErnieMSelfAttention(nn.Cell):
     dependencies and improve performance on various language understanding tasks.
 
     The class includes methods for initializing the self-attention mechanism, transposing input tensors for calculating
-    attention scores, and constructing the self-attention mechanism using the provided input
+    attention scores, and forwarding the self-attention mechanism using the provided input
     tensors. Additionally, it supports position embeddings and optional output of attention probabilities.
 
     The `MSErnieMSelfAttention` class ensures that the self-attention mechanism is efficiently implemented and
@@ -173,9 +174,9 @@ class MSErnieMSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.q_proj = nn.Dense(config.hidden_size, self.all_head_size)
-        self.k_proj = nn.Dense(config.hidden_size, self.all_head_size)
-        self.v_proj = nn.Dense(config.hidden_size, self.all_head_size)
+        self.q_proj = nn.Linear(config.hidden_size, self.all_head_size)
+        self.k_proj = nn.Linear(config.hidden_size, self.all_head_size)
+        self.v_proj = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -207,7 +208,7 @@ class MSErnieMSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -218,7 +219,7 @@ class MSErnieMSelfAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        Method to construct self-attention mechanism in the MSErnieMSelfAttention class.
+        Method to forward self-attention mechanism in the MSErnieMSelfAttention class.
 
         Args:
             self: The instance of the class.
@@ -337,17 +338,17 @@ class MSErnieMSelfAttention(nn.Cell):
         return outputs
 
 
-class MSErnieMAttention(nn.Cell):
+class MSErnieMAttention(nn.Module):
 
     """
     This class represents an attention module for MSErnieM model, which includes self-attention mechanism and projection
     layers.
-    It inherits from nn.Cell and provides methods to initialize the attention module, prune attention heads, and perform
+    It inherits from nn.Module and provides methods to initialize the attention module, prune attention heads, and perform
     attention computation.
     The attention module consists of self-attention mechanism with configurable position embedding type and projection
     layers for output transformation.
     The 'prune_heads' method allows pruning specific attention heads based on provided indices.
-    The 'construct' method computes the attention output given input hidden states, optional masks, and other optional
+    The 'forward' method computes the attention output given input hidden states, optional masks, and other optional
     inputs.
     """
     def __init__(self, config, position_embedding_type=None):
@@ -367,7 +368,7 @@ class MSErnieMAttention(nn.Cell):
         """
         super().__init__()
         self.self_attn = MSErnieMSelfAttention(config, position_embedding_type=position_embedding_type)
-        self.out_proj = nn.Dense(config.hidden_size, config.hidden_size)
+        self.out_proj = nn.Linear(config.hidden_size, config.hidden_size)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -403,7 +404,7 @@ class MSErnieMAttention(nn.Cell):
         self.self_attn.all_head_size = self.self_attn.attention_head_size * self.self_attn.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -457,20 +458,20 @@ class MSErnieMAttention(nn.Cell):
         return outputs
 
 
-class MSErnieMEncoderLayer(nn.Cell):
+class MSErnieMEncoderLayer(nn.Module):
 
     """
     This class represents an encoder layer for the MSErnieM model. It includes self-attention, linear transformations,
     dropout, layer normalization, and activation functions for processing input hidden states.
 
-    The MSErnieMEncoderLayer class inherits from nn.Cell and consists of an __init__ method for initializing the
-    layer's components and a construct method for performing the encoding operations on input tensors.
+    The MSErnieMEncoderLayer class inherits from nn.Module and consists of an __init__ method for initializing the
+    layer's components and a forward method for performing the encoding operations on input tensors.
 
     Attributes:
         self_attn (MSErnieMAttention): Self-attention mechanism for capturing dependencies within the input hidden states.
-        linear1 (nn.Dense): Linear transformation layer from hidden size to intermediate size.
+        linear1 (nn.Linear): Linear transformation layer from hidden size to intermediate size.
         dropout (nn.Dropout): Dropout layer for regularization during activation functions.
-        linear2 (nn.Dense): Linear transformation layer from intermediate size back to hidden size.
+        linear2 (nn.Linear): Linear transformation layer from intermediate size back to hidden size.
         norm1 (nn.LayerNorm): Layer normalization for normalizing hidden states.
         norm2 (nn.LayerNorm): Layer normalization for normalizing hidden states.
         dropout1 (nn.Dropout): Dropout layer for regularization after the first linear transformation.
@@ -479,9 +480,9 @@ class MSErnieMEncoderLayer(nn.Cell):
 
     Methods:
         __init__: Constructor method for initializing the encoder layer with provided configuration settings.
-        construct: Method for processing input hidden states through the encoder layer's components.
+        forward: Method for processing input hidden states through the encoder layer's components.
 
-    The construct method performs a series of operations on the input hidden states, including self-attention,
+    The forward method performs a series of operations on the input hidden states, including self-attention,
     linear transformations, activation functions, dropout, and layer normalization. It returns the processed hidden
     states and optional attention outputs if specified.
 
@@ -518,9 +519,9 @@ class MSErnieMEncoderLayer(nn.Cell):
         act_dropout = config.hidden_dropout_prob if config.act_dropout is None else config.act_dropout
 
         self.self_attn = MSErnieMAttention(config)
-        self.linear1 = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.linear1 = nn.Linear(config.hidden_size, config.intermediate_size)
         self.dropout = nn.Dropout(p=act_dropout)
-        self.linear2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.linear2 = nn.Linear(config.intermediate_size, config.hidden_size)
         self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout1 = nn.Dropout(p=dropout)
@@ -530,7 +531,7 @@ class MSErnieMEncoderLayer(nn.Cell):
         else:
             self.activation = config.hidden_act
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -588,24 +589,24 @@ class MSErnieMEncoderLayer(nn.Cell):
         return hidden_states
 
 
-class MSErnieMEncoder(nn.Cell):
+class MSErnieMEncoder(nn.Module):
 
     """
     This class represents an MSErnieMEncoder, which is a multi-layer transformer-based encoder model for
     natural language processing tasks.
 
-    The MSErnieMEncoder inherits from the nn.Cell class and is designed to process input embeddings and generate
+    The MSErnieMEncoder inherits from the nn.Module class and is designed to process input embeddings and generate
     hidden states, attentions, and last hidden state output.
 
     Attributes:
         config (object): The configuration object that contains the model's hyperparameters and settings.
-        layers (nn.CellList): A list of MSErnieMEncoderLayer instances that make up the layers of the encoder.
+        layers (nn.ModuleList): A list of MSErnieMEncoderLayer instances that make up the layers of the encoder.
 
     Methods:
         __init__(self, config):
             Initializes a new MSErnieMEncoder instance with the given configuration.
 
-        construct(self, input_embeds, attention_mask=None, head_mask=None, past_key_values=None, output_attentions=False, output_hidden_states=False):
+        forward(self, input_embeds, attention_mask=None, head_mask=None, past_key_values=None, output_attentions=False, output_hidden_states=False):
             Constructs the MSErnieMEncoder model by processing the input embeddings and generating the desired outputs.
 
             Args:
@@ -645,9 +646,9 @@ class MSErnieMEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([MSErnieMEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([MSErnieMEncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         input_embeds: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -657,7 +658,7 @@ class MSErnieMEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        This method constructs the MSErnieMEncoder by processing the input embeddings and applying attention masks and
+        This method forwards the MSErnieMEncoder by processing the input embeddings and applying attention masks and
         head masks if provided.
 
         Args:
@@ -712,21 +713,21 @@ class MSErnieMEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->ErnieM
-class MSErnieMPooler(nn.Cell):
+class MSErnieMPooler(nn.Module):
 
     """A class representing a pooling layer for the MSErnieM model in MindSpore.
 
-    This class is responsible for constructing the pooling layer of the MSErnieM model.
+    This class is responsible for forwarding the pooling layer of the MSErnieM model.
     The pooling layer takes the hidden states of the model as input and applies a dense layer followed by
     an activation function to the first token tensor. The resulting pooled output is returned.
 
     Attributes:
-        dense (nn.Dense): A dense layer used in the pooling layer.
+        dense (nn.Linear): A dense layer used in the pooling layer.
         activation (nn.Tanh): An activation function used in the pooling layer.
 
     Methods:
         __init__: Initializes the MSErnieMPooler instance.
-        construct: Constructs the pooling layer.
+        forward: Constructs the pooling layer.
 
     """
     def __init__(self, config):
@@ -749,10 +750,10 @@ class MSErnieMPooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the pooled output tensor from the provided hidden states.
 
@@ -787,7 +788,7 @@ class MSErnieMPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -812,7 +813,7 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
     It is a model for sequence classification tasks, built on top of the MSErnieM language model.
 
     The MSErnieMModel class includes methods for initializing the model, getting and setting input embeddings,
-    pruning model heads, and constructing the model.
+    pruning model heads, and forwarding the model.
 
     Methods:
         __init__: Initializes the MSErnieMModel with the given configuration.
@@ -820,7 +821,7 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
         get_input_embeddings: Returns the word embeddings used as input to the model.
         set_input_embeddings: Sets the word embeddings used as input to the model.
         _prune_heads: Prunes the specified heads in the model.
-        construct: Constructs the model with the given input and configuration.
+        forward: Constructs the model with the given input and configuration.
 
     Note:
         The MSErnieMModel class inherits from the MSErnieMPreTrainedModel, which provides additional functionality
@@ -833,7 +834,7 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
         >>> input_ids = ...
         >>> position_ids = ...
         >>> attention_mask = ...
-        >>> output = model.construct(input_ids, position_ids, attention_mask)
+        >>> output = model.forward(input_ids, position_ids, attention_mask)
         ```
     """
     def __init__(self, config, add_pooling_layer=True):
@@ -914,7 +915,7 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layers[layer].self_attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -1017,11 +1018,11 @@ class MSErnieMForSequenceClassification(MSErnieMPreTrainedModel):
         config (MSErnieMConfig): The configuration object for the model.
         ernie_m (MSErnieMModel): The MSErnieM model.
         dropout (nn.Dropout): The dropout layer for regularization.
-        classifier (nn.Dense): The dense layer for classification.
+        classifier (nn.Linear): The dense layer for classification.
 
     Methods:
         __init__: Initializes the MSErnieMForSequenceClassification instance.
-        construct: Constructs the model and computes the loss and logits for the given input.
+        forward: Constructs the model and computes the loss and logits for the given input.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
@@ -1052,12 +1053,12 @@ class MSErnieMForSequenceClassification(MSErnieMPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1123,11 +1124,11 @@ class MSErnieMForMultipleChoice(MSErnieMPreTrainedModel):
     This class represents a Multiple Choice classification model based on the MSErnieM architecture.
     It inherits from the MSErnieMPreTrainedModel and is designed to facilitate multiple choice question answering tasks.
 
-    The class implements the initialization method to set up the model and a construct method to process input data and
-    produce classification predictions. The construct method handles input tensors for input_ids, attention_mask,
+    The class implements the initialization method to set up the model and a forward method to process input data and
+    produce classification predictions. The forward method handles input tensors for input_ids, attention_mask,
     position_ids, head_mask, inputs_embeds, and labels, and provides options for output_attentions and output_hidden_states.
 
-    The construct method computes the multiple choice classification loss based on the input data and generates reshaped
+    The forward method computes the multiple choice classification loss based on the input data and generates reshaped
     logits for each choice. It utilizes the MSErnieM model to process the input data and applies dropout and dense layers
     for classification. Additionally, it handles the cross-entropy loss calculation for training the model.
 
@@ -1158,12 +1159,12 @@ class MSErnieMForMultipleChoice(MSErnieMPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1225,13 +1226,13 @@ class MSErnieMForTokenClassification(MSErnieMPreTrainedModel):
     The `MSErnieMForTokenClassification` class inherits from `MSErnieMPreTrainedModel` and extends its functionality
     by adding a token classification layer on top of the base model.
 
-    The class's constructor initializes the model and sets up the necessary components.
+    The class's forwardor initializes the model and sets up the necessary components.
     It takes a `config` object as input and initializes the base model with the provided configuration.
     The number of labels for token classification is also stored for later use.
     The dropout layer and the token classification layer are defined. Lastly, the `post_init` method is called to
     perform any additional initialization steps.
 
-    The `construct` method is the main entry point for using the model for token classification.
+    The `forward` method is the main entry point for using the model for token classification.
     It takes various input tensors such as `input_ids`, `attention_mask`, `position_ids`, `head_mask`,
     `inputs_embeds`, `past_key_values`, `output_hidden_states`, `output_attentions`, and `labels`.
 
@@ -1282,12 +1283,12 @@ class MSErnieMForTokenClassification(MSErnieMPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1332,17 +1333,17 @@ class MSErnieMForQuestionAnswering(MSErnieMPreTrainedModel):
 
     """
     MSErnieMForQuestionAnswering represents a model for question answering tasks using the MSErnieM architecture.
-    This class inherits from MSErnieMPreTrainedModel and implements methods for initializing the model and constructing
+    This class inherits from MSErnieMPreTrainedModel and implements methods for initializing the model and forwarding
     outputs for question answering.
 
     Attributes:
         num_labels (int): The number of labels for token classification.
         ernie_m (MSErnieMModel): The MSErnieMModel instance used for processing inputs.
-        qa_outputs (nn.Dense): Dense layer for outputting logits for question answering.
+        qa_outputs (nn.Linear): Dense layer for outputting logits for question answering.
 
     Methods:
         __init__: Initializes the MSErnieMForQuestionAnswering instance with the provided configuration.
-        construct:
+        forward:
             Constructs the question answering outputs based on the input tensors and labels provided.
 
         Note:
@@ -1377,12 +1378,12 @@ class MSErnieMForQuestionAnswering(MSErnieMPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.ernie_m = MSErnieMModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1449,7 +1450,7 @@ class MSErnieMForInformationExtraction(MSErnieMPreTrainedModel):
     The 'MSErnieMForInformationExtraction' class is a model for information extraction tasks using the MSERNIE-M
     (multi-lingual) model. It extends the 'MSErnieMPreTrainedModel' class.
 
-    This class initializes the MSERNIE-M model and includes methods for constructing the model for information
+    This class initializes the MSERNIE-M model and includes methods for forwarding the model for information
     extraction tasks, such as computing start and end position losses and probabilities. It also provides functionality
     for calculating the total loss, start probability, and end probability.
 
@@ -1481,12 +1482,12 @@ class MSErnieMForInformationExtraction(MSErnieMPreTrainedModel):
         """
         super().__init__(config)
         self.ernie_m = MSErnieMModel(config)
-        self.linear_start = nn.Dense(config.hidden_size, 1)
-        self.linear_end = nn.Dense(config.hidden_size, 1)
+        self.linear_start = nn.Linear(config.hidden_size, 1)
+        self.linear_end = nn.Linear(config.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1547,7 +1548,7 @@ class MSErnieMForInformationExtraction(MSErnieMPreTrainedModel):
 
 class MSUIEM(MSErnieMForInformationExtraction):
     """UIEM model"""
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

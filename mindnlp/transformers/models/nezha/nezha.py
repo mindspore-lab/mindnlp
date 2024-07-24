@@ -16,8 +16,9 @@
 """nezha model"""
 import math
 import mindspore
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
@@ -43,7 +44,7 @@ __all__ = [
     ]
 
 
-class NezhaRelativePositionsEncoding(nn.Cell):
+class NezhaRelativePositionsEncoding(nn.Module):
     """Implement the Functional Relative Position Encoding"""
     def __init__(self, length, depth, max_relative_position=127):
         """
@@ -89,13 +90,13 @@ class NezhaRelativePositionsEncoding(nn.Cell):
         my_shape.append(depth)
         self.positions_encoding = Parameter(positions_encoding.view(tuple(my_shape)), requires_grad=False)
 
-    def construct(self, length):
+    def forward(self, length):
         """
         Constructs a relative positions encoding matrix of specified length.
 
         Args:
             self (NezhaRelativePositionsEncoding): The instance of the NezhaRelativePositionsEncoding class.
-            length (int): The length of the positions encoding matrix to be constructed.
+            length (int): The length of the positions encoding matrix to be forwarded.
                 Must be a non-negative integer.
 
         Returns:
@@ -108,7 +109,7 @@ class NezhaRelativePositionsEncoding(nn.Cell):
         return self.positions_encoding[:length, :length, :]
 
 
-class NezhaEmbeddings(nn.Cell):
+class NezhaEmbeddings(nn.Module):
     """Construct the embeddings from word and token_type embeddings."""
     def __init__(self, config):
         """
@@ -143,9 +144,9 @@ class NezhaEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.token_type_ids = ops.zeros((1, config.max_position_embeddings), dtype=mindspore.int64)
 
-    def construct(self, input_ids = None, token_type_ids = None, inputs_embeds = None):
+    def forward(self, input_ids = None, token_type_ids = None, inputs_embeds = None):
         """
-        This method constructs Nezha embeddings based on the input_ids, token_type_ids, and inputs_embeds.
+        This method forwards Nezha embeddings based on the input_ids, token_type_ids, and inputs_embeds.
 
         Args:
             self: The instance of the class.
@@ -199,7 +200,7 @@ class NezhaEmbeddings(nn.Cell):
         return embeddings
 
 
-class NezhaSelfAttention(nn.Cell):
+class NezhaSelfAttention(nn.Module):
     """Self attention layer for NEZHA"""
     def __init__(self, config):
         '''
@@ -234,9 +235,9 @@ class NezhaSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.relative_positions_encoding = NezhaRelativePositionsEncoding(
@@ -252,11 +253,11 @@ class NezhaSelfAttention(nn.Cell):
         input_x = input_x.view(tuple(new_x_shape))
         return input_x.permute(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask = None, head_mask = None,
+    def forward(self, hidden_states, attention_mask = None, head_mask = None,
                   encoder_hidden_states = None, encoder_attention_mask = None,
                   past_key_value = None, output_attentions = False):
         """
-        This method 'construct' is defined within the class 'NezhaSelfAttention' and is responsible for performing
+        This method 'forward' is defined within the class 'NezhaSelfAttention' and is responsible for performing
         self-attention computations. It takes the following parameters:
 
         Args:
@@ -368,7 +369,7 @@ class NezhaSelfAttention(nn.Cell):
         return outputs
 
 
-class NezhaSelfOutput(nn.Cell):
+class NezhaSelfOutput(nn.Module):
     """NezhaSelfOutput"""
     def __init__(self, config):
         """
@@ -390,11 +391,11 @@ class NezhaSelfOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
         Constructs the self-attention output of the Nezha model.
 
@@ -415,7 +416,7 @@ class NezhaSelfOutput(nn.Cell):
 
         Returns:
             torch.Tensor:
-                A tensor representing the constructed self-attention output.
+                A tensor representing the forwarded self-attention output.
 
                 - Shape: (batch_size, sequence_length, hidden_size).
                 - Purpose: The self-attention output of the Nezha model.
@@ -429,7 +430,7 @@ class NezhaSelfOutput(nn.Cell):
         return hidden_states
 
 
-class NezhaAttention(nn.Cell):
+class NezhaAttention(nn.Module):
     """Nezha Attention"""
     def __init__(self, config):
         """
@@ -469,7 +470,7 @@ class NezhaAttention(nn.Cell):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(self, hidden_states, attention_mask = None,
+    def forward(self, hidden_states, attention_mask = None,
                   head_mask = None, encoder_hidden_states = None,
                   encoder_attention_mask = None, past_key_value = None,
                   output_attentions = False):
@@ -523,7 +524,7 @@ class NezhaAttention(nn.Cell):
         return outputs
 
 
-class NezhaIntermediate(nn.Cell):
+class NezhaIntermediate(nn.Module):
     """Nezha Intermediate"""
     def __init__(self, config):
         """
@@ -547,15 +548,15 @@ class NezhaIntermediate(nn.Cell):
             KeyError: If the 'config.hidden_act' value is not found in the ACT2FN dictionary.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the intermediate hidden states for the NezhaIntermediate class.
+        This method forwards the intermediate hidden states for the NezhaIntermediate class.
 
         Args:
             self (NezhaIntermediate): The instance of the NezhaIntermediate class.
@@ -572,7 +573,7 @@ class NezhaIntermediate(nn.Cell):
         return hidden_states
 
 
-class NezhaOutput(nn.Cell):
+class NezhaOutput(nn.Module):
     """Nezha Output"""
     def __init__(self, config):
         """
@@ -594,11 +595,11 @@ class NezhaOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
         Constructs the output of the Nezha model by applying a series of operations on the hidden states and input tensor.
 
@@ -621,7 +622,7 @@ class NezhaOutput(nn.Cell):
         return hidden_states
 
 
-class NezhaLayer(nn.Cell):
+class NezhaLayer(nn.Module):
     """Nezha Layer"""
     def __init__(self, config):
         """
@@ -655,12 +656,12 @@ class NezhaLayer(nn.Cell):
         self.intermediate = NezhaIntermediate(config)
         self.output = NezhaOutput(config)
 
-    def construct(self, hidden_states, attention_mask = None,
+    def forward(self, hidden_states, attention_mask = None,
                   head_mask = None, encoder_hidden_states = None,
                   encoder_attention_mask = None, past_key_value = None,
                   output_attentions = False):
         """
-        Method: construct
+        Method: forward
 
         Description:
             Constructs the NezhaLayer by performing self-attention and potentially cross-attention operations based on
@@ -745,7 +746,7 @@ class NezhaLayer(nn.Cell):
         return layer_output
 
 
-class NezhaEncoder(nn.Cell):
+class NezhaEncoder(nn.Module):
     """Nezha Encoder"""
     def __init__(self, config):
         """
@@ -767,10 +768,10 @@ class NezhaEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([NezhaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([NezhaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(self, hidden_states, attention_mask = None,
+    def forward(self, hidden_states, attention_mask = None,
                   head_mask = None, encoder_hidden_states = None,
                   encoder_attention_mask = None, past_key_values = None,
                   use_cache = None, output_attentions = False,
@@ -876,7 +877,7 @@ class NezhaEncoder(nn.Cell):
         )
 
 
-class NezhaPooler(nn.Cell):
+class NezhaPooler(nn.Module):
     """Nezha Pooler"""
     def __init__(self, config):
         """
@@ -895,10 +896,10 @@ class NezhaPooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the pooled output from the given hidden states.
 
@@ -922,7 +923,7 @@ class NezhaPooler(nn.Cell):
         return pooled_output
 
 
-class NezhaPredictionHeadTransform(nn.Cell):
+class NezhaPredictionHeadTransform(nn.Module):
     """Nezha Predicton Head Transform"""
     def __init__(self, config):
         """
@@ -944,14 +945,14 @@ class NezhaPredictionHeadTransform(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the NezhaPredictionHeadTransform.
 
@@ -971,7 +972,7 @@ class NezhaPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class NezhaLMPredictionHead(nn.Cell):
+class NezhaLMPredictionHead(nn.Module):
     """Nezha LMLMPredictionHead"""
     def __init__(self, config):
         """
@@ -997,14 +998,14 @@ class NezhaLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the prediction head for Nezha Language Model.
 
@@ -1013,7 +1014,7 @@ class NezhaLMPredictionHead(nn.Cell):
             hidden_states (Tensor): The hidden states to be processed for prediction.
 
         Returns:
-            hidden_states: The constructed prediction head for Nezha Language Model.
+            hidden_states: The forwarded prediction head for Nezha Language Model.
 
         Raises:
             None.
@@ -1023,7 +1024,7 @@ class NezhaLMPredictionHead(nn.Cell):
         return hidden_states
 
 
-class NezhaOnlyMLMHead(nn.Cell):
+class NezhaOnlyMLMHead(nn.Module):
     """Nezha OnlyMLMHead"""
     def __init__(self, config):
         """Initializes a new instance of the NezhaOnlyMLMHead class.
@@ -1041,7 +1042,7 @@ class NezhaOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = NezhaLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         """
         Constructs the Masked Language Model (MLM) head for the Nezha model.
 
@@ -1060,7 +1061,7 @@ class NezhaOnlyMLMHead(nn.Cell):
         return prediction_scores
 
 
-class NezhaOnlyNSPHead(nn.Cell):
+class NezhaOnlyNSPHead(nn.Module):
     """Nezha OnlyNSPHead"""
     def __init__(self, config):
         """
@@ -1080,9 +1081,9 @@ class NezhaOnlyNSPHead(nn.Cell):
             ValueError: If the config parameter does not contain the required hidden_size attribute.
         """
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         """
         Constructs the NSP (Next Sentence Prediction) head for the Nezha model.
 
@@ -1107,7 +1108,7 @@ class NezhaOnlyNSPHead(nn.Cell):
         return seq_relationship_score
 
 
-class NezhaPreTrainingHeads(nn.Cell):
+class NezhaPreTrainingHeads(nn.Module):
     """Nezha PreTrainingHeads"""
     def __init__(self, config):
         """
@@ -1126,11 +1127,11 @@ class NezhaPreTrainingHeads(nn.Cell):
         """
         super().__init__()
         self.predictions = NezhaLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         """
-        This method constructs Nezha pre-training heads.
+        This method forwards Nezha pre-training heads.
 
         Args:
             self (object): The instance of the NezhaPreTrainingHeads class.
@@ -1165,7 +1166,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
@@ -1333,14 +1334,14 @@ class NezhaModel(NezhaPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None,
                   inputs_embeds = None, encoder_hidden_states = None,
                   encoder_attention_mask = None, past_key_values = None,
                   use_cache = None, output_attentions = None,
                   output_hidden_states = None):
         """
-        This method constructs the NezhaModel by processing input data through the model's encoder and embeddings.
+        This method forwards the NezhaModel by processing input data through the model's encoder and embeddings.
 
         Args:
             self: The instance of the NezhaModel class.
@@ -1477,7 +1478,7 @@ class NezhaForPreTraining(NezhaPreTrainedModel):
         """set output embeddings"""
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, next_sentence_label = None,
                   output_attentions = None, output_hidden_states = None):
@@ -1568,7 +1569,7 @@ class NezhaForMaskedLM(NezhaPreTrainedModel):
         """set output embeddings"""
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   encoder_hidden_states = None, encoder_attention_mask = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
@@ -1666,7 +1667,7 @@ class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
         self.nezha = NezhaModel(config)
         self.cls = NezhaOnlyNSPHead(config)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
         token_type_ids = None, head_mask = None, inputs_embeds = None,
         labels = None, output_attentions = None, output_hidden_states = None, **kwargs):
         """
@@ -1764,13 +1765,13 @@ class NezhaForSequenceClassification(NezhaPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
         '''
-        This method constructs a Nezha model for sequence classification.
+        This method forwards a Nezha model for sequence classification.
 
         Args:
             self (object): The instance of the NezhaForSequenceClassification class.
@@ -1862,9 +1863,9 @@ class NezhaForMultipleChoice(NezhaPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
         r"""
@@ -1939,9 +1940,9 @@ class NezhaForTokenClassification(NezhaPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   labels = None, output_attentions = None, output_hidden_states = None):
         r"""
@@ -1997,9 +1998,9 @@ class NezhaForQuestionAnswering(NezhaPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.nezha = NezhaModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, input_ids = None, attention_mask = None,
+    def forward(self, input_ids = None, attention_mask = None,
                   token_type_ids = None, head_mask = None, inputs_embeds = None,
                   start_positions = None, end_positions = None, output_attentions = None,
                   output_hidden_states = None):

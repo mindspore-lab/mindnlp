@@ -15,16 +15,16 @@
 
 """MindNLP bert model"""
 import mindspore.common.dtype as mstype
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.modules.functional import make_causal_mask, finfo
+# from mindnlp.modules.functional import make_causal_mask, finfo
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
 
-class MSBertEmbeddings(nn.Cell):
+class MSBertEmbeddings(nn.Module):
     """
     Embeddings for BERT, include word, position and token_type
     """
@@ -78,9 +78,9 @@ class MSBertEmbeddings(nn.Cell):
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, input_ids, token_type_ids, position_ids):
+    def forward(self, input_ids, token_type_ids, position_ids):
         """
-        This method constructs the embeddings for MSBert model.
+        This method forwards the embeddings for MSBert model.
         
         Args:
             self (object): The object instance of MSBertEmbeddings class.
@@ -89,7 +89,7 @@ class MSBertEmbeddings(nn.Cell):
             position_ids (tensor): The position ids to indicate the position of each token in the input sequence.
         
         Returns:
-            tensor: The constructed embeddings for the input sequence represented as a tensor.
+            tensor: The forwarded embeddings for the input sequence represented as a tensor.
         
         Raises:
             None
@@ -103,7 +103,7 @@ class MSBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class MSBertSelfAttention(nn.Cell):
+class MSBertSelfAttention(nn.Module):
     """
     Self attention layer for BERT.
     """
@@ -161,15 +161,15 @@ class MSBertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(
+        self.query = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
-        self.key = nn.Dense(
+        self.key = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
-        self.value = nn.Dense(
+        self.value = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
@@ -264,7 +264,7 @@ class MSBertSelfAttention(nn.Cell):
         input_x = input_x.view(*new_x_shape)
         return input_x.transpose(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None):
         """
         Constructs the self-attention layer for the MSBert model.
 
@@ -381,7 +381,7 @@ class MSBertSelfAttention(nn.Cell):
         return outputs
 
 
-class MSBertSelfOutput(nn.Cell):
+class MSBertSelfOutput(nn.Module):
     r"""
     Bert Self Output
     """
@@ -402,16 +402,16 @@ class MSBertSelfOutput(nn.Cell):
             RuntimeError: If there is an issue with initializing the dense, LayerNorm, or dropout attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method 'construct' is a part of the 'MSBertSelfOutput' class and is responsible for
+        This method 'forward' is a part of the 'MSBertSelfOutput' class and is responsible for
         processing the hidden states and input tensor.
 
         Args:
@@ -433,7 +433,7 @@ class MSBertSelfOutput(nn.Cell):
         return hidden_states
 
 
-class MSBertAttention(nn.Cell):
+class MSBertAttention(nn.Module):
     r"""
     Bert Attention
     """
@@ -457,7 +457,7 @@ class MSBertAttention(nn.Cell):
         self.self = MSBertSelfAttention(config, causal, init_cache)
         self.output = MSBertSelfOutput(config)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None):
         """
         Constructs the attention mechanism for a multi-head self-attention layer in MSBertAttention.
 
@@ -490,7 +490,7 @@ class MSBertAttention(nn.Cell):
         return outputs
 
 
-class MSBertIntermediate(nn.Cell):
+class MSBertIntermediate(nn.Module):
     r"""
     Bert Intermediate
     """
@@ -515,13 +515,13 @@ class MSBertIntermediate(nn.Cell):
             ValueError: If the config object does not contain the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.intermediate_size,
         )
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the intermediate layer of the MSBert model.
 
@@ -546,7 +546,7 @@ class MSBertIntermediate(nn.Cell):
         return hidden_states
 
 
-class MSBertOutput(nn.Cell):
+class MSBertOutput(nn.Module):
     r"""
     Bert Output
     """
@@ -565,16 +565,16 @@ class MSBertOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.intermediate_size,
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method constructs the output of the MSBert model.
+        This method forwards the output of the MSBert model.
 
         Args:
             self: The instance of the MSBertOutput class.
@@ -584,7 +584,7 @@ class MSBertOutput(nn.Cell):
                 This tensor represents the original input to the MSBert model.
 
         Returns:
-            tensor: The constructed output tensor representing the final hidden states.
+            tensor: The forwarded output tensor representing the final hidden states.
             This tensor is the result of processing the hidden states and input tensor.
 
         Raises:
@@ -596,7 +596,7 @@ class MSBertOutput(nn.Cell):
         return hidden_states
 
 
-class MSBertLayer(nn.Cell):
+class MSBertLayer(nn.Module):
     r"""
     Bert Layer
     """
@@ -622,7 +622,7 @@ class MSBertLayer(nn.Cell):
         if config.add_cross_attention:
             self.crossattention = MSBertAttention(config, causal=False, init_cache=init_cache)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None,
+    def forward(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
         """
@@ -668,7 +668,7 @@ class MSBertLayer(nn.Cell):
         return outputs
 
 
-class MSBertEncoder(nn.Cell):
+class MSBertEncoder(nn.Module):
     r"""
     Bert Encoder
     """
@@ -683,7 +683,7 @@ class MSBertEncoder(nn.Cell):
 
                 - output_attentions (bool): Whether to output attentions weights.
                 - output_hidden_states (bool): Whether to output all hidden states.
-                - layer (nn.CellList): List of MSBertLayer instances.
+                - layer (nn.ModuleList): List of MSBertLayer instances.
 
         Returns:
             None.
@@ -694,7 +694,7 @@ class MSBertEncoder(nn.Cell):
         super().__init__()
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [MSBertLayer(config) for _ in range(config.num_hidden_layers)]
         )
 
@@ -731,7 +731,7 @@ class MSBertEncoder(nn.Cell):
         for layer in self.layer:
             layer.recompute()
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None,
+    def forward(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
         """
@@ -804,7 +804,7 @@ class MSBertEncoder(nn.Cell):
         return outputs
 
 
-class MSBertPooler(nn.Cell):
+class MSBertPooler(nn.Module):
     r"""
     Bert Pooler
     """
@@ -828,15 +828,15 @@ class MSBertPooler(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs a pooled output from the given hidden states.
+        This method forwards a pooled output from the given hidden states.
 
         Args:
             self (MSBertPooler): The instance of the MSBertPooler class.
@@ -860,7 +860,7 @@ class MSBertPooler(nn.Cell):
         return pooled_output
 
 
-class MSBertPredictionHeadTransform(nn.Cell):
+class MSBertPredictionHeadTransform(nn.Module):
     r"""
     Bert Prediction Head Transform
     """
@@ -886,7 +886,7 @@ class MSBertPredictionHeadTransform(nn.Cell):
             KeyError: If the hidden activation function specified in the config is not found in the ACT2FN dictionary.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
@@ -895,9 +895,9 @@ class MSBertPredictionHeadTransform(nn.Cell):
             (config.hidden_size,), epsilon=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is part of the 'MSBertPredictionHeadTransform' class and is used to perform transformations on hidden states.
+        This method 'forward' is part of the 'MSBertPredictionHeadTransform' class and is used to perform transformations on hidden states.
 
         Args:
             self:
@@ -929,7 +929,7 @@ class MSBertPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class MSBertLMPredictionHead(nn.Cell):
+class MSBertLMPredictionHead(nn.Module):
     r"""
     Bert LM Prediction Head
     """
@@ -957,7 +957,7 @@ class MSBertLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(
+        self.decoder = nn.Linear(
             config.hidden_size,
             config.vocab_size,
             has_bias=False,
@@ -965,7 +965,7 @@ class MSBertLMPredictionHead(nn.Cell):
 
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
 
-    def construct(self, hidden_states, masked_lm_positions):
+    def forward(self, hidden_states, masked_lm_positions):
         """
         Constructs the MSBertLMPredictionHead.
 
@@ -1000,7 +1000,7 @@ class MSBertLMPredictionHead(nn.Cell):
         return hidden_states
 
 
-class MSBertPreTrainingHeads(nn.Cell):
+class MSBertPreTrainingHeads(nn.Module):
     r"""
     Bert PreTraining Heads
     """
@@ -1015,7 +1015,7 @@ class MSBertPreTrainingHeads(nn.Cell):
 
                 - Type: Custom class
                 - Purpose: Provides configuration parameters for the pre-training heads.
-                - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Dense classes.
+                - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Linear classes.
 
         Returns:
             None.
@@ -1025,9 +1025,9 @@ class MSBertPreTrainingHeads(nn.Cell):
         """
         super().__init__()
         self.predictions = MSBertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output, masked_lm_positions):
+    def forward(self, sequence_output, pooled_output, masked_lm_positions):
         """
         Construct method in the MSBertPreTrainingHeads class.
 
@@ -1057,7 +1057,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -1142,7 +1142,7 @@ class MSBertModel(MSBertPreTrainedModel):
         """
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,
@@ -1254,7 +1254,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
             self.bert.embeddings.word_embeddings.weight
         )
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,
@@ -1264,7 +1264,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
         masked_lm_positions=None,
     ):
         """
-        This method constructs the pretraining model for MSBertForPretraining.
+        This method forwards the pretraining model for MSBertForPretraining.
 
         Args:
             self (MSBertForPretraining): The instance of the MSBertForPretraining class.
@@ -1338,10 +1338,10 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
             if config.classifier_dropout is not None
             else config.hidden_dropout_prob
         )
-        self.classifier = nn.Dense(config.hidden_size, self.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.num_labels)
         self.dropout = nn.Dropout(p=classifier_dropout)
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,

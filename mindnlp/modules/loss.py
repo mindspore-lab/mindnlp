@@ -15,7 +15,8 @@
 """Losses"""
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindnlp._legacy.functional import softmax, kl_div, masked_select
 
 def _inner_log_softmax(inputs, axis):
@@ -30,7 +31,7 @@ def sequence_mask(lengths, maxlen):
     return result.astype(mindspore.float32)
 
 
-class RDropLoss(nn.Cell):
+class RDropLoss(nn.Module):
     """
     R-Drop Loss implementation
     For more information about R-drop please refer to this paper: https://arxiv.org/abs/2106.14448
@@ -69,7 +70,7 @@ class RDropLoss(nn.Cell):
                 f"but received {reduction}.")
         self.reduction = reduction
 
-    def construct(self, p, q, pad_mask=None):
+    def forward(self, p, q, pad_mask=None):
         """
         Returns loss tensor, the rdrop loss of p and q.
 
@@ -112,7 +113,7 @@ class RDropLoss(nn.Cell):
         return loss
 
 
-class CMRC2018Loss(nn.Cell):
+class CMRC2018Loss(nn.Module):
     r"""
     CMRC2018Loss
     used to compute CMRC2018 chinese Q&A task
@@ -143,7 +144,7 @@ class CMRC2018Loss(nn.Cell):
 
         self.reduction = reduction
 
-    def construct(self, target_start, target_end, context_len, pred_start, pred_end):
+    def forward(self, target_start, target_end, context_len, pred_start, pred_end):
         """
         compute CMRC2018Loss
 

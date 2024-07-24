@@ -1119,7 +1119,7 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
                 Defaults to False.
 
         Returns:
-            str: The reconstructed text from the given token IDs.
+            str: The reforwarded text from the given token IDs.
 
         Raises:
             None.

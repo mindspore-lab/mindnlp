@@ -20,7 +20,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Constant
 
 from mindnlp.utils import (
@@ -51,7 +52,7 @@ _CHECKPOINT_FOR_DOC = "google/umt5-small"
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerNorm with T5->UMT5
-class UMT5LayerNorm(nn.Cell):
+class UMT5LayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Construct a layernorm module in the UMT5 style. No bias and no subtraction of mean.
@@ -60,7 +61,7 @@ class UMT5LayerNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # UMT5 uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
         # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
         # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
@@ -77,15 +78,15 @@ class UMT5LayerNorm(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseActDense with T5->UMT5
-class UMT5DenseActDense(nn.Cell):
+class UMT5DenseActDense(nn.Module):
     def __init__(self, config: UMT5Config):
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -100,16 +101,16 @@ class UMT5DenseActDense(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseGatedActDense with T5->UMT5
-class UMT5DenseGatedActDense(nn.Cell):
+class UMT5DenseGatedActDense(nn.Module):
     def __init__(self, config: UMT5Config):
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_gelu = self.act(self.wi_0(hidden_states))
         hidden_linear = self.wi_1(hidden_states)
         hidden_states = hidden_gelu * hidden_linear
@@ -130,7 +131,7 @@ class UMT5DenseGatedActDense(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerFF with T5->UMT5
-class UMT5LayerFF(nn.Cell):
+class UMT5LayerFF(nn.Module):
     def __init__(self, config: UMT5Config):
         super().__init__()
         if config.is_gated_act:
@@ -141,14 +142,14 @@ class UMT5LayerFF(nn.Cell):
         self.layer_norm = UMT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.DenseReluDense(forwarded_states)
         hidden_states = hidden_states + self.dropout(forwarded_states)
         return hidden_states
 
 
-class UMT5Attention(nn.Cell):
+class UMT5Attention(nn.Module):
     """
     T5's attention using relative_attention_bias.
     """
@@ -166,10 +167,10 @@ class UMT5Attention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -239,7 +240,7 @@ class UMT5Attention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         encoder_hidden_states: Optional[mindspore.Tensor] = None,
@@ -311,14 +312,14 @@ class UMT5Attention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class UMT5LayerSelfAttention(nn.Cell):
+class UMT5LayerSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.SelfAttention = UMT5Attention(config, has_relative_attention_bias=True)
         self.layer_norm = UMT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -337,14 +338,14 @@ class UMT5LayerSelfAttention(nn.Cell):
         return outputs
 
 
-class UMT5LayerCrossAttention(nn.Cell):
+class UMT5LayerCrossAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.EncDecAttention = UMT5Attention(config, has_relative_attention_bias=False)
         self.layer_norm = UMT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         encoder_hidden_states=None,
@@ -365,18 +366,18 @@ class UMT5LayerCrossAttention(nn.Cell):
         return outputs
 
 
-class UMT5Block(nn.Cell):
+class UMT5Block(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.is_decoder = config.is_decoder
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(UMT5LayerSelfAttention(config))
         if self.is_decoder:
             self.layer.append(UMT5LayerCrossAttention(config))
 
         self.layer.append(UMT5LayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -448,16 +449,16 @@ class UMT5Block(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5ClassificationHead with T5->UMT5
-class UMT5ClassificationHead(nn.Cell):
+class UMT5ClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config: UMT5Config):
         super().__init__()
-        self.dense = nn.Dense(config.d_model, config.d_model)
+        self.dense = nn.Linear(config.d_model, config.d_model)
         self.dropout = nn.Dropout(p=config.classifier_dropout)
-        self.out_proj = nn.Dense(config.d_model, config.num_labels)
+        self.out_proj = nn.Linear(config.d_model, config.num_labels)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -614,7 +615,7 @@ class UMT5Stack(UMT5PreTrainedModel):
         super().__init__(config)
         self.embed_tokens = embed_tokens
         self.is_decoder = config.is_decoder
-        self.block = nn.CellList([UMT5Block(config) for i in range(config.num_layers)])
+        self.block = nn.ModuleList([UMT5Block(config) for i in range(config.num_layers)])
         self.final_layer_norm = UMT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
@@ -628,7 +629,7 @@ class UMT5Stack(UMT5PreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -841,7 +842,7 @@ class UMT5Model(UMT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -973,7 +974,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = UMT5Stack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1010,7 +1011,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1243,7 +1244,7 @@ class UMT5EncoderModel(UMT5PreTrainedModel):
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
     # Copied from transformers.models.t5.modeling_t5.T5EncoderModel.forward with T5->UMT5, google-t5/t5-small->google/umt5-small
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1298,7 +1299,7 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
 
         self.model_parallel = False
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1414,13 +1415,13 @@ class UMT5ForTokenClassification(UMT5PreTrainedModel):
         self.transformer = UMT5EncoderModel(config)
         self.dropout = nn.Dropout(config.classifier_dropout)
 
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.post_init()
         # Initialize weights and apply final processing
 
 
     # Copied from transformers.models.t5.modeling_t5.T5ForTokenClassification.forward with T5->UMT5
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1491,7 +1492,7 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
         self.decoder = UMT5Stack(decoder_config, self.shared)
 
         self.num_labels = config.num_labels
-        self.qa_outputs = nn.Dense(config.d_model, config.num_labels)
+        self.qa_outputs = nn.Linear(config.d_model, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1520,7 +1521,7 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

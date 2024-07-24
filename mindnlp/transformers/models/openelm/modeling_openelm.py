@@ -7,11 +7,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 from mindspore.ops.function.nn_func import _scaled_dot_product_attention
 
-from ....modules.functional import finfo
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
@@ -28,7 +28,7 @@ logger = logging.get_logger(__name__)
 # huggingface transformers won't be able to load the module correctly
 
 
-class OpenELMRMSNorm(nn.Cell):
+class OpenELMRMSNorm(nn.Module):
 
     """
     This class represents the OpenELMRMSNorm normalization layer, which can be used for normalizing input tensors. 
@@ -44,7 +44,7 @@ class OpenELMRMSNorm(nn.Cell):
         _norm:
             Apply the OpenELMRMSNorm normalization to the input tensor.
 
-        construct:
+        forward:
             Forward pass through the OpenELMRMSNorm layer.
 
     """
@@ -79,7 +79,7 @@ class OpenELMRMSNorm(nn.Cell):
         """
         return x * ops.rsqrt(x.pow(2).mean(-1, keep_dims=True) + self.eps)
 
-    def construct(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward pass through the OpenELMRMSNorm layer.
 
@@ -104,7 +104,7 @@ class OpenELMPreTrainedModel(PreTrainedModel):
     of the model. This method takes a 'cell' parameter, which represents the neural network cell.
 
     The '_init_weights' method initializes the weights differently based on the type of the 'cell' parameter.
-    If the 'cell' is an instance of 'nn.Dense', the weight is initialized using a normal distribution
+    If the 'cell' is an instance of 'nn.Linear', the weight is initialized using a normal distribution
     with a range defined by the 'initializer_range' attribute of the 'config' object.
     If the 'cell' has a bias, it is initialized to zeros.
 
@@ -124,9 +124,9 @@ class OpenELMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["OpenELMDecoderLayer"]
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell: nn.Cell) -> None:
+    def _init_weights(self, cell: nn.Module) -> None:
         """Initialize the weights."""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.initialize(Normal(self.config.initializer_range))
@@ -184,7 +184,7 @@ def _apply_rotary_pos_emb(x: Tensor, pos_sin: Tensor, pos_cos: Tensor) -> Tensor
     return (x * pos_cos) + (_rotate_half(x) * pos_sin)
 
 
-class OpenELMRotaryEmbedding(nn.Cell):
+class OpenELMRotaryEmbedding(nn.Module):
     """
     The rotary position embeddings (aka RoPE) from `RoFormer <https://arxiv.org/abs/2104.09864>`_.
 
@@ -297,7 +297,7 @@ class OpenELMRotaryEmbedding(nn.Cell):
             self._cached_cos = cos_emb[None, None, :, :]
             self._cached_sin = sin_emb[None, None, :, :]
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -357,20 +357,20 @@ class OpenELMRotaryEmbedding(nn.Cell):
         return query_float.type_as(query), key_float.type_as(key)
 
 
-class OpenELMMultiHeadCausalAttention(nn.Cell):
+class OpenELMMultiHeadCausalAttention(nn.Module):
 
     """
     This class represents a multi-head causal attention mechanism for OpenELM models.
     It performs multi-head self-attention computation with optional key and query normalization and caching capabilities.
 
-    Inherits from nn.Cell, this class provides functionality for processing input tensors through multi-head
+    Inherits from nn.Module, this class provides functionality for processing input tensors through multi-head
     self-attention mechanism, with support for caching key-value pairs for efficient generation tasks.
 
     The class initializes with configuration parameters and layer index, setting up projection layers,
     position embeddings, normalization options, and output projection layers.
     It also defines the number of query, key, and value heads, along with transformer dimensions and grouping information.
 
-    The 'construct' method performs the forward pass of multi-head self-attention, taking input hidden states,
+    The 'forward' method performs the forward pass of multi-head self-attention, taking input hidden states,
     optional attention mask, cached key-value pairs, and other parameters.
     It computes queries, keys, and values, applies normalization if configured, updates cached key-value pairs
     if available, incorporates positional embeddings, and performs scaled dot-product attention calculation.
@@ -379,7 +379,7 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
 
     Note:
         This class assumes the existence of certain related classes and functions like OpenELMConfig,
-        OpenELMRotaryEmbedding, OpenELMRMSNorm, Cache, nn.Dense, and _scaled_dot_product_attention.
+        OpenELMRotaryEmbedding, OpenELMRMSNorm, Cache, nn.Linear, and _scaled_dot_product_attention.
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
         '''
@@ -403,7 +403,7 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
         k_heads = config.num_kv_heads[layer_idx]
         v_heads = config.num_kv_heads[layer_idx]
 
-        self.qkv_proj = nn.Dense(
+        self.qkv_proj = nn.Linear(
             in_channels=config.model_dim,
             out_channels=(q_heads + k_heads + v_heads) * head_dim,
             has_bias=False,
@@ -426,7 +426,7 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
             self.q_norm = None
             self.k_norm = None
 
-        self.out_proj = nn.Dense(
+        self.out_proj = nn.Linear(
             in_channels=q_heads * head_dim,
             out_channels=config.model_dim,
             has_bias=False,
@@ -460,7 +460,7 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
             + f"query_heads={self.num_q_heads}, key_heads={self.num_k_heads}, value_heads={self.num_v_heads}"
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -553,11 +553,11 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class OpenELMFeedForwardNetwork(nn.Cell):
+class OpenELMFeedForwardNetwork(nn.Module):
 
     """
     The OpenELMFeedForwardNetwork class represents a feedforward network layer for the OpenELM model.
-    This class inherits from nn.Cell and implements the forward function of the feedforward network layer.
+    This class inherits from nn.Module and implements the forward function of the feedforward network layer.
 
     The __init__ method initializes the OpenELMFeedForwardNetwork instance with the provided configuration and layer index.
     It calculates the intermediate dimensions based on the configuration, initializes the projection layers, and sets
@@ -565,7 +565,7 @@ class OpenELMFeedForwardNetwork(nn.Cell):
 
     The extra_repr method returns a string representation of the instance, including the ffn_with_glu attribute.
 
-    The construct method implements the forward function of the feedforward network layer.
+    The forward method implements the forward function of the feedforward network layer.
     It takes an input tensor of shape [batch size, sequence length, model dimension], applies the projection layers and
     activation functions based on the configuration, and returns a tensor of the same shape as the input.
 
@@ -597,12 +597,12 @@ class OpenELMFeedForwardNetwork(nn.Cell):
         )
         if config.ffn_with_glu:
             # FFN with Gated linear unit, as described in https://arxiv.org/abs/2002.05202v1.
-            self.proj_1 = nn.Dense(
+            self.proj_1 = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=2 * intermediate_dim,
                 has_bias=False,
             )
-            self.proj_2 = nn.Dense(
+            self.proj_2 = nn.Linear(
                 in_channels=intermediate_dim,
                 out_channels=config.model_dim,
                 has_bias=False,
@@ -610,12 +610,12 @@ class OpenELMFeedForwardNetwork(nn.Cell):
             self.ffn_with_glu = True
         else:
             # Standard FFN, as described in https://arxiv.org/abs/1706.03762
-            self.proj_1 = nn.Dense(
+            self.proj_1 = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=intermediate_dim,
                 has_bias=False,
             )
-            self.proj_2 = nn.Dense(
+            self.proj_2 = nn.Linear(
                 in_channels=intermediate_dim,
                 out_channels=config.model_dim,
                 has_bias=False,
@@ -641,7 +641,7 @@ class OpenELMFeedForwardNetwork(nn.Cell):
         """
         return super().extra_repr() + f"(ffn_with_glu) : {self.ffn_with_glu}"
 
-    def construct(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Forward function of FFN layer.
 
         Args:
@@ -659,13 +659,13 @@ class OpenELMFeedForwardNetwork(nn.Cell):
             return self.proj_2(self.act(self.proj_1(x)))
 
 
-class OpenELMDecoderLayer(nn.Cell):
+class OpenELMDecoderLayer(nn.Module):
 
     """
     The `OpenELMDecoderLayer` class represents a single layer of the OpenELM decoder model.
     It is designed to be used in the OpenELMDecoder model for generating high-quality sequence predictions.
 
-    This class inherits from the `nn.Cell` class, which provides a base class for all neural network cells in MindSpore.
+    This class inherits from the `nn.Module` class, which provides a base class for all neural network cells in MindSpore.
 
     Attributes:
         attn (OpenELMMultiHeadCausalAttention): An instance of the `OpenELMMultiHeadCausalAttention` class responsible
@@ -703,7 +703,7 @@ class OpenELMDecoderLayer(nn.Cell):
             num_features=config.model_dim,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -770,8 +770,8 @@ class OpenELMModel(OpenELMPreTrainedModel):
     The model architecture includes a transformer-based decoder with customizable layers and attention mechanisms.
 
     The OpenELMModel class provides methods for initializing the model with configuration settings, accessing and
-    updating input embeddings, and constructing the model for inference or training.
-    The construct method handles the main computation flow of the model, including processing input data, applying
+    updating input embeddings, and forwarding the model for inference or training.
+    The forward method handles the main computation flow of the model, including processing input data, applying
     transformer layers, and generating model outputs. The class also includes helper methods for managing cache,
     attention masks, and normalization.
 
@@ -811,7 +811,7 @@ class OpenELMModel(OpenELMPreTrainedModel):
             vocab_size=config.vocab_size,
         )
 
-        self.layers = nn.CellList([
+        self.layers = nn.ModuleList([
             OpenELMDecoderLayer(config=config, layer_idx=layer_idx)
             for layer_idx in range(config.num_transformer_layers)]
         )
@@ -819,7 +819,7 @@ class OpenELMModel(OpenELMPreTrainedModel):
         if config.share_input_output_layers:
             self.classifier = None
         else:
-            self.classifier = nn.Dense(
+            self.classifier = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=config.vocab_size,
                 has_bias=False,
@@ -875,7 +875,7 @@ class OpenELMModel(OpenELMPreTrainedModel):
         """
         self.token_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1088,7 +1088,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
     This class represents a OpenELM model for Causal Language Modeling (LM).
     It is designed for generating text based on input sequences and predicting the next token in a sequence.
     The class includes methods for setting and getting input and output embeddings, setting the decoder,
-    constructing the model for generation, and preparing inputs for text generation.
+    forwarding the model for generation, and preparing inputs for text generation.
     Additionally, it provides a static method for reordering cache during generation.
     The class inherits from OpenELMPreTrainedModel and implements functionality specific to Causal LM tasks.
     """
@@ -1116,11 +1116,11 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
         Attributes:
             self.transformer: An instance of the OpenELMModel class.
             self.vocab_size: An integer representing the size of the vocabulary used in the model.
-            self.lm_head: An instance of the nn.Dense class or None depending on the value of
+            self.lm_head: An instance of the nn.Linear class or None depending on the value of
                 config.share_input_output_layers.
 
         Note:
-            The OpenELMModel and nn.Dense classes are imported from the appropriate libraries.
+            The OpenELMModel and nn.Linear classes are imported from the appropriate libraries.
 
         Example:
             ```python
@@ -1134,7 +1134,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
         if config.share_input_output_layers:
             self.lm_head = None
         else:
-            self.lm_head = nn.Dense(config.model_dim, config.vocab_size, has_bias=False)
+            self.lm_head = nn.Linear(config.model_dim, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1234,7 +1234,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
         """
         return self.transformer
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1249,7 +1249,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
-        This method constructs a Causal Language Model for OpenELM.
+        This method forwards a Causal Language Model for OpenELM.
 
         Args:
             self (object): The instance of the class.

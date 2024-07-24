@@ -67,7 +67,7 @@ def gru_cell(inputs, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
     return hy
 
-class SingleGRULayer_CPU(nn.Cell):
+class SingleGRULayer_CPU(nn.Module):
     """Single layer gru on CPU."""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
         r""" 
@@ -143,7 +143,7 @@ class SingleGRULayer_CPU(nn.Cell):
 
         return outputs, hn
 
-    def construct(self, inputs, h, weights, biases):
+    def forward(self, inputs, h, weights, biases):
         r"""
         Constructs a single GRU layer in the CPU.
         
@@ -165,7 +165,7 @@ class SingleGRULayer_CPU(nn.Cell):
         return self.forward(inputs, h, weights, biases)
 
 
-class SingleLSTMLayerBase(nn.Cell):
+class SingleLSTMLayerBase(nn.Module):
     """Single LSTM Layer"""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
         r"""
@@ -209,9 +209,9 @@ class SingleLSTMLayerBase(nn.Cell):
         """
         raise NotImplementedError
 
-    def construct(self, inputs, h, weights, biases):
+    def forward(self, inputs, h, weights, biases):
         r"""
-        Method to construct a single LSTM layer.
+        Method to forward a single LSTM layer.
         
         Args:
             self: The instance of the SingleLSTMLayerBase class.
@@ -309,7 +309,7 @@ False.
         return weights
 
 
-class MultiLayerRNN(nn.Cell):
+class MultiLayerRNN(nn.Module):
     """Multilayer RNN."""
     def __init__(self, mode, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
@@ -344,7 +344,7 @@ class MultiLayerRNN(nn.Cell):
             layer_input_size = input_size if layer == 0 else hidden_size * num_directions
             rnn = rnn_class(layer_input_size, hidden_size, has_bias, bidirectional)
             cell_list.append(rnn)
-        self.cell_list = nn.CellList(cell_list)
+        self.cell_list = nn.ModuleList(cell_list)
 
         w_stride = 2
         if bidirectional:
@@ -358,7 +358,7 @@ class MultiLayerRNN(nn.Cell):
         self.num_directions = num_directions
         self.has_bias = has_bias
 
-    def construct(self, inputs, hx, weights, biases):
+    def forward(self, inputs, hx, weights, biases):
         """stacked mutil_layer static rnn"""
         pre_layer = inputs
         h_n = ()
@@ -399,7 +399,7 @@ class MultiLayerRNN(nn.Cell):
         return output, h_n
 
 
-class StaticGRU_GPU(nn.Cell):
+class StaticGRU_GPU(nn.Module):
     """Static GRU on GPU"""
     def __init__(self, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
@@ -429,7 +429,7 @@ class StaticGRU_GPU(nn.Cell):
         self.bidirectional = bidirectional
         self.dropout = dropout
 
-    def construct(self, inputs, h, weights, biases):
+    def forward(self, inputs, h, weights, biases):
         r"""
         Constructs a StaticGRU_GPU object.
         
@@ -460,7 +460,7 @@ class StaticGRU_GPU(nn.Cell):
         return outputs, hn
 
 
-class _RNNBase(nn.Cell):
+class _RNNBase(nn.Module):
     '''Basic class for RNN operators'''
     def __init__(self, mode, input_size, hidden_size, num_layers=1, has_bias=True,
                  batch_first=False, dropout=0., bidirectional=False):
@@ -539,7 +539,7 @@ class _RNNBase(nn.Cell):
         self._weights = ParameterTuple(self._weights)
         self._biases = ParameterTuple(self._biases)
 
-    def construct(self, x, hx=None):
+    def forward(self, x, hx=None):
         '''Defines the RNN like operators performed'''
         max_batch_size = x.shape[0] if self.batch_first else x.shape[1]
         num_directions = 2 if self.bidirectional else 1

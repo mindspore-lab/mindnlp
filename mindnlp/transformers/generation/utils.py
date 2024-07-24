@@ -892,7 +892,7 @@ class GenerationMixin:
             decoder_input_ids_start = decoder_input_ids_start.view(-1, 1)
         else:
             decoder_input_ids_start = (
-                ops.ones((batch_size, 1), dtype=mindspore.int64) * decoder_start_token_id
+                ops.ones(batch_size, 1, dtype=mindspore.int64) * decoder_start_token_id
             )
 
         # no user input -> use decoder_start_token_id as decoder_input_ids
@@ -2676,9 +2676,7 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(input_ids.shape[0], dtype=mindspore.int64)
 
         this_peer_finished = False  # used by synced_gpus only
-        import time
         while True:
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -2746,8 +2744,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-            t = time.time()
-            print(t - s)
         if streamer is not None:
             streamer.end()
 
@@ -2947,9 +2943,7 @@ class GenerationMixin:
 
         this_peer_finished = False  # used by synced_gpus only
         # auto-regressive generation
-        import time
         while True:
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
@@ -3022,8 +3016,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-            t = time.time()
-            print(t - s)
         if streamer is not None:
             streamer.end()
 
@@ -3080,7 +3072,7 @@ class GenerationMixin:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             beam_scorer (`BeamScorer`):
-                An derived instance of [`BeamScorer`] that defines how beam hypotheses are constructed, stored and
+                An derived instance of [`BeamScorer`] that defines how beam hypotheses are forwarded, stored and
                 sorted during generation. For more information, the documentation of [`BeamScorer`] should be read.
             logits_processor (`LogitsProcessorList`, *optional*):
                 An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
@@ -3394,7 +3386,7 @@ class GenerationMixin:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             beam_scorer (`BeamScorer`):
-                A derived instance of [`BeamScorer`] that defines how beam hypotheses are constructed, stored and
+                A derived instance of [`BeamScorer`] that defines how beam hypotheses are forwarded, stored and
                 sorted during generation. For more information, the documentation of [`BeamScorer`] should be read.
             logits_processor (`LogitsProcessorList`, *optional*):
                 An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
@@ -3711,7 +3703,7 @@ class GenerationMixin:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             beam_scorer (`BeamScorer`):
-                An derived instance of [`BeamScorer`] that defines how beam hypotheses are constructed, stored and
+                An derived instance of [`BeamScorer`] that defines how beam hypotheses are forwarded, stored and
                 sorted during generation. For more information, the documentation of [`BeamScorer`] should be read.
             logits_processor (`LogitsProcessorList`, *optional*):
                 An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
@@ -4079,7 +4071,7 @@ class GenerationMixin:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             constrained_beam_scorer (`ConstrainedBeamSearchScorer`):
-                A derived instance of [`BeamScorer`] that defines how beam hypotheses are constructed, stored and
+                A derived instance of [`BeamScorer`] that defines how beam hypotheses are forwarded, stored and
                 sorted during generation, while satisfying a list of positive constraints. For more information, the
                 documentation of [`ConstrainedBeamSearchScorer`] should be read.
             logits_processor (`LogitsProcessorList`, *optional*):

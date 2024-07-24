@@ -360,7 +360,7 @@ class BeamSearchScorer(BeamScorer):
         beam_indices: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
         r"""
-        This method finalizes the beam search process by selecting the best beam hypotheses and constructing the
+        This method finalizes the beam search process by selecting the best beam hypotheses and forwarding the
         final output sequences.
 
         Args:

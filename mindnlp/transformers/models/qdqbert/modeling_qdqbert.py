@@ -20,7 +20,7 @@ import warnings
 from typing import Dict, List, Optional, Tuple, Union
 from mindspore.common.initializer import initializer, Normal
 import mindspore as ms
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -50,7 +50,7 @@ _CHECKPOINT_FOR_DOC = "google-bert/bert-base-uncased"
 _CONFIG_FOR_DOC = "QDQBertConfig"
 
 
-class QDQBertEmbeddings(nn.Cell):
+class QDQBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -81,7 +81,7 @@ class QDQBertEmbeddings(nn.Cell):
 
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -101,7 +101,7 @@ class QDQBertEmbeddings(nn.Cell):
                 :, past_key_values_length : seq_length + past_key_values_length
             ]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -127,7 +127,7 @@ class QDQBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class QDQBertSelfAttention(nn.Cell):
+class QDQBertSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
@@ -142,9 +142,9 @@ class QDQBertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = getattr(
@@ -179,7 +179,7 @@ class QDQBertSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -296,11 +296,11 @@ class QDQBertSelfAttention(nn.Cell):
         return outputs
 
 
-class QDQBertSelfOutput(nn.Cell):
+class QDQBertSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         # Quantize Linear layer
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size], epsilon=config.layer_norm_eps
@@ -315,7 +315,7 @@ class QDQBertSelfOutput(nn.Cell):
         #     quant_nn.QuantLinear.default_quant_desc_input
         # )
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         # Quantize the inputs to the residual add
@@ -328,7 +328,7 @@ class QDQBertSelfOutput(nn.Cell):
 
 
 # Based on transformers.models.bert.modeling_bert.BertAttention with Bert -> QDQBert
-class QDQBertAttention(nn.Cell):
+class QDQBertAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = QDQBertSelfAttention(config)
@@ -358,7 +358,7 @@ class QDQBertAttention(nn.Cell):
         )
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -384,27 +384,27 @@ class QDQBertAttention(nn.Cell):
         return outputs
 
 
-class QDQBertIntermediate(nn.Cell):
+class QDQBertIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
         # Quantize Linear layer
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class QDQBertOutput(nn.Cell):
+class QDQBertOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         # Quantize Linear layer
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
@@ -418,7 +418,7 @@ class QDQBertOutput(nn.Cell):
         #     quant_nn.QuantLinear.default_quant_desc_input
         # )
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         # Quantize the inputs to the residual add
@@ -432,7 +432,7 @@ class QDQBertOutput(nn.Cell):
 
 
 # Based on transformers.models.bert.modeling_bert.BertLayer with Bert -> QDQBert
-class QDQBertLayer(nn.Cell):
+class QDQBertLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.seq_len_dim = 1
@@ -448,7 +448,7 @@ class QDQBertLayer(nn.Cell):
         self.intermediate = QDQBertIntermediate(config)
         self.output = QDQBertOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -526,16 +526,16 @@ class QDQBertLayer(nn.Cell):
 
 
 # Based on transformers.models.bert.modeling_bert.BertEncoder with Bert -> QDQBert
-class QDQBertEncoder(nn.Cell):
+class QDQBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [QDQBertLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -621,13 +621,13 @@ class QDQBertEncoder(nn.Cell):
         )
 
 
-class QDQBertPooler(nn.Cell):
+class QDQBertPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -636,10 +636,10 @@ class QDQBertPooler(nn.Cell):
         return pooled_output
 
 
-class QDQBertPredictionHeadTransform(nn.Cell):
+class QDQBertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -648,7 +648,7 @@ class QDQBertPredictionHeadTransform(nn.Cell):
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -656,14 +656,14 @@ class QDQBertPredictionHeadTransform(nn.Cell):
 
 
 # Based on transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert -> QDQBert
-class QDQBertLMPredictionHead(nn.Cell):
+class QDQBertLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = QDQBertPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         self.bias = ms.Parameter(ops.zeros(config.vocab_size))
 
@@ -673,41 +673,41 @@ class QDQBertLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Based on transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert -> QDQBert
-class QDQBertOnlyMLMHead(nn.Cell):
+class QDQBertOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = QDQBertLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
-class QDQBertOnlyNSPHead(nn.Cell):
+class QDQBertOnlyNSPHead(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
 
 
 # Based on transformers.models.bert.modeling_bert.BertPreTrainingHeads with Bert -> QDQBert
-class QDQBertPreTrainingHeads(nn.Cell):
+class QDQBertPreTrainingHeads(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = QDQBertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -726,7 +726,7 @@ class QDQBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.set_data(
@@ -769,7 +769,7 @@ QDQBERT_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -869,7 +869,7 @@ class QDQBertModel(QDQBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1045,7 +1045,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1219,7 +1219,7 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1318,7 +1318,7 @@ class QDQBertForNextSentencePrediction(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1418,11 +1418,11 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
 
         self.bert = QDQBertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1501,12 +1501,12 @@ class QDQBertForMultipleChoice(QDQBertPreTrainedModel):
 
         self.bert = QDQBertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1597,12 +1597,12 @@ class QDQBertForTokenClassification(QDQBertPreTrainedModel):
 
         self.bert = QDQBertModel(config, add_pooling_layer=False)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1662,12 +1662,12 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.bert = QDQBertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,

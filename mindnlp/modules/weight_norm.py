@@ -72,13 +72,13 @@ includes a method to remove the weight bias and a wrapper function for transposi
         self.dim = dim
 
     # TODO Make return type more specific
-    def compute_weight(self, module: nn.Cell) -> Any:
+    def compute_weight(self, module: nn.Module) -> Any:
         """
         Method to compute the weight using weight normalization for a given module.
         
         Args:
             self (WeightNorm): An instance of the WeightNorm class.
-            module (nn.Cell): The neural network module for which the weight is to be computed. It should be an instance of nn.Cell.
+            module (nn.Module): The neural network module for which the weight is to be computed. It should be an instance of nn.Module.
             
         Returns:
             Any: A value representing the computed weight after applying weight normalization to the module.
@@ -92,9 +92,9 @@ includes a method to remove the weight bias and a wrapper function for transposi
         return Parameter(_weight_norm(v, g, self.dim), 'weight')
 
     @staticmethod
-    def apply(cell: nn.Cell, name: str, dim: int) -> 'WeightNorm':
+    def apply(cell: nn.Module, name: str, dim: int) -> 'WeightNorm':
         r"""
-        construct methods
+        forward methods
         """
         # warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
         for hook in cell._forward_pre_hook.values():
@@ -123,7 +123,7 @@ includes a method to remove the weight bias and a wrapper function for transposi
             return func(cell, inputs)
         return new_func
 
-    def remove(self, cell: nn.Cell) -> None:
+    def remove(self, cell: nn.Module) -> None:
         r"""
         remove weight bias
         """
@@ -133,13 +133,13 @@ includes a method to remove the weight bias and a wrapper function for transposi
         del cell._params[self.name + '_v']
         setattr(cell, self.name, Parameter(weight.data))
 
-    def __call__(self, module: nn.Cell, inputs: Any) -> None:
+    def __call__(self, module: nn.Module, inputs: Any) -> None:
         r"""
         This method '__call__' in the class 'WeightNorm' applies weight normalization to a neural network module.
         
         Args:
         - self (WeightNorm): The current instance of the WeightNorm class.
-        - module (nn.Cell): The neural network module to which weight normalization will be applied.
+        - module (nn.Module): The neural network module to which weight normalization will be applied.
         - inputs (Any): Additional inputs that may be required for weight normalization.
         
         Returns:
@@ -151,7 +151,7 @@ includes a method to remove the weight bias and a wrapper function for transposi
         setattr(module, self.name, self.compute_weight(module))
 
 
-T_module = TypeVar('T_module', bound=nn.Cell)
+T_module = TypeVar('T_module', bound=nn.Module)
 
 def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_module:
     r"""Apply weight normalization to a parameter in the given module.

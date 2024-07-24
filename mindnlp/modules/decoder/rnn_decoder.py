@@ -16,8 +16,9 @@
 RNN Decoder modules
 """
 
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 import mindspore.numpy as mnp
 from mindnlp._legacy.abc import DecoderBase
 from mindnlp._legacy.nn import Dropout
@@ -91,7 +92,7 @@ class RNNDecoder(DecoderBase):
         super().__init__(embedding)
         self.dropout_in_module = Dropout(p=dropout_in)
         self.dropout_out_module = Dropout(p=dropout_out)
-        self.layers = nn.CellList(rnns)
+        self.layers = nn.ModuleList(rnns)
         self.num_layers = len(rnns)
         self.hidden_size = rnns[0].hidden_size
         self.vocab_size = self.embedding.vocab_size
@@ -99,14 +100,14 @@ class RNNDecoder(DecoderBase):
 
         self.attention = attention
         if attention:
-            self.input_proj = nn.Dense(self.hidden_size, encoder_output_units, has_bias=False)
-            self.output_proj = nn.Dense(self.hidden_size + encoder_output_units, self.hidden_size, has_bias=False)
+            self.input_proj = nn.Linear(self.hidden_size, encoder_output_units, has_bias=False)
+            self.output_proj = nn.Linear(self.hidden_size + encoder_output_units, self.hidden_size, has_bias=False)
             self.softmax = nn.Softmax(axis=1)
             self.tanh = nn.Tanh()
 
-        self.fc_out = nn.Dense(self.hidden_size, self.vocab_size)
+        self.fc_out = nn.Linear(self.hidden_size, self.vocab_size)
 
-    def construct(self, prev_output_tokens, encoder_out=None):
+    def forward(self, prev_output_tokens, encoder_out=None):
         """
         Construct method.
 

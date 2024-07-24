@@ -143,3 +143,6 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
     _layer_norm = _get_cache_prim(ops.LayerNorm)(-1, -1, epsilon=eps)
     return _layer_norm(input, weight, bias)[0]
+
+def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
+    return ops.interpolate(input, size, scale_factor, mode, align_corners, recompute_scale_factor)

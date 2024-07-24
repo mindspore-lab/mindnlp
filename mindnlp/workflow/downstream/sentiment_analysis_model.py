@@ -19,7 +19,7 @@
 from mindspore import nn
 from mindnlp.transformers import BertModel
 
-class BertForSentimentAnalysis(nn.Cell):
+class BertForSentimentAnalysis(nn.Module):
     """Bert Model for classification tasks"""
     def __init__(self, config):
         """
@@ -44,9 +44,9 @@ class BertForSentimentAnalysis(nn.Cell):
         self.num_labels = config.num_labels
         self.config = config
         self.bert = BertModel(config)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):
         """
         Constructs the sentiment analysis model using the BERT architecture.

@@ -24,7 +24,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 
 from ...activations import ACT2FN
@@ -60,7 +61,7 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding with Mixtral->StableLm
-class StableLmRotaryEmbedding(nn.Cell):
+class StableLmRotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
 
@@ -84,7 +85,7 @@ class StableLmRotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -182,29 +183,29 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralMLP with Mistral->StableLm
-class StableLmMLP(nn.Cell):
+class StableLmMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 
-class StableLmLayerNormPerHead(nn.Cell):
+class StableLmLayerNormPerHead(nn.Module):
     def __init__(self, dim, num_heads, epsilon=1e-5, bias=False):
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
-        self.norms = nn.CellList([nn.LayerNorm(dim, epsilon=epsilon) for _ in range(self.num_heads)])
+        self.norms = nn.ModuleList([nn.LayerNorm(dim, epsilon=epsilon) for _ in range(self.num_heads)])
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         # Split along the num_heads axis to get per-head inputs
         # [batch_size, num_heads, seq_len, head_dim] -> [batch_size, 1, seq_len, head_dim] * num_heads
         states_per_heads = ops.split(hidden_states, 1, axis=1)
@@ -225,7 +226,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class StableLmAttention(nn.Cell):
+class StableLmAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: StableLmConfig, layer_idx: Optional[int] = None):
@@ -254,10 +255,10 @@ class StableLmAttention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.use_qkv_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.use_qkv_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.use_qkv_bias)
-        self.o_proj = nn.Dense(self.hidden_size, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.use_qkv_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.use_qkv_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.use_qkv_bias)
+        self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, has_bias=False)
 
         self.qk_layernorm = config.qk_layernorm
         if self.qk_layernorm:
@@ -297,7 +298,7 @@ class StableLmAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -399,7 +400,7 @@ ATTENTION_CLASSES = {
 }
 
 
-class StableLmDecoderLayer(nn.Cell):
+class StableLmDecoderLayer(nn.Module):
     def __init__(self, config: StableLmConfig, layer_idx: int):
         super().__init__()
         self.use_parallel_residual = config.use_parallel_residual
@@ -412,7 +413,7 @@ class StableLmDecoderLayer(nn.Cell):
             self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -495,7 +496,7 @@ class StableLmPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         std = self.config.initializer_range
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             module.weight.initialize(Normal(std))
             if module.bias is not None:
                 module.bias.initialize('zeros')
@@ -521,7 +522,7 @@ class StableLmModel(StableLmPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [StableLmDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
@@ -537,7 +538,7 @@ class StableLmModel(StableLmPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -665,7 +666,7 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
         super().__init__(config)
         self.model = StableLmModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -695,7 +696,7 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
         return self.model
 
     # Ignore copy
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -851,7 +852,7 @@ class StableLmForSequenceClassification(StableLmPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = StableLmModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -862,7 +863,7 @@ class StableLmForSequenceClassification(StableLmPreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -962,7 +963,7 @@ class StableLmForTokenClassification(StableLmPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.score = nn.Dense(config.hidden_size, config.num_labels)
+        self.score = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -973,7 +974,7 @@ class StableLmForTokenClassification(StableLmPreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

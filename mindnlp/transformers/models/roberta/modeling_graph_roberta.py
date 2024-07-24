@@ -15,7 +15,7 @@
 
 """roberta model, base on bert."""
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
@@ -24,7 +24,7 @@ from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel
 
 
-class MSRobertaEmbeddings(nn.Cell):
+class MSRobertaEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -74,7 +74,7 @@ class MSRobertaEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         """
@@ -89,7 +89,7 @@ class MSRobertaEmbeddings(nn.Cell):
             past_key_values_length (int, optional): The length of past key values. Default is 0.
 
         Returns:
-            Tensor: The constructed embeddings for the model.
+            Tensor: The forwarded embeddings for the model.
 
         Raises:
             ValueError: If input_ids and inputs_embeds are both None.
@@ -113,7 +113,7 @@ class MSRobertaEmbeddings(nn.Cell):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -183,7 +183,7 @@ class MSRobertaModel(BertModel):
         super().__init__(config, add_pooling_layer=add_pooling_layer)
         self.embeddings = MSRobertaEmbeddings(config)
 
-class MSRobertaLMHead(nn.Cell):
+class MSRobertaLMHead(nn.Module):
     """RobertaLMHead"""
     def __init__(self, config):
         """
@@ -207,14 +207,14 @@ class MSRobertaLMHead(nn.Cell):
             RuntimeError: If there is an issue with initializing any of the neural network layers or parameters.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
         self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
         self.gelu = nn.GELU()
 
-    def construct(self, features):
+    def forward(self, features):
         """
         Constructs the output of the MSRobertaLMHead model.
 
@@ -235,7 +235,7 @@ class MSRobertaLMHead(nn.Cell):
         x = self.decoder(x) + self.bias
         return x
 
-class MSRobertaClassificationHead(nn.Cell):
+class MSRobertaClassificationHead(nn.Module):
     """RobertaClassificationHead"""
     def __init__(self, config):
         """
@@ -257,13 +257,13 @@ class MSRobertaClassificationHead(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, activation='tanh')
         self.dropout = Dropout(p=1-config.hidden_dropout_prob)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features):
+    def forward(self, features):
         """
-        This method constructs the classification head for the MSRoberta model.
+        This method forwards the classification head for the MSRoberta model.
 
         Args:
             self (MSRobertaClassificationHead): The instance of the MSRobertaClassificationHead class.
@@ -275,7 +275,7 @@ class MSRobertaClassificationHead(nn.Cell):
 
         Raises:
             ValueError: If the input features tensor is not in the expected format or shape.
-            RuntimeError: If an error occurs during the construction of the classification head.
+            RuntimeError: If an error occurs during the forwardion of the classification head.
         """
         x = features[:, 0, :]
         x = self.dropout(x)
@@ -344,7 +344,7 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   masked_lm_labels=None):
         """
         Constructs the masked language model (MLM) outputs for the MSRobertaForMaskedLM model.
@@ -411,7 +411,7 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
         self.roberta = MSRobertaModel(config, add_pooling_layer=False)
         self.classifier = MSRobertaClassificationHead(config)
 
-    def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   labels=None):
         """
         Constructs the model architecture for sequence classification using the MSRoberta model.
@@ -486,9 +486,9 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         super().__init__(config, *args, **kwargs)
         self.roberta = MSRobertaModel(config)
         self.dropout = Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
                   position_ids=None, head_mask=None):
         """
         Constructs the multiple choice model for MSRoberta.

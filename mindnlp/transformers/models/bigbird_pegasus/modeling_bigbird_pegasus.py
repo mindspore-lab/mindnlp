@@ -21,10 +21,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -86,35 +86,35 @@ class BigBirdPegasusLearnedPositionalEmbedding(nn.Embedding):
         """
         super().__init__(num_embeddings, embedding_dim)
 
-    def construct(self, input_ids_shape, past_key_values_length: int = 0):
+    def forward(self, input_ids_shape, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().construct(positions)
+        return super().forward(positions)
 
 
 # Copied from transformers.models.big_bird.modeling_big_bird.BigBirdSelfAttention with BigBird->BigBirdPegasus
-class BigBirdPegasusSelfAttention(nn.Cell):
+class BigBirdPegasusSelfAttention(nn.Module):
 
     """
     This class represents a self-attention mechanism implementation based on the BigBird Pegasus architecture. 
-    It is designed for neural network models and inherits from nn.Cell. 
+    It is designed for neural network models and inherits from nn.Module. 
     
     Attributes:
         num_attention_heads (int): Number of attention heads in the self-attention mechanism.
         attention_head_size (int): Size of each attention head in the self-attention mechanism.
         all_head_size (int): Total size of all attention heads combined.
-        query (nn.Dense): Linear transformation layer for query computation.
-        key (nn.Dense): Linear transformation layer for key computation.
-        value (nn.Dense): Linear transformation layer for value computation.
+        query (nn.Linear): Linear transformation layer for query computation.
+        key (nn.Linear): Linear transformation layer for key computation.
+        value (nn.Linear): Linear transformation layer for value computation.
         dropout (nn.Dropout): Dropout layer for attention probabilities.
         is_decoder (bool): Indicates whether the self-attention mechanism is used in a decoder context.
     
     Methods:
         swapaxes_for_scores(self, x): Reshapes the input tensor for attention score computation.
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, 
+        forward(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, 
             encoder_attention_mask=None, past_key_value=None, output_attentions=False): 
             Performs the self-attention mechanism computation based on the provided inputs.
     
@@ -160,9 +160,9 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.is_decoder = config.is_decoder
@@ -185,7 +185,7 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -196,7 +196,7 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the self-attention mechanism for the BigBirdPegasus model.
+        This method forwards the self-attention mechanism for the BigBirdPegasus model.
 
         Args:
             self: The instance of the class.
@@ -287,14 +287,14 @@ class BigBirdPegasusSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.big_bird.modeling_big_bird.BigBirdBlockSparseAttention with BigBird->BigBirdPegasus
-class BigBirdPegasusBlockSparseAttention(nn.Cell):
+class BigBirdPegasusBlockSparseAttention(nn.Module):
 
     """
     The `BigBirdPegasusBlockSparseAttention` class represents a block sparse attention mechanism used in the 
     BigBird model for text generation tasks. 
-    This class inherits from the `nn.Cell` class and provides methods for performing block sparse attention operations.
+    This class inherits from the `nn.Module` class and provides methods for performing block sparse attention operations.
 
-    The class initializes and constructs the block sparse attention mechanism using the provided configuration parameters. 
+    The class initializes and forwards the block sparse attention mechanism using the provided configuration parameters. 
     It also includes methods for fast matrix multiplication, creating random attention masks, and generating adjacency 
     lists for random attention.
 
@@ -302,7 +302,7 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         `__init__(self, config, seed=None)`: Initializes the BigBirdPegasusBlockSparseAttention with the given 
             configuration and optional seed for randomization.
         `swapaxes_for_scores(self, x)`: Swaps axes for the attention scores.
-        `construct(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, 
+        `forward(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, 
             to_blocked_mask=None, output_attentions=None)`: 
             Constructs the block sparse attention mechanism using the given hidden states and masks.
         `ms_bmm_nd(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication.
@@ -371,9 +371,9 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
 
     def swapaxes_for_scores(self, x):
         """
@@ -415,7 +415,7 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         band_mask=None,
@@ -426,7 +426,7 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         output_attentions=None,
     ):
         """
-        This method 'construct' is a part of the class 'BigBirdPegasusBlockSparseAttention'. It takes the following parameters:
+        This method 'forward' is a part of the class 'BigBirdPegasusBlockSparseAttention'. It takes the following parameters:
 
         Args:
             self: The instance of the class.
@@ -1349,15 +1349,15 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         return np.array(selected_random_blokcs, dtype=np.int32)
 
 
-class BigBirdPegasusEncoderAttention(nn.Cell):
+class BigBirdPegasusEncoderAttention(nn.Module):
 
     """
     This class represents the attention mechanism for the BigBirdPegasus encoder. 
     It handles different types of attention mechanisms based on the 'attention_type' specified in the configuration. 
-    The class provides methods to set the attention type and construct the attention outputs based on the specified type.
+    The class provides methods to set the attention type and forward the attention outputs based on the specified type.
 
-    The class inherits from nn.Cell and contains methods to initialize the attention type, set the attention type, 
-    and construct the attention outputs. 
+    The class inherits from nn.Module and contains methods to initialize the attention type, set the attention type, 
+    and forward the attention outputs. 
     The supported attention types are 'original_full' and 'block_sparse'.
 
     Attributes:
@@ -1369,7 +1369,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
 
     Methods:
         set_attention_type: Sets the attention type to the specified value.
-        construct: Constructs the attention outputs based on the attention type.
+        forward: Constructs the attention outputs based on the attention type.
 
     Raises:
         ValueError: If an invalid attention type is provided or if the attention type cannot be set to the specified value.
@@ -1405,7 +1405,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
                 f"attention_type can either be original_full or block_sparse, but is {self.config.attention_type}"
             )
 
-        self.output = nn.Dense(config.hidden_size, config.hidden_size, has_bias=config.use_bias)
+        self.output = nn.Linear(config.hidden_size, config.hidden_size, has_bias=config.use_bias)
 
     def set_attention_type(self, value: str):
         """
@@ -1446,7 +1446,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
         if not self.training:
             self.self.set_train(False)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1508,7 +1508,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with BartConfig->BigBirdPegasusConfig, Bart->BigBirdPegasusDecoder
-class BigBirdPegasusDecoderAttention(nn.Cell):
+class BigBirdPegasusDecoderAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -1555,10 +1555,10 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -1582,7 +1582,7 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -1702,7 +1702,7 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class BigBirdPegasusEncoderLayer(nn.Cell):
+class BigBirdPegasusEncoderLayer(nn.Module):
 
     """
     This class represents a BigBirdPegasusEncoderLayer in a neural network model. 
@@ -1710,12 +1710,12 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
     The layer includes mechanisms for self-attention, layer normalization, activation functions, and dropout regularization. 
     \It also supports different types of attention, such as 'original_full' and 'block_sparse'.
 
-    The BigBirdPegasusEncoderLayer inherits from the nn.Cell class and consists of methods for initialization, 
-    constructing the layer, and setting the attention type. 
+    The BigBirdPegasusEncoderLayer inherits from the nn.Module class and consists of methods for initialization, 
+    forwarding the layer, and setting the attention type. 
     The layer's parameters and operations are defined based on the provided configuration, including attention types, 
     embedding dimensions, and feedforward neural network dimensions.
 
-    The `construct` method processes the input hidden states through self-attention mechanisms, normalization, 
+    The `forward` method processes the input hidden states through self-attention mechanisms, normalization, 
     activation functions, and feedforward neural networks. 
     It allows for optional outputs of attention tensors from all attention layers. 
     The method handles different types of masks for attention and dropout regularization based on the provided configurations.
@@ -1753,11 +1753,11 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -1850,21 +1850,21 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
         self.self_attn.set_attention_type(value)
 
 
-class BigBirdPegasusDecoderLayer(nn.Cell):
+class BigBirdPegasusDecoderLayer(nn.Module):
 
     """
     This class represents a decoder layer for the BigBirdPegasus model. 
     It includes self-attention and cross-attention mechanisms, feedforward neural network, layer normalization, and dropout.
 
-    The class inherits from nn.Cell and has an initialization method that takes a BigBirdPegasusConfig object 
-    as input and constructs the decoder layer. 
-    The construct method takes input hidden states and various optional arguments to perform decoding and returns 
+    The class inherits from nn.Module and has an initialization method that takes a BigBirdPegasusConfig object 
+    as input and forwards the decoder layer. 
+    The forward method takes input hidden states and various optional arguments to perform decoding and returns 
     the output tensor. 
     It also includes detailed parameter descriptions and option flags for controlling the output.
 
     The decoder layer consists of self-attention, encoder attention, layer normalization, feedforward neural network, 
     and dropout operations. 
-    The construct method also supports caching of past key and value projection states and returning attention 
+    The forward method also supports caching of past key and value projection states and returning attention 
     weights if specified.
 
     This class provides a comprehensive implementation of a decoder layer for the BigBirdPegasus model with detailed parameter and method descriptions.
@@ -1903,15 +1903,15 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
                 config.is_decoder, and config.use_bias parameters.
             encoder_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of 
                 the encoder attention mechanism, which is created using the embed_dim parameter.
-            fc1 (nn.Dense): The first fully connected layer in the decoder feed-forward network, 
+            fc1 (nn.Linear): The first fully connected layer in the decoder feed-forward network, 
                 which has an input size of embed_dim and an output size of config.decoder_ffn_dim.
-            fc2 (nn.Dense): The second fully connected layer in the decoder feed-forward network, 
+            fc2 (nn.Linear): The second fully connected layer in the decoder feed-forward network, 
                 which has an input size of config.decoder_ffn_dim and an output size of embed_dim.
             final_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the decoder layer, 
                 which is created using the embed_dim parameter.
 
         Note:
-            The BigBirdPegasusDecoderAttention and nn.Dense classes are assumed to be imported from the appropriate libraries.
+            The BigBirdPegasusDecoderAttention and nn.Linear classes are assumed to be imported from the appropriate libraries.
         """
         super().__init__()
         self.embed_dim = config.d_model
@@ -1935,12 +1935,12 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
             bias=config.use_bias,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer.forward
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2031,7 +2031,7 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartClassificationHead with Bart->BigBirdPegasus
-class BigBirdPegasusClassificationHead(nn.Cell):
+class BigBirdPegasusClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(
         self,
@@ -2056,13 +2056,13 @@ class BigBirdPegasusClassificationHead(nn.Cell):
             ValueError: If the input_dim, inner_dim, num_classes, or pooler_dropout does not meet the specified restrictions.
         """
         super().__init__()
-        self.dense = nn.Dense(input_dim, inner_dim)
+        self.dense = nn.Linear(input_dim, inner_dim)
         self.dropout = nn.Dropout(p=pooler_dropout)
-        self.out_proj = nn.Dense(inner_dim, num_classes)
+        self.out_proj = nn.Linear(inner_dim, num_classes)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the classification head for the BigBirdPegasus model.
+        This method forwards the classification head for the BigBirdPegasus model.
 
         Args:
             self: The instance of the BigBirdPegasusClassificationHead class.
@@ -2091,7 +2091,7 @@ class BigBirdPegasusPreTrainedModel(PreTrainedModel):
     and generating dummy inputs for the model.
 
     The '_init_weights' method initializes the weights of the model's cells based on the specified standard deviation. 
-    It handles different cell types such as 'nn.Dense' and 'nn.Embedding', setting their weights and biases accordingly. 
+    It handles different cell types such as 'nn.Linear' and 'nn.Embedding', setting their weights and biases accordingly. 
     For 'nn.Embedding' cells, it also handles padding indices to ensure proper weight initialization.
 
     The 'dummy_inputs' property returns a dictionary of dummy inputs for the model, including an attention mask and input IDs. 
@@ -2109,7 +2109,7 @@ class BigBirdPegasusPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
@@ -2202,14 +2202,14 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList([BigBirdPegasusEncoderLayer(config, seed=i) for i in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([BigBirdPegasusEncoderLayer(config, seed=i) for i in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(embed_dim)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2539,7 +2539,7 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList([BigBirdPegasusDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([BigBirdPegasusDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -2576,7 +2576,7 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2804,7 +2804,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
         _tie_weights(self): Ties the weights of the encoder and decoder embedding layers if specified in the configuration.
         get_encoder(self): Returns the encoder module of the model.
         get_decoder(self): Returns the decoder module of the model.
-        construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask,
+        forward(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask,
             decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
             decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
             Constructs the model by performing encoding and decoding operations on the input sequence.
@@ -2935,7 +2935,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
         return self.decoder
 
     # Copied from transformers.models.bart.modeling_bart.BartModel.forward with Bart->BigBirdPegasus
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3079,7 +3079,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
         _resize_final_logits_bias: Resizes the bias tensor used for final logits.
         get_output_embeddings: Returns the output embedding layer of the model.
         set_output_embeddings: Sets the output embedding layer of the model.
-        construct: Constructs the model for conditional generation tasks.
+        forward: Constructs the model for conditional generation tasks.
         prepare_inputs_for_generation: Prepares the input tensors for generation.
         prepare_decoder_input_ids_from_labels: Prepares the decoder input IDs from the given labels.
         _reorder_cache: Reorders the past key values for beam search.
@@ -3108,7 +3108,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
         super().__init__(config)
         self.model = BigBirdPegasusModel(config)
         self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -3229,7 +3229,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3421,9 +3421,9 @@ class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
 
     """
     This class represents a BigBirdPegasus model for sequence classification. It inherits from
-    BigBirdPegasusPreTrainedModel and includes methods for model initialization and construction of the sequence
+    BigBirdPegasusPreTrainedModel and includes methods for model initialization and forwardion of the sequence
     classifier.
-    The construct method takes various input parameters for decoding and attention masks, and returns the sequence
+    The forward method takes various input parameters for decoding and attention masks, and returns the sequence
     classifier output including logits and optional loss.
     The class also handles different problem types such as regression, single label classification, and multi-label
     classification.
@@ -3459,7 +3459,7 @@ class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
         self.post_init()
 
     # Copied from transformers.models.bart.modeling_bart.BartForSequenceClassification.forward
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3561,12 +3561,12 @@ class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
     This class represents a BigBirdPegasus model for question answering tasks. It is designed to perform question
     answering using the BigBirdPegasus architecture.
 
-    The class includes methods for initialization and constructing the model for question answering tasks.
+    The class includes methods for initialization and forwarding the model for question answering tasks.
     It inherits from the BigBirdPegasusPreTrainedModel class and utilizes a sequence-to-sequence model for
     processing input and generating output.
 
     The __init__ method initializes the model with configuration settings, including setting the number of labels for classification.
-    The construct method constructs the model for question answering by processing input tensors and generating
+    The forward method forwards the model for question answering by processing input tensors and generating
     start and end position logits for the answer span.
 
     The class provides functionality for computing the token classification loss based on the start and end positions
@@ -3603,13 +3603,13 @@ class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.model = BigBirdPegasusModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     # Copied from transformers.models.bart.modeling_bart.BartForQuestionAnswering.forward
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3730,21 +3730,21 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
         super().__init__(config)
         self.decoder = BigBirdPegasusDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         """
-        Method to construct a decoder using the BigBirdPegasusDecoderWrapper.
+        Method to forward a decoder using the BigBirdPegasusDecoderWrapper.
 
         Args:
             self (object): The instance of the BigBirdPegasusDecoderWrapper class.
                 This parameter is required to access the methods and attributes of the class.
 
         Returns:
-            None: This method does not return any value explicitly. It delegates the construction
+            None: This method does not return any value explicitly. It delegates the forwardion
                 to the decoder specified in self.decoder.
 
         Raises:
             None:
-                However, exceptions may be raised by the decoder method called within this construct method.
+                However, exceptions may be raised by the decoder method called within this forward method.
         """
         return self.decoder(*args, **kwargs)
 
@@ -3756,14 +3756,14 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
     It inherits from the `BigBirdPegasusPreTrainedModel` class.
 
     The class initializes the model with the provided configuration and defines methods for getting and
-    setting input and output embeddings, setting the decoder, and constructing the model for generation.
+    setting input and output embeddings, setting the decoder, and forwarding the model for generation.
     Additionally, it provides methods for preparing inputs for generation and reordering cache for beam search.
 
-    The `construct` method processes the input data for the model and returns the model outputs.
+    The `forward` method processes the input data for the model and returns the model outputs.
     The `prepare_inputs_for_generation` method prepares input data for generation, and the `_reorder_cache` method
     reorders the cache for beam search.
 
-    The class also includes detailed documentation for the input and output parameters of the `construct` method,
+    The class also includes detailed documentation for the input and output parameters of the `forward` method,
     providing information on the usage and functionality of each parameter.
 
     Example usage of the `BigBirdPegasusForCausalLM` class is provided in the docstring, demonstrating how to
@@ -3797,7 +3797,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
         super().__init__(config)
         self.model = BigBirdPegasusDecoderWrapper(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -3912,7 +3912,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
         """
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

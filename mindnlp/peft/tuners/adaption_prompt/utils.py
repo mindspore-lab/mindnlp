@@ -13,7 +13,8 @@
 # limitations under the License.
 """Utility functions for adaption prompt tuners."""
 import inspect
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 
 
 def llama_rotate_half(x: Tensor) -> Tensor:
@@ -46,12 +47,12 @@ def llama_apply_rotary_pos_emb(q, cos, sin, position_ids):
     return q_embed
 
 
-def llama_compute_query_states(model: nn.Cell, **kwargs) -> Tensor:
+def llama_compute_query_states(model: nn.Module, **kwargs) -> Tensor:
     """
     Computes query states for a neural network model.
     
     Args:
-        model (nn.Cell): The neural network model for which query states are computed.
+        model (nn.Module): The neural network model for which query states are computed.
     
     Returns:
         Tensor: The computed query states.

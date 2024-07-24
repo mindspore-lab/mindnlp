@@ -21,7 +21,7 @@ from mindspore import Parameter, ops, nn
 from mindspore.common.initializer import initializer, Uniform
 from mindnlp._legacy.nn import Dropout
 
-class ScaledDotAttention(nn.Cell):
+class ScaledDotAttention(nn.Module):
     r"""
     Scaled Dot-Product Attention
     Scaled Dot-Product Attention proposed in "Attention Is All You Need"
@@ -67,8 +67,8 @@ class ScaledDotAttention(nn.Cell):
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = Dropout(p=dropout)
 
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
-        """Scaled dot-product attention network construction.
+    def forward(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
+        """Scaled dot-product attention network forwardion.
 
         Args:
             query (mindspore.Tensor): The query vector.
@@ -95,7 +95,7 @@ class ScaledDotAttention(nn.Cell):
         output = ops.matmul(attn, value)
         return output, attn
 
-class AdditiveAttention(nn.Cell):
+class AdditiveAttention(nn.Module):
     r"""
     Additive Attention
     Additive Attention proposed in "Neural Machine Translation by Jointly Learning to Align and Translate" paper
@@ -139,9 +139,9 @@ class AdditiveAttention(nn.Cell):
             TypeError: If the input types are not as expected.
         """
         super().__init__()
-        self.w_q = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
-        self.w_k = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
-        self.w_output = nn.Dense(hidden_dims, 1, has_bias=True)
+        self.w_q = nn.Linear(hidden_dims, hidden_dims, has_bias=False)
+        self.w_k = nn.Linear(hidden_dims, hidden_dims, has_bias=False)
+        self.w_output = nn.Linear(hidden_dims, 1, has_bias=True)
         self.dropout = Dropout(p=dropout)
         self.tanh = nn.Tanh()
         # Set bias parameter
@@ -149,8 +149,8 @@ class AdditiveAttention(nn.Cell):
         self.bias = Parameter(bias_layer)
         self.softmax = nn.Softmax(axis=-1)
 
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
-        """Additive attention network construction.
+    def forward(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
+        """Additive attention network forwardion.
 
         Args:
             query (mindspore.Tensor): The query vector.
@@ -179,7 +179,7 @@ class AdditiveAttention(nn.Cell):
         output = ops.matmul(attn, value)
         return output, attn
 
-class LinearAttention(nn.Cell):
+class LinearAttention(nn.Module):
     r"""
     Linear attention computes attention by concat the query and key vector.
 
@@ -225,18 +225,18 @@ class LinearAttention(nn.Cell):
             None.
         """
         super().__init__()
-        self.w_linear = nn.Dense(query_dim + key_dim, query_dim, has_bias=False)
+        self.w_linear = nn.Linear(query_dim + key_dim, query_dim, has_bias=False)
         self.softmax = nn.Softmax(axis=-1)
         self.tanh = nn.Tanh()
-        self.v_linear = nn.Dense(hidden_dim, key_dim, has_bias=False)
+        self.v_linear = nn.Linear(hidden_dim, key_dim, has_bias=False)
         self.dropout = Dropout(p=dropout)
         #set bias parameter
         uniformreal = ops.UniformReal(seed=0)
         bias_layer = uniformreal((hidden_dim,))
         self.bias = Parameter(bias_layer)
 
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
-        """linear attention with concatenate construction
+    def forward(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
+        """linear attention with concatenate forwardion
 
         Args:
             query (mindspore.Tensor): The query vector.
@@ -264,7 +264,7 @@ class LinearAttention(nn.Cell):
         output = ops.matmul(attn, value)
         return output, attn
 
-class CosineAttention(nn.Cell):
+class CosineAttention(nn.Module):
     r"""
     Cosine Attention
     Cosine Attention proposed in "Neural Turing Machines" paper
@@ -313,8 +313,8 @@ class CosineAttention(nn.Cell):
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = Dropout(p=dropout)
 
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
-        """Consine attention network construction.
+    def forward(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
+        """Consine attention network forwardion.
 
         Args:
             query (mindspore.Tensor): The query vector.
@@ -372,7 +372,7 @@ def _weighted_sum(tensor, weights, mask):
     mask = mask.expand_as(w_sum)
     return w_sum * mask
 
-class BinaryAttention(nn.Cell):
+class BinaryAttention(nn.Module):
     r"""
     Binary Attention, For a given sequence of two vectors :
     x_i and y_j, the BiAttention module will
@@ -420,7 +420,7 @@ class BinaryAttention(nn.Cell):
         super().__init__()
         self.bmm = ops.BatchMatMul()
 
-    def construct(self, x_batch, x_mask, y_batch, y_mask):
+    def forward(self, x_batch, x_mask, y_batch, y_mask):
         """Compute the attention result
 
         Args:
@@ -440,7 +440,7 @@ class BinaryAttention(nn.Cell):
         attended_y = _weighted_sum(x_batch, y_x_attn, y_mask)
         return attended_x, attended_y
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
     r"""
     Self attention is from the paper “attention is all you need”
 
@@ -492,10 +492,10 @@ class SelfAttention(nn.Cell):
         def __init__(self, d_model=512, dropout_rate=0.1, bias=False, attention_mode='dot'):
             super().__init__()
             self.d_model = d_model
-            self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
-            self.linear_key = nn.Dense(d_model, d_model, has_bias=bias)
-            self.linear_value = nn.Dense(d_model, d_model, has_bias=bias)
-            self.linear_out = nn.Dense(d_model, d_model, has_bias=bias)
+            self.linear_query = nn.Linear(d_model, d_model, has_bias=bias)
+            self.linear_key = nn.Linear(d_model, d_model, has_bias=bias)
+            self.linear_value = nn.Linear(d_model, d_model, has_bias=bias)
+            self.linear_out = nn.Linear(d_model, d_model, has_bias=bias)
             if 'add' in attention_mode.lower():
                 self.attention_mode = AdditiveAttention(hidden_dims=self.d_model, dropout=1 - dropout_rate)
             elif 'cos' in attention_mode.lower():
@@ -505,10 +505,10 @@ class SelfAttention(nn.Cell):
         """
         super().__init__()
         self.d_model = d_model
-        self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_key = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_value = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_out = nn.Dense(d_model, d_model, has_bias=bias)
+        self.linear_query = nn.Linear(d_model, d_model, has_bias=bias)
+        self.linear_key = nn.Linear(d_model, d_model, has_bias=bias)
+        self.linear_value = nn.Linear(d_model, d_model, has_bias=bias)
+        self.linear_out = nn.Linear(d_model, d_model, has_bias=bias)
         if "add" in attention_mode.lower():
             self.attention_mode = AdditiveAttention(hidden_dims=self.d_model, dropout=1-dropout_rate)
         elif "cos" in attention_mode.lower():
@@ -516,7 +516,7 @@ class SelfAttention(nn.Cell):
         else:
             self.attention_mode = ScaledDotAttention(1-dropout_rate)
 
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
+    def forward(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
         """Get self-attention output and attention weights.
 
         Args:
@@ -537,7 +537,7 @@ class SelfAttention(nn.Cell):
         output, self_attn = self.attention_mode(query, key, value, mask)
         return self.linear_out(output), self_attn
 
-class LocationAwareAttention(nn.Cell):
+class LocationAwareAttention(nn.Module):
     r"""
     Location Aware Attention
     Location Aware Attention proposed in "Attention-Based Models for Speech Recognition"
@@ -583,9 +583,9 @@ class LocationAwareAttention(nn.Cell):
         
         This method initializes the LocationAwareAttention object with the specified hidden dimension and smoothing flag. It sets up the following components:
         - conv (nn.Conv1d): A 1D convolutional layer with an input channel of 1, output channel of hidden_dim, kernel size of 3, padding mode of 'pad', padding size of 1, and bias.
-        - w_linear (nn.Dense): A fully connected layer with input and output dimensions of hidden_dim, used for attention weights computation.
-        - v_linear (nn.Dense): Another fully connected layer with input and output dimensions of hidden_dim, also used for attention weights computation.
-        - fc_linear (nn.Dense): A fully connected layer with input dimension of hidden_dim and output dimension of 1, used for final attention score calculation.
+        - w_linear (nn.Linear): A fully connected layer with input and output dimensions of hidden_dim, used for attention weights computation.
+        - v_linear (nn.Linear): Another fully connected layer with input and output dimensions of hidden_dim, also used for attention weights computation.
+        - fc_linear (nn.Linear): A fully connected layer with input dimension of hidden_dim and output dimension of 1, used for final attention score calculation.
         - bias (nn.Parameter): A learnable parameter used as bias in the attention calculation.
         - tanh (nn.Tanh): A hyperbolic tangent activation function used in the attention calculation.
         - softmax (nn.Softmax): A softmax activation function used to normalize attention weights across the input sequence.
@@ -599,9 +599,9 @@ class LocationAwareAttention(nn.Cell):
         self.smoothing = smoothing
         self.conv = nn.Conv1d(
             in_channels=1, out_channels=hidden_dim, kernel_size=3, pad_mode="pad", padding=1, has_bias=True)
-        self.w_linear = nn.Dense(hidden_dim, hidden_dim, has_bias=False)
-        self.v_linear = nn.Dense(hidden_dim, hidden_dim, has_bias=False)
-        self.fc_linear = nn.Dense(hidden_dim, 1, has_bias=True)
+        self.w_linear = nn.Linear(hidden_dim, hidden_dim, has_bias=False)
+        self.v_linear = nn.Linear(hidden_dim, hidden_dim, has_bias=False)
+        self.fc_linear = nn.Linear(hidden_dim, 1, has_bias=True)
         # Set bias parameter
         uniformreal = ops.UniformReal(seed=0)
         bias_layer = uniformreal((hidden_dim,))
@@ -620,8 +620,8 @@ class LocationAwareAttention(nn.Cell):
         """
         self.mask = mask
 
-    def construct(self, query, value, last_attn=None):
-        """Location aware attention network construction.
+    def forward(self, query, value, last_attn=None):
+        """Location aware attention network forwardion.
 
         Args:
             query (mindspore.Tensor): Decoder hidden states,

@@ -84,7 +84,7 @@ class MarkupLMFeatureExtractor(FeatureExtractionMixin):
 
         return all_doc_strings, string2xtag_seq, string2xsubs_seq
 
-    def construct_xpath(self, xpath_tags, xpath_subscripts):
+    def forward_xpath(self, xpath_tags, xpath_subscripts):
         xpath = ""
         for tagname, subs in zip(xpath_tags, xpath_subscripts):
             xpath += f"/{tagname}"
@@ -168,7 +168,7 @@ class MarkupLMFeatureExtractor(FeatureExtractionMixin):
             nodes.append(all_doc_strings)
             xpath_strings = []
             for node, tag_list, sub_list in zip(all_doc_strings, string2xtag_seq, string2xsubs_seq):
-                xpath_string = self.construct_xpath(tag_list, sub_list)
+                xpath_string = self.forward_xpath(tag_list, sub_list)
                 xpath_strings.append(xpath_string)
             xpaths.append(xpath_strings)
 

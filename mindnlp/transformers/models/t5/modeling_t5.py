@@ -23,7 +23,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Constant, Normal
 
 from mindnlp.utils import (
@@ -59,7 +60,7 @@ T5_PRETRAINED_MODEL_ARCHIVE_LIST = [
     # See all T5 models at https://hf-mirror.com/models?filter=t5
 ]
 
-class T5LayerNorm(nn.Cell):
+class T5LayerNorm(nn.Module):
     """T5LayerNorm"""
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -69,9 +70,9 @@ class T5LayerNorm(nn.Cell):
         self.weight = Parameter(initializer('zeros', (hidden_size,), mindspore.float32), 'weight')
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is a part of the class 'T5LayerNorm' and is used to perform layer normalization
+        This method 'forward' is a part of the class 'T5LayerNorm' and is used to perform layer normalization
         on the input hidden states.
         
         Args:
@@ -96,7 +97,7 @@ class T5LayerNorm(nn.Cell):
 
 ALL_LAYERNORM_LAYERS.append(T5LayerNorm)
 
-class T5DenseActDense(nn.Cell):
+class T5DenseActDense(nn.Module):
     """T5DenseActDense"""
     def __init__(self, config: T5Config):
         """
@@ -118,14 +119,14 @@ class T5DenseActDense(nn.Cell):
             None.
         """
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the hidden states by applying a series of transformations including linear mapping,
+        This method forwards the hidden states by applying a series of transformations including linear mapping,
         activation function, dropout, and additional conversion based on weight data types.
 
         Args:
@@ -148,7 +149,7 @@ class T5DenseActDense(nn.Cell):
         return hidden_states
 
 
-class T5DenseGatedActDense(nn.Cell):
+class T5DenseGatedActDense(nn.Module):
     """T5DenseGatedActDense"""
     def __init__(self, config: T5Config):
         """
@@ -165,13 +166,13 @@ class T5DenseGatedActDense(nn.Cell):
             None
         """
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states of the T5DenseGatedActDense model.
 
@@ -198,7 +199,7 @@ class T5DenseGatedActDense(nn.Cell):
         return hidden_states
 
 
-class T5LayerFF(nn.Cell):
+class T5LayerFF(nn.Module):
     """T5LayerFF"""
     def __init__(self, config: T5Config):
         """
@@ -224,7 +225,7 @@ class T5LayerFF(nn.Cell):
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the forward pass of the T5LayerFF class.
 
@@ -245,7 +246,7 @@ class T5LayerFF(nn.Cell):
         return hidden_states
 
 
-class T5Attention(nn.Cell):
+class T5Attention(nn.Module):
     """T5Attention"""
     def __init__(self, config: T5Config, has_relative_attention_bias=False):
         """
@@ -276,10 +277,10 @@ class T5Attention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -377,7 +378,7 @@ class T5Attention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -502,7 +503,7 @@ class T5Attention(nn.Cell):
         return outputs
 
 
-class T5LayerSelfAttention(nn.Cell):
+class T5LayerSelfAttention(nn.Module):
     """T5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """Initialize the T5LayerSelfAttention.
@@ -524,7 +525,7 @@ class T5LayerSelfAttention(nn.Cell):
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -535,7 +536,7 @@ class T5LayerSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method 'construct' in the class 'T5LayerSelfAttention' constructs the output of a T5 self-attention layer.
+        This method 'forward' in the class 'T5LayerSelfAttention' forwards the output of a T5 self-attention layer.
 
         Args:
             self: The instance of the class.
@@ -572,7 +573,7 @@ class T5LayerSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class T5LayerCrossAttention(nn.Cell):
+class T5LayerCrossAttention(nn.Module):
     """T5LayerCrossAttention"""
     def __init__(self, config):
         """
@@ -599,7 +600,7 @@ class T5LayerCrossAttention(nn.Cell):
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -612,7 +613,7 @@ class T5LayerCrossAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the T5 layer cross-attention mechanism.
+        This method forwards the T5 layer cross-attention mechanism.
 
         Args:
             self: Reference to the current instance of the class.
@@ -649,7 +650,7 @@ class T5LayerCrossAttention(nn.Cell):
         return outputs
 
 
-class T5Block(nn.Cell):
+class T5Block(nn.Module):
     """T5Block"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -669,14 +670,14 @@ class T5Block(nn.Cell):
         """
         super().__init__()
         self.is_decoder = config.is_decoder
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(T5LayerSelfAttention(config, has_relative_attention_bias=has_relative_attention_bias))
         if self.is_decoder:
             self.layer.append(T5LayerCrossAttention(config))
 
         self.layer.append(T5LayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -807,7 +808,7 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
-class T5ClassificationHead(nn.Cell):
+class T5ClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(self, config: T5Config):
         """
@@ -825,11 +826,11 @@ class T5ClassificationHead(nn.Cell):
             ValueError: If the config parameters are not valid or if there are any issues during initialization.
         """
         super().__init__()
-        self.dense = nn.Dense(config.d_model, config.d_model)
+        self.dense = nn.Linear(config.d_model, config.d_model)
         self.dropout = nn.Dropout(p=config.classifier_dropout)
-        self.out_proj = nn.Dense(config.d_model, config.num_labels)
+        self.out_proj = nn.Linear(config.d_model, config.num_labels)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the T5 classification head.
 
@@ -1047,7 +1048,7 @@ class T5Stack(T5PreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model)
         self.is_decoder = config.is_decoder
 
-        self.block = nn.CellList(
+        self.block = nn.ModuleList(
             [T5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
@@ -1087,7 +1088,7 @@ class T5Stack(T5PreTrainedModel):
         """
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1406,7 +1407,7 @@ class T5Model(T5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -1545,7 +1546,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = T5Stack(decoder_config)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
 
         self.post_init()
 
@@ -1665,7 +1666,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2051,7 +2052,7 @@ class T5EncoderModel(T5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2112,13 +2113,13 @@ class T5ForSequenceClassification(T5PreTrainedModel):
     T5ForSequenceClassification class implements a T5 model for sequence classification tasks.
     It inherits from the T5PreTrainedModel class.
 
-    This class includes methods for initializing the model with a T5 configuration, constructing the model for
+    This class includes methods for initializing the model with a T5 configuration, forwarding the model for
     sequence classification tasks, and computing the loss based on the provided labels.
 
     The __init__ method initializes the T5ForSequenceClassification instance with a T5 configuration.
-    The construct method constructs the model for sequence classification tasks and returns the computed loss and logits.
+    The forward method forwards the model for sequence classification tasks and returns the computed loss and logits.
 
-    The construct method takes various input arguments such as input_ids, attention_mask, decoder_input_ids, labels,
+    The forward method takes various input arguments such as input_ids, attention_mask, decoder_input_ids, labels,
     and other optional parameters to customize the behavior of the model during inference.
 
     If labels are provided, the model computes the loss based on the problem type specified in the T5 configuration.
@@ -2172,7 +2173,7 @@ class T5ForSequenceClassification(T5PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2288,13 +2289,13 @@ class T5ForQuestionAnswering(T5PreTrainedModel):
     applications where the model takes input text and outputs answers to questions posed about the input.
     The model architecture includes an encoder and a decoder, both based on the T5Stack structure.
     The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights, accessing the encoder
-    and decoder components, and constructing the model for inference or training.
+    and decoder components, and forwarding the model for inference or training.
 
-    The constructor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions,
+    The forwardor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions,
     shared embeddings, encoder, decoder, and other necessary components. The model can be fine-tuned for specific
     question answering tasks by adjusting configurations and utilizing the provided methods.
 
-    The construct method executes the forward pass of the model, taking input tensors and generating outputs for
+    The forward method executes the forward pass of the model, taking input tensors and generating outputs for
     question answering. It handles input embeddings, attention masks, decoder inputs, and various optional arguments
     to control the model's behavior during inference or training. The method returns the model's output,
     including predicted start and end positions for answering questions, loss values, and other relevant information.
@@ -2342,7 +2343,7 @@ class T5ForQuestionAnswering(T5PreTrainedModel):
         self.decoder = T5Stack(decoder_config)
 
         self.num_labels = config.num_labels
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2430,7 +2431,7 @@ class T5ForQuestionAnswering(T5PreTrainedModel):
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

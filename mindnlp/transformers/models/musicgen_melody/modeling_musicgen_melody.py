@@ -22,7 +22,8 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
@@ -117,7 +118,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
 
 
 # Copied from transformers.models.musicgen.modeling_musicgen.MusicgenSinusoidalPositionalEmbedding with Musicgen->MusicgenMelody
-class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
+class MusicgenMelodySinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
     def __init__(self, num_positions: int, embedding_dim: int):
         """
@@ -185,7 +186,7 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
             emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
         return emb.to(get_default_dtype())
 
-    def construct(self, inputs_embeds: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, inputs_embeds: mindspore.Tensor, past_key_values_length: int = 0):
         """
         Constructs the sinusoidal positional embedding for the MusicgenMelodySinusoidalPositionalEmbedding model.
 
@@ -212,7 +213,7 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->MusicgenMelody
-class MusicgenMelodyAttention(nn.Cell):
+class MusicgenMelodyAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -261,10 +262,10 @@ class MusicgenMelodyAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -291,7 +292,7 @@ class MusicgenMelodyAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -411,10 +412,10 @@ class MusicgenMelodyAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class MusicgenMelodyDecoderLayer(nn.Cell):
+class MusicgenMelodyDecoderLayer(nn.Module):
 
     """
-    This class represents a layer in the Musicgen Melody Decoder model. It is a subclass of nn.Cell and is responsible
+    This class represents a layer in the Musicgen Melody Decoder model. It is a subclass of nn.Module and is responsible
     for performing the decoding operations on the input.
 
     Attributes:
@@ -425,12 +426,12 @@ class MusicgenMelodyDecoderLayer(nn.Cell):
         activation_fn (function): The activation function used in the feed-forward neural network layers.
         activation_dropout (float): The dropout probability applied to the output of the activation function.
         self_attn_layer_norm (nn.LayerNorm): The layer normalization applied to the output of the self-attention layer.
-        fc1 (nn.Dense): The first fully connected layer of the feed-forward neural network.
-        fc2 (nn.Dense): The second fully connected layer of the feed-forward neural network.
+        fc1 (nn.Linear): The first fully connected layer of the feed-forward neural network.
+        fc2 (nn.Linear): The second fully connected layer of the feed-forward neural network.
         final_layer_norm (nn.LayerNorm): The layer normalization applied to the final output of the layer.
 
     Methods:
-        construct:
+        forward:
             Performs the decoding operations on the input hidden states.
 
             Args:
@@ -490,11 +491,11 @@ class MusicgenMelodyDecoderLayer(nn.Cell):
 
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
 
-        self.fc1 = nn.Dense(self.embed_dim, config.ffn_dim, has_bias=False)
-        self.fc2 = nn.Dense(config.ffn_dim, self.embed_dim, has_bias=False)
+        self.fc1 = nn.Linear(self.embed_dim, config.ffn_dim, has_bias=False)
+        self.fc2 = nn.Linear(config.ffn_dim, self.embed_dim, has_bias=False)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -577,7 +578,7 @@ class MusicgenMelodyPreTrainedModel(PreTrainedModel):
             None.
         """
         std = self.config.initializer_factor
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
@@ -620,7 +621,7 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
         self.embed_scale = math.sqrt(config.hidden_size) if config.scale_embedding else 1.0
 
         embed_dim = config.vocab_size + 1
-        self.embed_tokens = nn.CellList(
+        self.embed_tokens = nn.ModuleList(
             [nn.Embedding(embed_dim, config.hidden_size) for _ in range(config.num_codebooks)]
         )
 
@@ -629,7 +630,7 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
             config.hidden_size,
         )
 
-        self.layers = nn.CellList([MusicgenMelodyDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([MusicgenMelodyDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.layer_norm = nn.LayerNorm(config.hidden_size)
 
         self.gradient_checkpointing = False
@@ -667,7 +668,7 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -850,14 +851,14 @@ class MusicgenMelodyModel(MusicgenMelodyPreTrainedModel):
     It inherits from the MusicgenMelodyPreTrainedModel class.
 
     The MusicgenMelodyModel class contains methods for initializing the model, getting and setting input embeddings,
-    getting the decoder, and constructing the model for decoding melodies.
+    getting the decoder, and forwarding the model for decoding melodies.
 
     Methods:
         __init__: Initializes the MusicgenMelodyModel instance with the given configuration.
         get_input_embeddings: Retrieves the input embeddings used by the decoder.
         set_input_embeddings: Sets the input embeddings used by the decoder.
         get_decoder: Retrieves the decoder.
-        construct: Constructs the model for decoding melodies using the provided input arguments.
+        forward: Constructs the model for decoding melodies using the provided input arguments.
             Returns the decoder outputs as a tuple or BaseModelOutputWithPast if return_dict is True.
     """
     def __init__(self, config: MusicgenMelodyDecoderConfig):
@@ -944,7 +945,7 @@ class MusicgenMelodyModel(MusicgenMelodyPreTrainedModel):
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1030,7 +1031,7 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
     The `MusicgenMelodyForCausalLM` class represents a model for generating melodies using a causal language modeling
     head. This class inherits from the `MusicgenMelodyPreTrainedModel`.
 
-    This class includes methods for initializing the model, setting input and output embeddings, constructing the model,
+    This class includes methods for initializing the model, setting input and output embeddings, forwarding the model,
     preparing inputs for generation, building a delay pattern mask, applying a delay pattern mask, and generating
     sequences of token ids.
 
@@ -1059,8 +1060,8 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
         self.model = MusicgenMelodyModel(config)
 
         self.num_codebooks = config.num_codebooks
-        self.lm_heads = nn.CellList(
-            [nn.Dense(config.hidden_size, config.vocab_size, has_bias=False) for _ in range(config.num_codebooks)]
+        self.lm_heads = nn.ModuleList(
+            [nn.Linear(config.hidden_size, config.vocab_size, has_bias=False) for _ in range(config.num_codebooks)]
         )
 
         # Initialize weights and apply final processing
@@ -1168,7 +1169,7 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
         """
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1368,7 +1369,7 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
                 input_ids_shifted[:, 2 * codebook, codebook : seq_len + codebook] = input_ids[:, 2 * codebook]
                 input_ids_shifted[:, 2 * codebook + 1, codebook : seq_len + codebook] = input_ids[:, 2 * codebook + 1]
 
-        # construct a pattern mask that indicates the positions of padding tokens for each codebook
+        # forward a pattern mask that indicates the positions of padding tokens for each codebook
         # first fill the upper triangular part (the EOS padding)
         delay_pattern = ops.triu(
             ops.ones((channel_codebooks, max_length)), diagonal=max_length - channel_codebooks + 1
@@ -1683,7 +1684,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
     It is specifically designed for conditional generation of melodies. The model inherits from PreTrainedModel
     and includes methods for initializing the model, tying weights, getting various components of the model such as
     the text encoder, encoder, and decoder, as well as methods for preparing inputs for generation,
-    constructing sequences, and generating outputs based on given inputs and generation configurations.
+    forwarding sequences, and generating outputs based on given inputs and generation configurations.
 
     The class includes methods for handling input initialization, model configuration, token embeddings,
     and generation processes. It also provides functionalities for customizing logits processing, stopping
@@ -1769,11 +1770,11 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
 
         # text encoder outputs might need to be projected to different dimension for decoder
         if self.text_encoder.config.hidden_size != self.decoder.config.hidden_size:
-            self.enc_to_dec_proj = nn.Dense(self.text_encoder.config.hidden_size, self.decoder.config.hidden_size)
+            self.enc_to_dec_proj = nn.Linear(self.text_encoder.config.hidden_size, self.decoder.config.hidden_size)
 
         # audio encoder outputs after chroma extraction might need to be projected to different dimension for decoder
         if self.config.num_chroma != self.decoder.config.hidden_size:
-            self.audio_enc_to_dec_proj = nn.Dense(self.config.num_chroma, self.decoder.config.hidden_size)
+            self.audio_enc_to_dec_proj = nn.Linear(self.config.num_chroma, self.decoder.config.hidden_size)
 
         if self.text_encoder.get_output_embeddings() is not None:
             raise ValueError(
@@ -1802,7 +1803,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         # MusicgenMelodyForConditionalGeneration is made of PreTrainedModels that have already been initialized
         # Projection layers still need to be initialized.
         std = self.decoder.config.initializer_factor
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
@@ -2136,7 +2137,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         )
         return cls(text_encoder=text_encoder, audio_encoder=audio_encoder, decoder=decoder, config=config)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2457,7 +2458,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
                 for argument, value in model_kwargs.items()
                 if not any(argument.startswith(p) for p in irrelevant_prefix)
             }
-            encoder_signature = set(inspect.signature(encoder.construct).parameters)
+            encoder_signature = set(inspect.signature(encoder.forward).parameters)
             encoder_accepts_wildcard = "kwargs" in encoder_signature or "model_kwargs" in encoder_signature
             if not encoder_accepts_wildcard:
                 encoder_kwargs = {

@@ -596,7 +596,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                 else:
                     new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
                 new_bias = Parameter(new_bias, name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad)
-                replace_references(output_embeddings.bias, new_bias)
+                output_embeddings.bias = new_bias
 
         if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
             output_embeddings.out_channels = input_embeddings.vocab_size
@@ -1368,7 +1368,8 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             return
 
         # Check only the first and last input IDs to reduce overhead.
-        if self.config.pad_token_id in input_ids[:, [-1, 0]]:
+        # if self.config.pad_token_id in input_ids[:, [-1, 0]]:
+        if ops.contains(input_ids[:, [-1, 0]], self.config.pad_token_id):
             warn_string = (
                 "We strongly recommend passing in an `attention_mask` since your input_ids may be padded."
             )
@@ -1732,7 +1733,7 @@ class PoolerStartLogits(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, 1)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, p_mask: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         """
@@ -1789,7 +1790,7 @@ class PoolerEndLogits(nn.Module):
         self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dense_1 = nn.Linear(config.hidden_size, 1)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_states: Optional[mindspore.Tensor] = None,
@@ -1871,7 +1872,7 @@ class PoolerAnswerClass(nn.Module):
         self.activation = nn.Tanh()
         self.dense_1 = nn.Linear(config.hidden_size, 1, bias=False)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_states: Optional[mindspore.Tensor] = None,
@@ -1981,7 +1982,7 @@ class SQuADHead(nn.Module):
         self.end_logits = PoolerEndLogits(config)
         self.answer_class = PoolerAnswerClass(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_positions: Optional[mindspore.Tensor] = None,
@@ -2129,7 +2130,7 @@ class SequenceSummary(nn.Module):
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
             self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
-    def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
+    def forward(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         """
         Constructs a summary of hidden states based on the specified summary type.
 
@@ -2146,7 +2147,7 @@ class SequenceSummary(nn.Module):
             ValueError: If the summary type is not one of the available options.
             TypeError: If the input arguments are of incorrect types.
 
-        The method performs the following steps to construct the summary:
+        The method performs the following steps to forward the summary:
 
         1. If the summary type is 'last', it selects the last hidden state from each input sequence.
         2. If the summary type is 'first', it selects the first hidden state from each input sequence.
@@ -2168,7 +2169,7 @@ class SequenceSummary(nn.Module):
             >>> summary = SequenceSummary()
             >>> hidden_states = torch.randn(2, 5, 10)
             >>> cls_index = torch.tensor([[0], [1]])
-            >>> output = summary.construct(hidden_states, cls_index)
+            >>> output = summary.forward(hidden_states, cls_index)
             ```
         """
         if self.summary_type == "last":

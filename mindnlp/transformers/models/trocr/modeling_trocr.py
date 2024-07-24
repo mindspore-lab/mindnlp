@@ -20,7 +20,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import (initializer, Normal)
 from mindspore.ops import cross_entropy
 from mindnlp.utils import logging
@@ -47,7 +47,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
 
         bsz, seq_len = ids.shape[:2]
@@ -55,7 +55,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         ).expand(bsz, -1)
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
 class TrOCRScaledWordEmbedding(nn.Embedding):
@@ -68,11 +68,11 @@ class TrOCRScaledWordEmbedding(nn.Embedding):
         super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, ids: mindspore.Tensor):
-        return super().construct(ids) * self.embed_scale
+    def forward(self, ids: mindspore.Tensor):
+        return super().forward(ids) * self.embed_scale
 
 
-class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
+class TrOCRSinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -104,7 +104,7 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
 
         return emb.to(mindspore.float32)
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         bsz, seq_len = input_ids.shape
         # Create the position ids from the input token ids. Any padded tokens remain padded.
         position_ids = self.create_position_ids_from_input_ids(
@@ -139,7 +139,7 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
         return incremental_indices.long() + padding_idx
 
 
-class TrOCRAttention(nn.Cell):
+class TrOCRAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper."""
 
     def __init__(
@@ -170,16 +170,16 @@ class TrOCRAttention(nn.Cell):
         self.scaling = self.head_dim ** -0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(self.kdim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(self.vdim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(self.kdim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Linear(self.vdim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             key_value_states: Optional[mindspore.Tensor] = None,
@@ -299,7 +299,7 @@ class TrOCRAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class TrOCRDecoderLayer(nn.Cell):
+class TrOCRDecoderLayer(nn.Module):
     """
     A class of TrOCR decoder layer.
     """
@@ -333,11 +333,11 @@ class TrOCRDecoderLayer(nn.Cell):
             )
             self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
 
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -449,7 +449,7 @@ class TrOCRPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(module, (nn.Dense, nn.Conv1d)):
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.set_data(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
             if module.has_bias:
@@ -496,7 +496,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
         else:
             self.layernorm_embedding = None
 
-        self.layers = nn.CellList([TrOCRDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([TrOCRDecoderLayer(config) for _ in range(config.decoder_layers)])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -508,7 +508,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
             self,
             input_ids=None,
             attention_mask=None,
@@ -796,7 +796,7 @@ class TrOCRDecoderWrapper(TrOCRPreTrainedModel):
         super().__init__(config)
         self.decoder = TrOCRDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
 
 
@@ -830,7 +830,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
         super().__init__(config)
         self.model = TrOCRDecoderWrapper(config)
 
-        self.output_projection = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -853,7 +853,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
     def get_decoder(self):
         return self.model.decoder
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,

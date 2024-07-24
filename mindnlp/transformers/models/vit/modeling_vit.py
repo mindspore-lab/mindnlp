@@ -20,7 +20,8 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp.utils import logging
 
@@ -52,7 +53,7 @@ _IMAGE_CLASS_EXPECTED_OUTPUT = "Egyptian cat"
 
 
 
-class ViTEmbeddings(nn.Cell):
+class ViTEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
     """
@@ -102,7 +103,7 @@ class ViTEmbeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         bool_masked_pos: Optional[mindspore.Tensor] = None,
@@ -131,7 +132,7 @@ class ViTEmbeddings(nn.Cell):
         return embeddings
 
 
-class ViTPatchEmbeddings(nn.Cell):
+class ViTPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -153,7 +154,7 @@ class ViTPatchEmbeddings(nn.Cell):
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -170,7 +171,7 @@ class ViTPatchEmbeddings(nn.Cell):
         return embeddings
 
 
-class ViTSelfAttention(nn.Cell):
+class ViTSelfAttention(nn.Module):
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -183,9 +184,9 @@ class ViTSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -194,7 +195,7 @@ class ViTSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -230,7 +231,7 @@ class ViTSelfAttention(nn.Cell):
         return outputs
 
 
-class ViTSelfOutput(nn.Cell):
+class ViTSelfOutput(nn.Module):
     """
     The residual connection is defined in ViTLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -238,17 +239,17 @@ class ViTSelfOutput(nn.Cell):
 
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
         return hidden_states
 
 
-class ViTAttention(nn.Cell):
+class ViTAttention(nn.Module):
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
         self.attention = ViTSelfAttention(config)
@@ -273,7 +274,7 @@ class ViTAttention(nn.Cell):
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -287,29 +288,29 @@ class ViTAttention(nn.Cell):
         return outputs
 
 
-class ViTIntermediate(nn.Cell):
+class ViTIntermediate(nn.Module):
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
         return hidden_states
 
 
-class ViTOutput(nn.Cell):
+class ViTOutput(nn.Module):
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -318,7 +319,7 @@ class ViTOutput(nn.Cell):
         return hidden_states
 
 
-class ViTLayer(nn.Cell):
+class ViTLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: ViTConfig) -> None:
@@ -331,7 +332,7 @@ class ViTLayer(nn.Cell):
         self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -360,14 +361,14 @@ class ViTLayer(nn.Cell):
         return outputs
 
 
-class ViTEncoder(nn.Cell):
+class ViTEncoder(nn.Module):
     def __init__(self, config: ViTConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViTLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ViTLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -426,7 +427,7 @@ class ViTPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell) -> None:
 
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
@@ -468,7 +469,7 @@ class ViTModel(ViTPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         bool_masked_pos: Optional[mindspore.Tensor] = None,
@@ -531,13 +532,13 @@ class ViTModel(ViTPreTrainedModel):
         )
 
 
-class ViTPooler(nn.Cell):
+class ViTPooler(nn.Module):
     def __init__(self, config: ViTConfig):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -567,7 +568,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         bool_masked_pos: Optional[mindspore.Tensor] = None,
@@ -604,8 +605,8 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
             >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
             ...
             >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-            >>> loss, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
-            >>> list(reconstructed_pixel_values.shape)
+            >>> loss, reforwarded_pixel_values = outputs.loss, outputs.reforwardion
+            >>> list(reforwarded_pixel_values.shape)
             [1, 3, 224, 224]
             ```
         """
@@ -614,7 +615,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
         if bool_masked_pos is not None and (self.config.patch_size != self.config.encoder_stride):
             raise ValueError(
                 "When `bool_masked_pos` is provided, `patch_size` must be equal to `encoder_stride` to ensure that "
-                "the reconstructed image has the same dimensions as the input. "
+                "the reforwarded image has the same dimensions as the input. "
                 f"Got `patch_size` = {self.config.patch_size} and `encoder_stride` = {self.config.encoder_stride}."
             )
 
@@ -636,8 +637,8 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
         height = width = math.floor(sequence_length**0.5)
         sequence_output = sequence_output.permute(0, 2, 1).reshape(batch_size, num_channels, height, width)
 
-        # Reconstruct pixel values
-        reconstructed_pixel_values = self.decoder(sequence_output)
+        # Reforward pixel values
+        reforwarded_pixel_values = self.decoder(sequence_output)
 
         masked_im_loss = None
         if bool_masked_pos is not None:
@@ -648,16 +649,16 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
                 .repeat_interleave(self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reconstruction_loss = ops.l1_loss(pixel_values, reconstructed_pixel_values, reduction="none")
-            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
+            reforwardion_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
+            masked_im_loss = (reforwardion_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
-            output = (reconstructed_pixel_values,) + outputs[1:]
+            output = (reforwarded_pixel_values,) + outputs[1:]
             return ((masked_im_loss,) + output) if masked_im_loss is not None else output
 
         return MaskedImageModelingOutput(
             loss=masked_im_loss,
-            reconstruction=reconstructed_pixel_values,
+            reforwardion=reforwarded_pixel_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
@@ -672,13 +673,13 @@ class ViTForImageClassification(ViTPreTrainedModel):
         self.vit = ViTModel(config, add_pooling_layer=False)
 
         # Classifier head
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,

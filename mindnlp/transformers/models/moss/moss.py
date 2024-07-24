@@ -18,7 +18,8 @@ Moss model
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal, Zero, One
 from mindnlp.transformers.activations import ACT2FN
@@ -70,7 +71,7 @@ def apply_rotary_pos_emb(tensor: Tensor, sin: Tensor, cos: Tensor) -> Tensor:
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
-class MossAttention(nn.Cell):
+class MossAttention(nn.Module):
     """
     Moss attention layer
     """
@@ -122,10 +123,10 @@ class MossAttention(nn.Cell):
         self.scale_attn = ops.sqrt(Tensor(self.head_dim, dtype=mindspore.float32)).to(
             mindspore.float32
         )
-        self.qkv_proj = nn.Dense(
+        self.qkv_proj = nn.Linear(
             self.embed_dim, self.embed_dim * 3, has_bias=False)
 
-        self.out_proj = nn.Dense(
+        self.out_proj = nn.Linear(
             self.embed_dim, self.embed_dim, has_bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
@@ -240,7 +241,7 @@ class MossAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
+    def forward(
             self,
             hidden_states: Optional[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -345,7 +346,7 @@ class MossAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class MossMLP(nn.Cell):
+class MossMLP(nn.Module):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJMLP with GPTJ->Moss
     """
@@ -367,13 +368,13 @@ class MossMLP(nn.Cell):
         super().__init__()
         embed_dim = config.n_embd
 
-        self.fc_in = nn.Dense(embed_dim, intermediate_size)
-        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+        self.fc_in = nn.Linear(embed_dim, intermediate_size)
+        self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tensor]) -> Tensor:
+    def forward(self, hidden_states: Optional[Tensor]) -> Tensor:
         """
         Constructs the forward pass of the MossMLP neural network.
 
@@ -396,7 +397,7 @@ class MossMLP(nn.Cell):
         return hidden_states
 
 
-class MossBlock(nn.Cell):
+class MossBlock(nn.Module):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJBlock with GPTJ->Moss
     """
@@ -426,7 +427,7 @@ class MossBlock(nn.Cell):
         self.attn = MossAttention(config)
         self.mlp = MossMLP(inner_dim, config)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Optional[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -499,7 +500,7 @@ class MossPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weight."""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
             # cf https://github.com/MindSpore/MindSpore/pull/5617
             # cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -545,7 +546,7 @@ class MossPreTrainedModel(PreTrainedModel):
 
 
 MOSS_START_DOCSTRING = r"""
-    This model is a MindSpore [mindspore.nn.Cell](https://MindSpore.org/docs/stable/nn.html#mindspore.nn.Cell) sub-class. Use
+    This model is a MindSpore [mindspore.nn.Module](https://MindSpore.org/docs/stable/nn.html#mindspore.nn.Module) sub-class. Use
     it as a regular MindSpore Cell and refer to the MindSpore documentation for all matter related to general usage and
     behavior.
 
@@ -640,7 +641,7 @@ class MossModel(MossPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([MossBlock(config) for _ in range(config.n_layer)])
+        self.h = nn.ModuleList([MossBlock(config) for _ in range(config.n_layer)])
         self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
         self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.num_attention_heads)
 
@@ -661,7 +662,7 @@ class MossModel(MossPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[Tensor] = None,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -872,7 +873,7 @@ class MossForCausalLM(MossPreTrainedModel):
             self._init_weights = False
             # torch.set_default_dtype(mindspore.half)
         self.transformer = MossModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
         if config.wbits in [4, 8]:
             # torch.set_default_dtype(mindspore.float32)
             self._init_weights = True
@@ -921,7 +922,7 @@ class MossForCausalLM(MossPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[Tensor] = None,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,

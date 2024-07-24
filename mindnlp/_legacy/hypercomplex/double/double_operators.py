@@ -1450,7 +1450,7 @@ class Dense(_UniformOperator):
                                         has_bias=has_bias)
 
 
-class ReLU(nn.Cell):
+class ReLU(nn.Module):
     r"""
     Rectified Linear Unit activation function for double numbers.
 
@@ -1528,7 +1528,7 @@ class ReLU(nn.Cell):
         else:
             self.relu = nn.ReLU()
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Constructs and applies the rectified linear unit (ReLU) function on the input tensor.
         

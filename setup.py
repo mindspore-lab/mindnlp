@@ -116,7 +116,7 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
-        'mindspore',
+        'mindspore>=2.2.14',
         'tqdm',
         'requests',
         'datasets', # hf dependency

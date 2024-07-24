@@ -24,7 +24,9 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging, get_default_dtype
@@ -150,13 +152,13 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Mixtral
-class MixtralRMSNorm(nn.Cell):
+class MixtralRMSNorm(nn.Module):
 
     """
     The MixtralRMSNorm class is a custom implementation of the T5LayerNorm, which is used for normalization in
     neural networks.
 
-    This class inherits from the nn.Cell class and provides methods to perform RMS normalization on hidden states.
+    This class inherits from the nn.Module class and provides methods to perform RMS normalization on hidden states.
 
     Attributes:
         weight (Parameter): A learnable parameter that scales the normalized hidden states.
@@ -164,7 +166,7 @@ class MixtralRMSNorm(nn.Cell):
 
     Methods:
         __init__: Initializes the MixtralRMSNorm instance with the given hidden size and epsilon value.
-        construct: Applies the RMS normalization on the input hidden states and returns the normalized result.
+        forward: Applies the RMS normalization on the input hidden states and returns the normalized result.
 
     Note:
         - MixtralRMSNorm is equivalent to T5LayerNorm.
@@ -178,9 +180,9 @@ class MixtralRMSNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is defined within the 'MixtralRMSNorm' class and is used to perform a specific
+        This method 'forward' is defined within the 'MixtralRMSNorm' class and is used to perform a specific
         computation on the input hidden states.
 
         Args:
@@ -205,14 +207,14 @@ class MixtralRMSNorm(nn.Cell):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Mixtral
-class MixtralRotaryEmbedding(nn.Cell):
+class MixtralRotaryEmbedding(nn.Module):
 
     """
     A class representing MixtralRotaryEmbedding, a neural network module used for Rotary Positional Embedding in
     Mixtral models.
 
-    This class inherits from nn.Cell and provides methods to initialize the embedding, set the cosine and sine cache,
-    and construct the embedding for a given input sequence.
+    This class inherits from nn.Module and provides methods to initialize the embedding, set the cosine and sine cache,
+    and forward the embedding for a given input sequence.
 
     Attributes:
         dim (int): The dimension of the embedding.
@@ -231,7 +233,7 @@ class MixtralRotaryEmbedding(nn.Cell):
         _set_cos_sin_cache:
             Sets the cosine and sine cache for the specified sequence length and data type.
 
-        construct:
+        forward:
             Constructs the rotary positional embedding for the given input sequence.
 
     Note:
@@ -296,13 +298,13 @@ class MixtralRotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
-        This method constructs a Mixtral Rotary Embedding based on the input parameters.
+        This method forwards a Mixtral Rotary Embedding based on the input parameters.
 
         Args:
             self: The instance of the MixtralRotaryEmbedding class.
-            x: The input tensor for which the embedding is constructed.
+            x: The input tensor for which the embedding is forwarded.
             seq_len: An integer representing the sequence length of the embedding. Default is None.
 
         Returns:
@@ -373,7 +375,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralAttention with Mistral->Mixtral
-class MixtralAttention(nn.Cell):
+class MixtralAttention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
@@ -421,10 +423,10 @@ class MixtralAttention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=False)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=False)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
 
         self.rotary_emb = MixtralRotaryEmbedding(
             self.head_dim,
@@ -454,7 +456,7 @@ class MixtralAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -556,24 +558,24 @@ MIXTRAL_ATTENTION_CLASSES = {
 }
 
 
-class MixtralBlockSparseTop2MLP(nn.Cell):
+class MixtralBlockSparseTop2MLP(nn.Module):
 
     """
     The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer
-    perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for initialization
-    and construction of the MLP layers.
+    perceptron (MLP) for processing hidden states. It inherits from nn.Module and includes methods for initialization
+    and forwardion of the MLP layers.
 
     Attributes:
         ffn_dim (int): The dimension of the feed-forward network.
         hidden_dim (int): The dimension of the hidden layer in the network.
-        w1 (nn.Dense): The first dense layer in the MLP with hidden_dim input and ffn_dim output.
-        w2 (nn.Dense): The second dense layer in the MLP with ffn_dim input and hidden_dim output.
-        w3 (nn.Dense): The third dense layer in the MLP with hidden_dim input and ffn_dim output.
+        w1 (nn.Linear): The first dense layer in the MLP with hidden_dim input and ffn_dim output.
+        w2 (nn.Linear): The second dense layer in the MLP with ffn_dim input and hidden_dim output.
+        w3 (nn.Linear): The third dense layer in the MLP with hidden_dim input and ffn_dim output.
         act_fn (function): The activation function to be applied on the hidden states.
 
     Methods:
         __init__: Initializes the MixtralBlockSparseTop2MLP instance with the provided configuration.
-        construct: Constructs the sparse top-2 MLP using the provided hidden states and returns the processed
+        forward: Constructs the sparse top-2 MLP using the provided hidden states and returns the processed
             hidden states.
 
     Note:
@@ -599,22 +601,22 @@ class MixtralBlockSparseTop2MLP(nn.Cell):
         self.ffn_dim = config.intermediate_size
         self.hidden_dim = config.hidden_size
 
-        self.w1 = nn.Dense(self.hidden_dim, self.ffn_dim, has_bias=False)
-        self.w2 = nn.Dense(self.ffn_dim, self.hidden_dim, has_bias=False)
-        self.w3 = nn.Dense(self.hidden_dim, self.ffn_dim, has_bias=False)
+        self.w1 = nn.Linear(self.hidden_dim, self.ffn_dim, has_bias=False)
+        self.w2 = nn.Linear(self.ffn_dim, self.hidden_dim, has_bias=False)
+        self.w3 = nn.Linear(self.hidden_dim, self.ffn_dim, has_bias=False)
 
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the current hidden states using the provided hidden states.
 
         Args:
             self (MixtralBlockSparseTop2MLP): The instance of the MixtralBlockSparseTop2MLP class.
-            hidden_states (tensor): The input hidden states to be used for constructing the current hidden states.
+            hidden_states (tensor): The input hidden states to be used for forwarding the current hidden states.
 
         Returns:
-            tensor: The current hidden states constructed based on the input hidden states.
+            tensor: The current hidden states forwarded based on the input hidden states.
 
         Raises:
             ValueError: If the input hidden_states is not in the expected format.
@@ -625,7 +627,7 @@ class MixtralBlockSparseTop2MLP(nn.Cell):
         return current_hidden_states
 
 
-class MixtralSparseMoeBlock(nn.Cell):
+class MixtralSparseMoeBlock(nn.Module):
     """
     This implementation is strictly equivalent to standard MoE with full capacity (no dropped tokens).
     It's faster since it formulates MoE operations in terms of block-sparse operations to accomodate imbalanced
@@ -663,11 +665,11 @@ class MixtralSparseMoeBlock(nn.Cell):
         self.top_k = config.num_experts_per_tok
 
         # gating
-        self.gate = nn.Dense(self.hidden_dim, self.num_experts, has_bias=False)
+        self.gate = nn.Linear(self.hidden_dim, self.num_experts, has_bias=False)
 
-        self.experts = nn.CellList([MixtralBlockSparseTop2MLP(config) for _ in range(self.num_experts)])
+        self.experts = nn.ModuleList([MixtralBlockSparseTop2MLP(config) for _ in range(self.num_experts)])
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the MixtralSparseMoeBlock.
 
@@ -683,7 +685,7 @@ class MixtralSparseMoeBlock(nn.Cell):
         Raises:
             None.
 
-        This method constructs the MixtralSparseMoeBlock by applying the following steps:
+        This method forwards the MixtralSparseMoeBlock by applying the following steps:
 
         1. Reshapes the hidden_states tensor to (-1, hidden_dim).
         2. Computes the router logits by passing the reshaped hidden_states through the gate module.
@@ -745,18 +747,18 @@ class MixtralSparseMoeBlock(nn.Cell):
         return final_hidden_states, router_logits
 
 
-class MixtralDecoderLayer(nn.Cell):
+class MixtralDecoderLayer(nn.Module):
 
     """
     This class represents a decoder layer for the Mixtral model, used for processing input sequences in
     neural network models. It includes functionality for self-attention, block sparse mixture of experts,
     layer normalization, and other operations specific to the Mixtral architecture.
 
-    The MixtralDecoderLayer class inherits from nn.Cell and contains methods for initialization and processing input
+    The MixtralDecoderLayer class inherits from nn.Module and contains methods for initialization and processing input
     data through the decoder layer. The __init__ method initializes the layer with configuration settings and creates
     necessary components such as self-attention mechanism, block sparse mixture of experts, and layer normalization.
 
-    The construct method processes the input hidden states along with optional arguments like attention mask,
+    The forward method processes the input hidden states along with optional arguments like attention mask,
     position ids, past key values, and various output flags. It applies layer normalization, self-attention mechanism,
     block sparse mixture of experts, and additional layer normalization before returning the processed hidden states.
     Output can include attentions weights, present key values, and router logits based on the specified output flags.
@@ -787,7 +789,7 @@ class MixtralDecoderLayer(nn.Cell):
         self.input_layernorm = MixtralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = MixtralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -856,7 +858,7 @@ class MixtralPreTrainedModel(PreTrainedModel):
     Mixtral models.
 
     This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell`
-    parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance of `nn.Dense`,
+    parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance of `nn.Linear`,
     the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute
     of the `config` object. If the `cell` has a bias, it is initialized with zeros. If the `cell` is an instance of
     `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a
@@ -875,7 +877,7 @@ class MixtralPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -917,7 +919,7 @@ class MixtralModel(MixtralPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [MixtralDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = MixtralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -957,7 +959,7 @@ class MixtralModel(MixtralPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1113,7 +1115,7 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
     Represents a Mixtral model for causal language modeling.
 
     This class provides methods for initializing the model, setting and getting input and output embeddings,
-    setting and getting the decoder, constructing the model, preparing inputs for generation, and reordering
+    setting and getting the decoder, forwarding the model, preparing inputs for generation, and reordering
     cache values.
 
     The class inherits from MixtralPreTrainedModel.
@@ -1144,7 +1146,7 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
         super().__init__(config)
         self.model = MixtralModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
         self.router_aux_loss_coef = config.router_aux_loss_coef
         self.num_experts = config.num_local_experts
         self.num_experts_per_tok = config.num_experts_per_tok
@@ -1251,7 +1253,7 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1494,8 +1496,8 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
 
     This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and
     is designed to handle sequence classification tasks. It includes methods for initializing the model, getting and
-    setting input embeddings, and constructing the model for sequence classification.
-    The class also provides detailed documentation for the construct method, which accepts various input parameters and
+    setting input embeddings, and forwarding the model for sequence classification.
+    The class also provides detailed documentation for the forward method, which accepts various input parameters and
     returns the sequence classification output.
 
     Attributes:
@@ -1507,10 +1509,10 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
         __init__: Initializes the MixtralForSequenceClassification instance with the provided configuration.
         get_input_embeddings: Retrieves the input embeddings from the model.
         set_input_embeddings: Sets the input embeddings for the model.
-        construct: Constructs the model for sequence classification, processing the input data and returning the
+        forward: Constructs the model for sequence classification, processing the input data and returning the
             sequence classification output.
 
-    The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids,
+    The forward method supports various optional input parameters, including input_ids, attention_mask, position_ids,
     past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
     The labels parameter is optional and can be used for computing the sequence classification/regression loss.
     The method also handles different problem types such as regression, single-label classification, and multi-label
@@ -1519,7 +1521,7 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
     Returns:
         Conditional returns:
 
-            - When return_dict is False, the construct method returns a tuple containing the loss and other sequence
+            - When return_dict is False, the forward method returns a tuple containing the loss and other sequence
             classifier outputs.
             - When return_dict is True, it returns a SequenceClassifierOutputWithPast object that
             includes the loss, logits, past_key_values, hidden_states, and attentions.
@@ -1547,7 +1549,7 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = MixtralModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1586,7 +1588,7 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

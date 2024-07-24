@@ -24,7 +24,7 @@ from mindnlp.core import nn, ops
 
 from mindnlp.utils import ModelOutput, logging
 from mindnlp.core.nn.utils import weight_norm
-from mindnlp.modules.functional import embedding
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from .configuration_encodec import EncodecConfig
 

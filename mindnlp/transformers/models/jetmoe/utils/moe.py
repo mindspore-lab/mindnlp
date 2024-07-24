@@ -15,7 +15,8 @@
 """
 JetMoE MoE.
 """
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer
 
 from .parallel_experts import ParallelExperts, compute_gating
@@ -23,7 +24,7 @@ from .parallel_experts import ParallelExperts, compute_gating
 from .gate import top_k_gating
 
 
-class MoE(nn.Cell):
+class MoE(nn.Module):
     """
     A Sparsely gated mixture of experts layer with 1-layer Feed-Forward networks as experts.
 
@@ -227,7 +228,7 @@ class MoE(nn.Cell):
             y = y + self.bias
         return y, loss
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Forward pass of the mixture of experts layer.
 

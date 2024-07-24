@@ -67,7 +67,7 @@ class _ConvNd(Cell):
         On Ascend platform, only group convolution in depthwise convolution scenarios is supported.
         That is, when `group > 1`, condition `in\_channels` = `out\_channels` = `group` must be satisfied.
 
-        This is not a self-sufficient class. In order to construct a convolution layer, one should instantiate this
+        This is not a self-sufficient class. In order to forward a convolution layer, one should instantiate this
         class and an implementor class, which acts like a bridge pattern and determine the exact set of hypercomplex
         numbers. That implies the rules of multiplication and therefore affects how a convolution works.
 
@@ -263,16 +263,16 @@ class _ConvNd(Cell):
                 [out_channels, in_channels // group, *kernel_size]
         self.dtype = self.weight_init.dtype if isinstance(self.weight_init, Tensor) else None
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
-        Construct is a method in the _ConvNd class that constructs a tensor based on the input tensor 'u'.
+        Construct is a method in the _ConvNd class that forwards a tensor based on the input tensor 'u'.
         
         Args:
             self: An instance of the _ConvNd class.
             u (Tensor): The input tensor to be processed. It should be a valid tensor object.
         
         Returns:
-            Tensor: The constructed tensor. It will have the same data type as the input tensor 'u'.
+            Tensor: The forwarded tensor. It will have the same data type as the input tensor 'u'.
         
         Raises:
             TypeError: If the specified data type 'dtype' is not equal to the data type of the input tensor 'u'.
@@ -281,17 +281,17 @@ class _ConvNd(Cell):
         
         Next, the method extracts the values of 'x' and 'y' by calling the 'get_x_and_y' function on the input tensor 'u'.
         
-        Then, it calls the '_construct' method with 'x' and 'y' as arguments, which returns the constructed values for 'out_x' and 'out_y'.
+        Then, it calls the '_forward' method with 'x' and 'y' as arguments, which returns the forwarded values for 'out_x' and 'out_y'.
         
         The 'to_2channel' function is then called to convert 'out_x' and 'out_y' into a two-channel tensor, using the data type of the input tensor 'u'.
         
-        Finally, the constructed tensor 'out' is returned.
+        Finally, the forwarded tensor 'out' is returned.
         """
         if self.dtype is not None and self.dtype != u.dtype:
             raise TypeError("dtype must be equal to the data type of the inputs tensor, but got: "
                             f"dtype={self.dtype} and inputs.dtype={u.dtype}")
         x, y = get_x_and_y(u)
-        out_x, out_y = self._construct(x, y)
+        out_x, out_y = self._forward(x, y)
         out = to_2channel(out_x, out_y, u.dtype)
         return out
 
@@ -316,7 +316,7 @@ class _ConvNd(Cell):
         return s
 
     @abstractmethod
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -332,7 +332,7 @@ class _ConvNd(Cell):
         
         Returns:
             Tuple[Tensor, Tensor]
-                A tuple containing two tensors, the constructed tensor based on x and the constructed tensor based on y.
+                A tuple containing two tensors, the forwarded tensor based on x and the forwarded tensor based on y.
         
         Raises:
             None
@@ -529,7 +529,7 @@ class Conv2d(_ConvNd):
                                      bias_init,
                                      data_format)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -728,7 +728,7 @@ class Conv1d(_ConvNd):
         if len(input_shape) != 3:
             raise ValueError(f"For '{self.cls_name}', the dimension of input must be 3d, but got {len(input_shape)}.")
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         """
@@ -937,7 +937,7 @@ class Conv3d(_ConvNd):
                                      bias_init,
                                      data_format)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         """

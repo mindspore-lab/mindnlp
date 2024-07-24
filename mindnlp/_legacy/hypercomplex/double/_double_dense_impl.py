@@ -58,7 +58,7 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   real: Tensor,
                   double: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -125,7 +125,7 @@ class _J1J2DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   u1: Tensor,
                   u2: Tensor) -> Tuple[Tensor, Tensor]:
         r"""

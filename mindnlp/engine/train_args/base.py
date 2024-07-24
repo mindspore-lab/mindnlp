@@ -545,19 +545,19 @@ class TrainingArguments:
         use_mps_device (`bool`, *optional*, defaults to `False`):
             This argument is deprecated.`mps` device will be used if it is available similar to `cuda` device.
         nn_compile (`bool`, *optional*, defaults to `False`):
-            This will use the best defaults for the [`mindspore.nn.Cell.compile`]
+            This will use the best defaults for the [`mindspore.nn.Module.compile`]
             You can customize the defaults with the argument `nn_compile_backend` and `nn_compile_mode` but we
             don't guarantee any of them will work as the support is progressively rolled in in MindSpore.
 
             This flag and the whole compile API is experimental and subject to change in future releases.
         nn_compile_backend (`str`, *optional*):
-            The backend to use in `mindspore.nn.Cell.compile`. If set to any value, `mindspore.nn.Cell.compile` will be set to `True`.
+            The backend to use in `mindspore.nn.Module.compile`. If set to any value, `mindspore.nn.Module.compile` will be set to `True`.
 
             Refer to the MindSpore doc for possible values and note that they may change across MindSpore versions.
 
             This flag is experimental and subject to change in future releases.
         nn_compile_mode (`str`, *optional*):
-            The mode to use in `mindspore.nn.Cell.compile`. If set to any value, `mindspore.nn.Cell.compile` will be set to `True`.
+            The mode to use in `mindspore.nn.Module.compile`. If set to any value, `mindspore.nn.Module.compile` will be set to `True`.
 
             Refer to the MindSpore doc for possible values and note that they may change across MindSpore versions.
 
@@ -924,7 +924,7 @@ class TrainingArguments:
     recompute_kwargs: Optional[dict] = field(
         default=None,
         metadata={
-            "help": "Gradient checkpointing key word arguments such as `use_reentrant`. Will be passed to `mindspore.nn.Cell.recompute` through `model.recompute_enable`."
+            "help": "Gradient checkpointing key word arguments such as `use_reentrant`. Will be passed to `mindspore.nn.Module.recompute` through `model.recompute_enable`."
         },
     )
     include_inputs_for_metrics: bool = field(

@@ -85,12 +85,12 @@ class Work(metaclass=abc.ABCMeta):
             pass
 
     @abstractmethod
-    def _construct_model(self, model):
+    def _forward_model(self, model):
         """
         Construct the inference model for the predictor.
         """
     @abstractmethod
-    def _construct_tokenizer(self, model):
+    def _forward_tokenizer(self, model):
         """
         Construct the tokenizer for the predictor.
         """

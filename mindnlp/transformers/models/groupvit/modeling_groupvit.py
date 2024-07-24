@@ -22,7 +22,8 @@ from typing import Any, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore.common.initializer import initializer, Normal
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -146,7 +147,7 @@ def get_grouping_from_attentions(attentions, hw_shape):
     return final_grouping
 
 
-class GroupViTCrossAttentionLayer(nn.Cell):
+class GroupViTCrossAttentionLayer(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.attn = GroupViTAttention(config)
@@ -154,7 +155,7 @@ class GroupViTCrossAttentionLayer(nn.Cell):
         self.mlp = GroupViTMLP(config)
         self.norm_post = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-    def construct(self, query, key):
+    def forward(self, query, key):
         x = query
         x = x + self.attn(query, encoder_hidden_states=key)[0]
         x = x + self.mlp(self.norm2(x))
@@ -162,15 +163,15 @@ class GroupViTCrossAttentionLayer(nn.Cell):
         return x
 
 
-class GroupViTAssignAttention(nn.Cell):
+class GroupViTAssignAttention(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.scale = config.hidden_size**-0.5
 
-        self.q_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.k_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.v_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.proj = nn.Dense(config.hidden_size, config.hidden_size)
+        self.q_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.k_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.v_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.proj = nn.Linear(config.hidden_size, config.hidden_size)
         self.assign_eps = config.assign_eps
 
     def get_attn(self, attn, gumbel=True, hard=True):
@@ -184,7 +185,7 @@ class GroupViTAssignAttention(nn.Cell):
 
         return attn
 
-    def construct(self, query, key):
+    def forward(self, query, key):
         value = key
         # [batch_size, query_length, channels]
         query = self.q_proj(query)
@@ -210,7 +211,7 @@ class GroupViTAssignAttention(nn.Cell):
         return out, soft_attn
 
 
-class GroupViTTokenAssign(nn.Cell):
+class GroupViTTokenAssign(nn.Module):
     def __init__(self, config: GroupViTVisionConfig, num_group_token, num_output_group):
         super().__init__()
         self.num_output_group = num_output_group
@@ -245,7 +246,7 @@ class GroupViTTokenAssign(nn.Cell):
         projected_group_tokens = self.norm_post_tokens(projected_group_tokens)
         return projected_group_tokens
 
-    def construct(self, image_tokens, group_tokens):
+    def forward(self, image_tokens, group_tokens):
         """
         Args:
             image_tokens (`mindspore.Tensor`): image tokens, of shape [batch_size, input_length, channels]
@@ -316,7 +317,7 @@ class GroupViTModelOutput(ModelOutput):
         )
 
 
-class GroupViTPatchEmbeddings(nn.Cell):
+class GroupViTPatchEmbeddings(nn.Module):
     """
     Image to Patch Embedding.
     """
@@ -338,7 +339,7 @@ class GroupViTPatchEmbeddings(nn.Cell):
 
         self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,has_bias=True)
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if not interpolate_pos_encoding:
             if height != self.image_size[0] or width != self.image_size[1]:
@@ -350,7 +351,7 @@ class GroupViTPatchEmbeddings(nn.Cell):
         return x
 
 
-class GroupViTVisionEmbeddings(nn.Cell):
+class GroupViTVisionEmbeddings(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
 
@@ -400,7 +401,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return patch_pos_embed
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
 
@@ -420,7 +421,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextEmbeddings with CLIP->GroupViT
-class GroupViTTextEmbeddings(nn.Cell):
+class GroupViTTextEmbeddings(nn.Module):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         embed_dim = config.hidden_size
@@ -431,7 +432,7 @@ class GroupViTTextEmbeddings(nn.Cell):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -451,7 +452,7 @@ class GroupViTTextEmbeddings(nn.Cell):
         return embeddings
 
 
-class GroupViTStage(nn.Cell):
+class GroupViTStage(nn.Module):
     """This corresponds to the `GroupingLayer` class in the GroupViT implementation."""
 
     def __init__(
@@ -469,7 +470,7 @@ class GroupViTStage(nn.Cell):
             self.group_token = Parameter(ops.zeros(1, num_group_token, config.hidden_size))
         else:
             self.group_token = None
-        self.layers = nn.CellList([GroupViTEncoderLayer(config) for _ in range(depth)])
+        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(depth)])
 
         if num_group_token > 0:
             self.downsample = GroupViTTokenAssign(
@@ -503,7 +504,7 @@ class GroupViTStage(nn.Cell):
             return x
         return ops.cat((x, group_token), axis=1)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         prev_group_token: Optional[mindspore.Tensor] = None,
@@ -545,7 +546,7 @@ class GroupViTStage(nn.Cell):
         return outputs
 
 
-class GroupViTMLP(nn.Cell):
+class GroupViTMLP(nn.Module):
     def __init__(
         self,
         config: GroupViTVisionConfig,
@@ -559,10 +560,10 @@ class GroupViTMLP(nn.Cell):
         hidden_size = hidden_size if hidden_size is not None else config.hidden_size
         intermediate_size = intermediate_size if intermediate_size is not None else config.intermediate_size
         output_size = output_size if output_size is not None else hidden_size
-        self.fc1 = nn.Dense(hidden_size, intermediate_size)
-        self.fc2 = nn.Dense(intermediate_size, output_size)
+        self.fc1 = nn.Linear(hidden_size, intermediate_size)
+        self.fc2 = nn.Linear(intermediate_size, output_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -570,12 +571,12 @@ class GroupViTMLP(nn.Cell):
 
 
 class GroupViTMixerMLP(GroupViTMLP):
-    def construct(self, x):
-        x = super().construct(x.swapaxes(1, 2))
+    def forward(self, x):
+        x = super().forward(x.swapaxes(1, 2))
         return x.swapaxes(1, 2)
 
 
-class GroupViTAttention(nn.Cell):
+class GroupViTAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -592,15 +593,15 @@ class GroupViTAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -686,7 +687,7 @@ class GroupViTAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->GroupViT
-class GroupViTEncoderLayer(nn.Cell):
+class GroupViTEncoderLayer(nn.Module):
     def __init__(self, config: GroupViTConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
@@ -695,7 +696,7 @@ class GroupViTEncoderLayer(nn.Cell):
         self.mlp = GroupViTMLP(config)
         self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -750,7 +751,7 @@ class GroupViTPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
 
         init_range = self.config.initializer_range
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(init_range),
@@ -789,11 +790,11 @@ class GroupViTPreTrainedModel(PreTrainedModel):
             cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
                                     cell.fc2.weight.shape, cell.fc2.weight.dtype))
 
-class GroupViTVisionEncoder(nn.Cell):
+class GroupViTVisionEncoder(nn.Module):
     def __init__(self, config: GroupViTVisionConfig) -> None:
         super().__init__()
         self.config = config
-        self.stages = nn.CellList(
+        self.stages = nn.ModuleList(
             [
                 GroupViTStage(
                     config=config,
@@ -807,7 +808,7 @@ class GroupViTVisionEncoder(nn.Cell):
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,
@@ -847,7 +848,7 @@ class GroupViTVisionEncoder(nn.Cell):
         )
 
 
-class GroupViTTextEncoder(nn.Cell):
+class GroupViTTextEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self-attention layers. Each layer is a
     [`GroupViTEncoderLayer`].
@@ -859,10 +860,10 @@ class GroupViTTextEncoder(nn.Cell):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -945,7 +946,7 @@ class GroupViTTextEncoder(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextTransformer with CLIPText->GroupViTText, CLIPEncoder->GroupViTTextEncoder, CLIP_TEXT->GROUPVIT_TEXT
-class GroupViTTextTransformer(nn.Cell):
+class GroupViTTextTransformer(nn.Module):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         self.config = config
@@ -958,7 +959,7 @@ class GroupViTTextTransformer(nn.Cell):
         self.eos_token_id = config.eos_token_id
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1050,13 +1051,13 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1093,7 +1094,7 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
         )
 
 
-class GroupViTVisionTransformer(nn.Cell):
+class GroupViTVisionTransformer(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.config = config
@@ -1103,7 +1104,7 @@ class GroupViTVisionTransformer(nn.Cell):
         self.encoder = GroupViTVisionEncoder(config)
         self.layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1163,7 +1164,7 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
     def get_input_embeddings(self) -> GroupViTPatchEmbeddings:
         return self.vision_model.embeddings.patch_embeddings
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1231,16 +1232,16 @@ class GroupViTModel(GroupViTPreTrainedModel):
         self.vision_model = GroupViTVisionTransformer(vision_config)
 
         self.visual_projection = nn.SequentialCell(
-            nn.Dense(self.vision_embed_dim, self.projection_intermediate_dim, has_bias=True),
+            nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, has_bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Dense(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
         )
         self.text_projection = nn.SequentialCell(
-            nn.Dense(self.text_embed_dim, self.projection_intermediate_dim, has_bias=True),
+            nn.Linear(self.text_embed_dim, self.projection_intermediate_dim, has_bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Dense(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
         )
         self.logit_scale = Parameter(mindspore.Tensor([self.config.logit_scale_init_value]))
 
@@ -1341,7 +1342,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,

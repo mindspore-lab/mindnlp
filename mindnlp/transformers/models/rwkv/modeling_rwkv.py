@@ -23,7 +23,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
 from mindnlp.utils import logging, ModelOutput
@@ -78,7 +78,7 @@ def load_wkv_cuda_kernel(func_name, context_length):
     return wkv_op
 
 
-class RwkvLinearAttention(nn.Cell):
+class RwkvLinearAttention(nn.Module):
     """RWKV linear attention"""
     def __init__(self, config):
         """
@@ -104,7 +104,7 @@ class RwkvLinearAttention(nn.Cell):
 
         self.wkv_backward = load_wkv_cuda_kernel('wkv_backward', config.context_length)
 
-    def construct(self, time_decay, time_first, key, value, state=None, return_state=False):
+    def forward(self, time_decay, time_first, key, value, state=None, return_state=False):
         """
         Constructs the linear attention mechanism for the RwkvLinearAttention class.
         
@@ -226,7 +226,7 @@ def rwkv_linear_attention_cpu(time_decay, time_first, key, value, state=None, re
     return output, state
 
 
-class RwkvSelfAttention(nn.Cell):
+class RwkvSelfAttention(nn.Module):
     """RWKV self attention"""
     def __init__(self, config, layer_id=0):
         """
@@ -266,10 +266,10 @@ class RwkvSelfAttention(nn.Cell):
         self.time_mix_receptance = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
 
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
-        self.key = nn.Dense(hidden_size, attention_hidden_size, has_bias=False)
-        self.value = nn.Dense(hidden_size, attention_hidden_size, has_bias=False)
-        self.receptance = nn.Dense(hidden_size, attention_hidden_size, has_bias=False)
-        self.output = nn.Dense(attention_hidden_size, hidden_size, has_bias=False)
+        self.key = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
+        self.value = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
+        self.receptance = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
+        self.output = nn.Linear(attention_hidden_size, hidden_size, has_bias=False)
 
     def extract_key_value(self, hidden, state=None):
         """extrac key value"""
@@ -291,11 +291,11 @@ class RwkvSelfAttention(nn.Cell):
             state[1][:, :, self.layer_id] = hidden[:, -1]
         return receptance, key, value, state
 
-    def construct(self, hidden, state=None, use_cache=False):
+    def forward(self, hidden, state=None, use_cache=False):
         """
         Construct method in the RwkvSelfAttention class.
         
-        This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input,
+        This method forwards the self-attention mechanism for the Rwkv model. It takes in the hidden input,
         the state, and a flag indicating whether to use cache or not. It returns the output of the attention mechanism
         and the updated state.
 
@@ -330,7 +330,7 @@ class RwkvSelfAttention(nn.Cell):
         return self.output(receptance * rwkv), state
 
 
-class RwkvFeedForward(nn.Cell):
+class RwkvFeedForward(nn.Module):
     """RWKV feed forward"""
     def __init__(self, config, layer_id=0):
         """
@@ -369,13 +369,13 @@ class RwkvFeedForward(nn.Cell):
         self.time_mix_key = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_key')
         self.time_mix_receptance =Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
 
-        self.key = nn.Dense(hidden_size, intermediate_size, has_bias=False)
-        self.receptance = nn.Dense(hidden_size, hidden_size, has_bias=False)
-        self.value = nn.Dense(intermediate_size, hidden_size, has_bias=False)
+        self.key = nn.Linear(hidden_size, intermediate_size, has_bias=False)
+        self.receptance = nn.Linear(hidden_size, hidden_size, has_bias=False)
+        self.value = nn.Linear(intermediate_size, hidden_size, has_bias=False)
 
-    def construct(self, hidden, state=None):
+    def forward(self, hidden, state=None):
         """
-        This method 'construct' is defined in the class 'RwkvFeedForward' and is responsible for constructing the value
+        This method 'forward' is defined in the class 'RwkvFeedForward' and is responsible for forwarding the value
         and state based on the input parameters.
 
         Args:
@@ -415,7 +415,7 @@ class RwkvFeedForward(nn.Cell):
         return receptance * value, state
 
 
-class RwkvBlock(nn.Cell):
+class RwkvBlock(nn.Module):
     """RWKV block"""
     def __init__(self, config, layer_id):
         """
@@ -454,9 +454,9 @@ class RwkvBlock(nn.Cell):
         self.attention = RwkvSelfAttention(config, layer_id)
         self.feed_forward = RwkvFeedForward(config, layer_id)
 
-    def construct(self, hidden, state=None, use_cache=False, output_attentions=False):
+    def forward(self, hidden, state=None, use_cache=False, output_attentions=False):
         """
-        Method to construct a RwkvBlock.
+        Method to forward a RwkvBlock.
 
         Args:
             self: The instance of the RwkvBlock class.
@@ -642,7 +642,7 @@ class RwkvModel(RwkvPreTrainedModel):
         super().__init__(config)
 
         self.embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.blocks = nn.CellList([RwkvBlock(config, layer_id=idx) for idx in range(config.num_hidden_layers)])
+        self.blocks = nn.ModuleList([RwkvBlock(config, layer_id=idx) for idx in range(config.num_hidden_layers)])
         self.ln_out = nn.LayerNorm([config.hidden_size])
 
         self.layers_are_rescaled = False
@@ -688,7 +688,7 @@ class RwkvModel(RwkvPreTrainedModel):
     #         self._rescale_layers()
     #     return super().__call__(*args, **kwargs)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,  # noqa
@@ -700,7 +700,7 @@ class RwkvModel(RwkvPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, RwkvOutput]:
         """
-        This method constructs the RwkvModel based on the provided input and configuration parameters.
+        This method forwards the RwkvModel based on the provided input and configuration parameters.
 
         Args:
             self: The instance of the RwkvModel class.
@@ -842,7 +842,7 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         """
         super().__init__(config)
         self.rwkv = RwkvModel(config)
-        self.head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -870,7 +870,7 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         model_inputs["state"] = state
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,  # noqa

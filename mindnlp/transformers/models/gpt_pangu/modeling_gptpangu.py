@@ -18,7 +18,7 @@ from typing import Tuple
 import math
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
@@ -40,10 +40,10 @@ GPTPangu_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class GPTPanguAttention(nn.Cell):
+class GPTPanguAttention(nn.Module):
 
     """
-    Represents the GPTPanguAttention class, which inherits from nn.Cell.
+    Represents the GPTPanguAttention class, which inherits from nn.Module.
     This class contains methods for attention mechanism used in GPT (Generative Pre-trained Transformer) models.
     
     Methods:
@@ -52,7 +52,7 @@ class GPTPanguAttention(nn.Cell):
             head masks.
         _split_heads: Splits the hidden_size dimension of the given tensor into attn_head_size and num_heads.
         _merge_heads: Merges attn_head_size dimension and num_attn_heads dimension into hidden_size.
-        construct: Constructs the attention mechanism using the provided hidden_states and optional past layers, masks,
+        forward: Constructs the attention mechanism using the provided hidden_states and optional past layers, masks,
             custom query, cache usage, and attention output flag.
     """
     def __init__(self, config):
@@ -96,10 +96,10 @@ class GPTPanguAttention(nn.Cell):
 
         self.scale_attn_weights = config.scale_attn_weights
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=True)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=True)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=True)
-        self.c_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
+        self.c_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
@@ -180,7 +180,7 @@ class GPTPanguAttention(nn.Cell):
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         layer_past=None,
@@ -248,32 +248,32 @@ class GPTPanguAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class GPTPanguMLP(nn.Cell):
+class GPTPanguMLP(nn.Module):
 
     """
     GPTPanguMLP represents a multi-layer perceptron (MLP) used in the GPT-Pangu model for processing intermediate
     hidden states.
 
-    This class inherits from nn.Cell and contains methods for initializing the MLP layers and processing hidden states
+    This class inherits from nn.Module and contains methods for initializing the MLP layers and processing hidden states
     through a feedforward neural network.
 
     Attributes:
-        c_fc (nn.Dense): Fully connected layer to transform input hidden states.
-        c_proj (nn.Dense): Fully connected layer to project intermediate hidden states back to original embed dimension.
+        c_fc (nn.Linear): Fully connected layer to transform input hidden states.
+        c_proj (nn.Linear): Fully connected layer to project intermediate hidden states back to original embed dimension.
         act (ACT2FN[config.activation_function]): Activation function applied to hidden states.
         dropout (nn.Dropout): Dropout layer to add regularization to the model.
 
     Methods:
         __init__: Initializes the GPTPanguMLP with specified intermediate size and configuration parameters.
 
-        construct: Processes the input 'hidden_states' through the MLP layers and returns the processed hidden states.
+        forward: Processes the input 'hidden_states' through the MLP layers and returns the processed hidden states.
 
     Example:
         ```python
         >>> intermediate_size = 512
         >>> config = Configuration(hidden_size=768, activation_function='gelu', resid_pdrop=0.1)
         >>> mlp = GPTPanguMLP(intermediate_size, config)
-        >>> output = mlp.construct(hidden_states)
+        >>> output = mlp.forward(hidden_states)
         ```
 
     """
@@ -295,14 +295,14 @@ class GPTPanguMLP(nn.Cell):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Dense(embed_dim, intermediate_size)
-        self.c_proj = nn.Dense(intermediate_size, embed_dim)
+        self.c_fc = nn.Linear(embed_dim, intermediate_size)
+        self.c_proj = nn.Linear(intermediate_size, embed_dim)
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the hidden states by applying a series of transformations.
+        This method forwards the hidden states by applying a series of transformations.
 
         Args:
             self (GPTPanguMLP): The instance of the GPTPanguMLP class.
@@ -321,7 +321,7 @@ class GPTPanguMLP(nn.Cell):
         return hidden_states
 
 
-class GPTPanguBlock(nn.Cell):
+class GPTPanguBlock(nn.Module):
 
     """
     This class represents a block of the GPTPangu model, containing layers for attention and feed-forward processing.
@@ -337,7 +337,7 @@ class GPTPanguBlock(nn.Cell):
 
     Methods:
         __init__: Initializes the GPTPanguBlock with the given configuration settings.
-        construct:
+        forward:
             Constructs the block by processing the input hidden_states through attention and feed-forward layers.
 
     Returns:
@@ -345,7 +345,7 @@ class GPTPanguBlock(nn.Cell):
             A tuple containing the final hidden states after processing.
 
     Inherits from:
-        nn.Cell
+        nn.Module
     """
     def __init__(self, config):
         """
@@ -376,7 +376,7 @@ class GPTPanguBlock(nn.Cell):
         self.ln_2 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
         self.mlp = GPTPanguMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         layer_past=None,
@@ -463,7 +463,7 @@ class GPTPanguPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -508,7 +508,7 @@ class GPTPanguModel(GPTPanguPreTrainedModel):
         wpe (nn.Embedding): The position embedding layer.
         wqe (nn.Embedding): The query embedding layer.
         drop (nn.Dropout): The dropout layer.
-        h (nn.CellList): The list of GPTPanguBlock layers.
+        h (nn.ModuleList): The list of GPTPanguBlock layers.
         ln_f (nn.LayerNorm): The layer normalization layer.
         gradient_checkpointing (bool): Whether to use gradient checkpointing.
     """
@@ -540,7 +540,7 @@ class GPTPanguModel(GPTPanguPreTrainedModel):
         self.wqe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPTPanguBlock(config) for _ in range(config.num_layers)])
+        self.h = nn.ModuleList([GPTPanguBlock(config) for _ in range(config.num_layers)])
         self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
@@ -580,7 +580,7 @@ class GPTPanguModel(GPTPanguPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         past_key_values=None,
@@ -762,7 +762,7 @@ class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
     The __init__ method initializes the model with a given configuration and sets up the transformer and lm_head layers.
     The get_output_embeddings and set_output_embeddings methods deal with accessing and  modifying the output embeddings
     for the model. The prepare_inputs_for_generation method prepares input data for generation, considering past key
-    values, attention mask, position ids, and token type ids. The construct method constructs outputs based on input data,
+    values, attention mask, position ids, and token type ids. The forward method forwards outputs based on input data,
     including handling labels for language modeling and computing loss.
 
     The _reorder_cache method is a static method used to re-order the past_key_values cache when beam search or beam
@@ -789,7 +789,7 @@ class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPTPanguModel(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -875,7 +875,7 @@ class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         past_key_values=None,

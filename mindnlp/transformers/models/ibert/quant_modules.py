@@ -20,16 +20,16 @@ import decimal
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 
 from mindnlp.utils import logging
-import mindnlp.modules.functional as F
+from mindnlp.core.nn import functional as F
 
 
 logger = logging.get_logger(__name__)
 
 
-class QuantEmbedding(nn.Cell):
+class QuantEmbedding(nn.Module):
     """
     Quantized version of `torch.nn.Embedding`. Adds quantization-specific arguments on top of `torch.nn.Embedding`.
 
@@ -74,7 +74,7 @@ class QuantEmbedding(nn.Cell):
         self.quant_mode = quant_mode
         self.percentile_mode = False
 
-    def construct(self, x, positions=None, incremental_state=None):
+    def forward(self, x, positions=None, incremental_state=None):
         if not self.quant_mode:
             return (
                 F.embedding(
@@ -101,7 +101,7 @@ class QuantEmbedding(nn.Cell):
         return emb_int * self.weight_scaling_factor, self.weight_scaling_factor
 
 
-class QuantAct(nn.Cell):
+class QuantAct(nn.Module):
     """
     Quantizes the given activation.
 
@@ -143,7 +143,7 @@ class QuantAct(nn.Cell):
             f"Act_max: {self.x_max.item():.2f})"
         )
 
-    def construct(
+    def forward(
         self,
         x,
         pre_act_scaling_factor=None,
@@ -199,7 +199,7 @@ class QuantAct(nn.Cell):
         return quant_act_int * correct_output_scale, self.act_scaling_factor
 
 
-class QuantLinear(nn.Cell):
+class QuantLinear(nn.Module):
     """
     Quantized version of `torch.nn.Linear`. Adds quantization-specific arguments on top of `torch.nn.Linear`.
 
@@ -240,7 +240,7 @@ class QuantLinear(nn.Cell):
         s = f"({s} weight_bit={self.weight_bit}, quant_mode={self.quant_mode})"
         return s
 
-    def construct(self, x, prev_act_scaling_factor=None):
+    def forward(self, x, prev_act_scaling_factor=None):
         if not self.quant_mode:
             return ops.dense(x, weight=self.weight, bias=self.bias), None
 
@@ -277,7 +277,7 @@ class QuantLinear(nn.Cell):
         )
 
 
-class IntGELU(nn.Cell):
+class IntGELU(nn.Module):
     """
     Quantized version of `torch.nn.GELU`. Adds quantization-specific arguments on top of `torch.nn.GELU`.
 
@@ -320,7 +320,7 @@ class IntGELU(nn.Cell):
 
         return y_int, scaling_factor
 
-    def construct(self, x, scaling_factor=None):
+    def forward(self, x, scaling_factor=None):
         if not self.quant_mode:
             return self.activation_fn(x), None
 
@@ -335,7 +335,7 @@ class IntGELU(nn.Cell):
         return x_int * scaling_factor, scaling_factor
 
 
-class IntSoftmax(nn.Cell):
+class IntSoftmax(nn.Module):
     """
     Quantized version of `torch.nn.Softmax`. Adds quantization-specific arguments on top of `torch.nn.Softmax`.
 
@@ -384,7 +384,7 @@ class IntSoftmax(nn.Cell):
         scaling_factor = exp_scaling_factor / 2**self.const
         return exp_int, scaling_factor
 
-    def construct(self, x, scaling_factor):
+    def forward(self, x, scaling_factor):
         if not self.quant_mode:
             return ops.softmax(x, axis=-1), None
 
@@ -405,7 +405,7 @@ class IntSoftmax(nn.Cell):
         return exp_int * scaling_factor, scaling_factor
 
 
-class IntLayerNorm(nn.Cell):
+class IntLayerNorm(nn.Module):
     """
     Quantized version of `torch.nn.LayerNorm`. Adds quantization-specific arguments on top of `torch.nn.LayerNorm`.
 
@@ -458,7 +458,7 @@ class IntLayerNorm(nn.Cell):
         var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
         return var_int
 
-    def construct(self, x, scaling_factor=None):
+    def forward(self, x, scaling_factor=None):
         if not self.quant_mode:
             mean = x.mean(axis=2, keep_dims=True)
             y = x - mean
@@ -609,7 +609,7 @@ def symmetric_linear_quantization_params(num_bits, saturation_min, saturation_ma
     return scale
 
 
-class SymmetricQuantFunction(nn.Cell):
+class SymmetricQuantFunction(nn.Module):
     """
     Class to quantize the given floating-point values using symmetric quantization with given range and bitwidth.
     """
@@ -620,7 +620,7 @@ class SymmetricQuantFunction(nn.Cell):
         self.percentile_mode = percentile_mode
         self.scale = scale
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Args:
             x (`torch.Tensor`):
@@ -658,7 +658,7 @@ class SymmetricQuantFunction(nn.Cell):
         return (dout.copy() / scale,)
 
 
-class floor_ste(nn.Cell):
+class floor_ste(nn.Module):
     """
     Straight-through Estimator(STE) for torch.floor()
     """
@@ -666,14 +666,14 @@ class floor_ste(nn.Cell):
     def __init__(self):
         super(floor_ste, self).__init__()
 
-    def construct(self, x):
+    def forward(self, x):
         return ops.floor(x)
 
     def bprop(self, x, out, dout):
         return (dout.copy(),)
 
 
-class round_ste(nn.Cell):
+class round_ste(nn.Module):
     """
     Straight-through Estimator(STE) for torch.round()
     """
@@ -681,7 +681,7 @@ class round_ste(nn.Cell):
     def __init__(self):
         super(round_ste, self).__init__()
 
-    def construct(self, x):
+    def forward(self, x):
         return ops.round(x)
 
     def bprop(self, x, out, dout):
@@ -722,7 +722,7 @@ def batch_frexp(inputs, max_bit=31):
     )
 
 
-class FixedPointMul(nn.Cell):
+class FixedPointMul(nn.Module):
     """
     Function to perform fixed-point arithmetic that can match integer arithmetic on hardware.
 
@@ -762,7 +762,7 @@ class FixedPointMul(nn.Cell):
     def reshape_other(self, x):
         return x.view(1, 1, -1)
 
-    def construct(
+    def forward(
         self,
         pre_act,
         identity=None

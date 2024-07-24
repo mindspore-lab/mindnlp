@@ -19,7 +19,7 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp.utils import logging
 
@@ -40,7 +40,7 @@ logger = logging.get_logger(__name__)
 
 
 
-class Dinov2Embeddings(nn.Cell):
+class Dinov2Embeddings(nn.Module):
     """
     Construct the CLS token, mask token, position and patch embeddings.
     """
@@ -92,7 +92,7 @@ class Dinov2Embeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
 
-    def construct(self, pixel_values: mindspore.Tensor, bool_masked_pos: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, bool_masked_pos: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embeddings.projection.weight.dtype
         embeddings = self.patch_embeddings(pixel_values.to(dtype=target_dtype))
@@ -114,7 +114,7 @@ class Dinov2Embeddings(nn.Cell):
         return embeddings
 
 
-class Dinov2PatchEmbeddings(nn.Cell):
+class Dinov2PatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -136,7 +136,7 @@ class Dinov2PatchEmbeddings(nn.Cell):
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -148,7 +148,7 @@ class Dinov2PatchEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfAttention with ViT->Dinov2
-class Dinov2SelfAttention(nn.Cell):
+class Dinov2SelfAttention(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -161,9 +161,9 @@ class Dinov2SelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -172,7 +172,7 @@ class Dinov2SelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -209,7 +209,7 @@ class Dinov2SelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->Dinov2
-class Dinov2SelfOutput(nn.Cell):
+class Dinov2SelfOutput(nn.Module):
     """
     The residual connection is defined in Dinov2Layer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -217,10 +217,10 @@ class Dinov2SelfOutput(nn.Cell):
 
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -228,7 +228,7 @@ class Dinov2SelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->Dinov2
-class Dinov2Attention(nn.Cell):
+class Dinov2Attention(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         self.attention = Dinov2SelfAttention(config)
@@ -253,7 +253,7 @@ class Dinov2Attention(nn.Cell):
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -267,12 +267,12 @@ class Dinov2Attention(nn.Cell):
         return outputs
 
 
-class Dinov2LayerScale(nn.Cell):
+class Dinov2LayerScale(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         self.lambda1 = mindspore.Parameter(config.layerscale_value * ops.ones(config.hidden_size), 'lambda1')
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         return hidden_state * self.lambda1
 
 
@@ -298,57 +298,57 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath
-class Dinov2DropPath(nn.Cell):
+class Dinov2DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class Dinov2MLP(nn.Cell):
+class Dinov2MLP(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         in_features = out_features = config.hidden_size
         hidden_features = int(config.hidden_size * config.mlp_ratio)
-        self.fc1 = nn.Dense(in_features, hidden_features, has_bias=True)
+        self.fc1 = nn.Linear(in_features, hidden_features, has_bias=True)
         if isinstance(config.hidden_act, str):
             self.activation = ACT2FN[config.hidden_act]
         else:
             self.activation = config.hidden_act
-        self.fc2 = nn.Dense(hidden_features, out_features, has_bias=True)
+        self.fc2 = nn.Linear(hidden_features, out_features, has_bias=True)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.fc1(hidden_state)
         hidden_state = self.activation(hidden_state)
         hidden_state = self.fc2(hidden_state)
         return hidden_state
 
 
-class Dinov2SwiGLUFFN(nn.Cell):
+class Dinov2SwiGLUFFN(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         in_features = out_features = config.hidden_size
         hidden_features = int(config.hidden_size * config.mlp_ratio)
         hidden_features = (int(hidden_features * 2 / 3) + 7) // 8 * 8
 
-        self.weights_in = nn.Dense(in_features, 2 * hidden_features, has_bias=True)
-        self.weights_out = nn.Dense(hidden_features, out_features, has_bias=True)
+        self.weights_in = nn.Linear(in_features, 2 * hidden_features, has_bias=True)
+        self.weights_out = nn.Linear(hidden_features, out_features, has_bias=True)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.weights_in(hidden_state)
         x1, x2 = hidden_state.chunk(2, axis=-1)
         hidden = ops.silu(x1) * x2
         return self.weights_out(hidden)
 
 
-class Dinov2Layer(nn.Cell):
+class Dinov2Layer(nn.Module):
     """This corresponds to the Block class in the original implementation."""
 
     def __init__(self, config: Dinov2Config) -> None:
@@ -367,7 +367,7 @@ class Dinov2Layer(nn.Cell):
             self.mlp = Dinov2MLP(config)
         self.layer_scale2 = Dinov2LayerScale(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -400,14 +400,14 @@ class Dinov2Layer(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTEncoder with ViT->Dinov2
-class Dinov2Encoder(nn.Cell):
+class Dinov2Encoder(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([Dinov2Layer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([Dinov2Layer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -463,9 +463,9 @@ class Dinov2PreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["Dinov2SwiGLUFFN"]
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
@@ -510,7 +510,7 @@ class Dinov2Model(Dinov2PreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         bool_masked_pos: Optional[mindspore.Tensor] = None,
@@ -570,13 +570,13 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
 
         # Classifier head
         self.classifier = (
-            nn.Dense(config.hidden_size * 2, config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.hidden_size * 2, config.num_labels) if config.num_labels > 0 else nn.Identity()
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -661,7 +661,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
     def get_input_embeddings(self) -> Dinov2PatchEmbeddings:
         return self.embeddings.patch_embeddings
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,

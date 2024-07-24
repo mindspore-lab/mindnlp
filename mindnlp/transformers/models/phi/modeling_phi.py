@@ -21,7 +21,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging, get_default_dtype
@@ -83,11 +84,11 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding with Llama->Phi
-class PhiRotaryEmbedding(nn.Cell):
+class PhiRotaryEmbedding(nn.Module):
 
     """
     The PhiRotaryEmbedding class represents a rotational positional embedding for neural network models.
-    It inherits from nn.Cell and provides functionality for constructing rotational embeddings based on
+    It inherits from nn.Module and provides functionality for forwarding rotational embeddings based on
     input sequences and sequence lengths.
 
     Attributes:
@@ -104,7 +105,7 @@ class PhiRotaryEmbedding(nn.Cell):
             Precomputes and caches cosine and sine values for positional embeddings based on the specified sequence
             length and data type.
 
-        construct:
+        forward:
             Constructs the rotational positional embedding for the input sequence based on the specified sequence
             length or the maximum cached sequence length.
 
@@ -170,7 +171,7 @@ class PhiRotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Constructs a PhiRotaryEmbedding.
 
@@ -185,7 +186,7 @@ class PhiRotaryEmbedding(nn.Cell):
         Raises:
             ValueError: If `seq_len` is greater than `max_seq_len_cached`.
 
-        This method constructs a PhiRotaryEmbedding by calculating and returning the cosine and sine cached values 
+        This method forwards a PhiRotaryEmbedding by calculating and returning the cosine and sine cached values 
         based on the input tensor `x` and the provided sequence length `seq_len`. If `seq_len` is not specified, 
         the method returns the cosine and sine cached values for the entire sequence. 
         The returned values are converted to the same data type as `x`.
@@ -357,26 +358,26 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->Phi
-class PhiMLP(nn.Cell):
+class PhiMLP(nn.Module):
 
     """
     PhiMLP represents a Multi-Layer Perceptron (MLP) neural network with configurable hidden layer sizes and
     activation functions.
 
-    This class inherits from nn.Cell and implements the forward pass of the MLP by defining the layers and
+    This class inherits from nn.Module and implements the forward pass of the MLP by defining the layers and
     activation functions.
 
     Attributes:
         config (object): A configuration object that specifies the MLP architecture parameters.
         activation_fn (function): The activation function used in the hidden layers of the MLP.
-        fc1 (nn.Dense): The first fully connected layer of the MLP.
-        fc2 (nn.Dense): The second fully connected layer of the MLP.
+        fc1 (nn.Linear): The first fully connected layer of the MLP.
+        fc2 (nn.Linear): The second fully connected layer of the MLP.
 
     Methods:
         __init__:
             Initializes the PhiMLP instance with the provided configuration.
 
-        construct:
+        forward:
             Constructs the forward pass of the MLP using the provided input tensor.
 
     Returns:
@@ -404,10 +405,10 @@ class PhiMLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the forward pass of the PhiMLP model.
 
@@ -442,7 +443,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class PhiAttention(nn.Cell):
+class PhiAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config: PhiConfig, layer_idx: Optional[int] = None):
         """
@@ -495,10 +496,10 @@ class PhiAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.dense = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
 
         self.qk_layernorm = config.qk_layernorm
         if self.qk_layernorm:
@@ -565,7 +566,7 @@ class PhiAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -575,7 +576,7 @@ class PhiAttention(nn.Cell):
         use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method, named 'construct', is defined in the class 'PhiAttention'.
+        This method, named 'forward', is defined in the class 'PhiAttention'.
 
         Args:
             self: The instance of the class.
@@ -694,18 +695,18 @@ PHI_ATTENTION_CLASSES = {
 }
 
 
-class PhiDecoderLayer(nn.Cell):
+class PhiDecoderLayer(nn.Module):
 
     """
     PhiDecoderLayer represents a single layer of the Phi decoder model.
 
-    This class inherits from nn.Cell and contains methods for initializing the layer and constructing the
+    This class inherits from nn.Module and contains methods for initializing the layer and forwarding the
     layer's computations.
 
     The __init__ method initializes the PhiDecoderLayer with the provided configuration and layer index.
     It sets up the self-attention mechanism, multi-layer perceptron, layer normalization, and residual dropout.
 
-    The construct method takes hidden_states as input and applies layer normalization. It then computes the
+    The forward method takes hidden_states as input and applies layer normalization. It then computes the
     self-attention outputs, optionally returning attention weights and caching key-value states. The method also
     computes the feed-forward hidden states and returns the final layer outputs, optionally including attention weights
     and key-value states in the output tuple.
@@ -732,7 +733,7 @@ class PhiDecoderLayer(nn.Cell):
         self.input_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -796,7 +797,7 @@ class PhiPreTrainedModel(PreTrainedModel):
     The method takes a cell object as an argument and sets the weights and biases for the cell based on the
     configuration settings.
 
-    If the cell is an instance of nn.Dense, the method sets the weight data using the initializer function with a
+    If the cell is an instance of nn.Linear, the method sets the weight data using the initializer function with a
     normal distribution and the specified standard deviation. It also sets the bias data to zeros if the cell has a bias.
 
     If the cell is an instance of nn.Embedding, the method generates random weight values from a normal distribution
@@ -825,13 +826,13 @@ class PhiPreTrainedModel(PreTrainedModel):
             None.
 
         Raises:
-            ValueError: If the cell type is neither nn.Dense nor nn.Embedding.
+            ValueError: If the cell type is neither nn.Linear nor nn.Embedding.
             TypeError: If the cell type is not recognized or if there are issues with setting the data for
                 weights and biases.
             IndexError: If there are issues with indexing while setting the weight values.
         """
         std = self.config.initializer_range
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -877,8 +878,8 @@ class PhiModel(PhiPreTrainedModel):
                 - `embed_dropout`: The dropout layer applied to the input embeddings.
                 It is an instance of `nn.Dropout` and is initialized with the dropout probability `config.embd_pdrop`.
                 - `layers`: A list of PhiDecoderLayer instances representing the decoder layers of the model.
-                It is initialized as a `nn.CellList` containing `config.num_hidden_layers` PhiDecoderLayer instances.
-                Each PhiDecoderLayer instance is created using the `PhiDecoderLayer` constructor with `config` and `layer_idx`.
+                It is initialized as a `nn.ModuleList` containing `config.num_hidden_layers` PhiDecoderLayer instances.
+                Each PhiDecoderLayer instance is created using the `PhiDecoderLayer` forwardor with `config` and `layer_idx`.
                 - `final_layernorm`: The layer normalization applied to the final hidden state.
                 It is an instance of `nn.LayerNorm` and is initialized with the following attributes:
 
@@ -900,7 +901,7 @@ class PhiModel(PhiPreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.embed_dropout = nn.Dropout(p=config.embd_pdrop)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [PhiDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.final_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
@@ -942,7 +943,7 @@ class PhiModel(PhiPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -955,7 +956,7 @@ class PhiModel(PhiPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
-        This method constructs the PhiModel using the specified input parameters and returns the output as a tuple or
+        This method forwards the PhiModel using the specified input parameters and returns the output as a tuple or
         a BaseModelOutputWithPast object.
 
         Args:
@@ -1089,7 +1090,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
     """
     The `PhiForCausalLM` class represents a Phi model for causal language modeling. It inherits from `PhiPreTrainedModel`
     and provides methods for initializing the model, getting and setting input and output embeddings, setting the
-    decoder, constructing the model, preparing inputs for generation, and reordering cache.
+    decoder, forwarding the model, preparing inputs for generation, and reordering cache.
     The `PhiForCausalLM` class also includes detailed type annotations and example usage.
 
     The class includes the following methods:
@@ -1101,7 +1102,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
     - `set_output_embeddings`: Sets the output embeddings of the model to the provided new_embeddings.
     - `set_decoder`: Sets the decoder of the model to the provided decoder.
     - `get_decoder`: Returns the decoder of the model.
-    - `construct`: Constructs the model for causal language modeling with the specified inputs and returns the outputs.
+    - `forward`: Constructs the model for causal language modeling with the specified inputs and returns the outputs.
     - `prepare_inputs_for_generation`: Prepares the inputs for generation based on the provided input_ids,
     past_key_values, attention_mask, and inputs_embeds.
     - `_reorder_cache`: Reorders the past_key_values based on the specified beam index.
@@ -1134,7 +1135,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
         super().__init__(config)
         self.model = PhiModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=True)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1248,7 +1249,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1455,13 +1456,13 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         config (PhiConfig): The model configuration class instance.
         num_labels (int): The number of labels for the classification task.
         model (PhiModel): The PHI model for token embeddings.
-        score (nn.Dense): The dense layer for scoring hidden states.
+        score (nn.Linear): The dense layer for scoring hidden states.
 
     Methods:
         __init__: Initializes a new PhiForSequenceClassification instance.
         get_input_embeddings: Retrieves the input embeddings from the model.
         set_input_embeddings: Sets the input embeddings for the model.
-        construct: Constructs the model for sequence classification.
+        forward: Constructs the model for sequence classification.
 
     """
     def __init__(self, config):
@@ -1486,7 +1487,7 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = PhiModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1522,7 +1523,7 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1624,7 +1625,7 @@ class PhiForTokenClassification(PhiPreTrainedModel):
     'classifier_dropout' parameter in the config or the 'hidden_dropout' parameter. If neither is provided, a default
     dropout rate of 0.1 is used.
 
-    The 'construct' method is used to perform the forward pass of the model. It takes several input tensors such as
+    The 'forward' method is used to perform the forward pass of the model. It takes several input tensors such as
     'input_ids', 'past_key_values', 'attention_mask', 'inputs_embeds', and 'labels'. It also supports various optional
     arguments such as 'use_cache', 'output_attentions', 'output_hidden_states', and 'return_dict'.
 
@@ -1633,7 +1634,7 @@ class PhiForTokenClassification(PhiPreTrainedModel):
     If 'config.num_labels == 1', a regression loss (Mean-Square loss) is computed. If 'config.num_labels > 1',
     a classification loss (Cross-Entropy) is computed.
 
-    The 'construct' method returns either a tuple of logits and other model outputs or a TokenClassifierOutput object
+    The 'forward' method returns either a tuple of logits and other model outputs or a TokenClassifierOutput object
     depending on the 'return_dict' parameter. If 'labels' are provided, the method also computes the loss using the
     logits and the ground truth labels.
 
@@ -1667,12 +1668,12 @@ class PhiForTokenClassification(PhiPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,

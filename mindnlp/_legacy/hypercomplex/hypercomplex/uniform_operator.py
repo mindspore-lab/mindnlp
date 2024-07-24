@@ -26,7 +26,7 @@ class _UniformOperator(Cell):
     Args:
         hc_op (Type): The abstraction part of the bridge pattern.
         hc_impl (Type): The implementor part of the bridge pattern.
-        **kwargs (dict): Additional arguments that may be required to construct the specific layer
+        **kwargs (dict): Additional arguments that may be required to forward the specific layer
 
     Inputs:
         - **inp** (Tensor) - input tensor. The shape is specific to the subclass.
@@ -72,13 +72,13 @@ class _UniformOperator(Cell):
         super().__init__()
         self.op = hc_op(hc_impl, **kwargs)
 
-    def construct(self, x):
+    def forward(self, x):
         r"""
         Construct a new instance of the _UniformOperator class.
         
         Args:
             self (_UniformOperator): The instance of the _UniformOperator class.
-            x: The input value for the construction.
+            x: The input value for the forwardion.
         
         Returns:
             None: This method returns None.

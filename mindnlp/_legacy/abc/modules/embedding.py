@@ -23,7 +23,7 @@ from mindspore import nn
 from mindspore import Parameter
 from mindnlp._legacy.nn import Dropout
 
-class TokenEmbedding(nn.Cell):
+class TokenEmbedding(nn.Module):
     r"""
     Create Embedding from a given pre-trained vector file.
 
@@ -88,14 +88,14 @@ class TokenEmbedding(nn.Cell):
         return len(self.embed)
 
     @abstractmethod
-    def construct(self, ids):
+    def forward(self, ids):
         r"""
 
         Args:
             ids (Tensor): Ids to query.
 
         Raises:
-            NotImplementedError: If construct interface is not called.
+            NotImplementedError: If forward interface is not called.
 
         """
-        raise NotImplementedError(f'Function `construct` not implemented in {self.__class__.__name__}')
+        raise NotImplementedError(f'Function `forward` not implemented in {self.__class__.__name__}')

@@ -1,9 +1,11 @@
 """other op"""
 import copy
+import numpy as np
 import mindspore
 from mindspore import ops
 from mindnlp.configs import USE_PYBOOST
-
+from .reduction import any
+from .comparison import eq
 
 # atleast_2d
 
@@ -598,3 +600,22 @@ def unflatten(x, dim, sizes):
 
 def masked_fill(input, mask, value):
     return ops.masked_fill(input, mask, value)
+
+def finfo(dtype):
+    return np.finfo(mindspore.dtype_to_nptype(dtype))
+
+def contains(self, key):
+    r"""
+    Args:
+        self (object): The object instance on which the method is called.
+        key (object): The key to be checked for containment in the object.
+        
+    Returns:
+        None: This function returns None, indicating whether the key is contained in the object.
+        
+    Raises:
+        None
+    """
+    eq_res = eq(self, key)
+    res = any(eq_res)
+    return bool(res)

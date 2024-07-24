@@ -19,7 +19,8 @@ import warnings
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
@@ -196,22 +197,22 @@ def _get_unpad_data(attention_mask):
     )
 
 
-class JetMoERMSNorm(nn.Cell):
+class JetMoERMSNorm(nn.Module):
 
     """
     The 'JetMoERMSNorm' class is a custom implementation of the root mean square normalization (RMSNorm) module,
-    specifically designed for the JetMoE model. It inherits from the 'nn.Cell' class, which is a base class for
+    specifically designed for the JetMoE model. It inherits from the 'nn.Module' class, which is a base class for
     all neural network modules in MindSpore.
 
     This class provides a trainable normalization layer that performs RMS normalization on the input hidden states.
     The normalization is applied along the last dimension of the input tensor, reducing the variance across
     that dimension.
 
-    The constructor '__init__' initializes the 'JetMoERMSNorm' module.
+    The forwardor '__init__' initializes the 'JetMoERMSNorm' module.
     It takes two parameters: 'hidden_size' specifies the size of the hidden states, and 'eps' (default value 1e-06)
     is the epsilon value used for numerical stability in the normalization calculation.
 
-    The 'construct' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization
+    The 'forward' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization
     on the input 'hidden_states' tensor. The method first converts the input tensor to 'mindspore.float32' to ensure
     consistent data type for the calculations. It then computes the variance along the last dimension of the tensor
     using the 'pow' and 'mean' operations. Afterward, the input tensor is multiplied element-wise by the reciprocal
@@ -221,7 +222,7 @@ class JetMoERMSNorm(nn.Cell):
     Note that the 'JetMoERMSNorm' module is intended to be used as a part of the JetMoE model and can be applied to the
     hidden states of the model's components.
 
-    Please refer to the MindSpore documentation for more information on the 'nn.Cell' class and the 'mindspore.float32'
+    Please refer to the MindSpore documentation for more information on the 'nn.Module' class and the 'mindspore.float32'
     data type.
     """
     def __init__(self, hidden_size, eps=1e-6):
@@ -232,7 +233,7 @@ class JetMoERMSNorm(nn.Cell):
         self.weight = Parameter(initializer('ones', (hidden_size,)))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the JetMoERMSNorm.
 
@@ -259,11 +260,11 @@ class JetMoERMSNorm(nn.Cell):
 
 
 # copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding
-class JetMoERotaryEmbedding(nn.Cell):
+class JetMoERotaryEmbedding(nn.Module):
 
     """
     The JetMoERotaryEmbedding class represents a rotary position embedding module that can be used in
-    neural network models. It inherits from the nn.Cell class and provides functionality for generating rotary
+    neural network models. It inherits from the nn.Module class and provides functionality for generating rotary
     position embeddings based on the input sequence length.
 
     Attributes:
@@ -277,7 +278,7 @@ class JetMoERotaryEmbedding(nn.Cell):
 
     Methods:
         _set_cos_sin_cache: Sets the cosine and sine embeddings cache for a given sequence length and data type.
-        construct: Constructs the cosine and sine embeddings for the input sequence, updating the cache if necessary.
+        forward: Constructs the cosine and sine embeddings for the input sequence, updating the cache if necessary.
 
     Note:
         This class is designed to be used as part of neural network models,
@@ -340,7 +341,7 @@ class JetMoERotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Construct the JetMoERotaryEmbedding.
 
@@ -350,15 +351,15 @@ class JetMoERotaryEmbedding(nn.Cell):
                 The input tensor.
 
                 - Type: Any
-                - Purpose: The input tensor for which the cos and sin cached values need to be constructed.
+                - Purpose: The input tensor for which the cos and sin cached values need to be forwarded.
 
                 It is expected to be a tensor.
             seq_len:
-                The length of the sequence for which the cached values need to be constructed.
+                The length of the sequence for which the cached values need to be forwarded.
 
                 - Type: int
                 - Purpose: Determines the length of the sequence for which the cos and sin cached values
-                need to be constructed.
+                need to be forwarded.
                 - Restrictions: Should be a positive integer.
 
         Returns:
@@ -417,7 +418,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=2):
     return q_embed, k_embed
 
 
-class JetMoEAttention(nn.Cell):
+class JetMoEAttention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper.
     """
@@ -455,7 +456,7 @@ class JetMoEAttention(nn.Cell):
             glu=False,
         )
 
-        self.kv_proj = nn.Dense(config.hidden_size, self.kv_projection_size * 2, has_bias=False)
+        self.kv_proj = nn.Linear(config.hidden_size, self.kv_projection_size * 2, has_bias=False)
 
         self.rotary_emb = JetMoERotaryEmbedding(
             config.kv_channels,
@@ -463,7 +464,7 @@ class JetMoEAttention(nn.Cell):
             base=config.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -583,7 +584,7 @@ JETMOE_ATTENTION_CLASSES = {
 }
 
 
-class JetMoEBlock(nn.Cell):
+class JetMoEBlock(nn.Module):
 
     """
     The 'JetMoEBlock' class represents a module that implements a JetMoE block for a neural network model.
@@ -596,7 +597,7 @@ class JetMoEBlock(nn.Cell):
     self-attention mechanism, post-attention layer normalization, and the MLP with MoE architecture based on the
     provided configuration.
 
-    The 'construct' method performs the forward pass computation of the JetMoEBlock module.
+    The 'forward' method performs the forward pass computation of the JetMoEBlock module.
     It takes input hidden states, optional position IDs, past key-value states, attention mask,
     and other optional arguments.
     The method computes the self-attention output, updates the hidden states, applies the MLP operation,
@@ -628,7 +629,7 @@ class JetMoEBlock(nn.Cell):
             glu=config.glu,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
         position_ids: Optional[mindspore.Tensor] = None,
@@ -706,7 +707,7 @@ class JetMoEPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(module, (nn.Dense,)):
+        if isinstance(module, (nn.Linear,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.initialize(Normal(self.config.initializer_range))
@@ -753,7 +754,7 @@ class JetMoEModel(JetMoEPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList([JetMoEBlock(config, layer_idx) for layer_idx in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([JetMoEBlock(config, layer_idx) for layer_idx in range(config.num_hidden_layers)])
         self._attn_implementation = config._attn_implementation
         self.norm = JetMoERMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -795,7 +796,7 @@ class JetMoEModel(JetMoEPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -808,7 +809,7 @@ class JetMoEModel(JetMoEPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
-        This method constructs the JetMoEModel by processing input data and generating the model output.
+        This method forwards the JetMoEModel by processing input data and generating the model output.
 
         Args:
             self: The instance of the JetMoEModel class.
@@ -977,8 +978,8 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
     It inherits from the JetMoEPreTrainedModel.
 
     This class includes methods for initializing the model, getting and setting input and output embeddings, 
-    setting and getting the decoder, constructing the model, preparing inputs for generation, and reordering cache. 
-    The construct method handles the generation of outputs based on input and model configuration, 
+    setting and getting the decoder, forwarding the model, preparing inputs for generation, and reordering cache. 
+    The forward method handles the generation of outputs based on input and model configuration, 
     while the prepare_inputs_for_generation method prepares inputs for the generation process.
     Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
 
@@ -1012,7 +1013,7 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
         self.model = JetMoEModel(config)
         self.vocab_size = config.vocab_size
         self.aux_loss_coef = getattr(config, "aux_loss_coef", 0.01)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
         self.tie_word_embeddings = config.tie_word_embeddings
 
         # Initialize weights and apply final processing
@@ -1131,7 +1132,7 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1329,14 +1330,14 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
     - __init__: Initializes the JetMoEForSequenceClassification instance with the given configuration.
     - get_input_embeddings: Returns the input embeddings used by the model.
     - set_input_embeddings: Sets the input embeddings of the model to the given value.
-    - construct: Constructs the sequence classification model and computes the output logits.
+    - forward: Constructs the sequence classification model and computes the output logits.
     It takes several optional arguments such as input_ids, attention_mask, and labels,
     and returns a tuple containing the loss, logits, and other outputs.
 
     The JetMoEForSequenceClassification class follows the configuration provided to initialize the model,
     including the number of labels for the classification task. It utilizes the JetMoEModel for the main
     transformer architecture and applies a score layer to compute the logits.
-    The construct method handles the computation of the model's output based on the given inputs and labels,
+    The forward method handles the computation of the model's output based on the given inputs and labels,
     including handling different problem types (regression, single-label classification, or multi-label classification)
     and computing the loss.
 
@@ -1365,7 +1366,7 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = JetMoEModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1410,7 +1411,7 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

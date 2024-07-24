@@ -26,7 +26,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
@@ -275,7 +275,7 @@ class AlbertModelTest(ModelTesterMixin, unittest.TestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64)
+                    self.model_tester.batch_size, self.model_tester.seq_length, dtype=mindspore.int64)
                 inputs_dict["sentence_order_label"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64)
         return inputs_dict

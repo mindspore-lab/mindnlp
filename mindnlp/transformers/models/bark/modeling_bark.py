@@ -26,7 +26,6 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...generation.logits_process import (
     AlternatingCodebooksLogitsProcessor,
     BarkEosPrioritizerLogitsProcessor,
@@ -219,7 +218,7 @@ class BarkSelfAttention(nn.Module):
             # fill the upper left part of the attention weights with inf
             attn_weights = attn_weights.masked_fill(
                 self.bias[:, :, key_length - query_length : key_length, :key_length] == 0,
-                finfo(attn_weights.dtype, 'min'),
+                ops.finfo(attn_weights.dtype).min,
             )
 
         if attention_mask is not None:
@@ -1226,7 +1225,7 @@ class BarkCoarseModel(BarkCausalModel):
         )
         output_lengths = ops.round(output_lengths * coarse_generation_config.n_coarse_codebooks).int()
 
-        max_generated_len = ops.max(output_lengths)[0].item()
+        max_generated_len = ops.max(output_lengths).item()
 
         batch_size = semantic_output.shape[0]
 

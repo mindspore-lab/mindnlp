@@ -1,6 +1,6 @@
 """new nn modules"""
 from .module import Module
-from .container import ModuleList, ParameterList, Sequential
+from .container import ModuleList, ParameterList, Sequential, ParameterDict, ModuleDict
 from .linear import Linear, Identity
 from .sparse import Embedding
 from .normalization import LayerNorm, GroupNorm

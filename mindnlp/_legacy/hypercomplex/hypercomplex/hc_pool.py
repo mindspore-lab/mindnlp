@@ -25,7 +25,7 @@ from mindspore.ops.operations.nn_ops import AdaptiveAvgPool3D, AdaptiveMaxPool2D
 from ..utils import get_x_and_y, to_2channel, _size_1_t, _size_2_t, _size_3_t
 
 
-class _PoolNd(nn.Cell):
+class _PoolNd(nn.Module):
     r"""
     Base class for pooling layers for the second-order hypercomplex numbers.
 
@@ -117,7 +117,7 @@ class _PoolNd(nn.Cell):
         self.kernel_size = _check_int_or_tuple('kernel_size', kernel_size)
         self.stride = _check_int_or_tuple('stride', stride)
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Constructs a tensor based on the input tensor 'u'.
         
@@ -126,13 +126,13 @@ class _PoolNd(nn.Cell):
             u (Tensor): The input tensor to be processed.
         
         Returns:
-            Tensor: A tensor resulting from the construction process.
+            Tensor: A tensor resulting from the forwardion process.
         
         Raises:
             None.
         """
         x, y = get_x_and_y(u)
-        x, y = self._construct(x, y)
+        x, y = self._forward(x, y)
         out = to_2channel(x, y, u.dtype)
         return out
 
@@ -154,7 +154,7 @@ class _PoolNd(nn.Cell):
         return 'kernel_size={kernel_size}, stride={stride}, pad_mode={pad_mode}'.format(**self.__dict__)
 
     @abstractmethod
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -170,9 +170,9 @@ class _PoolNd(nn.Cell):
                 - Purpose: Represents additional input data.
         
         Returns:
-            Tuple[Tensor, Tensor]: A tuple of tensors representing the constructed outputs.
+            Tuple[Tensor, Tensor]: A tuple of tensors representing the forwarded outputs.
                 - Type: Tuple[Tensor, Tensor]
-                - Purpose: Contains the constructed output tensors.
+                - Purpose: Contains the forwarded output tensors.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -278,7 +278,7 @@ class MaxPool2d(_PoolNd):
                                   pad_mode=self.pad_mode,
                                   data_format=self.format)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -409,7 +409,7 @@ class MaxPool1d(_PoolNd):
         if len(in_shape) != 3:
             raise ValueError(f"{msg_prefix} input must has 3 dim, but got {len(in_shape)}")
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -433,7 +433,7 @@ class MaxPool1d(_PoolNd):
             ShapeError: If the shape of the input tensors x or y does not match the expected
                         shape (batch_size, channels, length).
         
-        This method constructs and applies max pooling to the input tensors x and y. It first
+        This method forwards and applies max pooling to the input tensors x and y. It first
         checks the shape of the input tensors and then expands their dimensions along the
         third axis. The expanded tensors are then passed through the max_pool function to
         apply max pooling, and the resulting tensors are squeezed along the third axis to
@@ -552,11 +552,11 @@ class AvgPool2d(_PoolNd):
                                   pad_mode=self.pad_mode,
                                   data_format=self.format)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
-        This method constructs the average pooled representation of input tensors x and y.
+        This method forwards the average pooled representation of input tensors x and y.
         
         Args:
             self (AvgPool2d): The instance of the AvgPool2d class.
@@ -687,7 +687,7 @@ class AvgPool1d(_PoolNd):
         if len(in_shape) != 3:
             raise ValueError(f"{msg_prefix} input must has 3 dim, but got {len(in_shape)}")
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -699,7 +699,7 @@ class AvgPool1d(_PoolNd):
             y (Tensor): The input tensor of shape (batch, channel, width).
         
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing the constructed output tensors x and y.
+            Tuple[Tensor, Tensor]: A tuple containing the forwarded output tensors x and y.
             
         Raises:
             None.
@@ -725,7 +725,7 @@ class AvgPool1d(_PoolNd):
         return x, y
 
 
-class _AdaptivePoolNd(nn.Cell):
+class _AdaptivePoolNd(nn.Module):
     r"""
     Base class for adaptive pooling layers for the second-order temporal hypercomplex data.
 
@@ -779,7 +779,7 @@ class _AdaptivePoolNd(nn.Cell):
         super(_AdaptivePoolNd, self).__init__()
         self.output_size = output_size
 
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Constructs a tensor with adaptive pooling based on the input tensor.
         
@@ -794,21 +794,21 @@ class _AdaptivePoolNd(nn.Cell):
             ValueError: If the input tensor is not at least 2-dimensional.
         
         This method takes an input tensor and performs adaptive pooling on it. Adaptive pooling is a technique that dynamically adapts the pooling operation according to the input tensor's shape and
-dimensions. The method first extracts the x and y dimensions from the input tensor using the 'get_x_and_y' function. Then, the '_construct' method is called with the extracted x and y dimensions. The output
-from '_construct' is then converted to a 2-channel tensor using the 'to_2channel' function. Finally, the resulting tensor is returned as the output of the 'construct' method.
+dimensions. The method first extracts the x and y dimensions from the input tensor using the 'get_x_and_y' function. Then, the '_forward' method is called with the extracted x and y dimensions. The output
+from '_forward' is then converted to a 2-channel tensor using the 'to_2channel' function. Finally, the resulting tensor is returned as the output of the 'forward' method.
         """
         x, y = get_x_and_y(u)
-        out_x, out_y = self._construct(x, y)
+        out_x, out_y = self._forward(x, y)
         out = to_2channel(out_x, out_y, u.dtype)
 
         return out
 
     @abstractmethod
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
-        This method '_construct' in the class '_AdaptivePoolNd' constructs and processes the input tensors 'x' and 'y' to produce a tuple of tensors.
+        This method '_forward' in the class '_AdaptivePoolNd' forwards and processes the input tensors 'x' and 'y' to produce a tuple of tensors.
         
         Args:
             self: An instance of the '_AdaptivePoolNd' class.
@@ -893,11 +893,11 @@ class AdaptiveAvgPool1d(_AdaptivePoolNd):
         super(AdaptiveAvgPool1d, self).__init__(output_size)
         validator.check_int(output_size, 1, validator.GE, "output_size", self.cls_name)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
-        Method for constructing an adaptive average pooling operation for 1D tensors.
+        Method for forwarding an adaptive average pooling operation for 1D tensors.
         
         Args:
             self (object): The instance of the AdaptiveAvgPool1d class.
@@ -995,7 +995,7 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
         super(AdaptiveAvgPool2d, self).__init__(output_size)
         self.adaptive_avgpool2d = P.AdaptiveAvgPool2D(output_size)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -1083,7 +1083,7 @@ class AdaptiveAvgPool3d(_AdaptivePoolNd):
         super(AdaptiveAvgPool3d, self).__init__(output_size)
         self.adaptive_avg_pool3d = AdaptiveAvgPool3D(output_size)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -1159,7 +1159,7 @@ class AdaptiveMaxPool1d(_AdaptivePoolNd):
         validator.check_value_type('output_size', output_size, [int], self.cls_name)
         validator.check_int(output_size, 1, validator.GE, "output_size", self.cls_name)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -1278,7 +1278,7 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
         super(AdaptiveMaxPool2d, self).__init__(output_size)
         self.adaptive_maxpool2d = AdaptiveMaxPool2D(output_size)
 
-    def _construct(self,
+    def _forward(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
         r"""

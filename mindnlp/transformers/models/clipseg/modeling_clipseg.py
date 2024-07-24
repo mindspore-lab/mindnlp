@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.nn import BCEWithLogitsLoss
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import (
@@ -136,7 +137,7 @@ class CLIPSegImageSegmentationOutput(ModelOutput):
         )
 
 
-class CLIPSegVisionEmbeddings(nn.Cell):
+class CLIPSegVisionEmbeddings(nn.Module):
     # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings.__init__ with CLIP->CLIPSeg
     def __init__(self, config: CLIPSegVisionConfig):
         super().__init__()
@@ -179,7 +180,7 @@ class CLIPSegVisionEmbeddings(nn.Cell):
 
         return result
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         batch_size = pixel_values.shape[0]
         patch_embeds = self.patch_embedding(pixel_values)  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
@@ -198,7 +199,7 @@ class CLIPSegVisionEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextEmbeddings with CLIP->CLIPSeg
-class CLIPSegTextEmbeddings(nn.Cell):
+class CLIPSegTextEmbeddings(nn.Module):
     def __init__(self, config: CLIPSegTextConfig):
         super().__init__()
         embed_dim = config.hidden_size
@@ -210,7 +211,7 @@ class CLIPSegTextEmbeddings(nn.Cell):
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -231,7 +232,7 @@ class CLIPSegTextEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPAttention with CLIP->CLIPSeg
-class CLIPSegAttention(nn.Cell):
+class CLIPSegAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -248,15 +249,15 @@ class CLIPSegAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -336,15 +337,15 @@ class CLIPSegAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->CLIPSeg
-class CLIPSegMLP(nn.Cell):
+class CLIPSegMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -352,7 +353,7 @@ class CLIPSegMLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->CLIPSeg
-class CLIPSegEncoderLayer(nn.Cell):
+class CLIPSegEncoderLayer(nn.Module):
     def __init__(self, config: CLIPSegConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
@@ -361,7 +362,7 @@ class CLIPSegEncoderLayer(nn.Cell):
         self.mlp = CLIPSegMLP(config)
         self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -464,11 +465,11 @@ class CLIPSegPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-        if isinstance(cell, nn.Dense) and cell.bias is not None:
+        if isinstance(cell, nn.Linear) and cell.bias is not None:
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoder with CLIP->CLIPSeg
-class CLIPSegEncoder(nn.Cell):
+class CLIPSegEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`CLIPSegEncoderLayer`].
@@ -480,10 +481,10 @@ class CLIPSegEncoder(nn.Cell):
     def __init__(self, config: CLIPSegConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([CLIPSegEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([CLIPSegEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -565,7 +566,7 @@ class CLIPSegEncoder(nn.Cell):
         )
 
 
-class CLIPSegTextTransformer(nn.Cell):
+class CLIPSegTextTransformer(nn.Module):
     # Copied from transformers.models.clip.modeling_clip.CLIPTextTransformer.__init__ with CLIP->CLIPSeg
     def __init__(self, config: CLIPSegTextConfig):
         super().__init__()
@@ -578,7 +579,7 @@ class CLIPSegTextTransformer(nn.Cell):
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
     # Copied from transformers.models.clip.modeling_clip.CLIPTextTransformer.forward with clip->clipseg, CLIP->CLIPSeg
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -671,13 +672,13 @@ class CLIPSegTextModel(CLIPSegPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -713,7 +714,7 @@ class CLIPSegTextModel(CLIPSegPreTrainedModel):
         )
 
 
-class CLIPSegVisionTransformer(nn.Cell):
+class CLIPSegVisionTransformer(nn.Module):
     # Copied from transformers.models.clip.modeling_clip.CLIPVisionTransformer.__init__ with CLIP->CLIPSeg
     def __init__(self, config: CLIPSegVisionConfig):
         super().__init__()
@@ -725,7 +726,7 @@ class CLIPSegVisionTransformer(nn.Cell):
         self.encoder = CLIPSegEncoder(config)
         self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
     # Copied from transformers.models.clip.modeling_clip.CLIPVisionTransformer.forward
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -780,10 +781,10 @@ class CLIPSegVisionModel(CLIPSegPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -848,8 +849,8 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         self.text_model = CLIPSegTextTransformer(text_config)
         self.vision_model = CLIPSegVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, has_bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, has_bias=False)
         self.logit_scale = mindspore.Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
@@ -947,7 +948,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         image_features = self.visual_projection(pooled_output)
 
         return image_features
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -1039,7 +1040,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         )
 
 
-class CLIPSegDecoderLayer(nn.Cell):
+class CLIPSegDecoderLayer(nn.Module):
     """
     CLIPSeg decoder layer, which is identical to `CLIPSegEncoderLayer`, except that normalization is applied after
     self-attention/MLP, rather than before.
@@ -1054,7 +1055,7 @@ class CLIPSegDecoderLayer(nn.Cell):
         self.mlp = CLIPSegMLP(config)
         self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -1102,8 +1103,8 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
 
         self.conditional_layer = config.conditional_layer
 
-        self.film_mul = nn.Dense(config.projection_dim, config.reduce_dim)
-        self.film_add = nn.Dense(config.projection_dim, config.reduce_dim)
+        self.film_mul = nn.Linear(config.projection_dim, config.reduce_dim)
+        self.film_add = nn.Linear(config.projection_dim, config.reduce_dim)
 
         if config.use_complex_transposed_convolution:
             transposed_kernels = (config.vision_config.patch_size // 4, config.vision_config.patch_size // 4)
@@ -1128,8 +1129,8 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
             )
 
         depth = len(config.extract_layers)
-        self.reduces = nn.CellList(
-            [nn.Dense(config.vision_config.hidden_size, config.reduce_dim) for _ in range(depth)]
+        self.reduces = nn.ModuleList(
+            [nn.Linear(config.vision_config.hidden_size, config.reduce_dim) for _ in range(depth)]
         )
 
         decoder_config = copy.deepcopy(config.vision_config)
@@ -1137,9 +1138,9 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
         decoder_config.num_attention_heads = config.decoder_num_attention_heads
         decoder_config.intermediate_size = config.decoder_intermediate_size
         decoder_config.hidden_act = "relu"
-        self.layers = nn.CellList([CLIPSegDecoderLayer(decoder_config) for _ in range(len(config.extract_layers))])
+        self.layers = nn.ModuleList([CLIPSegDecoderLayer(decoder_config) for _ in range(len(config.extract_layers))])
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tuple[mindspore.Tensor],
         conditional_embeddings: mindspore.Tensor,
@@ -1240,7 +1241,7 @@ class CLIPSegForImageSegmentation(CLIPSegPreTrainedModel):
 
         return conditional_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,

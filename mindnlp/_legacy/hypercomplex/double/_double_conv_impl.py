@@ -59,7 +59,7 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   double: Tensor,
@@ -139,7 +139,7 @@ class _J1J2ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   u1: Tensor,
                   u2: Tensor,

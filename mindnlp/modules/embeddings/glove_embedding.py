@@ -141,7 +141,7 @@ class Glove(TokenEmbedding):
 
         return cls(Tensor(embeddings), requires_grad, dropout)
 
-    def construct(self, ids):
+    def forward(self, ids):
         r"""
 
         Args:

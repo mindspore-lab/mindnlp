@@ -47,12 +47,12 @@ def _weight_norm(weight_v:Tensor, weight_g:Tensor, dim:int=-1) -> Tensor:
     return weight_g.asnumpy() * weight_v.asnumpy() / norm_except_dim(weight_v, 2, dim)
 
 
-def recompute_weight(cell:nn.Cell):
+def recompute_weight(cell:nn.Module):
     """
     Recomputes the weight of a neural network cell.
     
     Args:
-        cell (nn.Cell): The neural network cell for which the weight needs to be recomputed.
+        cell (nn.Module): The neural network cell for which the weight needs to be recomputed.
     
     Returns:
         None. The function updates the weight of the input cell in-place.
@@ -69,19 +69,19 @@ def recompute_weight(cell:nn.Cell):
     weight.set_data(Tensor(new_weight))
 
 
-def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> nn.Cell:
+def weight_norm(cell:nn.Module, name:str='weight', dim:int=-1, axis:int=None) -> nn.Module:
     r"""
     Applies weight normalization to a neural network cell.
     
     Args:
-        cell (nn.Cell): The neural network cell to apply weight normalization to.
+        cell (nn.Module): The neural network cell to apply weight normalization to.
         name (str, optional): The name of the weight property. Defaults to 'weight'.
         dim (int, optional): The dimension along which the normalization is computed. Defaults to -1.
         axis (int, optional): An alternative way to specify the dimension along which the normalization is computed. 
             If provided, it overrides the value of 'dim'. Defaults to None.
     
     Returns:
-        nn.Cell: The neural network cell with weight normalization applied.
+        nn.Module: The neural network cell with weight normalization applied.
     
     Raises:
         AssertionError: If the weight property with the specified name is not found.
@@ -97,25 +97,25 @@ def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> n
     setattr(cell, f'{name}_g', Parameter(Tensor(norm_except_dim(weight.data, 2, dim), dtype)))
     setattr(cell, f'{name}_v', Parameter(Tensor(weight.data, dtype)))
 
-    cell.wn_construct = cell.construct
-    def construct_hijack(self:nn.Cell, *args, **kwargs) -> Any:
+    cell.wn_forward = cell.forward
+    def forward_hijack(self:nn.Module, *args, **kwargs) -> Any:
         recompute_weight(self)
-        return self.wn_construct(*args, **kwargs)
-    cell.construct = MethodType(construct_hijack, cell)
+        return self.wn_forward(*args, **kwargs)
+    cell.forward = MethodType(forward_hijack, cell)
     cell.wn_name = name
     cell.wn_dim = dim
     return cell
 
 
-def remove_weight_norm(cell:nn.Cell) -> nn.Cell:
+def remove_weight_norm(cell:nn.Module) -> nn.Module:
     r"""
     Removes weight normalization from the given neural network cell.
     
     Args:
-        cell (nn.Cell): The neural network cell from which weight normalization will be removed.
+        cell (nn.Module): The neural network cell from which weight normalization will be removed.
     
     Returns:
-        nn.Cell: The modified neural network cell with weight normalization removed.
+        nn.Module: The modified neural network cell with weight normalization removed.
     
     Raises:
         None.
@@ -134,8 +134,8 @@ def remove_weight_norm(cell:nn.Cell) -> nn.Cell:
     name = cell.wn_name
     delattr(cell, f'{name}_g')
     delattr(cell, f'{name}_v')
-    cell.construct = cell.wn_construct
-    del cell.wn_construct
+    cell.forward = cell.wn_forward
+    del cell.wn_forward
     del cell.wn_name
     del cell.wn_dim
     return cell

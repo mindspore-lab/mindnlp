@@ -158,7 +158,7 @@ def is_sudachi_projection_available():
     if not is_sudachi_available():
         return False
 
-    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the constructor of BertJapaneseTokenizer.
+    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the forwardor of BertJapaneseTokenizer.
     # - `projection` option is not supported in sudachipy<0.6.8, see https://github.com/WorksApplications/sudachi.rs/issues/230
     return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 

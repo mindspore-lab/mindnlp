@@ -22,7 +22,8 @@ from typing import List, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Constant, Normal
 
 from mindnlp.utils import (
@@ -210,7 +211,7 @@ def _create_global_aggregates(
     return ops.einsum("...nd,...ng->...gd", hidden_states, one_hot_block_ids.type(hidden_states.dtype))
 
 
-class LongT5LayerNorm(nn.Cell):
+class LongT5LayerNorm(nn.Module):
     """LongT5LayerNorm"""
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -220,7 +221,7 @@ class LongT5LayerNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size, mindspore.float32))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the LongT5LayerNorm for normalization of hidden states.
         
@@ -245,7 +246,7 @@ class LongT5LayerNorm(nn.Cell):
 
 ALL_LAYERNORM_LAYERS.append(LongT5LayerNorm)
 
-class LongT5DenseActDense(nn.Cell):
+class LongT5DenseActDense(nn.Module):
     """LongT5DenseActDense"""
     def __init__(self, config: LongT5Config):
         """
@@ -266,14 +267,14 @@ class LongT5DenseActDense(nn.Cell):
             RuntimeError: If there is an issue with initializing the dense layers, dropout, or activation function.
         """
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs and processes hidden states in the LongT5DenseActDense class.
+        This method forwards and processes hidden states in the LongT5DenseActDense class.
 
         Args:
             self: An instance of the LongT5DenseActDense class, representing the current object.
@@ -294,7 +295,7 @@ class LongT5DenseActDense(nn.Cell):
         return hidden_states
 
 
-class LongT5DenseGatedActDense(nn.Cell):
+class LongT5DenseGatedActDense(nn.Module):
     """LongT5DenseGatedActDense"""
     def __init__(self, config: LongT5Config):
         """
@@ -317,13 +318,13 @@ class LongT5DenseGatedActDense(nn.Cell):
             None.
         """
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states of the LongT5DenseGatedActDense model.
 
@@ -344,7 +345,7 @@ class LongT5DenseGatedActDense(nn.Cell):
         hidden_states = self.wo(hidden_states)
         return hidden_states
 
-class LongT5LayerFF(nn.Cell):
+class LongT5LayerFF(nn.Module):
     """LongT5LayerFF"""
     def __init__(self, config: LongT5Config):
         """
@@ -371,9 +372,9 @@ class LongT5LayerFF(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method to construct the forward pass through the LongT5LayerFF feed-forward layer.
+        Method to forward the forward pass through the LongT5LayerFF feed-forward layer.
 
         Args:
             self (LongT5LayerFF): The instance of the LongT5LayerFF class.
@@ -392,7 +393,7 @@ class LongT5LayerFF(nn.Cell):
         return hidden_states
 
 
-class LongT5Attention(nn.Cell):
+class LongT5Attention(nn.Module):
     """LongT5Attention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -422,10 +423,10 @@ class LongT5Attention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -524,7 +525,7 @@ class LongT5Attention(nn.Cell):
         values = values.transpose([2, 0, 1]).expand_dims(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -653,7 +654,7 @@ class LongT5Attention(nn.Cell):
             outputs = outputs + (attn_weights,)
         return outputs
 
-class LongT5LocalAttention(nn.Cell):
+class LongT5LocalAttention(nn.Module):
     """LongT5LocalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -684,10 +685,10 @@ class LongT5LocalAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -770,7 +771,7 @@ class LongT5LocalAttention(nn.Cell):
         values = values.transpose([2, 0, 1]).expand_dims(0).expand_dims(0)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -876,7 +877,7 @@ class LongT5LocalAttention(nn.Cell):
             outputs = outputs + (attn_weights,)
         return outputs
 
-class LongT5TransientGlobalAttention(nn.Cell):
+class LongT5TransientGlobalAttention(nn.Module):
     """LongT5TransientGlobalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -909,10 +910,10 @@ class LongT5TransientGlobalAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -1027,7 +1028,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         attention_side_bias = attention_side_bias + side_bias
         return attention_side_bias
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -1036,7 +1037,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the transient global attention mechanism for the LongT5 model.
+        This method forwards the transient global attention mechanism for the LongT5 model.
 
         Args:
             self: The instance of the LongT5TransientGlobalAttention class.
@@ -1178,7 +1179,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         return outputs
 
 
-class LongT5LayerSelfAttention(nn.Cell):
+class LongT5LayerSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1201,7 +1202,7 @@ class LongT5LayerSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1212,9 +1213,9 @@ class LongT5LayerSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        Method 'construct' in the class 'LongT5LayerSelfAttention'.
+        Method 'forward' in the class 'LongT5LayerSelfAttention'.
 
-        This method constructs the output hidden states by applying self-attention mechanism.
+        This method forwards the output hidden states by applying self-attention mechanism.
 
         Args:
             self: Instance of the class.
@@ -1248,7 +1249,7 @@ class LongT5LayerSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerLocalSelfAttention(nn.Cell):
+class LongT5LayerLocalSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1269,7 +1270,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1278,7 +1279,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the LongT5LayerLocalSelfAttention and performs the local self-attention operation.
+        This method forwards the LongT5LayerLocalSelfAttention and performs the local self-attention operation.
 
         Args:
             self: The instance of the LongT5LayerLocalSelfAttention class.
@@ -1317,7 +1318,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
+class LongT5LayerTransientGlobalSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1342,7 +1343,7 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1351,8 +1352,8 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        Method 'construct' in the class 'LongT5LayerTransientGlobalSelfAttention'.
-        This method constructs the output of the layer by applying transient global self-attention mechanism.
+        Method 'forward' in the class 'LongT5LayerTransientGlobalSelfAttention'.
+        This method forwards the output of the layer by applying transient global self-attention mechanism.
 
         Args:
             self: Reference to the instance of the class.
@@ -1384,7 +1385,7 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerCrossAttention(nn.Cell):
+class LongT5LayerCrossAttention(nn.Module):
     """LongT5LayerCrossAttention"""
     def __init__(self, config):
         """
@@ -1410,7 +1411,7 @@ class LongT5LayerCrossAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -1476,7 +1477,7 @@ class LongT5LayerCrossAttention(nn.Cell):
         return outputs
 
 
-class LongT5Block(nn.Cell):
+class LongT5Block(nn.Module):
     """LongT5Block"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1509,14 +1510,14 @@ class LongT5Block(nn.Cell):
                 f"but got {config.encoder_attention_type}."
             )
 
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(attention_layer(config, has_relative_attention_bias=has_relative_attention_bias))
         if self.is_decoder:
             self.layer.append(LongT5LayerCrossAttention(config))
 
         self.layer.append(LongT5LayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1811,7 +1812,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         4. Sets the is_decoder attribute to the value of config.is_decoder.
         5. Sets the local_radius attribute to the value of config.local_radius.
         6. Sets the block_len attribute to the local_radius + 1.
-        7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is
+        7. Creates a block attribute as an nn.ModuleList containing LongT5Block objects. The number of blocks is
         determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is the
         first block in the list.
         8. Sets the final_layer_norm attribute to a LongT5LayerNorm object with the specified d_model and layer_norm_epsilon.
@@ -1833,7 +1834,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         self.local_radius = config.local_radius
         self.block_len = self.local_radius + 1
 
-        self.block = nn.CellList(
+        self.block = nn.ModuleList(
             [LongT5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
@@ -1878,7 +1879,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         """
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1894,7 +1895,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         return_dict=None,
     ):
         '''
-        This method constructs the LongT5Stack model. It takes 13 parameters:
+        This method forwards the LongT5Stack model. It takes 13 parameters:
 
         Args:
             self (object): The instance of the class.
@@ -2180,7 +2181,7 @@ class LongT5Model(LongT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2199,7 +2200,7 @@ class LongT5Model(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs a LongT5 model with the specified parameters.
+        This method forwards a LongT5 model with the specified parameters.
 
         Args:
             self (object): The instance of the class.
@@ -2321,7 +2322,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = LongT5Stack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
 
     def get_input_embeddings(self):
         """
@@ -2383,7 +2384,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         """get decoder"""
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2403,7 +2404,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs a LongT5 model for conditional generation.
+        This method forwards a LongT5 model for conditional generation.
 
         Args:
             self: The instance of the class.
@@ -2682,7 +2683,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2693,7 +2694,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs the LongT5EncoderModel by passing the input parameters to the encoder.
+        This method forwards the LongT5EncoderModel by passing the input parameters to the encoder.
         
         Args:
             self: The instance of the LongT5EncoderModel class.

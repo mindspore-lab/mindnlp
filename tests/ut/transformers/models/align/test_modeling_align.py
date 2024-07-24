@@ -50,7 +50,7 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.align.modeling_align import ALIGN_PRETRAINED_MODEL_ARCHIVE_LIST
 
-mindspore.set_context(pynative_synchronize=True)
+
 
 if is_vision_available():
     from PIL import Image
