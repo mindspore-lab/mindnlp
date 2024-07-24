@@ -1209,6 +1209,8 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                             new_param.name = param.name
                             new_param.requires_grad = param.requires_grad
                             replace_references(param, new_param)
+                        elif isinstance(param, Tensor):
+                            param.assign_value(new_param)
                         else:
                             replace_references(param, Parameter(new_param, requires_grad=param.requires_grad))
                     else:

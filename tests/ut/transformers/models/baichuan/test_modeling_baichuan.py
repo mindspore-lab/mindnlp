@@ -29,6 +29,8 @@ from mindnlp.transformers.models.baichuan import BaiChuanConfig, BaiChuan7bModel
 from mindnlp.utils.testing_utils import slow
 from .....common import MindNLPTestCase
 
+mindspore.set_context(pynative_synchronize=True)
+
 class TestModelingBaiChuan(MindNLPTestCase):
     r"""
     Test BaiChuan

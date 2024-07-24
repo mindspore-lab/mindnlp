@@ -62,6 +62,8 @@ def clone(input):
 def cumsum(input, dim, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.cumsum(input, dim, dtype)
+    if input.dtype == mindspore.bool_:
+        input = input.to(mindspore.int32)
     return ops.cumsum(input, dim, dtype)
 
 # diag
@@ -549,6 +551,8 @@ def meshgrid(*tensors, indexing=None):
 
 
 # repeat_interleave
+def repeat_interleave(input, repeats, dim=None):
+    return ops.repeat_elements(input, repeats, dim)
 
 # roll
 
@@ -563,10 +567,14 @@ def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=
 # trace
 
 # tril
+def tril(input, diagonal=0):
+    return ops.tril(input, diagonal)
 
 # tril_indices
 
 # triu
+def triu(input, diagonal=0):
+    return ops.triu(input, diagonal)
 
 # triu_indices
 
@@ -587,3 +595,6 @@ def unflatten(x, dim, sizes):
 
 
 # resolve_neg
+
+def masked_fill(input, mask, value):
+    return ops.masked_fill(input, mask, value)

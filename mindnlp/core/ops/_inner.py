@@ -12,6 +12,8 @@ def assign(input, other):
 def pad(input, pad, mode='constant', value=0.0):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.pad(input, pad, mode, value)
+    if mode == 'reflect':
+        return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
 
 __all__ = ['cast', 'assign']

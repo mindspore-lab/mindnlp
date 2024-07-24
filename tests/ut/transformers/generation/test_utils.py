@@ -30,7 +30,7 @@ from ....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         AutoModelForCausalLM,
@@ -867,6 +867,7 @@ class GenerationTesterMixin:
             )
             beam_kwargs, beam_scorer = self._get_beam_scorer_and_kwargs(input_ids.shape[0], max_length)
 
+            print(input_ids)
             # check `generate()` and `beam_search()` are equal
             output_generate, output_beam_search = self._beam_search_generate(
                 model=model,
@@ -1246,8 +1247,8 @@ class GenerationTesterMixin:
             # check `generate()` and `constrained_beam_search()` are equal
             # Sample constraints
             if not input_ids.dtype == mindspore.float32:
-                min_id = int(ops.min(input_ids)[0].asnumpy() + 3)
-                max_id = int(ops.max(input_ids)[0].asnumpy())
+                min_id = int(ops.min(input_ids).asnumpy() + 3)
+                max_id = int(ops.max(input_ids).asnumpy())
             else:
                 # otherwise this throws an error for Speech2TextModel since its inputs are floating points
                 min_id = 3
@@ -1659,7 +1660,7 @@ class GenerationTesterMixin:
         def _prepare_model_kwargs(input_ids, attention_mask, signature):
             model_kwargs = {"input_ids": input_ids, "attention_mask": attention_mask}
             if "position_ids" in signature:
-                position_ids = ops.cumsum(attention_mask, axis=-1) - 1
+                position_ids = ops.cumsum(attention_mask, dim=-1) - 1
                 position_ids = position_ids.masked_fill(attention_mask == 0, 1)
                 model_kwargs["position_ids"] = position_ids
             if "cache_position" in signature:
@@ -1678,9 +1679,9 @@ class GenerationTesterMixin:
 
             # With left-padding (length 32)
             pad_size = (input_ids.shape[0], 32)
-            padding = ops.ones(pad_size, dtype=input_ids.dtype) * config.pad_token_id
-            padded_input_ids = ops.cat((padding, input_ids), axis=1)
-            padded_attention_mask = ops.cat((ops.zeros_like(padding), attention_mask), axis=1)
+            padding = ops.ones(*pad_size, dtype=input_ids.dtype) * config.pad_token_id
+            padded_input_ids = ops.cat((padding, input_ids), dim=1)
+            padded_attention_mask = ops.cat((ops.zeros_like(padding), attention_mask), dim=1)
             model_kwargs = _prepare_model_kwargs(padded_input_ids, padded_attention_mask, signature)
             next_logits_with_padding = model(**model_kwargs).logits[:, -1, :]
 
@@ -2296,7 +2297,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
         # lets run beam search using 3 beams
         num_beams = 3
         # define decoder start token ids
-        input_ids = ops.ones((num_beams, 1), device=model.device, dtype=mindspore.int64)
+        input_ids = ops.ones(num_beams, 1, dtype=mindspore.int64)
         input_ids = input_ids * model.config.decoder_start_token_id
 
         # add encoder_outputs to model keyword arguments
@@ -2310,7 +2311,6 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
         beam_scorer = BeamSearchScorer(
             batch_size=1,
             num_beams=num_beams,
-            device=model.device,
         )
 
         # instantiate logits processors
@@ -2518,7 +2518,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
         # lets run beam search using 5 beams
         num_beams = 5
         # define decoder start token ids
-        input_ids = ops.ones((num_beams, 1), device=model.device, dtype=mindspore.int64)
+        input_ids = ops.ones(num_beams, 1, dtype=mindspore.int64)
         input_ids = input_ids * model.config.decoder_start_token_id
 
         # add encoder_outputs to model keyword arguments
@@ -2534,7 +2534,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
 
         # instantiate beam scorer
         beam_scorer = ConstrainedBeamSearchScorer(
-            batch_size=1, num_beams=num_beams, device=model.device, constraints=constraints
+            batch_size=1, num_beams=num_beams, constraints=constraints
         )
 
         # instantiate logits processors

@@ -2,6 +2,8 @@
 import numpy as np
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
+
 from mindnlp.configs import USE_PYBOOST
 
 def gelu(input, approximate='none'):
@@ -34,6 +36,11 @@ def mish(input):
 
 def relu6(input):
     return ops.relu6(input)
+
+def elu(input, alpha=1.0):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.elu(input, alpha)
+    return ops.elu(input, alpha)
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
@@ -100,7 +107,7 @@ def linear(input, weight, bias=None):
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
-    return ops.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
+    return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
 def log_softmax(input, dim=-1):
     return ops.log_softmax(input, dim)
@@ -125,3 +132,14 @@ def pad(input, pad, mode='constant', value=0.0):
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+
+def softmax(input, dim=-1, *, dtype=None):
+    if USE_PYBOOST:
+        return mindspore.mint.softmax(input, dim, dtype=dtype)
+    return ops.softmax(input, dim, dtype=dtype)
+
+def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if USE_PYBOOST:
+        return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
+    _layer_norm = _get_cache_prim(ops.LayerNorm)(-1, -1, epsilon=eps)
+    return _layer_norm(input, weight, bias)[0]

@@ -47,7 +47,7 @@ from ..encodec.test_modeling_encodec import EncodecModelTester
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, nn
+    from mindnlp.core import ops, nn
 
     from mindnlp.transformers import (
         BarkCausalModel,
@@ -163,8 +163,8 @@ class BarkSemanticModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["logits"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -299,8 +299,8 @@ class BarkCoarseModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["logits"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -439,8 +439,8 @@ class BarkFineModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["logits"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -743,7 +743,7 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -758,10 +758,10 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings()[0], (nn.Embedding))
             model.set_input_embeddings(
-                nn.CellList([nn.Embedding(10, 10) for _ in range(config.n_codes_total)])
+                nn.ModuleList([nn.Embedding(10, 10) for _ in range(config.n_codes_total)])
             )
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x[0], nn.Dense))
+            self.assertTrue(x is None or isinstance(x[0], nn.Linear))
 
     def test_resize_tokens_embeddings(self):
         # resizing tokens_embeddings of a ModuleList

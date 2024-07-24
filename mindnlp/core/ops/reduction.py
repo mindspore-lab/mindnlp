@@ -52,7 +52,10 @@ def max(input, dim=None, keepdim=False):
 def min(input, dim=None, keepdim=False):
     if USE_PYBOOST:
         return mindspore.mint.min(input, dim, keepdim)
-    return ops.min(input, dim, keepdim)
+    out = ops.min(input, dim, keepdim)
+    if dim is None:
+        return out[0]
+    return out
 
 # dist
 
@@ -82,6 +85,8 @@ def nanmedian(input, dim=-1, keepdim=False):
 
 
 # norm
+def norm(input, p='fro', dim=None, keepdim=False, dtype=None):
+    return ops.norm(input, p, dim, keepdim, dtype=dtype)
 
 # nansum
 

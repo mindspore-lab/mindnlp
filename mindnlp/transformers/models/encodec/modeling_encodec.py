@@ -19,11 +19,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal, Uniform
+from mindnlp.core import nn, ops
 
 from mindnlp.utils import ModelOutput, logging
-from mindnlp.modules.weight_norm import weight_norm
+from mindnlp.core.nn.utils import weight_norm
 from mindnlp.modules.functional import embedding
 from ...modeling_utils import PreTrainedModel
 from .configuration_encodec import EncodecConfig
@@ -72,7 +72,7 @@ class EncodecDecoderOutput(ModelOutput):
     audio_values: mindspore.Tensor = None
 
 
-class EncodecConv1d(nn.Cell):
+class EncodecConv1d(nn.Module):
     """Conv1d with asymmetric or causal padding and normalization."""
     def __init__(
         self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, dilation: int = 1
@@ -113,7 +113,7 @@ class EncodecConv1d(nn.Cell):
                 f" (kernel_size={kernel_size} stride={stride}, dilation={dilation})."
             )
 
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, stride, dilation=dilation, pad_mode='valid', has_bias=True)
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, stride, dilation=dilation)
         if self.norm_type == "weight_norm":
             setattr(self, 'conv', weight_norm(self.conv))
         elif self.norm_type == "time_group_norm":
@@ -152,9 +152,9 @@ class EncodecConv1d(nn.Cell):
         end = padded.shape[-1] - extra_pad
         return padded[..., :end]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method 'construct' in the class 'EncodecConv1d'.
+        Method 'forward' in the class 'EncodecConv1d'.
         
         Args:
             self (object): Instance of EncodecConv1d class.
@@ -195,7 +195,7 @@ class EncodecConv1d(nn.Cell):
         return hidden_states
 
 
-class EncodecConvTranspose1d(nn.Cell):
+class EncodecConvTranspose1d(nn.Module):
     """ConvTranspose1d with asymmetric or causal padding and normalization."""
     def __init__(self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1):
         """
@@ -223,7 +223,7 @@ class EncodecConvTranspose1d(nn.Cell):
                 f'self.norm_type must be one of `"weight_norm"`, `"time_group_norm"`), got {self.norm_type}'
             )
 
-        self.conv = nn.Conv1dTranspose(in_channels, out_channels, kernel_size, stride, has_bias=True, pad_mode='valid')
+        self.conv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size, stride)
         if config.norm_type == "weight_norm":
             self.conv = weight_norm(self.conv)
         elif config.norm_type == "time_group_norm":
@@ -232,9 +232,9 @@ class EncodecConvTranspose1d(nn.Cell):
         if not (self.causal or self.trim_right_ratio == 1.0):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs a 1D transposed convolutional layer for the EncodecConvTranspose1d class.
+        This method forwards a 1D transposed convolutional layer for the EncodecConvTranspose1d class.
         
         Args:
             self: An instance of the EncodecConvTranspose1d class.
@@ -278,7 +278,7 @@ class EncodecConvTranspose1d(nn.Cell):
         return hidden_states
 
 
-class EncodecLSTM(nn.Cell):
+class EncodecLSTM(nn.Module):
     """
     LSTM without worrying about the hidden state, nor the layout of the data. Expects input as convolutional layout.
     """
@@ -300,7 +300,7 @@ class EncodecLSTM(nn.Cell):
         super().__init__()
         self.lstm = nn.LSTM(dimension, dimension, config.num_lstm_layers)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the encoded hidden states using the Long Short-Term Memory (LSTM) algorithm.
         
@@ -329,7 +329,7 @@ class EncodecLSTM(nn.Cell):
         return hidden_states
 
 
-class EncodecResnetBlock(nn.Cell):
+class EncodecResnetBlock(nn.Module):
     """
     Residual block from SEANet model as used by EnCodec.
     """
@@ -361,18 +361,18 @@ class EncodecResnetBlock(nn.Cell):
             out_chs = dim if i == len(kernel_sizes) - 1 else hidden
             block += [nn.ELU()]
             block += [EncodecConv1d(config, in_chs, out_chs, kernel_size, dilation=dilation)]
-        self.block = nn.CellList(block)
+        self.block = nn.ModuleList(block)
 
         if config.use_conv_shortcut:
             self.shortcut = EncodecConv1d(config, dim, dim, kernel_size=1)
         else:
             self.shortcut = nn.Identity()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the EncodecResnetBlock.
         
-        This method applies a series of layers to the given hidden_states to construct the EncodecResnetBlock.
+        This method applies a series of layers to the given hidden_states to forward the EncodecResnetBlock.
         The method returns the combined result of the residual connection and the output of the layers.
         
         Args:
@@ -394,7 +394,7 @@ class EncodecResnetBlock(nn.Cell):
         return self.shortcut(residual) + hidden_states
 
 
-class EncodecEncoder(nn.Cell):
+class EncodecEncoder(nn.Module):
     """SEANet encoder as used by EnCodec."""
     def __init__(self, config: EncodecConfig):
         """
@@ -441,9 +441,9 @@ class EncodecEncoder(nn.Cell):
         model += [nn.ELU()]
         model += [EncodecConv1d(config, scaling * config.num_filters, config.hidden_size, config.last_kernel_size)]
 
-        self.layers = nn.CellList(model)
+        self.layers = nn.ModuleList(model)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the encoded hidden states by applying each layer in the EncodecEncoder.
 
@@ -467,7 +467,7 @@ class EncodecEncoder(nn.Cell):
         return hidden_states
 
 
-class EncodecDecoder(nn.Cell):
+class EncodecDecoder(nn.Module):
     """SEANet decoder as used by EnCodec."""
     def __init__(self, config: EncodecConfig):
         """
@@ -512,9 +512,9 @@ class EncodecDecoder(nn.Cell):
         # Add final layers
         model += [nn.ELU()]
         model += [EncodecConv1d(config, config.num_filters, config.audio_channels, config.last_kernel_size)]
-        self.layers = nn.CellList(model)
+        self.layers = nn.ModuleList(model)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Construct method in the EncodecDecoder class.
 
@@ -535,7 +535,7 @@ class EncodecDecoder(nn.Cell):
         return hidden_states
 
 
-class EncodecEuclideanCodebook(nn.Cell):
+class EncodecEuclideanCodebook(nn.Module):
     """Codebook with Euclidean distance."""
     def __init__(self, config: EncodecConfig):
         """
@@ -625,7 +625,7 @@ class EncodecEuclideanCodebook(nn.Cell):
         return quantize
 
 
-class EncodecVectorQuantization(nn.Cell):
+class EncodecVectorQuantization(nn.Module):
     """
     Vector quantization implementation. Currently supports only euclidean distance.
     """
@@ -688,7 +688,7 @@ class EncodecVectorQuantization(nn.Cell):
         return quantize
 
 
-class EncodecResidualVectorQuantizer(nn.Cell):
+class EncodecResidualVectorQuantizer(nn.Module):
     """Residual Vector Quantizer."""
     def __init__(self, config: EncodecConfig):
         """
@@ -713,7 +713,7 @@ class EncodecResidualVectorQuantizer(nn.Cell):
         self.codebook_size = config.codebook_size
         self.frame_rate = config.frame_rate
         self.num_quantizers = config.num_quantizers
-        self.layers = nn.CellList([EncodecVectorQuantization(config) for _ in range(config.num_quantizers)])
+        self.layers = nn.ModuleList([EncodecVectorQuantization(config) for _ in range(config.num_quantizers)])
 
     def get_num_quantizers_for_bandwidth(self, bandwidth: Optional[float] = None) -> int:
         """Return num_quantizers based on specified target bandwidth."""
@@ -760,7 +760,7 @@ class EncodecPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(
                 Normal(sigma=self.config.initializer_range, mean=0.0)))
             if cell.bias is not None:
@@ -771,7 +771,7 @@ class EncodecPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, nn.Conv1d):
             cell.weight.set_data(initializer('he_normal',shape=cell.weight.shape))
             if cell.bias is not None:
-                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
+                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(k), shape=cell.bias.shape))
                 # nn.init.uniform_(cell.bias, a=-k, b=k)
         elif isinstance(cell, nn.Embedding):
@@ -813,7 +813,7 @@ class EncodecModel(EncodecPreTrainedModel):
         _linear_overlap_add(frames, stride): Applies linear overlap-add to the given frames.
         _decode_frame(codes, scale): Decodes the given codes into an output audio waveform.
         decode(audio_codes, audio_scales, padding_mask, return_dict): Decodes the given frames into an output audio waveform.
-        construct(input_values, padding_mask, bandwidth, audio_codes, audio_scales, return_dict): Constructs the model.
+        forward(input_values, padding_mask, bandwidth, audio_codes, audio_scales, return_dict): Constructs the model.
 
     Example:
         ```python
@@ -917,7 +917,7 @@ class EncodecModel(EncodecPreTrainedModel):
             # if the padding is non zero
             input_values = input_values * padding_mask
             mono = ops.sum(input_values, 1, keepdim=True) / input_values.shape[1]
-            scale = mono.pow(2).mean(axis=-1, keep_dims=True).sqrt() + 1e-8
+            scale = ops.mean(mono.pow(2), dim=-1, keepdim=True).sqrt() + 1e-8
             input_values = input_values / scale
 
         embeddings = self.encoder(input_values)
@@ -1003,7 +1003,7 @@ class EncodecModel(EncodecPreTrainedModel):
         """
         Method _linear_overlap_add in the EncodecModel class.
 
-        This method performs linear overlap-add method on a list of frames to reconstruct the original signal.
+        This method performs linear overlap-add method on a list of frames to reforward the original signal.
 
         Args:
             frames (List[mindspore.Tensor]): A list of mindspore tensors representing the input frames.
@@ -1137,7 +1137,7 @@ class EncodecModel(EncodecPreTrainedModel):
             return (audio_values,)
         return EncodecDecoderOutput(audio_values)
 
-    def construct(
+    def forward(
         self,
         input_values: mindspore.Tensor,
         padding_mask: Optional[mindspore.Tensor] = None,
