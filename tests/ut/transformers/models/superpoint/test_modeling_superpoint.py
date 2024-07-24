@@ -1,20 +1,21 @@
-# Copyright 2024 The HuggingFace Team. All rights reserved.
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 import inspect
 import unittest
-import numpy as np
 from typing import List
+import numpy as np
 from mindspore import ops
 
 from mindnlp.transformers import SuperPointConfig
@@ -23,17 +24,14 @@ from mindnlp.utils import cached_property
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
-
-import mindspore
-mindspore.set_context(pynative_synchronize=True)
-
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import (
         SuperPointForKeypointDetection,
     )
+mindspore.set_context(pynative_synchronize=True)
 
 if is_vision_available():
     from PIL import Image
@@ -223,7 +221,6 @@ class SuperPointModelTest(ModelTesterMixin, unittest.TestCase):
 
             check_hidden_states_output(inputs_dict, config, model_class)
 
-    
     def test_model_from_pretrained(self):
         model = SuperPointForKeypointDetection.from_pretrained(self.from_pretrained_id,from_pt = True)
         self.assertIsNotNone(model)
@@ -257,7 +254,6 @@ class SuperPointModelIntegrationTest(unittest.TestCase):
     def default_image_processor(self):
         return AutoImageProcessor.from_pretrained("magic-leap-community/superpoint") if is_vision_available() else None
 
-    
     def test_inference(self):
         model = SuperPointForKeypointDetection.from_pretrained("magic-leap-community/superpoint")
         preprocessor = self.default_image_processor
@@ -273,9 +269,7 @@ class SuperPointModelIntegrationTest(unittest.TestCase):
                 len(images),
                 expected_max_number_keypoints,
             )
-        
         expected_descriptors_shape = (len(images), expected_max_number_keypoints, 256)
-        # Check output shapes
         self.assertEqual(outputs.keypoints.shape, expected_keypoints_shape)
         self.assertEqual(outputs.scores.shape, expected_scores_shape)
         self.assertEqual(outputs.descriptors.shape, expected_descriptors_shape)
@@ -290,7 +284,7 @@ class SuperPointModelIntegrationTest(unittest.TestCase):
         # Check output values
         self.assertTrue(
             np.allclose(
-                predicted_keypoints_image0_values.asnumpy(),   
+                predicted_keypoints_image0_values.asnumpy(),
                 expected_keypoints_image0_values.asnumpy(),
                 atol=1e-3,
             )
