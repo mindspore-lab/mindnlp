@@ -806,7 +806,7 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
         super().__init__(config)
         self.transformer = ImageGPTModel(config)
         self.lm_head = nn.Linear(
-            config.n_embd, config.vocab_size - 1, has_bias=False)
+            config.n_embd, config.vocab_size - 1, bias=False)
 
         # Model parallel
         # Initialize weights and apply final processing
@@ -999,7 +999,7 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = ImageGPTModel(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

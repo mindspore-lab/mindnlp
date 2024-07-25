@@ -323,7 +323,7 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -388,7 +388,7 @@ class Wav2Vec2LayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
@@ -465,7 +465,7 @@ class Wav2Vec2GroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -539,7 +539,7 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
             padding=config.num_conv_pos_embeddings // 2,
             pad_mode='pad',
             group=config.num_conv_pos_embedding_groups,
-            has_bias=True,
+            bias=True,
         )
 
         self.conv = weight_norm(self.conv, name='weight', axis=2)
@@ -855,10 +855,10 @@ class Wav2Vec2Attention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
         """
@@ -1802,7 +1802,7 @@ class Wav2Vec2AdapterLayer(nn.Module):
             stride=config.adapter_stride,
             padding=1,
             pad_mode='pad',
-            has_bias=True,
+            bias=True,
         )
 
     def forward(self, hidden_states):

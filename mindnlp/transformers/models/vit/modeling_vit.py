@@ -152,7 +152,7 @@ class ViTPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -184,9 +184,9 @@ class ViTSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -432,7 +432,7 @@ class ViTPreTrainedModel(PreTrainedModel):
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -559,7 +559,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
                 in_channels=config.hidden_size,
                 out_channels=config.encoder_stride**2 * config.num_channels,
                 kernel_size=1,
-                has_bias=True
+                bias=True
             ),
             nn.PixelShuffle(config.encoder_stride),
         )

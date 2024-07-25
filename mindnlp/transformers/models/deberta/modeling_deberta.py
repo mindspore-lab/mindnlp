@@ -1306,7 +1306,7 @@ class DisentangledSelfAttention(nn.Module):
         self.num_attention_heads = config.num_attention_heads
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
-        self.in_proj = nn.Linear(config.hidden_size, self.all_head_size * 3, has_bias=False)
+        self.in_proj = nn.Linear(config.hidden_size, self.all_head_size * 3, bias=False)
         self.q_bias = Parameter(ops.zeros((self.all_head_size), dtype=mindspore.float32))
         self.v_bias = Parameter(ops.zeros((self.all_head_size), dtype=mindspore.float32))
         self.pos_att_type = config.pos_att_type if config.pos_att_type is not None else []
@@ -1315,8 +1315,8 @@ class DisentangledSelfAttention(nn.Module):
         self.talking_head = getattr(config, "talking_head", False)
 
         if self.talking_head:
-            self.head_logits_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, has_bias=False)
-            self.head_weights_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, has_bias=False)
+            self.head_logits_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, bias=False)
+            self.head_weights_proj = nn.Linear(config.num_attention_heads, config.num_attention_heads, bias=False)
 
         if self.relative_attention:
             self.max_relative_positions = getattr(config, "max_relative_positions", -1)
@@ -1325,7 +1325,7 @@ class DisentangledSelfAttention(nn.Module):
             self.pos_dropout = StableDropout(config.hidden_dropout_prob)
 
             if "c2p" in self.pos_att_type:
-                self.pos_proj = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
+                self.pos_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
             if "p2c" in self.pos_att_type:
                 self.pos_q_proj = nn.Linear(config.hidden_size, self.all_head_size)
 
@@ -1571,7 +1571,7 @@ class DebertaEmbeddings(nn.Module):
             self.token_type_embeddings = nn.Embedding(config.type_vocab_size, self.embedding_size)
 
         if self.embedding_size != config.hidden_size:
-            self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, has_bias=False)
+            self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, bias=False)
         self.LayerNorm = DebertaLayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
@@ -1667,7 +1667,7 @@ class DebertaPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -2133,7 +2133,7 @@ class DebertaLMPredictionHead(nn.Module):
         self.embedding_size = getattr(config, "embedding_size", config.hidden_size)
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(self.embedding_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(self.embedding_size, config.vocab_size, bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size))
 

@@ -267,7 +267,7 @@ class TimeSeriesValueEmbedding(nn.Module):
     def __init__(self, feature_size, d_model):
         super().__init__()
         self.value_projection = nn.Linear(
-            in_channels=feature_size, out_channels=d_model, has_bias=False)
+            in_channels=feature_size, out_channels=d_model, bias=False)
 
     def forward(self, x):
         return self.value_projection(x)
@@ -295,10 +295,10 @@ class TimeSeriesTransformerAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -645,7 +645,7 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(
                 Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, TimeSeriesSinusoidalPositionalEmbedding):

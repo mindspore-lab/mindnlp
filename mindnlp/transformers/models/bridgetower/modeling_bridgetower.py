@@ -390,7 +390,7 @@ class BridgeTowerVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
             pad_mode='valid'
         )
 
@@ -2873,7 +2873,7 @@ class BridgeTowerMLMHead(nn.Module):
         super().__init__()
         self.config = config
         self.transform = BridgeTowerPredictionHeadTransform(config)
-        self.decoder = nn.Linear(config.hidden_size, config.text_config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.text_config.vocab_size, bias=False)
         self.bias = Parameter(ops.zeros(config.text_config.vocab_size))
         if weight is not None:
             self.decoder.weight = weight

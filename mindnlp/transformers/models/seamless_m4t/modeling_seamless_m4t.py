@@ -716,7 +716,7 @@ class SeamlessM4TConformerConvolutionModule(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.glu = nn.GLU(axis=1)
         self.depthwise_conv = nn.Conv1d(
@@ -726,7 +726,7 @@ class SeamlessM4TConformerConvolutionModule(nn.Module):
             stride=1,
             pad_mode="same",
             group=config.hidden_size,
-            has_bias=False,
+            bias=False,
         )
         self.batch_norm = nn.BatchNorm1d(config.hidden_size)
         self.activation = ACT2FN[config.speech_encoder_hidden_act]
@@ -736,7 +736,7 @@ class SeamlessM4TConformerConvolutionModule(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
 
@@ -820,7 +820,7 @@ class SeamlessM4TConformerSelfAttention(nn.Module):
 
         if self.position_embeddings_type == "relative":
             # linear transformation for positional encoding
-            self.linear_pos = nn.Linear(config.hidden_size, config.hidden_size, has_bias=False)
+            self.linear_pos = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
             # these two learnable bias are used in matrix c and matrix d
             # as described in https://arxiv.org/abs/1901.02860 Section 3.3
             self.pos_bias_u = Parameter(ops.zeros(self.num_heads, self.head_size))
@@ -1751,10 +1751,10 @@ class SeamlessM4TAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -3298,7 +3298,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
 
         self.model = SeamlessM4TTextToUnitModel(config, embed_tokens_decoder)
 
-        self.lm_head = nn.Linear(config.hidden_size, config.t2u_vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.t2u_vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -4356,7 +4356,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
 
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -4852,7 +4852,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
         self.shared = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -5364,7 +5364,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
 
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -5922,7 +5922,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
         self.shared = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -6462,7 +6462,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

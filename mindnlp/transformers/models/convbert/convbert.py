@@ -230,10 +230,10 @@ class SeparableConv1D(nn.Module):
             group=input_filters,
             pad_mode="pad",
             padding=kernel_size // 2,
-            has_bias=False,
+            bias=False,
         )
         self.pointwise = nn.Conv1d(
-            input_filters, output_filters, kernel_size=1, has_bias=False
+            input_filters, output_filters, kernel_size=1, bias=False
         )
         self.bias = ms.Parameter(ops.zeros((output_filters, 1)))
 

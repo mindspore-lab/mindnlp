@@ -77,7 +77,7 @@ class CpmBeeLinear(nn.Linear):
         """
         Construct a linear for CPMBee. It contains a scale operation.
         """
-        super().__init__(dim_in, dim_out, has_bias=False)
+        super().__init__(dim_in, dim_out, bias=False)
         self.dim_in = self.in_features = dim_in
         self.dim_out = self.out_features = dim_out
 
@@ -1990,7 +1990,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         self.cpmbee = CpmBeeModel(config)
 
         # lm_head.weight is tied to cpmbee.input_embedding.weight
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.post_init()
 
     def forward(

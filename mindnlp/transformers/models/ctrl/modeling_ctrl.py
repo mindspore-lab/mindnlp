@@ -241,7 +241,7 @@ class CTRLPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -474,7 +474,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = CTRLModel(config)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=True)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -619,7 +619,7 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = CTRLModel(config)
-        self.classifier = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.classifier = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

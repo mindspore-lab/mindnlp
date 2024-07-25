@@ -247,14 +247,14 @@ class SelfAttention(nn.Module):
         self.query_key_value = nn.Linear(
             hidden_size,
             3 * self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
         self.dense = nn.Linear(
             self.inner_hidden_size,
             hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -535,14 +535,14 @@ class GLU(nn.Module):
         self.dense_h_to_4h = nn.Linear(
             self.hidden_size,
             self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
         self.dense_4h_to_h = nn.Linear(
             self.inner_hidden_size,
             self.hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -1045,7 +1045,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         self.lm_head = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
             dtype=mindspore.float16
         )
         self.quantized = False

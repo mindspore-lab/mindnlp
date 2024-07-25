@@ -124,10 +124,10 @@ class MossAttention(nn.Module):
             mindspore.float32
         )
         self.qkv_proj = nn.Linear(
-            self.embed_dim, self.embed_dim * 3, has_bias=False)
+            self.embed_dim, self.embed_dim * 3, bias=False)
 
         self.out_proj = nn.Linear(
-            self.embed_dim, self.embed_dim, has_bias=False)
+            self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(

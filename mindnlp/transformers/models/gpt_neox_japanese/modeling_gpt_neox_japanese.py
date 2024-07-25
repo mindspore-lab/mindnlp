@@ -96,9 +96,9 @@ class GPTNeoXJapaneseAttention(nn.Module):
         )
 
         self.query_key_value = nn.Linear(
-            config.hidden_size, 3 * config.hidden_size, has_bias=False
+            config.hidden_size, 3 * config.hidden_size, bias=False
         )
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         # Activate bias if the last layer
         self.use_bias = use_bias
         self.dense_bias = (
@@ -350,11 +350,11 @@ class GPTNeoXJapaneseMLP(nn.Module):
         super().__init__()
         intermediate_size = int(config.hidden_size * config.intermediate_multiple_size)
         self.dense_h_to_4h = nn.Linear(
-            config.hidden_size, intermediate_size, has_bias=False
+            config.hidden_size, intermediate_size, bias=False
         )
         # Project back to h.
         self.dense_4h_to_h = nn.Linear(
-            intermediate_size, config.hidden_size, has_bias=False
+            intermediate_size, config.hidden_size, bias=False
         )
         self.act = ACT2FN[config.hidden_act]
 
@@ -613,7 +613,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
         self.config = config
 
         self.gpt_neox_japanese = GPTNeoXJapaneseModel(config)
-        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -1152,9 +1152,9 @@ class DisentangledSelfAttention(nn.Module):
         _attention_head_size = config.hidden_size // config.num_attention_heads
         self.attention_head_size = getattr(config, "attention_head_size", _attention_head_size)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
-        self.query_proj = nn.Linear(config.hidden_size, self.all_head_size, has_bias=True)
-        self.key_proj =  nn.Linear(config.hidden_size, self.all_head_size, has_bias=True)
-        self.value_proj =  nn.Linear(config.hidden_size, self.all_head_size, has_bias=True)
+        self.query_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
+        self.key_proj =  nn.Linear(config.hidden_size, self.all_head_size, bias=True)
+        self.value_proj =  nn.Linear(config.hidden_size, self.all_head_size, bias=True)
 
         self.share_att_key = getattr(config, "share_att_key", False)
         self.pos_att_type = config.pos_att_type if config.pos_att_type is not None else []
@@ -1173,7 +1173,7 @@ class DisentangledSelfAttention(nn.Module):
 
             if not self.share_att_key:
                 if "c2p" in self.pos_att_type:
-                    self.pos_key_proj = nn.Linear(config.hidden_size, self.all_head_size, has_bias=True)
+                    self.pos_key_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
                 if "p2c" in self.pos_att_type:
                     self.pos_query_proj = nn.Linear(config.hidden_size, self.all_head_size)
 
@@ -1381,7 +1381,7 @@ class DebertaV2Embeddings(nn.Module):
             self.token_type_embeddings = nn.Embedding(config.type_vocab_size, self.embedding_size)
 
         if self.embedding_size != config.hidden_size:
-            self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, has_bias=False)
+            self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, bias=False)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
@@ -1477,7 +1477,7 @@ class DebertaV2PreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1794,7 +1794,7 @@ class DebertaV2LMPredictionHead(nn.Module):
         self.embedding_size = getattr(config, "embedding_size", config.hidden_size)
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(self.embedding_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(self.embedding_size, config.vocab_size, bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size))
 

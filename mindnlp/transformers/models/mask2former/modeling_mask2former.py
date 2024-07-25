@@ -1194,7 +1194,7 @@ class Mask2FormerPixelDecoder(nn.Module):
             for in_channels in transformer_in_channels[::-1]:
                 input_projections_list.append(
                     nn.SequentialCell(
-                        nn.Conv2d(in_channels, feature_dim, kernel_size=1, has_bias=True),
+                        nn.Conv2d(in_channels, feature_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, feature_dim),
                     )
                 )
@@ -1203,14 +1203,14 @@ class Mask2FormerPixelDecoder(nn.Module):
             self.input_projections = nn.ModuleList(
                 [
                     nn.SequentialCell(
-                        nn.Conv2d(transformer_in_channels[-1], feature_dim, kernel_size=1, has_bias=True),
+                        nn.Conv2d(transformer_in_channels[-1], feature_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, feature_dim),
                     )
                 ]
             )
 
         self.encoder = Mask2FormerPixelDecoderEncoderOnly(config)
-        self.mask_projection = nn.Conv2d(feature_dim, mask_dim, kernel_size=1, stride=1, padding=0, has_bias=True)
+        self.mask_projection = nn.Conv2d(feature_dim, mask_dim, kernel_size=1, stride=1, padding=0, bias=True)
 
         # Extra FPN levels
         stride = min(self.transformer_feature_strides)
@@ -1222,12 +1222,12 @@ class Mask2FormerPixelDecoder(nn.Module):
 
         for idx, in_channels in enumerate(self.feature_channels[: self.num_fpn_levels]):
             lateral_conv = nn.SequentialCell(
-                nn.Conv2d(in_channels, feature_dim, kernel_size=1, has_bias=False),
+                nn.Conv2d(in_channels, feature_dim, kernel_size=1, bias=False),
                 nn.GroupNorm(32, feature_dim),
             )
 
             output_conv = nn.SequentialCell(
-                nn.Conv2d(feature_dim, feature_dim, kernel_size=3, stride=1, pad_mode='pad', padding=1, has_bias=False),
+                nn.Conv2d(feature_dim, feature_dim, kernel_size=3, stride=1, pad_mode='pad', padding=1, bias=False),
                 nn.GroupNorm(32, feature_dim),
                 nn.ReLU(),
             )
@@ -1404,10 +1404,10 @@ class Mask2FormerAttention(nn.Module):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)

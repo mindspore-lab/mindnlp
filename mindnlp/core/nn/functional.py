@@ -1,4 +1,5 @@
 """nn functional"""
+import math
 import numpy as np
 import mindspore
 from mindspore import ops
@@ -146,3 +147,75 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
 
 def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
     return ops.interpolate(input, size, scale_factor, mode, align_corners, recompute_scale_factor)
+
+def normalize(input, p=2.0, dim=1):
+    r"""
+    Normalize a tensor along a specified dimension.
+    
+    Args:
+        input (Tensor): The input tensor to be normalized.
+        p (float, optional): The power parameter for the normalization. Default is 2.0.
+        dim (int, optional): The dimension along which to normalize the tensor. Default is 1.
+    
+    Returns:
+        None
+    
+    Raises:
+        TypeError: If the input is not a tensor.
+        ValueError: If the specified dimension is out of range or if the power parameter is not a positive number.
+    
+    This function normalizes the input tensor along the specified dimension using the power parameter 'p'.
+    The normalization is performed by dividing each element of the tensor by the Lp norm of the tensor along the specified dimension.
+    The Lp norm is defined as the p-th root of the sum of the absolute values raised to the power of 'p'.
+    The resulting tensor will have the same shape as the input tensor.
+    """
+    return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+
+def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
+        if USE_PYBOOST:
+            return mindspore.mint.nn.functional.batch_norm(
+                input,
+                running_mean,
+                running_var,
+                weight,
+                bias,
+                training,
+                momentum,
+                eps
+            )
+        return ops.batch_norm(
+                input,
+                running_mean,
+                running_var,
+                weight,
+                bias,
+                training,
+                momentum,
+                eps
+        )
+
+def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    pad_mode = 'pad'
+    if not isinstance(padding, (int, tuple)):
+        pad_mode = padding
+
+    return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
+
+def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, *, ceil_mode=False, return_indices=False):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+    return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
+    input_shape = input.shape
+    input = input.reshape(input_shape[0], num_groups, -1)
+    mean = ops.mean(input, axis=2, keep_dims=True)
+    var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (math.prod(input_shape[1:]) / num_groups))
+    std = ops.sqrt(var + eps)
+    input = ops.div(ops.sub(input, mean), std)
+    input = input.reshape(input_shape)
+    output = ops.add(input *weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
+                        bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
+    return output

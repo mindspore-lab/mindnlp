@@ -146,7 +146,7 @@ class ConvNextV2Embeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
-            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size, pad_mode='valid', has_bias=True
+            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size, pad_mode='valid', bias=True
         )
         self.layernorm = ConvNextV2LayerNorm(config.hidden_sizes[0], eps=1e-6, data_format="channels_first")
         self.num_channels = config.num_channels
@@ -179,7 +179,7 @@ class ConvNextV2Layer(nn.Module):
     def __init__(self, config, dim, drop_path=0):
         super().__init__()
         # depthwise conv
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, group=dim, pad_mode='pad', has_bias=True)
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, group=dim, pad_mode='pad', bias=True)
         self.layernorm = ConvNextV2LayerNorm(dim, eps=1e-6)
         # pointwise/1x1 convs, implemented with linear layers
         self.pwconv1 = nn.Linear(dim, 4 * dim)
@@ -223,7 +223,7 @@ class ConvNextV2Stage(nn.Module):
         if in_channels != out_channels or stride > 1:
             self.downsampling_layer = nn.SequentialCell(
                 ConvNextV2LayerNorm(in_channels, eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', has_bias=True),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', bias=True),
             )
         else:
             self.downsampling_layer = nn.Identity()
@@ -304,7 +304,7 @@ class ConvNextV2PreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))

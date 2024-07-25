@@ -188,9 +188,9 @@ class MCTCTSelfAttention(nn.Module):
         self.attention_head_size = config.attention_head_dim
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
 
         self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
 
@@ -297,7 +297,7 @@ class MCTCTSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
@@ -355,7 +355,7 @@ class MCTCTAttention(nn.Module):
 class MCTCTIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.intermediate_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
@@ -370,7 +370,7 @@ class MCTCTIntermediate(nn.Module):
 class MCTCTOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.intermediate_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 

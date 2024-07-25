@@ -418,7 +418,7 @@ class XLMPreTrainedModel(PreTrainedModel):
             if self.config is not None and self.config.init_std is not None:
                 cell.weight.set_data(initializer(Normal(self.config.init_std),
                                                         cell.weight.shape, cell.weight.dtype))
-                if cell.has_bias:
+                if cell.bias:
                     cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, nn.LayerNorm):
@@ -832,7 +832,7 @@ class XLMPredLayer(nn.Module):
         dim = config.emb_dim
 
         if config.asm is False:
-            self.proj = nn.Linear(dim, config.n_words, has_bias=True)
+            self.proj = nn.Linear(dim, config.n_words, bias=True)
         else:
             self.proj = nn.AdaptiveLogSoftmaxWithLoss(
                 in_features=dim,

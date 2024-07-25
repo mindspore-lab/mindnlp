@@ -624,7 +624,7 @@ class ModelTesterMixin:
             inputs = self._prepare_for_class(inputs_dict, model_class).copy()
             inputs["head_mask"] = head_mask
             if model.config.is_encoder_decoder:
-                signature = inspect.signature(model.construct)
+                signature = inspect.signature(model.forward)
                 arg_names = [*signature.parameters.keys()]
                 if "decoder_head_mask" in arg_names:  # necessary diferentiation because of T5 model
                     inputs["decoder_head_mask"] = head_mask

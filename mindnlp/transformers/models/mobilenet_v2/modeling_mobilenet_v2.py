@@ -121,7 +121,7 @@ class MobileNetV2ConvLayer(nn.Module):
             padding=padding,
             dilation=dilation,
             group=groups,
-            has_bias=bias,
+            bias=bias,
             pad_mode="pad",
         )
 

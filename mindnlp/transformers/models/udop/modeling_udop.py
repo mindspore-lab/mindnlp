@@ -269,7 +269,7 @@ class UdopPreTrainedModel(PreTrainedModel):
             # cell.weight.data = nn.init.trunc_normal_(module.weight.data.to(mindspore.float32), mean=0.0, std=factor).to(
             #     cell.weight.dtype
             # )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.data.set_data(initializer("zeros",cell.bias.data.shape,cell.bias.data.dtype))
                 #module.bias.data.zero_()
         elif isinstance(cell, RelativePositionBiasBase):
@@ -290,28 +290,28 @@ class UdopPreTrainedModel(PreTrainedModel):
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
             cell.wi.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi.weight.data.shape,cell.wi.weight.data.dtype))
             #module.wi.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi, "bias") and cell.wi.has_bias:
+            if hasattr(cell.wi, "bias") and cell.wi.bias:
                 cell.wi.bias.data.set_data(initializer("zeros",cell.wi.bias.data.shape,cell.wi.bias.data.dtype))
                 #module.wi.bias.data.zero_()
             cell.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),cell.wo.weight.data.shape,cell.wo.weight.data.dtype))
             #module.wo.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
-            if hasattr(cell.wo, "bias") and cell.wo.has_bias:
+            if hasattr(cell.wo, "bias") and cell.wo.bias:
                 cell.wo.bias.data.set_data(initializer("zeros",cell.wo.bias.data.shape,cell.wo.bias.data.dtype))
                 #module.wo.bias.data.zero_()
         elif isinstance(cell, UdopDenseGatedActDense):
             cell.wi_0.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi_0.weight.data.shape,cell.wi_0.weight.data.dtype))
             #module.wi_0.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi_0, "bias") and cell.wi_0.has_bias:
+            if hasattr(cell.wi_0, "bias") and cell.wi_0.bias:
                 cell.wi_0.bias.data.set_data(initializer("zeros",cell.wi_0.bias.data.shape,cell.wi_0.bias.data.dtype))
                 #module.wi_0.bias.data.zero_()
             cell.wi_1.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi_1.weight.data.shape,cell.wi_1.weight.data.dtype))
             #module.wi_1.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi_1, "bias") and cell.wi_1.has_bias:
+            if hasattr(cell.wi_1, "bias") and cell.wi_1.bias:
                 cell.wi_1.bias.data.set_data(initializer("zeros",cell.wi_1.bias.data.shape,cell.wi_1.bias.data.dtype))
                 #module.wi_1.bias.data.zero_()
             cell.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),cell.wo.weight.data.shape,cell.wo.weight.data.dtype))
             #module.wo.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
-            if hasattr(cell.wo, "bias") and cell.wo.has_bias:
+            if hasattr(cell.wo, "bias") and cell.wo.bias:
                 cell.wo.bias.data.set_data(initializer("zeros",cell.wo.bias.data.shape,cell.wo.bias.data.dtype))
                 #module.wo.bias.data.zero_()
         elif isinstance(cell, UdopAttention):
@@ -386,8 +386,8 @@ class UdopLayerNorm(nn.Module):
 class UdopDenseActDense(nn.Module):
     def __init__(self, config: UdopConfig):
         super().__init__()
-        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p =config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
@@ -409,9 +409,9 @@ class UdopDenseActDense(nn.Module):
 class UdopDenseGatedActDense(nn.Module):
     def __init__(self, config: UdopConfig):
         super().__init__()
-        self.wi_0 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
@@ -469,10 +469,10 @@ class UdopAttention(nn.Module):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -1561,7 +1561,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         self.decoder = UdopStack(decoder_config, self.shared)
 
         # The weights of the language modeling head are shared with those of the encoder and decoder
-        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

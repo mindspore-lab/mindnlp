@@ -337,7 +337,7 @@ class BlipVisionEmbeddings(nn.Module):
         self.class_embedding = Parameter(ops.randn(1, 1, self.embed_dim))
 
         self.patch_embedding = nn.Conv2d(
-            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size, has_bias=True
+            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size, bias=True
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -1047,8 +1047,8 @@ class BlipModel(BlipPreTrainedModel):
         self.text_model = BlipTextModel(text_config)
         self.vision_model = BlipVisionModel(vision_config)
 
-        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = Parameter(mindspore.tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing

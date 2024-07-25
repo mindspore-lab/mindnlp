@@ -253,8 +253,8 @@ class Starcoder2MLP(nn.Module):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Linear(embed_dim, config.intermediate_size, has_bias=config.use_bias)
-        self.c_proj = nn.Linear(config.intermediate_size, embed_dim, has_bias=config.use_bias)
+        self.c_fc = nn.Linear(embed_dim, config.intermediate_size, bias=config.use_bias)
+        self.c_proj = nn.Linear(config.intermediate_size, embed_dim, bias=config.use_bias)
         self.act = ACT2FN[config.hidden_act]
         self.residual_dropout = config.residual_dropout
 
@@ -343,10 +343,10 @@ class Starcoder2Attention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=self.use_bias)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=self.use_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=self.use_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.use_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.use_bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=self.use_bias)
 
         self.rotary_emb = Starcoder2RotaryEmbedding(
             self.head_dim,
@@ -619,7 +619,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -901,7 +901,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.model = Starcoder2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1247,7 +1247,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Starcoder2Model(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

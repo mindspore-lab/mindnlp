@@ -43,7 +43,7 @@ class Dense(nn.Module):
     which is defined and provided by the implementor part of the dense connected layer, :math:`\text{kernel}` is
     a hypercomplex weight matrix with the same data type as the :math:`inp` created by the layer, and
     :math:`\text{bias}` is a hypercomplex bias vector with the same data type as the :math:`inp` created by the layer
-    (only if has_bias is True).
+    (only if bias is True).
 
     This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate this
     class and an implementor class, which acts like a strategy pattern and determine the exact set of hypercomplex
@@ -58,7 +58,7 @@ class Dense(nn.Module):
             is same as `inp`. The values of str refer to the function `initializer`. Default: 'normal'.
         bias_init (Union[Tensor, str, Initializer, numbers.Number]): The trainable bias_init parameter. The dtype is
             same as `inp`. The values of str refer to the function `initializer`. Default: 'zeros'.
-        has_bias (bool): Specifies whether the layer uses a bias vector. Default: True.
+        bias (bool): Specifies whether the layer uses a bias vector. Default: True.
 
     Inputs:
         - **inp** (Tensor) - Tensor of shape :math:`(2, *, ..., *, in\_channels)`, with float16 or float32 data type,
@@ -74,7 +74,7 @@ class Dense(nn.Module):
 
     Raises:
         TypeError: If `in_channels` or `out_channels` is not an int.
-        TypeError: If `has_bias` is not a bool.
+        TypeError: If `bias` is not a bool.
         TypeError: If any two of `inp`, `weight_init` and `bias_init` are Tensors of different data type.
         ValueError: If length of shape of `weight_init` is not equal to 3,
                     or shape[0] of 'weight_init' is not equal to 2,
@@ -93,12 +93,12 @@ class Dense(nn.Module):
                  out_channels: int,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
-                 has_bias: bool = True) -> None:
+                 bias: bool = True) -> None:
         """Initialize Dense."""
         super(Dense, self).__init__()
         self.in_channels = Validator.check_positive_int(in_channels, "in_channels", self.cls_name)
         self.out_channels = Validator.check_positive_int(out_channels, "out_channels", self.cls_name)
-        self.has_bias = Validator.check_bool(has_bias, "has_bias", self.cls_name)
+        self.bias = Validator.check_bool(bias, "bias", self.cls_name)
         self.dtype = None
 
         self.weight_x = None
@@ -129,7 +129,7 @@ class Dense(nn.Module):
 
         self.bias_x = None
         self.bias_y = None
-        if self.has_bias:
+        if self.bias:
             if isinstance(bias_init, Tensor):
                 if self.dtype is None:
                     self.dtype = bias_init.dtype
@@ -178,7 +178,7 @@ class Dense(nn.Module):
             u = P.reshape(u, tuple(u_reshape))
         x, y = get_x_and_y(u)
         out_x, out_y = self.dense_impl(x, y)
-        if self.has_bias:
+        if self.bias:
             out_x = P.bias_add(out_x, self.bias_x)
             out_y = P.bias_add(out_y, self.bias_y)
         out = to_2channel(out_x, out_y, u.dtype)
@@ -203,6 +203,6 @@ class Dense(nn.Module):
             None.
         """
         s = 'input_channels={}, output_channels={}'.format(self.in_channels, self.out_channels)
-        if self.has_bias:
-            s += ', has_bias={}'.format(self.has_bias)
+        if self.bias:
+            s += ', bias={}'.format(self.bias)
         return s

@@ -456,7 +456,7 @@ class JetMoEAttention(nn.Module):
             glu=False,
         )
 
-        self.kv_proj = nn.Linear(config.hidden_size, self.kv_projection_size * 2, has_bias=False)
+        self.kv_proj = nn.Linear(config.hidden_size, self.kv_projection_size * 2, bias=False)
 
         self.rotary_emb = JetMoERotaryEmbedding(
             config.kv_channels,
@@ -1013,7 +1013,7 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
         self.model = JetMoEModel(config)
         self.vocab_size = config.vocab_size
         self.aux_loss_coef = getattr(config, "aux_loss_coef", 0.01)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.tie_word_embeddings = config.tie_word_embeddings
 
         # Initialize weights and apply final processing
@@ -1366,7 +1366,7 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = JetMoEModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

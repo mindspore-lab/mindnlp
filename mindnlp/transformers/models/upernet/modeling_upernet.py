@@ -110,7 +110,7 @@ class UPerNetConvModule(nn.Module):
             kernel_size=kernel_size,
             padding=padding,
             pad_mode='pad',
-            has_bias=bias,
+            bias=bias,
             dilation=dilation,
             weight_init='ones',
             bias_init='zeros'
@@ -195,7 +195,7 @@ class UPerNetHead(nn.Module):
         self.in_channels = in_channels
         self.channels = config.hidden_size
         self.align_corners = False
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
                                     bias_init='zeros')
 
         # PSP Module
@@ -326,7 +326,7 @@ class UPerNetFCNHead(nn.Module):
                 self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
             )
 
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
                                     bias_init='zeros')
 
     def init_weights(self):

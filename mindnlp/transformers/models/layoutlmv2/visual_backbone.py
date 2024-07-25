@@ -149,7 +149,7 @@ class BasicStem(nn.Module):
             kernel_size=7,
             stride=2,
             padding=3,
-            has_bias=False,
+            bias=False,
             pad_mode='pad',
             norm=bn1
         )
@@ -200,7 +200,7 @@ class BasicBlock(nn.Module):
                 out_channels,
                 kernel_size=1,
                 stride=stride,
-                has_bias=False,
+                bias=False,
                 norm=nn.BatchNorm2d(out_channels),
                 pad_mode='valid'
             )
@@ -214,7 +214,7 @@ class BasicBlock(nn.Module):
             stride=stride,
             padding=1,
             pad_mode='pad',
-            has_bias=False,
+            bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
 
@@ -225,7 +225,7 @@ class BasicBlock(nn.Module):
             stride=1,
             padding=1,
             pad_mode='pad',
-            has_bias=False,
+            bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
         self.relu = nn.ReLU()
@@ -299,7 +299,7 @@ class BottleneckBlock(nn.Module):
                 out_channels,
                 kernel_size=1,
                 stride=stride,
-                has_bias=False,
+                bias=False,
                 norm=norm(out_channels),
                 pad_mode='valid'
             )
@@ -315,7 +315,7 @@ class BottleneckBlock(nn.Module):
             bottleneck_channels,
             kernel_size=1,
             stride=stride_1x1,
-            has_bias=False,
+            bias=False,
             norm=nn.BatchNorm2d(bottleneck_channels),
             pad_mode='valid'
         )
@@ -326,7 +326,7 @@ class BottleneckBlock(nn.Module):
             kernel_size=3,
             stride=stride_3x3,
             padding=1 * dilation,
-            has_bias=False,
+            bias=False,
             group=num_groups,
             dilation=dilation,
             pad_mode='pad',
@@ -336,7 +336,7 @@ class BottleneckBlock(nn.Module):
             bottleneck_channels,
             out_channels,
             kernel_size=1,
-            has_bias=False,
+            bias=False,
             pad_mode='valid',
             norm=norm(out_channels)
         )
@@ -872,8 +872,8 @@ class FPN(nn.Module):
         output_convs = []
 
         for idx, in_channels in enumerate(in_channels_per_feature):
-            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, has_bias=True, pad_mode='valid')
-            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, has_bias=True, pad_mode='pad')
+            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=True, pad_mode='valid')
+            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=True, pad_mode='pad')
             stage = int(math.log2(strides[idx]))
 
             setattr(self, "fpn_lateral{}".format(stage), lateral_conv)

@@ -824,7 +824,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         ignore_index = kwargs.pop('ignore_index', -1)
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
@@ -974,7 +974,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         super().__init__(config)
         config.num_labels = 1
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
         # Initialize weights and apply final processing
         self.post_init()
@@ -1155,7 +1155,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         self.config = config
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 

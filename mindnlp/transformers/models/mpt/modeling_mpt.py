@@ -125,8 +125,8 @@ class MptAttention(nn.Module):
             self.softmax_scale = 1 / math.sqrt(self.hidden_size / self.n_heads)
 
         self.attn_dropout_p = config.attn_config.attn_pdrop
-        self.Wqkv = nn.Linear(self.hidden_size, 3 * self.hidden_size, has_bias=False)
-        self.out_proj = nn.Linear(self.hidden_size, self.hidden_size, has_bias=False)
+        self.Wqkv = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=False)
+        self.out_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
 
     def forward(
         self,
@@ -238,9 +238,9 @@ class MptMLP(nn.Module):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.up_proj = nn.Linear(hidden_size, 4 * hidden_size, has_bias=False)
+        self.up_proj = nn.Linear(hidden_size, 4 * hidden_size, bias=False)
         self.act = nn.GELU(approximate=False)
-        self.down_proj = nn.Linear(4 * hidden_size, hidden_size, has_bias=False)
+        self.down_proj = nn.Linear(4 * hidden_size, hidden_size, bias=False)
         self.hidden_dropout = config.attn_config.attn_pdrop
 
     def forward(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
@@ -441,7 +441,7 @@ class MptPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -764,7 +764,7 @@ class MptForCausalLM(MptPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = MptModel(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1005,7 +1005,7 @@ class MptForSequenceClassification(MptPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = MptModel(config)
-        self.score = nn.Linear(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

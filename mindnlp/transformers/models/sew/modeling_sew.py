@@ -196,7 +196,7 @@ class SEWNoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -219,7 +219,7 @@ class SEWLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.layer_norm = nn.LayerNorm([self.out_conv_dim])
@@ -248,7 +248,7 @@ class SEWGroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -275,7 +275,7 @@ class SEWPositionalConvEmbedding(nn.Module):
             group=config.num_conv_pos_embedding_groups,
             stride=config.squeeze_factor,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.conv = weight_norm(self.conv, dim=2)
 
@@ -418,10 +418,10 @@ class SEWAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)

@@ -178,9 +178,9 @@ class CodeGenAttention(nn.Module):
                 f" `num_attention_heads`: {self.num_attention_heads})."
             )
         self.scale_attn = ops.sqrt(mindspore.tensor(self.head_dim, dtype=mindspore.float32)).to(get_default_dtype())
-        self.qkv_proj = nn.Linear(self.embed_dim, self.embed_dim * 3, has_bias=False)
+        self.qkv_proj = nn.Linear(self.embed_dim, self.embed_dim * 3, bias=False)
 
-        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
@@ -620,7 +620,7 @@ class CodeGenPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)

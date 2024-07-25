@@ -83,10 +83,10 @@ class GPTNeoSelfAttention(nn.Module):
                 f" {self.num_heads})."
             )
 
-        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
 
     def _split_heads(self, tensor, num_heads, attn_head_size):
         """
@@ -798,7 +798,7 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
         super().__init__(config)
         self.transformer = GPTNeoModel(config)
         self.lm_head = nn.Linear(
-            config.hidden_size, config.vocab_size, has_bias=False)
+            config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -944,7 +944,7 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = GPTNeoModel(config)
         self.score = nn.Linear(config.hidden_size,
-                              self.num_labels, has_bias=False)
+                              self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

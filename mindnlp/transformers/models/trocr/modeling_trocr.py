@@ -170,11 +170,11 @@ class TrOCRAttention(nn.Module):
         self.scaling = self.head_dim ** -0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(self.kdim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(self.vdim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(self.kdim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(self.vdim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -452,7 +452,7 @@ class TrOCRPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.set_data(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
-            if module.has_bias:
+            if module.bias:
                 module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
@@ -830,7 +830,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
         super().__init__(config)
         self.model = TrOCRDecoderWrapper(config)
 
-        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

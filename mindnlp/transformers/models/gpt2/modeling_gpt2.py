@@ -1119,7 +1119,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1351,7 +1351,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         config = copy.deepcopy(config)
         config.num_labels = 1
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
 
         # Initialize weights and apply final processing
@@ -1615,7 +1615,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

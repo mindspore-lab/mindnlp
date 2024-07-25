@@ -1883,12 +1883,12 @@ class RobertaLMHead(nn.Module):
             (config.hidden_size,), epsilon=config.layer_norm_eps
         )
 
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
         self.decoder.bias = self.bias
 
         # for mindspore.nn.Linear
-        self.decoder.has_bias = True
+        self.decoder.bias = True
         self.decoder.bias_add = ops.add
 
     def forward(self, features):

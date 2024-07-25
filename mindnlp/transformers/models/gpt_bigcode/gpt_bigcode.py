@@ -547,7 +547,7 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
@@ -935,7 +935,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         super().__init__(config)
         self.transformer = GPTBigCodeModel(config)
         self.lm_head = nn.Linear(
-            config.n_embd, config.vocab_size, has_bias=False)
+            config.n_embd, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1143,7 +1143,7 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTBigCodeModel(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -80,7 +80,7 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
             self.kernel_size,
             padding=padding,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.conv2 = nn.Conv1d(
             self.channels,
@@ -88,7 +88,7 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
             self.kernel_size,
             padding=padding,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
     def forward(self, hidden_states: ms.Tensor):
@@ -163,7 +163,7 @@ class UnivNetKernelPredictor(nn.Module):
             5,
             padding=2,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
         self.resblocks = nn.ModuleList(
@@ -179,7 +179,7 @@ class UnivNetKernelPredictor(nn.Module):
             self.resnet_kernel_size,
             padding=padding,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.bias_conv = nn.Conv1d(
             self.resnet_hidden_channels,
@@ -187,7 +187,7 @@ class UnivNetKernelPredictor(nn.Module):
             self.resnet_kernel_size,
             padding=padding,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
     def forward(self, spectrogram: ms.Tensor):
@@ -285,7 +285,7 @@ class UnivNetLvcResidualBlock(nn.Module):
             padding=padding,
             dilation=self.dilation,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
     def forward(self, hidden_states, kernel, bias, hop_size=256):
@@ -418,7 +418,7 @@ class UnivNetLvcBlock(nn.Module):
             stride=self.stride,
             padding=self.stride // 2 + self.stride % 2,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
         self.kernel_predictor = UnivNetKernelPredictor(
@@ -525,7 +525,7 @@ class UnivNetModel(PreTrainedModel):
             stride=1,
             padding=3,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
 
         # Initialize location-variable convolution ResNet Blocks.
@@ -547,7 +547,7 @@ class UnivNetModel(PreTrainedModel):
             ]
         )
         self.conv_post = nn.Conv1d(
-            config.model_hidden_channels, 1, 7, padding=3, pad_mode="pad", has_bias=True
+            config.model_hidden_channels, 1, 7, padding=3, pad_mode="pad", bias=True
         )
         # Initialize weights and apply final processing
         self.post_init()

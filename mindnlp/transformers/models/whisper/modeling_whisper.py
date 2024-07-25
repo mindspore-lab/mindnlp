@@ -429,10 +429,10 @@ class WhisperAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=False)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention._shape with BART->whisper
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
@@ -915,7 +915,7 @@ class WhisperPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv1d)):
             cell.weight.set_data(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -975,8 +975,8 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.max_source_positions = config.max_source_positions
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
 
-        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, pad_mode='pad', has_bias=True)
-        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad', has_bias=True)
+        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, pad_mode='pad', bias=True)
+        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad', bias=True)
 
         self.embed_positions = nn.Embedding(self.max_source_positions, embed_dim)
         self.embed_positions.weight.requires_grad = False
@@ -1711,7 +1711,7 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
         """
         super().__init__(config)
         self.model = WhisperModel(config)
-        self.proj_out = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
+        self.proj_out = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2460,7 +2460,7 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
         config.is_encoder_decoder = False
         self.model = WhisperDecoderWrapper(config)
 
-        self.proj_out = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.proj_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -663,7 +663,7 @@ class QDQBertLMPredictionHead(nn.Module):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = ms.Parameter(ops.zeros(config.vocab_size))
 
@@ -736,7 +736,7 @@ class QDQBertPreTrainedModel(PreTrainedModel):
                     module.weight.dtype,
                 )
             )
-            if module.has_bias is not None:
+            if module.bias is not None:
                 module.bias.set_data(
                     initializer("zeros", module.bias.shape, module.bias.dtype)
                 )

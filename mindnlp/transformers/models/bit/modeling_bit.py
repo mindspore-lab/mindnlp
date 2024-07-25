@@ -20,9 +20,10 @@ from typing import Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, HeNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
@@ -92,57 +93,34 @@ def get_padding_value(padding=None, kernel_size=7, stride=1, dilation=1) -> Tupl
 
 
 class WeightStandardizedConv2d(nn.Conv2d):
-    """Conv2d with Weight Standardization. Includes mindspore.TensorFlow compatible SAME padding. Used for ViT Hybrid model.
+    """Conv2d with Weight Standardization. Includes TensorFlow compatible SAME padding. Used for ViT Hybrid model.
 
     Paper: [Micro-Batch Training with Batch-Channel Normalization and Weight
     Standardization](https://arxiv.org/abs/1903.10520v2)
     """
+
     def __init__(
         self,
         in_channel,
         out_channels,
         kernel_size,
         stride=1,
-        padding=0,
+        padding="SAME",
         dilation=1,
         groups=1,
         bias=False,
         eps=1e-6,
     ):
-        """
-        This method initializes an instance of the WeightStandardizedConv2d class.
-
-        Args:
-            self (object): The instance of the class.
-            in_channel (int): The number of input channels.
-            out_channels (int): The number of output channels.
-            kernel_size (int): The size of the convolutional kernel.
-            stride (int, optional): The stride for the convolution operation. Default is 1.
-            padding (int, optional): The padding to apply. Default is 0.
-            dilation (int, optional): The dilation rate for the convolution operation. Default is 1.
-            groups (int, optional): The number of groups for grouped convolution. Default is 1.
-            bias (bool, optional): Whether to include bias in the convolution operation. Default is False.
-            eps (float, optional): Small value to avoid division by zero. Default is 1e-06.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If any of the input parameters are of incorrect type.
-            ValueError: If the values of parameters are out of expected range or invalid.
-            RuntimeError: If an error occurs during the initialization process.
-        """
         padding, is_dynamic = get_padding_value(padding, kernel_size, stride=stride, dilation=dilation)
         super().__init__(
             in_channel,
             out_channels,
             kernel_size,
             stride=stride,
-            pad_mode='pad' if padding != 0 else 'valid',
             padding=padding,
             dilation=dilation,
-            group=groups,
-            has_bias=bias,
+            groups=groups,
+            bias=bias,
         )
         if is_dynamic:
             self.pad = DynamicPad2d(kernel_size, stride, dilation)
@@ -151,29 +129,13 @@ class WeightStandardizedConv2d(nn.Conv2d):
         self.eps = eps
 
     def forward(self, hidden_state):
-        """
-        Constructs a weighted standardized convolutional operation.
-
-        Args:
-            self (WeightStandardizedConv2d): The instance of the WeightStandardizedConv2d class.
-            hidden_state (tensor): The input tensor representing the hidden state.
-
-        Returns:
-            None: This method does not return any value directly, but modifies the hidden state tensor in place.
-
-        Raises:
-            None.
-        """
         if self.pad is not None:
             hidden_state = self.pad(hidden_state)
-        input_weight = self.weight.reshape(1, self.out_channels, -1)
-        weight = ops.batch_norm(
-            input_weight, ops.ones(self.out_channels), ops.zeros(self.out_channels),
-                                ops.ones(self.out_channels), ops.zeros(self.out_channels),
-                                training=True, momentum=0.0, eps=self.eps
+        weight = nn.functional.batch_norm(
+            self.weight.reshape(1, self.out_channels, -1), ops.ones(self.out_channels), ops.zeros(self.out_channels), training=True, momentum=0.0, eps=self.eps
         ).reshape_as(self.weight)
-        hidden_state = ops.conv2d(
-            hidden_state, weight, self.bias, self.stride, self.pad_mode, self.padding, self.dilation, self.group
+        hidden_state = nn.functional.conv2d(
+            hidden_state, weight, self.bias, self.stride, self.padding, self.dilation, self.groups
         )
         return hidden_state
 
@@ -182,25 +144,8 @@ class BitGroupNormActivation(nn.GroupNorm):
     r"""
     A module that combines group normalization with an activation function.
     """
+
     def __init__(self, config, num_channels, eps=1e-5, affine=True, apply_activation=True):
-        """
-        Initializes an instance of the BitGroupNormActivation class.
-
-        Args:
-            self (BitGroupNormActivation): The instance of the class.
-            config: The configuration object.
-            num_channels (int): The number of input channels.
-            eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-05.
-            affine (bool, optional): If True, applies learnable affine transformation. Defaults to True.
-            apply_activation (bool, optional): If True, applies activation function specified in the configuration.
-                If False, applies identity function. Defaults to True.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super(BitGroupNormActivation, self).__init__(config.num_groups, num_channels, eps=eps, affine=affine)
         if apply_activation:
             self.activation = ACT2FN[config.hidden_act]
@@ -208,24 +153,9 @@ class BitGroupNormActivation(nn.GroupNorm):
             self.activation = nn.Identity()
 
     def forward(self, hidden_state):
-        """
-        Constructs the hidden state of the BitGroupNormActivation.
-
-        Args:
-            self (BitGroupNormActivation): An instance of the BitGroupNormActivation class.
-            hidden_state: The hidden state to be processed.
-                It can be any valid input that can be processed by the _cal_output and activation methods.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        hidden_state = self._cal_output(hidden_state)
+        hidden_state = nn.functional.group_norm(hidden_state, self.num_groups, self.weight, self.bias, self.eps)
         hidden_state = self.activation(hidden_state)
         return hidden_state
-
 
 class DynamicPad2d(nn.Module):
     r"""
@@ -386,8 +316,8 @@ class BitMaxPool2d(nn.Module):
             TypeError: If the ceil_mode is not a boolean value.
         """
         hidden_states = self.pad(hidden_states)
-        return ops.max_pool2d(
-            hidden_states, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode
+        return nn.functional.max_pool2d(
+            hidden_states, self.kernel_size, self.stride, self.padding, self.dilation, ceil_mode=self.ceil_mode
         )
 
 
@@ -941,14 +871,15 @@ class BitStage(nn.Module):
             layer_cls = BitPreActivationBottleneckLayer
 
         prev_chs = in_channels
-        self.layers = nn.SequentialCell()
+        self.layers = nn.Sequential()
         for layer_idx in range(depth):
             # Get the current hyper-parameters
             stride, drop_path_rate, is_first_layer = self._get_updated_hyperparameters(
                 layer_idx, stride, layer_dropout
             )
 
-            self.layers.append(
+            self.layers.add_module(
+                str(layer_idx),
                 layer_cls(
                     config,
                     prev_chs,
@@ -1291,7 +1222,7 @@ class BitForImageClassification(BitPreTrainedModel):
     Attributes:
         num_labels (int): The number of labels for classification.
         bit (BitModel): BitModel instance for feature extraction.
-        classifier (nn.SequentialCell): Neural network layers for classification.
+        classifier (nn.Sequential): Neural network layers for classification.
 
     Methods:
         __init__:
@@ -1329,7 +1260,7 @@ class BitForImageClassification(BitPreTrainedModel):
         self.num_labels = config.num_labels
         self.bit = BitModel(config)
         # classification head
-        self.classifier = nn.SequentialCell(
+        self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity(),
         )
@@ -1369,13 +1300,13 @@ class BitForImageClassification(BitPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

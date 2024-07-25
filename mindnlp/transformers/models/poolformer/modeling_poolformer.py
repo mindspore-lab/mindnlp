@@ -96,7 +96,7 @@ class PoolFormerEmbeddings(nn.Module):
             padding, collections.abc.Iterable) else padding
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size,
-                                    stride=stride, pad_mode='pad', padding=padding, has_bias=True)
+                                    stride=stride, pad_mode='pad', padding=padding, bias=True)
         self.norm = norm_layer(hidden_size) if norm_layer else nn.Identity()
 
     def forward(self, pixel_values):
@@ -127,8 +127,8 @@ class PoolFormerPooling(nn.Module):
 class PoolFormerOutput(nn.Module):
     def __init__(self, config, dropout_prob, hidden_size, intermediate_size):
         super().__init__()
-        self.conv1 = nn.Conv2d(hidden_size, intermediate_size, 1, has_bias=True)
-        self.conv2 = nn.Conv2d(intermediate_size, hidden_size, 1, has_bias=True)
+        self.conv1 = nn.Conv2d(hidden_size, intermediate_size, 1, bias=True)
+        self.conv2 = nn.Conv2d(intermediate_size, hidden_size, 1, bias=True)
         self.drop = PoolFormerDropPath(dropout_prob)
         if isinstance(config.hidden_act, str):
             self.act_fn = ACT2FN[config.hidden_act]

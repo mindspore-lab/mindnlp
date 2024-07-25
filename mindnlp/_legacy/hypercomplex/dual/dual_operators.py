@@ -67,7 +67,7 @@ class Conv2d(_UniformOperator):
     where and :math:`cccor` is the real-valued `cross-correlation <https://en.wikipedia.org/wiki/Cross-correlation>`_,
     :math:`inp` is the dual input tensors, :math:`\text{kernel}` is a dual weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a dual bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{Re(...)}`
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{Re(...)}`
     and :math:`\text{Du(...)}` are respectively real and dual parts of the dual-valued expression inside
     the parentheses.
 
@@ -116,7 +116,7 @@ class Conv2d(_UniformOperator):
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. If the group is equal to `in_channels` and `out_channels`,
             this 2D convolution layer also can be called 2D depthwise convolution layer. Default: 1.
-        has_bias (bool): Whether the Conv2d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv2d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -185,7 +185,7 @@ class Conv2d(_UniformOperator):
         >>> b = Tensor(np.random.random((2, 128)).astype(np.float32))
         >>> net = Conv2d(
         >>>     in_channels=3, out_channels=128, kernel_size=7, stride=2, padding=3,
-        >>>     pad_mode='pad', weight_init=w, bias_init=b, has_bias=True
+        >>>     pad_mode='pad', weight_init=w, bias_init=b, bias=True
         >>> )
         >>> inp = Tensor(np.random.random((2, 16, 3, 224, 224)).astype(np.float32))
         >>> out = net(inp)
@@ -201,7 +201,7 @@ class Conv2d(_UniformOperator):
                  padding: _size_2_t = 0,
                  dilation: _size_2_t = 1,
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW') -> None:
@@ -218,7 +218,7 @@ class Conv2d(_UniformOperator):
         - padding (_size_2_t): Padding size.
         - dilation (_size_2_t): Dilation rate for the convolution operation.
         - group (int): Number of groups for grouped convolution.
-        - has_bias (bool): Whether to include bias in the convolution operation.
+        - bias (bool): Whether to include bias in the convolution operation.
         - weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the weights.
         - bias_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the bias.
         - data_format (str): Format of the input data (e.g., 'NCHW').
@@ -241,7 +241,7 @@ class Conv2d(_UniformOperator):
                                      padding=padding,
                                      dilation=dilation,
                                      group=group,
-                                     has_bias=has_bias,
+                                     bias=bias,
                                      weight_init=weight_init,
                                      bias_init=bias_init,
                                      data_format=data_format)
@@ -278,7 +278,7 @@ class Conv1d(_UniformOperator):
     where and :math:`ccor` is the real-valued `cross-correlation <https://en.wikipedia.org/wiki/Cross-correlation>`_,
     :math:`inp` is the dual input tensors, :math:`\text{kernel}` is a dual weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a dual bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{Re(...)}` and
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{Re(...)}` and
     :math:`\text{Du(...)}` are respectively real and dual parts of the dual-valued expression inside the parentheses.
 
     For more details, please refers to the paper `Gradient Based Learning Applied to Document
@@ -311,7 +311,7 @@ class Conv1d(_UniformOperator):
             every `k` elements. The value of `k` is in range of [1, L]. Default: 1.
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. Default: 1.
-        has_bias (bool): Whether the Conv1d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv1d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -362,7 +362,7 @@ class Conv1d(_UniformOperator):
         >>> b = Tensor(np.random.random((2, 16)).astype(np.float32))
         >>> net = Conv1d(
         >>>     in_channels=1, out_channels=16, kernel_size=6, stride=2, padding=2,
-        >>>     pad_mode='pad', weight_init=w, bias_init=b, has_bias=True
+        >>>     pad_mode='pad', weight_init=w, bias_init=b, bias=True
         >>> )
         >>> u = Tensor(np.random.random((2, 8, 1, 4096)).astype(np.float32))
         >>> out = net(u)
@@ -378,7 +378,7 @@ class Conv1d(_UniformOperator):
                  padding: _size_1_t = 0,
                  dilation: _size_1_t = 1,
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros') -> None:
         r"""
@@ -394,7 +394,7 @@ class Conv1d(_UniformOperator):
             padding (_size_1_t, optional): The size of the padding. Defaults to 0.
             dilation (_size_1_t, optional): The spacing between kernel elements. Defaults to 1.
             group (int, optional): Number of blocked connections from input channels to output channels. Defaults to 1.
-            has_bias (bool, optional): Indicates whether the layer uses a bias. Defaults to False.
+            bias (bool, optional): Indicates whether the layer uses a bias. Defaults to False.
             weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization. Defaults to 'normal'.
             bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization. Defaults to 'zeros'.
         
@@ -414,7 +414,7 @@ class Conv1d(_UniformOperator):
                                      padding=padding,
                                      dilation=dilation,
                                      group=group,
-                                     has_bias=has_bias,
+                                     bias=bias,
                                      weight_init=weight_init,
                                      bias_init=bias_init)
 
@@ -455,7 +455,7 @@ class Conv3d(_UniformOperator):
     where and :math:`ccor` is the real-valued `cross-correlation <https://en.wikipedia.org/wiki/Cross-correlation>`_,
     :math:`inp` is the dual input tensors, :math:`\text{kernel}` is a dual weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a dual bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{Re(...)}`
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{Re(...)}`
     and :math:`\text{Du(...)}` are respectively real and dual parts of the dual-valued expression inside
     the parentheses.
 
@@ -501,7 +501,7 @@ class Conv3d(_UniformOperator):
             [1, D], [1, H] and [1, W] respectively. Default: 1.
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. Default: 1. Only 1 is currently supported.
-        has_bias (bool): Whether the Conv3d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv3d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -575,7 +575,7 @@ class Conv3d(_UniformOperator):
         >>> b = Tensor(np.random.random((2, 128)).astype(np.float32))
         >>> net = Conv3d(
         >>>     in_channels=3, out_channels=128, kernel_size=3, stride=1, padding=1,
-        >>>     pad_mode='pad', weight_init=w, bias_init=b, has_bias=True
+        >>>     pad_mode='pad', weight_init=w, bias_init=b, bias=True
         >>> )
         >>> u = Tensor(np.random.random((2, 64, 3, 32, 32, 32)).astype(np.float32))
         >>> out = net(u)
@@ -591,7 +591,7 @@ class Conv3d(_UniformOperator):
                  padding: _size_3_t = 0,
                  dilation: _size_3_t = 1,
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW') -> None:
@@ -608,7 +608,7 @@ class Conv3d(_UniformOperator):
             padding (_size_3_t): Padding added to all sides of the input. Default is 0.
             dilation (_size_3_t): Spacing between kernel elements. Default is 1.
             group (int): Number of blocked connections from input channels to output channels. Default is 1.
-            has_bias (bool): Whether the layer uses a bias vector. Default is False.
+            bias (bool): Whether the layer uses a bias vector. Default is False.
             weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the weight tensor. Default is 'normal'.
             bias_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the bias tensor. Default is 'zeros'.
             data_format (str): Format of the input data. Default is 'NCDHW'.
@@ -629,7 +629,7 @@ class Conv3d(_UniformOperator):
                                      padding=padding,
                                      dilation=dilation,
                                      group=group,
-                                     has_bias=has_bias,
+                                     bias=bias,
                                      weight_init=weight_init,
                                      bias_init=bias_init,
                                      data_format=data_format)
@@ -1025,7 +1025,7 @@ class Dense(_UniformOperator):
 
     where :math:`inp` is the dual input tensors, :math:`\text{kernel}` is a dual weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a dual bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{Re(...)}` and
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{Re(...)}` and
     :math:`\text{Du(...)}` are respectively real and dual parts of the dual-valued expression inside the parentheses.
 
     Args:
@@ -1035,7 +1035,7 @@ class Dense(_UniformOperator):
             is same as `inp`. The values of str refer to the function `initializer`. Default: 'normal'.
         bias_init (Union[Tensor, str, Initializer, numbers.Number]): The trainable bias_init parameter. The dtype is
             same as `inp`. The values of str refer to the function `initializer`. Default: 'zeros'.
-        has_bias (bool): Specifies whether the layer uses a bias vector. Default: True.
+        bias (bool): Specifies whether the layer uses a bias vector. Default: True.
 
     Inputs:
         - **inp** (Tensor) - Tensor of shape :math:`(2, *, ..., *, in\_channels)`. '2' denotes that the input tensor
@@ -1049,7 +1049,7 @@ class Dense(_UniformOperator):
 
     Raises:
         TypeError: If `in_channels` or `out_channels` is not an int.
-        TypeError: If `has_bias` is not a bool.
+        TypeError: If `bias` is not a bool.
         ValueError: If length of shape of `weight_init` is not equal to 3,
                     or shape[0] of 'weight_init' is not equal to 2,
                     or shape[1] of `weight_init` is not equal to `out_channels`,
@@ -1067,7 +1067,7 @@ class Dense(_UniformOperator):
         >>> from mindspore import Tensor
         >>> w = Tensor(np.random.random((2, 7, 5)).astype(np.float32))
         >>> b = Tensor(np.random.random((2, 7)).astype(np.float32))
-        >>> net = Dense(in_channels=5, out_channels=7, weight_init=w, bias_init=b, has_bias=True)
+        >>> net = Dense(in_channels=5, out_channels=7, weight_init=w, bias_init=b, bias=True)
         >>> u = Tensor(np.random.random((2, 34, 1, 5)).astype(np.float32))
         >>> out = net(u)
         >>> print(out.shape)
@@ -1078,7 +1078,7 @@ class Dense(_UniformOperator):
                  out_channels: int,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
-                 has_bias: bool = True) -> None:
+                 bias: bool = True) -> None:
         r"""
         __init__
         
@@ -1090,7 +1090,7 @@ class Dense(_UniformOperator):
             out_channels (int): The number of output channels.
             weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Default is 'normal'.
             bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Default is 'zeros'.
-            has_bias (bool, optional): Indicates whether the layer has bias. Default is True.
+            bias (bool, optional): Indicates whether the layer has bias. Default is True.
         
         Returns:
             None. This method does not return any value.
@@ -1104,4 +1104,4 @@ class Dense(_UniformOperator):
                                     out_channels=out_channels,
                                     weight_init=weight_init,
                                     bias_init=bias_init,
-                                    has_bias=has_bias)
+                                    bias=bias)

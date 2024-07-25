@@ -180,7 +180,7 @@ class SegformerOverlapPatchEmbeddings(nn.Module):
             stride=stride,
             padding=patch_size // 2,
             pad_mode='pad',
-            has_bias=True
+            bias=True
         )
 
         self.layer_norm = nn.LayerNorm(hidden_size)
@@ -263,7 +263,7 @@ class SegformerEfficientSelfAttention(nn.Module):
         self.sr_ratio = sequence_reduction_ratio
         if sequence_reduction_ratio > 1:
             self.sr = nn.Conv2d(
-                hidden_size, hidden_size, kernel_size=sequence_reduction_ratio, stride=sequence_reduction_ratio, pad_mode='valid', has_bias=True
+                hidden_size, hidden_size, kernel_size=sequence_reduction_ratio, stride=sequence_reduction_ratio, pad_mode='valid', bias=True
             )
             self.layer_norm = nn.LayerNorm(hidden_size)
 
@@ -611,7 +611,7 @@ class SegformerDWConv(nn.Module):
             RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__()
-        self.dwconv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True, group=dim)
+        self.dwconv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, bias=True, group=dim)
 
     def forward(self, hidden_states, height, width):
         """
@@ -1379,14 +1379,14 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
             in_channels=config.decoder_hidden_size * config.num_encoder_blocks,
             out_channels=config.decoder_hidden_size,
             kernel_size=1,
-            has_bias=False,
+            bias=False,
             pad_mode='valid'
         )
         self.batch_norm = nn.BatchNorm2d(config.decoder_hidden_size)
         self.activation = nn.ReLU()
 
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
-        self.classifier = nn.Conv2d(config.decoder_hidden_size, config.num_labels, kernel_size=1, pad_mode='valid', has_bias=True)
+        self.classifier = nn.Conv2d(config.decoder_hidden_size, config.num_labels, kernel_size=1, pad_mode='valid', bias=True)
 
         self.config = config
 

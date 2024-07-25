@@ -264,18 +264,18 @@ class ClapAudioAFFBlock(nn.Module):
         inter_channels = int(channels // downsize_ratio)
 
         self.local_att = nn.SequentialCell([
-            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", has_bias=True),
+            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
             nn.BatchNorm2d(inter_channels),
             nn.ReLU(),
-            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", has_bias=True),
+            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
             nn.BatchNorm2d(channels),]
         )
         self.global_att = nn.SequentialCell([
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", has_bias=True),
+            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
             nn.BatchNorm2d(inter_channels),
             nn.ReLU(),
-            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", has_bias=True),
+            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
             nn.BatchNorm2d(channels),]
         )
 
@@ -326,7 +326,7 @@ class ClapAudioPatchEmbed(nn.Module):
             stride=tuple(patch_stride),
             padding=padding[0],
             pad_mode='pad',
-            has_bias=True
+            bias=True
         )
 
         self.norm = nn.LayerNorm(config.patch_embeds_hidden_size) if config.enable_patch_layer_norm else nn.Identity()
@@ -339,7 +339,7 @@ class ClapAudioPatchEmbed(nn.Module):
                 stride=(patch_stride[0], patch_stride[1] * 3),
                 padding=padding[0],
                 pad_mode='pad',
-                has_bias=True
+                bias=True
             )
 
     def forward(self, hidden_states, is_longer_idx=None):
@@ -425,9 +425,9 @@ class ClapAudioSelfAttention(nn.Module):
         relative_position_index = relative_coords.sum(-1)
         self.relative_position_index = relative_position_index
 
-        self.query = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -777,7 +777,7 @@ class ClapAudioPatchMerging(nn.Module):
         super().__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.reduction = nn.Linear(4 * dim, 2 * dim, has_bias=False)
+        self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
         self.norm = norm_layer(4 * dim)
 
     def maybe_pad(self, input_feature, height, width):
@@ -1709,7 +1709,7 @@ class ClapPreTrainedModel(PreTrainedModel):
             cell.weight.data.set_data(
                 initializer(Normal(in_proj_std),
                             cell.weight.data.shape, cell.weight.data.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 

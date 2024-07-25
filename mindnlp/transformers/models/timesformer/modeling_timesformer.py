@@ -72,7 +72,7 @@ class TimesformerPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(config.num_channels, config.hidden_size, kernel_size=patch_size,
-                                    stride=patch_size, pad_mode='valid', has_bias=True)
+                                    stride=patch_size, pad_mode='valid', bias=True)
 
     def forward(self, pixel_values):
         '''
@@ -360,7 +360,7 @@ class TimesformerSelfAttention(nn.Module):
         self.num_heads = num_heads
         head_dim = config.hidden_size // num_heads
         self.scale = head_dim**-0.5
-        self.qkv = nn.Linear(config.hidden_size, config.hidden_size * 3, has_bias=qkv_bias)
+        self.qkv = nn.Linear(config.hidden_size, config.hidden_size * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(p=attention_dropout_prob)
 
     def forward(self, hidden_states, output_attentions: bool = False):

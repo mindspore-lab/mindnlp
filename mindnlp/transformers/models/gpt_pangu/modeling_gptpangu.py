@@ -96,10 +96,10 @@ class GPTPanguAttention(nn.Module):
 
         self.scale_attn_weights = config.scale_attn_weights
 
-        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
-        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
-        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
-        self.c_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=True)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        self.c_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
@@ -789,7 +789,7 @@ class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPTPanguModel(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

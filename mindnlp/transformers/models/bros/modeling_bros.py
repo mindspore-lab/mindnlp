@@ -270,7 +270,7 @@ class BrosBboxEmbeddings(nn.Module):
         """
         super(BrosBboxEmbeddings, self).__init__()
         self.bbox_sinusoid_emb = BrosPositionalEmbedding2D(config)
-        self.bbox_projection = nn.Linear(config.dim_bbox_sinusoid_emb_2d, config.dim_bbox_projection, has_bias=False)
+        self.bbox_projection = nn.Linear(config.dim_bbox_sinusoid_emb_2d, config.dim_bbox_projection, bias=False)
 
     def forward(self, bbox: mindspore.Tensor):
         """

@@ -960,7 +960,7 @@ class MSBertLMPredictionHead(nn.Module):
         self.decoder = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
@@ -1067,7 +1067,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )

@@ -217,7 +217,7 @@ class HubertNoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="valid",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -283,7 +283,7 @@ class HubertLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="valid",
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
@@ -361,7 +361,7 @@ class HubertGroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="valid",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -438,7 +438,7 @@ class HubertPositionalConvEmbedding(nn.Module):
             pad_mode='pad',
             padding=config.num_conv_pos_embeddings // 2,
             group=config.num_conv_pos_embedding_groups,
-            has_bias=True,      # TODO: confirm this
+            bias=True,      # TODO: confirm this
         )
         self.conv = weight_norm(self.conv, name='weight', dim=2)
         self.padding = HubertSamePadLayer(config.num_conv_pos_embeddings)
@@ -732,10 +732,10 @@ class HubertAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
         """

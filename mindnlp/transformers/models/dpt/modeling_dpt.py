@@ -138,7 +138,7 @@ class DPTViTHybridEmbeddings(nn.Module):
         self.patch_size = patch_size[0]
         self.num_channels = num_channels
 
-        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1, pad_mode='valid', bias=True)
 
         self.cls_token = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
         self.position_embeddings = mindspore.Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
@@ -281,7 +281,7 @@ class DPTViTPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size,
-                                    pad_mode='valid', has_bias=True)
+                                    pad_mode='valid', bias=True)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -307,9 +307,9 @@ class DPTViTSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -661,18 +661,18 @@ class DPTReassembleLayer(nn.Module):
         # projection
         hidden_size = _get_backbone_hidden_size(config)
         self.projection = nn.Conv2d(in_channels=hidden_size, out_channels=channels, kernel_size=1,
-                                    pad_mode='valid', has_bias=True)
+                                    pad_mode='valid', bias=True)
 
         # up/down sampling depending on factor
         if factor > 1:
             self.resize = nn.Conv2dTranspose(channels, channels, kernel_size=factor, stride=factor,
-                                             padding=0, has_bias=True)
+                                             padding=0, bias=True)
         elif factor == 1:
             self.resize = nn.Identity()
         elif factor < 1:
             # so should downsample
             self.resize = nn.Conv2d(channels, channels, kernel_size=3, stride=int(1 / factor), padding=1,
-                                    pad_mode='pad', has_bias=True)
+                                    pad_mode='pad', bias=True)
 
     def forward(self, hidden_state):
         hidden_state = self.projection(hidden_state)
@@ -730,7 +730,7 @@ class DPTPreActResidualLayer(nn.Module):
             stride=1,
             padding=1,
             pad_mode='pad',
-            has_bias=use_bias_in_fusion_residual,
+            bias=use_bias_in_fusion_residual,
         )
 
         self.activation2 = nn.ReLU()
@@ -741,7 +741,7 @@ class DPTPreActResidualLayer(nn.Module):
             stride=1,
             padding=1,
             pad_mode='pad',
-            has_bias=use_bias_in_fusion_residual,
+            bias=use_bias_in_fusion_residual,
         )
 
         if self.use_batch_norm:
@@ -782,7 +782,7 @@ class DPTFeatureFusionLayer(nn.Module):
         self.align_corners = align_corners
 
         self.projection = nn.Conv2d(config.fusion_hidden_size, config.fusion_hidden_size, kernel_size=1,
-                                    pad_mode='valid', has_bias=True)
+                                    pad_mode='valid', bias=True)
 
         self.residual_layer1 = DPTPreActResidualLayer(config)
         self.residual_layer2 = DPTPreActResidualLayer(config)
@@ -822,7 +822,7 @@ class DPTPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0), cell.weight.shape,
                                              cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -985,7 +985,7 @@ class DPTNeck(nn.Module):
         self.convs = nn.ModuleList()
         for channel in config.neck_hidden_sizes:
             self.convs.append(nn.Conv2d(channel, config.fusion_hidden_size, kernel_size=3, padding=1,
-                                        pad_mode='pad', has_bias=False))
+                                        pad_mode='pad', bias=False))
 
         # fusion
         self.fusion_stage = DPTFeatureFusionStage(config)
@@ -1031,15 +1031,15 @@ class DPTDepthEstimationHead(nn.Module):
         self.projection = None
         if config.add_projection:
             self.projection = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=1,
-                                        pad_mode='pad', has_bias=True)
+                                        pad_mode='pad', bias=True)
 
         features = config.fusion_hidden_size
         self.head = nn.SequentialCell(
-            nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1, pad_mode='pad', has_bias=True),
+            nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1, pad_mode='pad', bias=True),
             nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
-            nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1, pad_mode='pad', has_bias=True),
+            nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1, pad_mode='pad', bias=True),
             nn.ReLU(),
-            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, pad_mode='pad', has_bias=True),
+            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, pad_mode='pad', bias=True),
             nn.ReLU(),
         )
 
@@ -1198,11 +1198,11 @@ class DPTSemanticSegmentationHead(nn.Module):
 
         features = config.fusion_hidden_size
         self.head = nn.SequentialCell(
-            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', has_bias=False),
+            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', bias=False),
             nn.BatchNorm2d(features),
             nn.ReLU(),
             nn.Dropout(p=config.semantic_classifier_dropout),
-            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', has_bias=True),
+            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', bias=True),
             nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
         )
 
@@ -1221,11 +1221,11 @@ class DPTAuxiliaryHead(nn.Module):
 
         features = config.fusion_hidden_size
         self.head = nn.SequentialCell(
-            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', has_bias=False),
+            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', bias=False),
             nn.BatchNorm2d(features),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', has_bias=True),
+            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', bias=True),
         )
 
     def forward(self, hidden_states):

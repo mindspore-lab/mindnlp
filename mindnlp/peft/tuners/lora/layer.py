@@ -181,8 +181,8 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
 
         self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
-        self.lora_A[adapter_name] = nn.Linear(self.in_features, r, has_bias=False)
-        self.lora_B[adapter_name] = nn.Linear(r, self.out_features, has_bias=False)
+        self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+        self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
@@ -1130,8 +1130,8 @@ class Conv2d(nn.Module, LoraLayer):
         kernel_size = base_layer.kernel_size
         stride = base_layer.stride
         padding = base_layer.padding
-        self.lora_A[adapter_name] = nn.Conv2d(self.in_features, r, kernel_size, stride, padding, has_bias=False)
-        self.lora_B[adapter_name] = nn.Conv2d(r, self.out_features, (1, 1), (1, 1), has_bias=False)
+        self.lora_A[adapter_name] = nn.Conv2d(self.in_features, r, kernel_size, stride, padding, bias=False)
+        self.lora_B[adapter_name] = nn.Conv2d(r, self.out_features, (1, 1), (1, 1), bias=False)
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:

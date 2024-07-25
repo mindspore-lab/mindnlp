@@ -141,7 +141,7 @@ class DPRPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -164,7 +164,7 @@ class DPREncoder(DPRPreTrainedModel):
             raise ValueError("Encoder hidden_size can't be zero")
         self.projection_dim = config.projection_dim
         if self.projection_dim > 0:
-            self.encode_proj = nn.Linear(self.bert_model.config.hidden_size, config.projection_dim, has_bias=True)
+            self.encode_proj = nn.Linear(self.bert_model.config.hidden_size, config.projection_dim, bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -216,8 +216,8 @@ class DPRSpanPredictor(DPRPreTrainedModel):
     def __init__(self, config: DPRConfig):
         super().__init__(config)
         self.encoder = DPREncoder(config)
-        self.qa_outputs = nn.Linear(self.encoder.embeddings_size, 2, has_bias=True)
-        self.qa_classifier = nn.Linear(self.encoder.embeddings_size, 1, has_bias=True)
+        self.qa_outputs = nn.Linear(self.encoder.embeddings_size, 2, bias=True)
+        self.qa_classifier = nn.Linear(self.encoder.embeddings_size, 1, bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 

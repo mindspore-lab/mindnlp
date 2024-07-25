@@ -104,10 +104,10 @@ class GPTJAttention(nn.Module):
             )
         self.scale_attn = ops.sqrt(mindspore.Tensor(self.head_dim, dtype=mindspore.float32))
 
-        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
-        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, has_bias=False)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
@@ -357,7 +357,7 @@ class GPTJPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear,)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -806,7 +806,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTJModel(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Model parallel
         self.model_parallel = False

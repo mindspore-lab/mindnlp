@@ -631,7 +631,7 @@ class TinyBertLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(bert_model_embedding_weights.shape[1],
                                 bert_model_embedding_weights.shape[0],
-                                has_bias=False)
+                                bias=False)
         self.decoder.weight = bert_model_embedding_weights
         self.bias = mindspore.Parameter(ops.zeros(
             bert_model_embedding_weights.shape[0]))

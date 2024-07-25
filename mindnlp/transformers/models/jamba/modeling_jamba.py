@@ -264,10 +264,10 @@ class JambaAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=False)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -584,7 +584,7 @@ class JambaMambaMixer(nn.Module):
         self.conv1d = nn.Conv1d(
             in_channels=self.intermediate_size,
             out_channels=self.intermediate_size,
-            has_bias=self.use_conv_bias,
+            bias=self.use_conv_bias,
             kernel_size=self.conv_kernel_size,
             group=self.intermediate_size,
             padding=self.conv_kernel_size - 1,
@@ -598,11 +598,11 @@ class JambaMambaMixer(nn.Module):
         self.use_fast_kernels = config.use_mamba_kernels
 
         # projection of the input hidden states
-        self.in_proj = nn.Linear(self.hidden_size, self.intermediate_size * 2, has_bias=self.use_bias)
+        self.in_proj = nn.Linear(self.hidden_size, self.intermediate_size * 2, bias=self.use_bias)
         # selective projection used to make dt, B and C input dependant
-        self.x_proj = nn.Linear(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, has_bias=False)
+        self.x_proj = nn.Linear(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, bias=False)
         # time step projection (discretization)
-        self.dt_proj = nn.Linear(self.time_step_rank, self.intermediate_size, has_bias=True)
+        self.dt_proj = nn.Linear(self.time_step_rank, self.intermediate_size, bias=True)
 
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded
@@ -611,7 +611,7 @@ class JambaMambaMixer(nn.Module):
 
         self.A_log = Parameter(ops.log(A))
         self.D = Parameter(ops.ones(self.intermediate_size))
-        self.out_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=self.use_bias)
+        self.out_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=self.use_bias)
 
         if self.apply_inner_layernorms:
             self.dt_layernorm = JambaRMSNorm(self.time_step_rank, eps=config.rms_norm_eps)
@@ -858,9 +858,9 @@ class JambaMLP(nn.Module):
         self.ffn_dim = config.intermediate_size
         self.hidden_dim = config.hidden_size
 
-        self.gate_proj = nn.Linear(self.hidden_dim, self.ffn_dim, has_bias=False)
-        self.down_proj = nn.Linear(self.ffn_dim, self.hidden_dim, has_bias=False)
-        self.up_proj = nn.Linear(self.hidden_dim, self.ffn_dim, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_dim, self.ffn_dim, bias=False)
+        self.down_proj = nn.Linear(self.ffn_dim, self.hidden_dim, bias=False)
+        self.up_proj = nn.Linear(self.hidden_dim, self.ffn_dim, bias=False)
 
         self.act_fn = ACT2FN[config.hidden_act]
 
@@ -923,7 +923,7 @@ class JambaSparseMoeBlock(nn.Module):
 
         if num_experts > 1:
             # expert routing
-            self.router = nn.Linear(self.hidden_dim, self.num_experts, has_bias=False)
+            self.router = nn.Linear(self.hidden_dim, self.num_experts, bias=False)
         else:
             self.router = None
 
@@ -1369,7 +1369,7 @@ class JambaPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -1757,7 +1757,7 @@ class JambaForCausalLM(JambaPreTrainedModel):
         super().__init__(config)
         self.model = JambaModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.router_aux_loss_coef = config.router_aux_loss_coef
         self.num_experts = config.num_experts
         self.num_experts_per_tok = config.num_experts_per_tok
@@ -2121,7 +2121,7 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = JambaModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

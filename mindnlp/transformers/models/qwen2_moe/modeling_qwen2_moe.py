@@ -456,9 +456,9 @@ class Qwen2MoeMLP(nn.Module):
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -549,10 +549,10 @@ class Qwen2MoeAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=True)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
         self.rotary_emb = Qwen2MoeRotaryEmbedding(
             self.head_dim,
@@ -719,13 +719,13 @@ class Qwen2MoeSparseMoeBlock(nn.Module):
         self.norm_topk_prob = config.norm_topk_prob
 
         # gating
-        self.gate = nn.Linear(config.hidden_size, config.num_experts, has_bias=False)
+        self.gate = nn.Linear(config.hidden_size, config.num_experts, bias=False)
         self.experts = nn.ModuleList(
             [Qwen2MoeMLP(config, intermediate_size=config.moe_intermediate_size) for _ in range(self.num_experts)]
         )
 
         self.shared_expert = Qwen2MoeMLP(config, intermediate_size=config.shared_expert_intermediate_size)
-        self.shared_expert_gate = nn.Linear(config.hidden_size, 1, has_bias=False)
+        self.shared_expert_gate = nn.Linear(config.hidden_size, 1, bias=False)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -948,7 +948,7 @@ class Qwen2MoePreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1250,7 +1250,7 @@ class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
         super().__init__(config)
         self.model = Qwen2MoeModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.router_aux_loss_coef = config.router_aux_loss_coef
         self.num_experts = config.num_experts
@@ -1623,7 +1623,7 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Qwen2MoeModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

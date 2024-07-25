@@ -55,7 +55,7 @@ class MambaDense(nn.Linear):
         >>>     if len(x_shape) != 2:
         >>>         x = x.reshape(-1, x.shape[-1])
         >>>     x = ops.matmul(x, self.weight.T)
-        >>>     if self.has_bias:
+        >>>     if self.bias:
         >>>         x = ops.add(x, self.bias)
         >>>     if len(x_shape) != 2:
         >>>         out_shape = x_shape[:-1] + (x.shape[-1], )
@@ -83,7 +83,7 @@ class MambaDense(nn.Linear):
         if len(x_shape) != 2:
             x = x.reshape(-1, x.shape[-1])
         x = ops.matmul(x, self.weight.T)
-        if self.has_bias:
+        if self.bias:
             x = ops.add(x, self.bias)
         if len(x_shape) != 2:
             out_shape = x_shape[:-1] + (x.shape[-1],)
@@ -133,7 +133,7 @@ class MSMambaMixer(nn.Module):
         self.conv1d = nn.Conv1d(
             in_channels=self.intermediate_size,
             out_channels=self.intermediate_size,
-            has_bias=config.use_conv_bias,
+            bias=config.use_conv_bias,
             kernel_size=config.conv_kernel,
             group=self.intermediate_size,
             padding=config.conv_kernel - 1,
@@ -144,11 +144,11 @@ class MSMambaMixer(nn.Module):
         self.act = ACT2FN[config.hidden_act]
 
         # projection of the input hidden states
-        self.in_proj = MambaDense(self.hidden_size, self.intermediate_size * 2, has_bias=config.use_bias)
+        self.in_proj = MambaDense(self.hidden_size, self.intermediate_size * 2, bias=config.use_bias)
         # selective projection used to make dt, B and C input dependant
-        self.x_proj = MambaDense(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, has_bias=False)
+        self.x_proj = MambaDense(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, bias=False)
         # time step projection (discretization)
-        self.dt_proj = MambaDense(self.time_step_rank, self.intermediate_size, has_bias=True)
+        self.dt_proj = MambaDense(self.time_step_rank, self.intermediate_size, bias=True)
 
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded
@@ -157,7 +157,7 @@ class MSMambaMixer(nn.Module):
 
         self.A_log = Parameter(ops.log(A))
         self.D = Parameter(ops.ones(self.intermediate_size))
-        self.out_proj = MambaDense(self.intermediate_size, self.hidden_size, has_bias=config.use_bias)
+        self.out_proj = MambaDense(self.intermediate_size, self.hidden_size, bias=config.use_bias)
         self.use_bias = config.use_bias
 
     # fmt: off
@@ -716,7 +716,7 @@ class MSMambaForCausalLM(MSMambaPreTrainedModel):
         """
         super().__init__(config)
         self.backbone = MSMambaModel(config)
-        self.lm_head = MambaDense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = MambaDense(config.hidden_size, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 

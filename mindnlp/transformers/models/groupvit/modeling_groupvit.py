@@ -337,7 +337,7 @@ class GroupViTPatchEmbeddings(nn.Module):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,has_bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,bias=True)
 
     def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -1232,16 +1232,16 @@ class GroupViTModel(GroupViTPreTrainedModel):
         self.vision_model = GroupViTVisionTransformer(vision_config)
 
         self.visual_projection = nn.SequentialCell(
-            nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, has_bias=True),
+            nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Linear(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
         self.text_projection = nn.SequentialCell(
-            nn.Linear(self.text_embed_dim, self.projection_intermediate_dim, has_bias=True),
+            nn.Linear(self.text_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Linear(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
         self.logit_scale = Parameter(mindspore.Tensor([self.config.logit_scale_init_value]))
 

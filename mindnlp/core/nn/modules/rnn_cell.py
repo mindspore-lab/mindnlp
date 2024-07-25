@@ -87,15 +87,15 @@ def _gru_cell(inputs, hidden, w_ih, w_hh, b_ih, b_hh):
 
 class RNNCellBase(Module):
     """Basic class for RNN Cells"""
-    def __init__(self, input_size: int, hidden_size: int, has_bias: bool, num_chunks: int,
+    def __init__(self, input_size: int, hidden_size: int, bias: bool, num_chunks: int,
                  dtype=mindspore.float32):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.has_bias = has_bias
+        self.bias = bias
         self.weight_ih = Parameter(Tensor(np.random.randn(num_chunks * hidden_size, input_size), dtype=dtype))
         self.weight_hh = Parameter(Tensor(np.random.randn(num_chunks * hidden_size, hidden_size), dtype=dtype))
-        if has_bias:
+        if bias:
             self.bias_ih = Parameter(Tensor(np.random.randn(num_chunks * hidden_size), dtype=dtype))
             self.bias_hh = Parameter(Tensor(np.random.randn(num_chunks * hidden_size), dtype=dtype))
         else:
@@ -124,7 +124,7 @@ class RNNCell(RNNCellBase):
     Args:
         input_size (int): Number of features of input.
         hidden_size (int):  Number of features of hidden layer.
-        has_bias (bool): Whether the cell has bias :math:`b_{ih}` and :math:`b_{hh}`. Default: ``True`` .
+        bias (bool): Whether the cell has bias :math:`b_{ih}` and :math:`b_{hh}`. Default: ``True`` .
         nonlinearity (str): The non-linearity to use. Can be either ``"tanh"`` or ``"relu"`` .
             Default: ``"tanh"`` .
         dtype (:class:`mindspore.dtype`): Dtype of Parameters. Default: ``mstype.float32`` .
@@ -138,7 +138,7 @@ class RNNCell(RNNCellBase):
 
     Raises:
         TypeError: If `input_size` or `hidden_size` is not an int or not greater than 0.
-        TypeError: If `has_bias` is not a bool.
+        TypeError: If `bias` is not a bool.
         ValueError: If `nonlinearity` is not in ['tanh', 'relu'].
 
     Supported Platforms:
@@ -159,9 +159,9 @@ class RNNCell(RNNCellBase):
     """
     _non_linearity = ['tanh', 'relu']
 
-    def __init__(self, input_size: int, hidden_size: int, has_bias: bool = True, nonlinearity: str = "tanh",
+    def __init__(self, input_size: int, hidden_size: int, bias: bool = True, nonlinearity: str = "tanh",
                  dtype=mindspore.float32):
-        super().__init__(input_size, hidden_size, has_bias, num_chunks=1, dtype=dtype)
+        super().__init__(input_size, hidden_size, bias, num_chunks=1, dtype=dtype)
         self.nonlinearity = nonlinearity
 
     def forward(self, x, hx):
@@ -202,7 +202,7 @@ class LSTMCell(RNNCellBase):
     Args:
         input_size (int): Number of features of input.
         hidden_size (int):  Number of features of hidden layer.
-        has_bias (bool): Whether the cell has bias `b_{ih}` and `b_{hh}`. Default: ``True`` .
+        bias (bool): Whether the cell has bias `b_{ih}` and `b_{hh}`. Default: ``True`` .
         dtype (:class:`mindspore.dtype`): Dtype of Parameters. Default: ``mstype.float32`` .
 
     Inputs:
@@ -215,7 +215,7 @@ class LSTMCell(RNNCellBase):
 
     Raises:
         TypeError: If `input_size`, `hidden_size` is not an int.
-        TypeError: If `has_bias` is not a bool.
+        TypeError: If `bias` is not a bool.
 
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
@@ -234,9 +234,9 @@ class LSTMCell(RNNCellBase):
         >>> print(output[0][0].shape)
         (3, 16)
     """
-    def __init__(self, input_size: int, hidden_size: int, has_bias: bool = True,
+    def __init__(self, input_size: int, hidden_size: int, bias: bool = True,
                  dtype=mindspore.float32):
-        super().__init__(input_size, hidden_size, has_bias, num_chunks=4, dtype=dtype)
+        super().__init__(input_size, hidden_size, bias, num_chunks=4, dtype=dtype)
         self.support_non_tensor_inputs = True
 
     def forward(self, x, hx):
@@ -267,7 +267,7 @@ class GRUCell(RNNCellBase):
     Args:
         input_size (int): Number of features of input.
         hidden_size (int):  Number of features of hidden layer.
-        has_bias (bool): Whether the cell has bias :math:`b_{in}` and :math:`b_{hn}`. Default: ``True`` .
+        bias (bool): Whether the cell has bias :math:`b_{in}` and :math:`b_{hn}`. Default: ``True`` .
         dtype (:class:`mindspore.dtype`): Dtype of Parameters. Default: ``mstype.float32`` .
 
     Inputs:
@@ -279,7 +279,7 @@ class GRUCell(RNNCellBase):
 
     Raises:
         TypeError: If `input_size`, `hidden_size` is not an int.
-        TypeError: If `has_bias` is not a bool.
+        TypeError: If `bias` is not a bool.
 
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
@@ -297,9 +297,9 @@ class GRUCell(RNNCellBase):
         >>> print(output[0].shape)
         (3, 16)
     """
-    def __init__(self, input_size: int, hidden_size: int, has_bias: bool = True,
+    def __init__(self, input_size: int, hidden_size: int, bias: bool = True,
                  dtype=mindspore.float32):
-        super().__init__(input_size, hidden_size, has_bias, num_chunks=3, dtype=dtype)
+        super().__init__(input_size, hidden_size, bias, num_chunks=3, dtype=dtype)
 
     def forward(self, x, hx):
         return _gru_cell(x, hx, self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh)

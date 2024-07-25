@@ -266,10 +266,10 @@ class RwkvSelfAttention(nn.Module):
         self.time_mix_receptance = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
 
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
-        self.key = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
-        self.value = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
-        self.receptance = nn.Linear(hidden_size, attention_hidden_size, has_bias=False)
-        self.output = nn.Linear(attention_hidden_size, hidden_size, has_bias=False)
+        self.key = nn.Linear(hidden_size, attention_hidden_size, bias=False)
+        self.value = nn.Linear(hidden_size, attention_hidden_size, bias=False)
+        self.receptance = nn.Linear(hidden_size, attention_hidden_size, bias=False)
+        self.output = nn.Linear(attention_hidden_size, hidden_size, bias=False)
 
     def extract_key_value(self, hidden, state=None):
         """extrac key value"""
@@ -369,9 +369,9 @@ class RwkvFeedForward(nn.Module):
         self.time_mix_key = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_key')
         self.time_mix_receptance =Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
 
-        self.key = nn.Linear(hidden_size, intermediate_size, has_bias=False)
-        self.receptance = nn.Linear(hidden_size, hidden_size, has_bias=False)
-        self.value = nn.Linear(intermediate_size, hidden_size, has_bias=False)
+        self.key = nn.Linear(hidden_size, intermediate_size, bias=False)
+        self.receptance = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.value = nn.Linear(intermediate_size, hidden_size, bias=False)
 
     def forward(self, hidden, state=None):
         """
@@ -842,7 +842,7 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         """
         super().__init__(config)
         self.rwkv = RwkvModel(config)
-        self.head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

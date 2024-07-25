@@ -248,7 +248,7 @@ class CLIPVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -1381,8 +1381,8 @@ class CLIPModel(CLIPPreTrainedModel):
         self.text_model = CLIPTextTransformer(text_config)
         self.vision_model = CLIPVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = mindspore.tensor([self.config.logit_scale_init_value])
 
         # Initialize weights and apply final processing
@@ -1629,7 +1629,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
 
         self.text_model = CLIPTextTransformer(config)
 
-        self.text_projection = nn.Linear(config.hidden_size, config.projection_dim, has_bias=False)
+        self.text_projection = nn.Linear(config.hidden_size, config.projection_dim, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1776,7 +1776,7 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
 
         self.vision_model = CLIPVisionTransformer(config)
 
-        self.visual_projection = nn.Linear(config.hidden_size, config.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(config.hidden_size, config.projection_dim, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -60,7 +60,7 @@ provides a method for returning an extra representation string for the module.
         assert top_k <= num_experts
         self.top_k = top_k
 
-        self.layer = nn.Linear(input_size, num_experts, has_bias=False)
+        self.layer = nn.Linear(input_size, num_experts, bias=False)
 
     def extra_repr(self):
         """

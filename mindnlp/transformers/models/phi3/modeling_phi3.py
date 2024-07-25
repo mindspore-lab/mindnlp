@@ -507,8 +507,8 @@ class Phi3MLP(nn.Module):
         super().__init__()
 
         self.config = config
-        self.gate_up_proj = nn.Linear(config.hidden_size, 2 * config.intermediate_size, has_bias=False)
-        self.down_proj = nn.Linear(config.intermediate_size, config.hidden_size, has_bias=False)
+        self.gate_up_proj = nn.Linear(config.hidden_size, 2 * config.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
 
         self.activation_fn = ACT2FN[config.hidden_act]
 
@@ -620,8 +620,8 @@ class Phi3Attention(nn.Module):
             )
 
         op_size = self.num_heads * self.head_dim + 2 * (self.num_key_value_heads * self.head_dim)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
-        self.qkv_proj = nn.Linear(self.hidden_size, op_size, has_bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
+        self.qkv_proj = nn.Linear(self.hidden_size, op_size, bias=False)
         self._init_rope()
 
     def _init_rope(self):
@@ -1370,7 +1370,7 @@ class Phi3ForCausalLM(Phi3PreTrainedModel):
         super().__init__(config)
         self.model = Phi3Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1714,7 +1714,7 @@ class Phi3ForSequenceClassification(Phi3PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Phi3Model(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

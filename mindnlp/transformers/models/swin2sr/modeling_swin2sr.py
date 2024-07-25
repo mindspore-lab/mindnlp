@@ -166,7 +166,7 @@ class Swin2SRPatchEmbeddings(nn.Module):
         self.patches_resolution = patches_resolution
         self.num_patches = patches_resolution[0] * patches_resolution[1]
 
-        self.projection = nn.Conv2d(num_channels, config.embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, config.embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
         self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=1e-5) if normalize_patches else None
 
     def forward(self, embeddings: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
@@ -213,7 +213,7 @@ class Swin2SRPatchMerging(nn.Module):
         super().__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.reduction = nn.Linear(4 * dim, 2 * dim, has_bias=False)
+        self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
         self.norm = norm_layer(2 * dim)
 
     def maybe_pad(self, input_feature, height, width):
@@ -269,7 +269,7 @@ class Swin2SRSelfAttention(nn.Module):
         self.logit_scale = mindspore.Parameter(ops.log(10 * ops.ones((num_heads, 1, 1))))
         # mlp to generate continuous relative position bias
         self.continuous_position_bias_mlp = nn.SequentialCell(
-            nn.Linear(2, 512, has_bias=True), nn.ReLU(), nn.Linear(512, num_heads, has_bias=False)
+            nn.Linear(2, 512, bias=True), nn.ReLU(), nn.Linear(512, num_heads, bias=False)
         )
 
         # get relative_coords_table
@@ -305,9 +305,9 @@ class Swin2SRSelfAttention(nn.Module):
         relative_position_index = relative_coords.sum(-1)
         self.relative_position_index = relative_position_index
 
-        self.query = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(self.all_head_size, self.all_head_size, has_bias=False)
-        self.value = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
@@ -613,15 +613,15 @@ class Swin2SRStage(nn.Module):
         )
 
         if config.resi_connection == "1conv":
-            self.conv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.conv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, bias=True)
         elif config.resi_connection == "3conv":
             # to save parameters and memory
             self.conv = nn.SequentialCell(
-                nn.Conv2d(dim, dim // 4, 3, 1, pad_mode='pad', padding=1, has_bias=True),
+                nn.Conv2d(dim, dim // 4, 3, 1, pad_mode='pad', padding=1, bias=True),
                 nn.LeakyReLU(alpha=0.2),
-                nn.Conv2d(dim // 4, dim // 4, 1, 1, pad_mode='valid', has_bias=True),
+                nn.Conv2d(dim // 4, dim // 4, 1, 1, pad_mode='valid', bias=True),
                 nn.LeakyReLU(alpha=0.2),
-                nn.Conv2d(dim // 4, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True),
+                nn.Conv2d(dim // 4, dim, 3, 1, pad_mode='pad', padding=1, bias=True),
             )
 
         self.patch_embed = Swin2SRPatchEmbeddings(config, normalize_patches=False)
@@ -769,13 +769,13 @@ class Swin2SRModel(Swin2SRPreTrainedModel):
             self.mean = ops.zeros((1, 1, 1, 1))
         self.img_range = config.img_range
 
-        self.first_convolution = nn.Conv2d(config.num_channels, config.embed_dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.first_convolution = nn.Conv2d(config.num_channels, config.embed_dim, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.embeddings = Swin2SREmbeddings(config)
         self.encoder = Swin2SREncoder(config, grid_size=self.embeddings.patch_embeddings.patches_resolution)
 
         self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=config.layer_norm_eps)
         self.patch_unembed = Swin2SRPatchUnEmbeddings(config)
-        self.conv_after_body = nn.Conv2d(config.embed_dim, config.embed_dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_after_body = nn.Conv2d(config.embed_dim, config.embed_dim, 3, 1, pad_mode='pad', padding=1, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -879,12 +879,12 @@ class Upsample(nn.Module):
         if (scale & (scale - 1)) == 0:
             # scale = 2^n
             for i in range(int(math.log(scale, 2))):
-                self.insert_child_to_cell(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True))
+                self.insert_child_to_cell(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True))
                 self.insert_child_to_cell(f"pixelshuffle_{i}", nn.PixelShuffle(2))
-                # self.add_module(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True))
+                # self.add_module(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True))
                 # self.add_module(f"pixelshuffle_{i}", nn.PixelShuffle(2))
         elif scale == 3:
-            self.convolution = nn.Conv2d(num_features, 9 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.convolution = nn.Conv2d(num_features, 9 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
             self.pixelshuffle = nn.PixelShuffle(3)
         else:
             raise ValueError(f"Scale {scale} is not supported. Supported scales: 2^n and 3.")
@@ -919,7 +919,7 @@ class UpsampleOneStep(nn.Module):
     def __init__(self, scale, in_channels, out_channels):
         super().__init__()
 
-        self.conv = nn.Conv2d(in_channels, (scale**2) * out_channels, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv = nn.Conv2d(in_channels, (scale**2) * out_channels, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.pixel_shuffle = nn.PixelShuffle(scale)
 
     def forward(self, x):
@@ -932,10 +932,10 @@ class UpsampleOneStep(nn.Module):
 class PixelShuffleUpsampler(nn.Module):
     def __init__(self, config, num_features):
         super().__init__()
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
         self.upsample = Upsample(config.upscale, num_features)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
     def forward(self, sequence_output):
         x = self.conv_before_upsample(sequence_output)
@@ -952,12 +952,12 @@ class NearestConvUpsampler(nn.Module):
         if config.upscale != 4:
             raise ValueError("The nearest+conv upsampler only supports an upscale factor of 4 at the moment.")
 
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
-        self.conv_up1 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_up2 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_hr = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_up1 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_up2 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_hr = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.lrelu = nn.LeakyReLU(alpha=0.2)
 
     def forward(self, sequence_output):
@@ -980,13 +980,13 @@ class PixelShuffleAuxUpsampler(nn.Module):
         super().__init__()
 
         self.upscale = config.upscale
-        self.conv_bicubic = nn.Conv2d(config.num_channels, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_bicubic = nn.Conv2d(config.num_channels, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
-        self.conv_aux = nn.Conv2d(num_features, config.num_channels, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_after_aux = nn.SequentialCell(nn.Conv2d(3, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True), nn.LeakyReLU(alpha=0.01))
+        self.conv_aux = nn.Conv2d(num_features, config.num_channels, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_after_aux = nn.SequentialCell(nn.Conv2d(3, num_features, 3, 1, pad_mode='pad', padding=1, bias=True), nn.LeakyReLU(alpha=0.01))
         self.upsample = Upsample(config.upscale, num_features)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
     def forward(self, sequence_output, bicubic, height, width):
         bicubic = self.conv_bicubic(bicubic)
@@ -1026,7 +1026,7 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
             self.upsample = NearestConvUpsampler(config, num_features)
         else:
             # for image denoising and JPEG compression artifact reduction
-            self.final_convolution = nn.Conv2d(config.embed_dim, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.final_convolution = nn.Conv2d(config.embed_dim, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()

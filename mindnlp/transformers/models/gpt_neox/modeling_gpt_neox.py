@@ -95,7 +95,7 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
@@ -190,8 +190,8 @@ class GPTNeoXAttention(nn.Module):
         self._init_rope()
 
         self.norm_factor = self.head_size ** -0.5
-        self.query_key_value = nn.Linear(config.hidden_size, 3 * config.hidden_size, has_bias=config.attention_bias)
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size, has_bias=config.attention_bias)
+        self.query_key_value = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=config.attention_bias)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.attention_bias)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self.is_causal = True
 
@@ -1062,7 +1062,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         super().__init__(config)
 
         self.gpt_neox = GPTNeoXModel(config)
-        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1290,7 +1290,7 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.gpt_neox = GPTNeoXModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -310,7 +310,7 @@ class WavLMNoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -333,7 +333,7 @@ class WavLMLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
@@ -362,7 +362,7 @@ class WavLMGroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -387,7 +387,7 @@ class WavLMPositionalConvEmbedding(nn.Module):
             padding=config.num_conv_pos_embeddings // 2,
             group=config.num_conv_pos_embedding_groups,
             pad_mode='pad',
-            has_bias=True
+            bias=True
         )
 
         weight_norm = mindnlp.modules.weight_norm.weight_norm
@@ -1397,7 +1397,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     module.bias.data.zero_()
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             # module.bias.data.zero_()
@@ -1412,7 +1412,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     nn.init.uniform_(module.bias, a=-k, b=k)
             cell.weight.set_data(
                 initializer(HeNormal(),cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k),
                                                     cell.bias.shape, cell.bias.dtype))

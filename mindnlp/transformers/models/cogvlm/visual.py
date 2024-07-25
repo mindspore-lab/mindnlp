@@ -32,7 +32,7 @@ class PatchEmbedding(nn.Module):
         """
         super().__init__()
         self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size,
-                              stride=config.patch_size,pad_mode='valid',has_bias=True)
+                              stride=config.patch_size,pad_mode='valid',bias=True)
         self.cls_embedding = mindspore.Parameter(ops.zeros(1, config.hidden_size))
         self.position_embedding = nn.Embedding(config.num_positions, config.hidden_size)
 
@@ -372,13 +372,13 @@ class GLU(nn.Module):
             None.
         """
         super().__init__()
-        self.linear_proj = nn.Linear(in_features, config.hidden_size, has_bias=False)
+        self.linear_proj = nn.Linear(in_features, config.hidden_size, bias=False)
         self.norm1 = nn.LayerNorm(config.hidden_size)
         self.act1 = nn.GELU(approximate=False)
         self.act2 = ops.silu
-        self.dense_h_to_4h = nn.Linear(config.hidden_size, config.intermediate_size, has_bias=False)
-        self.gate_proj = nn.Linear(config.hidden_size, config.intermediate_size, has_bias=False)
-        self.dense_4h_to_h = nn.Linear(config.intermediate_size, config.hidden_size, has_bias=False)
+        self.dense_h_to_4h = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_proj = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.dense_4h_to_h = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x):
         """

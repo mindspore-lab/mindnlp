@@ -269,7 +269,7 @@ class FastSpeech2ConformerBatchNormConvLayer(nn.Module):
             stride=1,
             pad_mode='pad',
             padding=(config.speech_decoder_postnet_kernel - 1) // 2,
-            has_bias=False,
+            bias=False,
         )
         self.batch_norm = nn.BatchNorm1d(out_conv_dim)
 
@@ -437,7 +437,7 @@ class FastSpeech2ConformerAttention(nn.Module):
         self.dropout = nn.Dropout(p=module_config["attention_dropout_rate"])
 
         # linear transformation for positional encoding
-        self.linear_pos = nn.Linear(self.hidden_size, self.hidden_size, has_bias=False)
+        self.linear_pos = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         self.pos_bias_u = Parameter(ops.zeros(self.num_heads, self.head_dim))
@@ -534,12 +534,12 @@ class FastSpeech2ConformerConvolutionModule(nn.Module):
         # kernel_size should be an odd number for 'SAME' padding
         channels = config.hidden_size
         kernel_size = module_config["kernel_size"]
-        self.pointwise_conv1 = nn.Conv1d(channels, 2 * channels, kernel_size=1, stride=1, pad_mode='pad', padding=0, has_bias=True)
+        self.pointwise_conv1 = nn.Conv1d(channels, 2 * channels, kernel_size=1, stride=1, pad_mode='pad', padding=0, bias=True)
         self.depthwise_conv = nn.Conv1d(
-            channels, channels, kernel_size, stride=1, pad_mode='pad', padding=(kernel_size - 1) // 2, group=channels, has_bias=True
+            channels, channels, kernel_size, stride=1, pad_mode='pad', padding=(kernel_size - 1) // 2, group=channels, bias=True
         )
         self.norm = nn.BatchNorm1d(channels)
-        self.pointwise_conv2 = nn.Conv1d(channels, channels, kernel_size=1, stride=1, pad_mode='pad', padding=0, has_bias=True)
+        self.pointwise_conv2 = nn.Conv1d(channels, channels, kernel_size=1, stride=1, pad_mode='pad', padding=0, bias=True)
 
     def forward(self, hidden_states):
         """

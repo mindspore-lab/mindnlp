@@ -334,7 +334,7 @@ class SwinPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
         self.grid_size = (image_size[0] // patch_size[0], image_size[1] // patch_size[1])
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def maybe_pad(self, pixel_values, height, width):
         if width % self.patch_size[1] != 0:
@@ -378,7 +378,7 @@ class SwinPatchMerging(nn.Module):
         super().__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.reduction = nn.Linear(4 * dim, 2 * dim, has_bias=False)
+        self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
         self.norm = norm_layer(4 * dim)
 
     def maybe_pad(self, input_feature, height, width):
@@ -483,9 +483,9 @@ class SwinSelfAttention(nn.Module):
         relative_position_index = relative_coords.sum(-1)
         self.relative_position_index = relative_position_index
 
-        self.query = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 

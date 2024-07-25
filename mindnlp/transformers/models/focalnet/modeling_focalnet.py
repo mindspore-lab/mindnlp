@@ -236,10 +236,10 @@ class FocalNetPatchEmbeddings(nn.Module):
                 padding = 1
                 stride = 2
             self.projection = nn.Conv2d(
-                num_channels, embed_dim, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode='pad', has_bias=True
+                num_channels, embed_dim, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode='pad', bias=True
             )
         else:
-            self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+            self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
         if add_norm:
             self.norm = nn.LayerNorm((embed_dim,), epsilon=config.layer_norm_eps)
@@ -322,8 +322,8 @@ class FocalNetModulation(nn.Module):
         self.use_post_layernorm_in_modulation = config.use_post_layernorm_in_modulation
         self.normalize_modulator = config.normalize_modulator
 
-        self.projection_in = nn.Linear(dim, 2 * dim + (self.focal_level + 1), has_bias=bias)
-        self.projection_context = nn.Conv2d(dim, dim, kernel_size=1, stride=1, has_bias=bias)
+        self.projection_in = nn.Linear(dim, 2 * dim + (self.focal_level + 1), bias=bias)
+        self.projection_context = nn.Conv2d(dim, dim, kernel_size=1, stride=1, bias=bias)
 
         self.activation = nn.GELU()
         self.projection_out = nn.Linear(dim, dim)
@@ -336,7 +336,7 @@ class FocalNetModulation(nn.Module):
             self.focal_layers.append(
                 nn.SequentialCell(
                     nn.Conv2d(
-                        dim, dim, kernel_size=kernel_size, stride=1, group=dim, padding=kernel_size // 2, pad_mode='pad', has_bias=False
+                        dim, dim, kernel_size=kernel_size, stride=1, group=dim, padding=kernel_size // 2, pad_mode='pad', bias=False
                     ),
                     nn.GELU(),
                 )
@@ -745,7 +745,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
                 in_channels=num_features,
                 out_channels=config.encoder_stride**2 * config.num_channels,
                 kernel_size=1,
-                has_bias=True
+                bias=True
             ),
             nn.PixelShuffle(config.encoder_stride),
         )
