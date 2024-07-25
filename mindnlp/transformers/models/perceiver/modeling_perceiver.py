@@ -211,8 +211,8 @@ class PerceiverSelfAttention(nn.Module):
         self.v_channels_per_head = self.v_channels // num_heads
 
         # Layer normalization
-        self.layernorm1 = nn.LayerNorm(q_dim, epsilon=1e-5)
-        self.layernorm2 = nn.LayerNorm(kv_dim, epsilon=1e-5) if is_cross_attention else nn.Identity()
+        self.layernorm1 = nn.LayerNorm(q_dim, eps=1e-5)
+        self.layernorm2 = nn.LayerNorm(kv_dim, eps=1e-5) if is_cross_attention else nn.Identity()
 
         # Projection matrices
         self.query = nn.Linear(q_dim, qk_channels)

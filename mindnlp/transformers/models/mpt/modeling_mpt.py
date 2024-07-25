@@ -306,14 +306,14 @@ class MptBlock(nn.Module):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.norm_1 = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_1.bias = None
 
         self.num_heads = config.n_heads
         self.attn = MptAttention(config)
 
-        self.norm_2 = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_2.bias = None
 
@@ -516,7 +516,7 @@ class MptModel(MptPreTrainedModel):
         self.blocks = nn.ModuleList([MptBlock(config) for _ in range(config.n_layers)])
 
         # Final Layer Norm
-        self.norm_f = nn.LayerNorm(self.hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_f = nn.LayerNorm(self.hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_f.bias = None
 

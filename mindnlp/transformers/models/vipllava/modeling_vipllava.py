@@ -120,7 +120,7 @@ class VipLlavaMultiModalProjector(nn.Module):
         """
         super().__init__()
         self.projector_layernorm = nn.LayerNorm(
-            len(config.vision_feature_layers) * config.vision_config.hidden_size, epsilon=config.projector_layernorm_eps
+            len(config.vision_feature_layers) * config.vision_config.hidden_size, eps=config.projector_layernorm_eps
         )
 
         self.linear_1 = nn.Linear(

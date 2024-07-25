@@ -376,8 +376,8 @@ class VideoMAELayer(nn.Module):
         self.attention = VIDEOMAE_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = VideoMAEIntermediate(config)
         self.output = VideoMAEOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -497,7 +497,7 @@ class VideoMAEModel(VideoMAEPreTrainedModel):
         if config.use_mean_pooling:
             self.layernorm = None
         else:
-            self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+            self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -781,7 +781,7 @@ class VideoMAEForVideoClassification(VideoMAEPreTrainedModel):
         self.videomae = VideoMAEModel(config)
 
         # Classifier head
-        self.fc_norm = nn.LayerNorm([config.hidden_size], epsilon=1e-5) if config.use_mean_pooling else None
+        self.fc_norm = nn.LayerNorm([config.hidden_size], eps=1e-5) if config.use_mean_pooling else None
         self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing

@@ -709,11 +709,11 @@ class SEWEncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(p=config.hidden_dropout)
         self.layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.feed_forward = SEWFeedForward(config)
         self.final_layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
     def forward(self, hidden_states, attention_mask=None, output_attentions=False):
@@ -745,7 +745,7 @@ class SEWEncoder(nn.Module):
         self.pos_conv_embed = SEWPositionalConvEmbedding(config)
         self.pool = nn.AvgPool1d(config.squeeze_factor, config.squeeze_factor)
         self.layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
         self.layers = nn.ModuleList(
@@ -978,7 +978,7 @@ class SEWModel(SEWPreTrainedModel):
         self.config = config
         self.feature_extractor = SEWFeatureEncoder(config)
         self.layer_norm = nn.LayerNorm(
-            [config.conv_dim[-1]], epsilon=config.layer_norm_eps
+            [config.conv_dim[-1]], eps=config.layer_norm_eps
         )
 
         self.project_features = config.conv_dim[-1] != config.hidden_size

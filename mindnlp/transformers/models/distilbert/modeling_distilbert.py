@@ -178,7 +178,7 @@ class Embeddings(nn.Module):
                 n_pos=config.max_position_embeddings, dim=config.dim, out=self.position_embeddings.weight
             )
 
-        self.LayerNorm = nn.LayerNorm(config.dim, epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm(config.dim, eps=1e-12)
         self.dropout = nn.Dropout(p=config.dropout)
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
@@ -534,10 +534,10 @@ class TransformerBlock(nn.Module):
             raise ValueError(f"config.n_heads {config.n_heads} must divide config.dim {config.dim} evenly")
 
         self.attention = DISTILBERT_ATTENTION_CLASSES["eager"](config)
-        self.sa_layer_norm = nn.LayerNorm(normalized_shape=config.dim, epsilon=1e-12)
+        self.sa_layer_norm = nn.LayerNorm(normalized_shape=config.dim, eps=1e-12)
 
         self.ffn = FFN(config)
-        self.output_layer_norm = nn.LayerNorm(normalized_shape=config.dim, epsilon=1e-12)
+        self.output_layer_norm = nn.LayerNorm(normalized_shape=config.dim, eps=1e-12)
 
     def forward(
         self,
@@ -1014,7 +1014,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
 
         self.distilbert = DistilBertModel(config)
         self.vocab_transform = nn.Linear(config.dim, config.dim)
-        self.vocab_layer_norm = nn.LayerNorm(config.dim, epsilon=1e-12)
+        self.vocab_layer_norm = nn.LayerNorm(config.dim, eps=1e-12)
         self.vocab_projector = nn.Linear(config.dim, config.vocab_size)
 
         # Initialize weights and apply final processing

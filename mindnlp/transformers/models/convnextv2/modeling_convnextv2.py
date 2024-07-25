@@ -321,7 +321,7 @@ class ConvNextV2Model(ConvNextV2PreTrainedModel):
         self.encoder = ConvNextV2Encoder(config)
 
         # final layernorm layer
-        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()

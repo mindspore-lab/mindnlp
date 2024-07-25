@@ -354,12 +354,12 @@ class Dinov2Layer(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.attention = Dinov2Attention(config)
         self.layer_scale1 = Dinov2LayerScale(config)
         self.drop_path = Dinov2DropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
 
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         if config.use_swiglu_ffn:
             self.mlp = Dinov2SwiGLUFFN(config)
@@ -493,7 +493,7 @@ class Dinov2Model(Dinov2PreTrainedModel):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -653,7 +653,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()

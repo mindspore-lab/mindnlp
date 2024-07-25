@@ -82,7 +82,7 @@ class GitEmbeddings(nn.Module):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
@@ -248,7 +248,7 @@ class GitSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -335,7 +335,7 @@ class GitOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -677,9 +677,9 @@ class GitVisionEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = GitVisionAttention(config)
-        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
         self.mlp = GitVisionMLP(config)
-        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -828,9 +828,9 @@ class GitVisionTransformer(nn.Module):
         embed_dim = config.hidden_size
 
         self.embeddings = GitVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
         self.encoder = GitVisionEncoder(config)
-        self.post_layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -936,7 +936,7 @@ class GitProjection(nn.Module):
         self.config = config
         self.visual_projection = nn.SequentialCell(
             nn.Linear(config.vision_config.hidden_size, config.hidden_size),
-            nn.LayerNorm([config.hidden_size], epsilon=config.vision_config.layer_norm_eps),
+            nn.LayerNorm([config.hidden_size], eps=config.vision_config.layer_norm_eps),
         )
 
     def forward(self, embeddings: mindspore.Tensor) -> mindspore.Tensor:

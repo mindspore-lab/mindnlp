@@ -385,9 +385,9 @@ class Kosmos2VisionEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = Kosmos2VisionAttention(config)
-        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
         self.mlp = Kosmos2VisionMLP(config)
-        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -537,9 +537,9 @@ class Kosmos2VisionTransformer(nn.Module):
         embed_dim = config.hidden_size
 
         self.embeddings = Kosmos2VisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
         self.encoder = Kosmos2VisionEncoder(config)
-        self.post_layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -709,7 +709,7 @@ class KosmosTextAttention(nn.Module):
         # End opy
         self.inner_attn_ln = None
         if add_inner_attn_layernorm:
-            self.inner_attn_ln = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+            self.inner_attn_ln = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
     def _shape(self, projection: mindspore.Tensor) -> mindspore.Tensor:
         new_projection_shape = projection.shape[:-1] + (self.num_heads, self.head_dim)
@@ -803,7 +803,7 @@ class Kosmos2TextFFN(nn.Module):
         self.fc1 = nn.Linear(config.embed_dim, config.ffn_dim)
         self.fc2 = nn.Linear(config.ffn_dim, config.embed_dim)
 
-        self.ffn_layernorm = nn.LayerNorm([config.ffn_dim], epsilon=config.layer_norm_eps)
+        self.ffn_layernorm = nn.LayerNorm([config.ffn_dim], eps=config.layer_norm_eps)
 
     def forward(self, hidden_states):
         hidden_states = self.activation_fn(self.fc1(hidden_states))
@@ -829,7 +829,7 @@ class Kosmos2TextBlock(nn.Module):
             add_inner_attn_layernorm=True,
         )
         self.dropout = config.dropout
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
         if config.add_cross_attention:
             self.encoder_attn = KosmosTextAttention(
@@ -840,10 +840,10 @@ class Kosmos2TextBlock(nn.Module):
                 is_decoder=True,
                 add_inner_attn_layernorm=False,
             )
-            self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+            self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
         self.ffn = Kosmos2TextFFN(config)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -950,7 +950,7 @@ class Kosmos2TextTransformer(nn.Module):
         )
 
         self.layers = nn.ModuleList([Kosmos2TextBlock(config) for _ in range(config.layers)])
-        self.layer_norm = nn.LayerNorm([config.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.embed_dim], eps=config.layer_norm_eps)
 
         self.gradient_checkpointing = False
 

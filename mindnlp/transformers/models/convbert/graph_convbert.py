@@ -72,7 +72,7 @@ class MSConvBertEmbeddings(nn.Module):
         )
 
         self.LayerNorm = nn.LayerNorm(
-            config.embedding_size, epsilon=config.layer_norm_eps
+            config.embedding_size, eps=config.layer_norm_eps
         )
         self.dropout_p = config.hidden_dropout_prob
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to(
@@ -445,7 +445,7 @@ class MSConvBertSelfOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.dropout_p = config.hidden_dropout_prob
 
     def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
@@ -627,7 +627,7 @@ class MSConvBertOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.dropout_p = config.hidden_dropout_prob
 
     def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:

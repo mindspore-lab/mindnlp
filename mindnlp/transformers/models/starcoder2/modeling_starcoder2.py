@@ -526,8 +526,8 @@ class Starcoder2DecoderLayer(nn.Module):
 
         self.mlp = Starcoder2MLP(config)
 
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
 
     # Copied from transformers.models.mistral.modeling_mistral.MistralDecoderLayer.forward
     def forward(
@@ -670,7 +670,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             [Starcoder2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         # self._attn_implementation = config._attn_implementation
-        self.norm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
+        self.norm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()

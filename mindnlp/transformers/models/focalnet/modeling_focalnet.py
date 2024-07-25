@@ -183,7 +183,7 @@ class FocalNetEmbeddings(nn.Module):
         self.patch_grid = self.patch_embeddings.grid_size
         self.mask_token = Parameter(ops.zeros(1, 1, config.embed_dim)) if use_mask_token else None
 
-        self.norm = nn.LayerNorm((config.embed_dim,), epsilon=config.layer_norm_eps)
+        self.norm = nn.LayerNorm((config.embed_dim,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
     def forward(
@@ -242,7 +242,7 @@ class FocalNetPatchEmbeddings(nn.Module):
             self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
         if add_norm:
-            self.norm = nn.LayerNorm((embed_dim,), epsilon=config.layer_norm_eps)
+            self.norm = nn.LayerNorm((embed_dim,), eps=config.layer_norm_eps)
         else:
             self.norm = None
 
@@ -343,7 +343,7 @@ class FocalNetModulation(nn.Module):
             )
             self.kernel_sizes.append(kernel_size)
         if self.use_post_layernorm_in_modulation:
-            self.layernorm = nn.LayerNorm((dim,), epsilon=config.layer_norm_eps)
+            self.layernorm = nn.LayerNorm((dim,), eps=config.layer_norm_eps)
 
     def forward(self, hidden_state):
         """
@@ -431,7 +431,7 @@ class FocalNetLayer(nn.Module):
         self.drop = config.hidden_dropout_prob
         self.use_post_layernorm = config.use_post_layernorm
 
-        self.norm1 = nn.LayerNorm((dim,), epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm((dim,), eps=config.layer_norm_eps)
         self.modulation = FocalNetModulation(
             config=config,
             index=index,
@@ -440,7 +440,7 @@ class FocalNetLayer(nn.Module):
         )
 
         self.drop_path = FocalNetDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        self.norm2 = nn.LayerNorm((dim,), epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm((dim,), eps=config.layer_norm_eps)
         mlp_hidden_dim = int(dim * config.mlp_ratio)
         self.mlp = FocalNetMlp(config=config, in_features=dim, hidden_features=mlp_hidden_dim, drop=self.drop)
 
@@ -672,7 +672,7 @@ class FocalNetModel(FocalNetPreTrainedModel):
         self.embeddings = FocalNetEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = FocalNetEncoder(config, self.embeddings.patch_grid)
 
-        self.layernorm = nn.LayerNorm((self.num_features,), epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm((self.num_features,), eps=config.layer_norm_eps)
         self.pooler = nn.AdaptiveAvgPool1d(1) if add_pooling_layer else None
 
         # Initialize weights and apply final processing

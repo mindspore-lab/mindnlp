@@ -298,7 +298,7 @@ class MCTCTSelfOutput(nn.Module):
         super().__init__()
         self.config = config
         self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -371,7 +371,7 @@ class MCTCTOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):

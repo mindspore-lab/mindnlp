@@ -368,8 +368,8 @@ class ViTMSNLayer(nn.Module):
         self.attention = VITMSN_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTMSNIntermediate(config)
         self.output = ViTMSNOutput(config)
-        self.layernorm_before = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -491,7 +491,7 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
         self.embeddings = ViTMSNEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = ViTMSNEncoder(config)
 
-        self.layernorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()

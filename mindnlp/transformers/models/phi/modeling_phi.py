@@ -504,10 +504,10 @@ class PhiAttention(nn.Module):
         self.qk_layernorm = config.qk_layernorm
         if self.qk_layernorm:
             self.q_layernorm = nn.LayerNorm(
-                [config.hidden_size // self.num_heads], epsilon=config.layer_norm_eps, elementwise_affine=True
+                [config.hidden_size // self.num_heads], eps=config.layer_norm_eps, elementwise_affine=True
             )
             self.k_layernorm = nn.LayerNorm(
-                [config.hidden_size // self.num_heads], epsilon=config.layer_norm_eps, elementwise_affine=True
+                [config.hidden_size // self.num_heads], eps=config.layer_norm_eps, elementwise_affine=True
             )
 
         self._init_rope()
@@ -730,7 +730,7 @@ class PhiDecoderLayer(nn.Module):
         super().__init__()
         self.self_attn = PHI_ATTENTION_CLASSES["eager"](config, layer_idx=layer_idx)
         self.mlp = PhiMLP(config)
-        self.input_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
     def forward(
@@ -904,7 +904,7 @@ class PhiModel(PhiPreTrainedModel):
         self.layers = nn.ModuleList(
             [PhiDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
-        self.final_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.final_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing

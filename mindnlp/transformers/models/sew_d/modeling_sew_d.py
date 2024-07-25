@@ -662,7 +662,7 @@ class SEWDSelfOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = StableDropout(config.activation_dropout)
 
@@ -974,7 +974,7 @@ class SEWDOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = StableDropout(config.activation_dropout)
         self.config = config
@@ -1038,7 +1038,7 @@ class ConvLayer(nn.Module):
             bias=True,
         )
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
@@ -1098,7 +1098,7 @@ class SEWDTransformerEncoder(nn.Module):
 
         if "layer_norm" in self.norm_rel_ebd:
             self.LayerNorm = nn.LayerNorm(
-                [config.hidden_size], epsilon=config.layer_norm_eps
+                [config.hidden_size], eps=config.layer_norm_eps
             )
 
         self.conv = (
@@ -1402,7 +1402,7 @@ class SEWDModel(SEWDPreTrainedModel):
         self.config = config
         self.feature_extractor = SEWDFeatureEncoder(config)
         self.layer_norm = nn.LayerNorm(
-            [config.conv_dim[-1]], epsilon=config.feature_layer_norm_eps
+            [config.conv_dim[-1]], eps=config.feature_layer_norm_eps
         )
 
         self.project_features = config.conv_dim[-1] != config.hidden_size

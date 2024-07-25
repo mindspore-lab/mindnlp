@@ -83,7 +83,7 @@ class InternLMRMSNorm(nn.Module):
     """
     RMSNorm
     """
-    def __init__(self, hidden_size, epsilon=1e-6):
+    def __init__(self, hidden_size, eps=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
         """
@@ -582,8 +582,8 @@ class InternLMDecoderLayer(nn.Module):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
-        self.post_attention_layernorm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.input_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
             self,
@@ -762,7 +762,7 @@ class InternLMModel(InternLMPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
 
         self.layers = nn.ModuleList([InternLMDecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.norm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         # Initialize weights and apply final processing
         self.gradient_checkpointing = False

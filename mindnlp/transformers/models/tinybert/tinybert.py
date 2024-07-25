@@ -42,7 +42,7 @@ class TinyBertEmbeddings(nn.Module):
         self.token_type_embeddings = nn.Embedding(
             config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, input_ids, token_type_ids=None):
@@ -229,7 +229,7 @@ class TinyBertSelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -345,7 +345,7 @@ class TinyBertOutput(nn.Module):
                 config.intermediate_size, config.hidden_size)
         else:
             self.dense = nn.Linear(intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -578,7 +578,7 @@ class TinyBertPredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
 
     def forward(self, hidden_states):
         """

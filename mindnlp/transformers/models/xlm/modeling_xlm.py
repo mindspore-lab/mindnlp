@@ -559,7 +559,7 @@ class XLMModel(XLMPreTrainedModel):
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
         self.embeddings = nn.Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
-        self.layer_norm_emb = nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps)
+        self.layer_norm_emb = nn.LayerNorm([self.dim], eps=config.layer_norm_eps)
 
         # transformer layers
         attentions = []
@@ -572,12 +572,12 @@ class XLMModel(XLMPreTrainedModel):
 
         for _ in range(self.n_layers):
             attentions.append(MultiHeadAttention(self.n_heads, self.dim, config=config))
-            layer_norm1.append(nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps))
+            layer_norm1.append(nn.LayerNorm([self.dim], eps=config.layer_norm_eps))
             # if self.is_decoder:
             #     self.layer_norm15.append(nn.LayerNorm(self.dim, eps=config.layer_norm_eps))
             #     self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
             ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, config=config))
-            layer_norm2.append(nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps))
+            layer_norm2.append(nn.LayerNorm([self.dim], eps=config.layer_norm_eps))
 
         self.attentions = nn.ModuleList(attentions)
         self.layer_norm1 = nn.ModuleList(layer_norm1)

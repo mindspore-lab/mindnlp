@@ -199,11 +199,11 @@ class StableLmMLP(nn.Module):
 
 
 class StableLmLayerNormPerHead(nn.Module):
-    def __init__(self, dim, num_heads, epsilon=1e-5, bias=False):
+    def __init__(self, dim, num_heads, eps=1e-5, bias=False):
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
-        self.norms = nn.ModuleList([nn.LayerNorm(dim, epsilon=epsilon) for _ in range(self.num_heads)])
+        self.norms = nn.ModuleList([nn.LayerNorm(dim, eps=epsilon) for _ in range(self.num_heads)])
 
     def forward(self, hidden_states: mindspore.Tensor):
         # Split along the num_heads axis to get per-head inputs
@@ -262,9 +262,9 @@ class StableLmAttention(nn.Module):
 
         self.qk_layernorm = config.qk_layernorm
         if self.qk_layernorm:
-            self.q_layernorm = StableLmLayerNormPerHead(self.head_dim, self.num_heads, epsilon=config.layer_norm_eps)
+            self.q_layernorm = StableLmLayerNormPerHead(self.head_dim, self.num_heads, eps=config.layer_norm_eps)
             self.k_layernorm = StableLmLayerNormPerHead(
-                self.head_dim, self.num_key_value_heads, epsilon=config.layer_norm_eps
+                self.head_dim, self.num_key_value_heads, eps=config.layer_norm_eps
             )
 
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
@@ -407,10 +407,10 @@ class StableLmDecoderLayer(nn.Module):
         self.hidden_size = config.hidden_size
         self.self_attn = ATTENTION_CLASSES[config._attn_implementation](config, layer_idx=layer_idx)
         self.mlp = StableLmMLP(config)
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.post_attention_layernorm = None
         if not self.use_parallel_residual:
-            self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+            self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
     def forward(
@@ -525,7 +525,7 @@ class StableLmModel(StableLmPreTrainedModel):
         self.layers = nn.ModuleList(
             [StableLmDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
-        self.norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self._attn_implementation = config._attn_implementation
         self.gradient_checkpointing = False

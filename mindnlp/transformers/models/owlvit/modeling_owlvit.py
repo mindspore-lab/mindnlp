@@ -473,10 +473,10 @@ class OwlViTEncoderLayer(nn.Module):
         self.embed_dim = config.hidden_size
         self.self_attn = OwlViTAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = OwlViTMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -803,7 +803,7 @@ class OwlViTTextTransformer(nn.Module):
         self.embeddings = OwlViTTextEmbeddings(config)
         self.encoder = OwlViTEncoder(config)
         self.final_layer_norm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -931,10 +931,10 @@ class OwlViTVisionTransformer(nn.Module):
 
         self.embeddings = OwlViTVisionEmbeddings(config)
         self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.encoder = OwlViTEncoder(config)
         self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -1327,7 +1327,7 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         self.box_head = OwlViTBoxPredictionHead(config)
 
         self.layer_norm = nn.LayerNorm(
-            config.vision_config.hidden_size, epsilon=config.vision_config.layer_norm_eps)
+            config.vision_config.hidden_size, eps=config.vision_config.layer_norm_eps)
         self.sigmoid = nn.Sigmoid()
 
         self.sqrt_num_patches = config.vision_config.image_size // config.vision_config.patch_size

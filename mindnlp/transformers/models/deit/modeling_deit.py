@@ -382,8 +382,8 @@ class DeiTLayer(nn.Module):
         self.attention = DEIT_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = DeiTIntermediate(config)
         self.output = DeiTOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -498,7 +498,7 @@ class DeiTModel(DeiTPreTrainedModel):
         self.embeddings = DeiTEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = DeiTEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pooler = DeiTPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing

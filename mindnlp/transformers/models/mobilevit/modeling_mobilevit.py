@@ -343,9 +343,9 @@ class MobileViTTransformerLayer(nn.Module):
             config, hidden_size, intermediate_size)
         self.output = MobileViTOutput(config, hidden_size, intermediate_size)
         self.layernorm_before = nn.LayerNorm(
-            hidden_size, epsilon=config.layer_norm_eps)
+            hidden_size, eps=config.layer_norm_eps)
         self.layernorm_after = nn.LayerNorm(
-            hidden_size, epsilon=config.layer_norm_eps)
+            hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         attention_output = self.attention(self.layernorm_before(hidden_states))
@@ -430,7 +430,7 @@ class MobileViTLayer(nn.Module):
         )
 
         self.layernorm = nn.LayerNorm(
-            hidden_size, epsilon=config.layer_norm_eps)
+            hidden_size, eps=config.layer_norm_eps)
 
         self.conv_projection = MobileViTConvLayer(
             config, in_channels=hidden_size, out_channels=in_channels, kernel_size=1

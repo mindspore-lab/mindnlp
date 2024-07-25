@@ -1058,13 +1058,13 @@ class OneFormerPixelDecoderEncoderLayer(nn.Module):
             n_points=4,
         )
 
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.dropout = config.dropout
         self.activation_fn = ops.relu
         self.activation_dropout = config.dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_feedforward_dim)
         self.fc2 = nn.Linear(config.encoder_feedforward_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
         self.is_training = config.is_training
 
@@ -1632,7 +1632,7 @@ class OneFormerTransformerDecoderSelfAttentionLayer(nn.Module):
         super().__init__()
         self.self_attn = OneFormerAttention(embed_dim=embed_dim, num_heads=num_heads, dropout=dropout, is_decoder=True)
 
-        self.norm = nn.LayerNorm(embed_dim, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
         self.activation = ACT2FN[activation]
@@ -1690,7 +1690,7 @@ class OneFormerTransformerDecoderCrossAttentionLayer(nn.Module):
         super().__init__()
         self.multihead_attn = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout)
 
-        self.norm = nn.LayerNorm(embed_dim, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
         self.activation = ACT2FN[activation]
@@ -1771,7 +1771,7 @@ class OneFormerTransformerDecoderFFNLayer(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        self.norm = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(d_model, eps=layer_norm_eps)
 
         self.activation = ACT2FN[activation]
         self.normalize_before = normalize_before
@@ -1982,9 +1982,9 @@ class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        self.norm1 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm2 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm3 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout1 = nn.Dropout(p=dropout)
         self.dropout2 = nn.Dropout(p=dropout)
         self.dropout3 = nn.Dropout(p=dropout)
@@ -2109,7 +2109,7 @@ class OneFormerTransformerDecoderQueryTransformer(nn.Module):
         decoder_layer = OneFormerTransformerDecoderQueryTransformerDecoderLayer(
             d_model, nhead, dim_feedforward, dropout, activation, normalize_before, layer_norm_eps
         )
-        decoder_norm = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        decoder_norm = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.decoder = OneFormerTransformerDecoderQueryTransformerDecoder(
             decoder_layer,
             num_decoder_layers,
@@ -2163,7 +2163,7 @@ class OneFormerTransformerDecoder(nn.Module):
             layer_norm_eps=config.layer_norm_eps,
         )
 
-        self.decoder_norm = nn.LayerNorm(config.hidden_dim, epsilon=config.layer_norm_eps)
+        self.decoder_norm = nn.LayerNorm(config.hidden_dim, eps=config.layer_norm_eps)
 
         self.num_feature_levels = 3
 
@@ -2475,9 +2475,9 @@ class OneFormerTextTransformerDecoderLayer(nn.Module):
         self.self_attn = OneFormerTextMapperAttention(d_model, nhead, proj_drop=dropout)
         self.cross_attn = OneFormerTextMapperAttention(d_model, nhead, proj_drop=dropout)
 
-        self.norm1 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm2 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm3 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
         self.mlp = nn.SequentialCell(
@@ -2507,13 +2507,13 @@ class OneFormerTextContextDecoder(nn.Module):
         super().__init__()
 
         self.memory_proj = nn.SequentialCell(
-            nn.LayerNorm(visual_dim, epsilon=layer_norm_eps),
+            nn.LayerNorm(visual_dim, eps=layer_norm_eps),
             nn.Linear(visual_dim, transformer_width),
-            nn.LayerNorm(transformer_width, epsilon=layer_norm_eps),
+            nn.LayerNorm(transformer_width, eps=layer_norm_eps),
         )
 
         self.text_proj = nn.SequentialCell(
-            nn.LayerNorm(visual_dim, epsilon=layer_norm_eps),
+            nn.LayerNorm(visual_dim, eps=layer_norm_eps),
             nn.Linear(visual_dim, transformer_width),
         )
 
@@ -2525,7 +2525,7 @@ class OneFormerTextContextDecoder(nn.Module):
         )
 
         self.out_proj = nn.SequentialCell(
-            nn.LayerNorm(transformer_width, epsilon=layer_norm_eps), nn.Linear(transformer_width, visual_dim)
+            nn.LayerNorm(transformer_width, eps=layer_norm_eps), nn.Linear(transformer_width, visual_dim)
         )
 
     def forward(self, text, visual):
@@ -2561,9 +2561,9 @@ class OneFormerTextTransformerLayer(nn.Module):
     def __init__(self, width: int, heads: int, attn_mask: mindspore.Tensor, layer_norm_eps=1e-05):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(width, heads)
-        self.layer_norm1 = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(width, eps=layer_norm_eps)
         self.mlp = OneFormerTextMLP(width, width * 4, width)
-        self.layer_norm2 = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(width, eps=layer_norm_eps)
         self.attn_mask = attn_mask
 
     def forward(
@@ -2642,7 +2642,7 @@ class OneFormerTextEncoder(nn.Module):
         )
 
         self.positional_embedding = Parameter(ops.zeros(self.context_length, width))
-        self.ln_final = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.ln_final = nn.LayerNorm(width, eps=layer_norm_eps)
         self.token_embedding = nn.Embedding(vocab_size, width)
 
     def build_attention_mask(self):

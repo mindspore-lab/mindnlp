@@ -151,9 +151,9 @@ class GroupViTCrossAttentionLayer(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.attn = GroupViTAttention(config)
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.mlp = GroupViTMLP(config)
-        self.norm_post = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_post = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(self, query, key):
         x = query
@@ -216,7 +216,7 @@ class GroupViTTokenAssign(nn.Module):
         super().__init__()
         self.num_output_group = num_output_group
         # norm on group_tokens
-        self.norm_tokens = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_tokens = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         assign_mlp_ratio = (
             config.assign_mlp_ratio
             if isinstance(config.assign_mlp_ratio, collections.abc.Iterable)
@@ -224,13 +224,13 @@ class GroupViTTokenAssign(nn.Module):
         )
         tokens_dim, channels_dim = [int(x * config.hidden_size) for x in assign_mlp_ratio]
         self.mlp_inter = GroupViTMixerMLP(config, num_group_token, tokens_dim, num_output_group)
-        self.norm_post_tokens = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_post_tokens = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         # norm on x
-        self.norm_x = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_x = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pre_assign_attn = GroupViTCrossAttentionLayer(config)
 
         self.assign = GroupViTAssignAttention(config)
-        self.norm_new_x = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_new_x = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.mlp_channels = GroupViTMLP(config, config.hidden_size, channels_dim, config.hidden_size)
 
     def project_group_token(self, group_tokens):
@@ -364,7 +364,7 @@ class GroupViTVisionEmbeddings(nn.Module):
         num_patches = self.patch_embeddings.num_patches
         self.position_embeddings = Parameter(ops.zeros(1, num_patches, config.hidden_size))
         self.dropout = nn.Dropout(p=config.dropout)
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.config = config
 
     def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
@@ -483,7 +483,7 @@ class GroupViTStage(nn.Module):
 
         if num_prev_group_token > 0 and num_group_token > 0:
             self.group_projector = nn.SequentialCell([
-                nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps),
+                nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps),
                 GroupViTMixerMLP(config, num_prev_group_token, config.hidden_size // 2, num_group_token),
             ])
         else:
@@ -692,9 +692,9 @@ class GroupViTEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = GroupViTAttention(config)
-        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
         self.mlp = GroupViTMLP(config)
-        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -953,7 +953,7 @@ class GroupViTTextTransformer(nn.Module):
         embed_dim = config.hidden_size
         self.embeddings = GroupViTTextEmbeddings(config)
         self.encoder = GroupViTTextEncoder(config)
-        self.final_layer_norm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
@@ -1102,7 +1102,7 @@ class GroupViTVisionTransformer(nn.Module):
 
         self.embeddings = GroupViTVisionEmbeddings(config)
         self.encoder = GroupViTVisionEncoder(config)
-        self.layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
     def forward(
         self,

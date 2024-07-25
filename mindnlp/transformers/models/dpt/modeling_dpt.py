@@ -459,8 +459,8 @@ class DPTViTLayer(nn.Module):
         self.attention = DPTViTAttention(config)
         self.intermediate = DPTViTIntermediate(config)
         self.output = DPTViTOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
             self,
@@ -853,7 +853,7 @@ class DPTModel(DPTPreTrainedModel):
             self.embeddings = DPTViTEmbeddings(config)
         self.encoder = DPTViTEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.pooler = DPTViTPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing

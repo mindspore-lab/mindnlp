@@ -370,10 +370,10 @@ class GPTNeoXJapaneseLayer(nn.Module):
         super().__init__()
         self.layer_number = layer_number
         self.input_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.post_attention_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         # activate bias only last layer
         self.attention = GPTNeoXJapaneseAttention(
@@ -446,7 +446,7 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
             ]
         )
         self.final_layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
         # Initialize weights and apply final processing

@@ -897,17 +897,17 @@ class FalconDecoderLayer(nn.Module):
         if config.new_decoder_architecture:
             # The layer norm before self-attention
             self.ln_attn = nn.LayerNorm(
-                [hidden_size], epsilon=config.layer_norm_epsilon
+                [hidden_size], eps=config.layer_norm_epsilon
             )
             # The layer norm before the MLP
-            self.ln_mlp = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+            self.ln_mlp = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         else:
             self.input_layernorm = nn.LayerNorm(
-                [hidden_size], epsilon=config.layer_norm_epsilon
+                [hidden_size], eps=config.layer_norm_epsilon
             )
             if not config.parallel_attn:
                 self.post_attention_layernorm = nn.LayerNorm(
-                    [hidden_size], epsilon=config.layer_norm_epsilon
+                    [hidden_size], eps=config.layer_norm_epsilon
                 )
 
     def forward(
@@ -1098,7 +1098,7 @@ class FalconModel(FalconPreTrainedModel):
         )
 
         # Final Layer Norm
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -453,13 +453,13 @@ class VitDetLayer(nn.Module):
         dim = config.hidden_size
         input_size = (config.image_size // config.patch_size, config.image_size // config.patch_size)
 
-        self.norm1 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
         self.attention = VitDetAttention(
             config, input_size=input_size if window_size == 0 else (window_size, window_size)
         )
 
         self.drop_path = VitDetDropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
-        self.norm2 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
         self.mlp = VitDetMlp(config=config, in_features=dim, hidden_features=int(dim * config.mlp_ratio))
 
         self.window_size = window_size

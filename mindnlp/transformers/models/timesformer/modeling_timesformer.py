@@ -753,8 +753,8 @@ class TimesformerLayer(nn.Module):
         self.attention = TimeSformerAttention(config)
         self.intermediate = TimesformerIntermediate(config)
         self.output = TimesformerOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.config = config
         self.attention_type = attention_type
@@ -763,7 +763,7 @@ class TimesformerLayer(nn.Module):
 
         # Temporal Attention Parameters
         if self.attention_type == "divided_space_time":
-            self.temporal_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+            self.temporal_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
             self.temporal_attention = TimeSformerAttention(config)
             self.temporal_dense = nn.Linear(config.hidden_size, config.hidden_size)
 
@@ -1091,7 +1091,7 @@ class TimesformerModel(TimesformerPreTrainedModel):
         self.embeddings = TimesformerEmbeddings(config)
         self.encoder = TimesformerEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()

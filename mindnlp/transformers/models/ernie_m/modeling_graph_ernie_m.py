@@ -74,7 +74,7 @@ class MSErnieMEmbeddings(nn.Module):
         self.position_embeddings = nn.Embedding(
             config.max_position_embeddings, config.hidden_size, padding_idx=config.pad_token_id
         )
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.padding_idx = config.pad_token_id
 
@@ -522,8 +522,8 @@ class MSErnieMEncoderLayer(nn.Module):
         self.linear1 = nn.Linear(config.hidden_size, config.intermediate_size)
         self.dropout = nn.Dropout(p=act_dropout)
         self.linear2 = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout1 = nn.Dropout(p=dropout)
         self.dropout2 = nn.Dropout(p=dropout)
         if isinstance(config.hidden_act, str):
