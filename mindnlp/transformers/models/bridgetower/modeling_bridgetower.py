@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN, QuickGELUActivation
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -173,7 +174,7 @@ class BridgeTowerResidualAttention(nn.Module):
         super().__init__()
 
         self.attn = nn.MultiheadAttention(config.hidden_size, config.hidden_size // 64)
-        self.ln_1 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.ln_1 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = nn.ModuleDict(
             OrderedDict(
                 [
@@ -183,7 +184,7 @@ class BridgeTowerResidualAttention(nn.Module):
                 ]
             )
         )
-        self.ln_2 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.ln_2 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.attn_mask = None
 
     def attention(self, hidden_state: mindspore.Tensor, attention_mask: mindspore.Tensor):
@@ -391,13 +392,12 @@ class BridgeTowerVisionEmbeddings(nn.Module):
             kernel_size=self.patch_size,
             stride=self.patch_size,
             bias=False,
-            pad_mode='valid'
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.position_ids = ops.broadcast_to(ops.arange(self.num_positions), (1, -1))
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -420,8 +420,8 @@ class BridgeTowerVisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1))
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -507,13 +507,13 @@ class BridgeTowerVisionTransformer(nn.Module):
         super().__init__()
 
         self.embeddings = BridgeTowerVisionEmbeddings(config)
-        self.ln_pre = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.ln_pre = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.transformer = BridgeTowerTransformer(config)
-        self.ln_post = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.ln_post = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.share_layernorm = config.share_layernorm
         if not config.share_layernorm:
             self.ln_separate = nn.ModuleList(
-                [nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps) for _ in range(config.num_hidden_layers)]
+                [nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps) for _ in range(config.num_hidden_layers)]
             )
 
     def forward(self, pixel_values: mindspore.Tensor, attention_mask):
@@ -543,7 +543,7 @@ class BridgeTowerVisionTransformer(nn.Module):
 
         hidden_states = self.transformer(hidden_states, attention_mask)
         # shape = [num_hidden_layers, hidden_size, *, grid ** 2]
-        hidden_states = ops.stack(hidden_states, axis=0)
+        hidden_states = ops.stack(hidden_states, dim=0)
         # shape = [num_hidden_layers, *, hidden_size, grid ** 2]
         hidden_states = hidden_states.permute(0, 2, 1, 3)
         if self.share_layernorm:
@@ -554,7 +554,7 @@ class BridgeTowerVisionTransformer(nn.Module):
                 hidden_states = ln(hidden_states)
                 hidden_states_stack.append(hidden_states)
             # shape = [num_hidden_layers, *, hidden_size, grid ** 2]
-            hidden_states = ops.stack(hidden_states_stack, axis=0)
+            hidden_states = ops.stack(hidden_states_stack, dim=0)
         return hidden_states
 
     def forward_pre(self, pixel_values: mindspore.Tensor):
@@ -660,7 +660,7 @@ class BridgeTowerLinkTower(nn.Module):
                 self.scaled_factor = Parameter(mindspore.tensor(1.0))
             elif config.link_tower_type == "interpolate":
                 self.beta = Parameter(mindspore.tensor(0.5))
-            self.LayerNorm = nn.LayerNorm(self.hidden_size, epsilon=config.layer_norm_eps)
+            self.LayerNorm = nn.LayerNorm(self.hidden_size, eps=config.layer_norm_eps)
         else:
             raise NotImplementedError(f"link_tower_type {config.link_tower_type} is not implemented")
 
@@ -732,7 +732,7 @@ class BridgeTowerSelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -870,7 +870,7 @@ class BridgeTowerOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1141,8 +1141,8 @@ class BridgeTowerSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -1191,7 +1191,7 @@ class BridgeTowerSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1920,12 +1920,12 @@ class BridgeTowerTextEmbeddings(nn.Module):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.position_ids = ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1))
+        self.token_type_ids = ops.zeros(*self.position_ids.shape, dtype=mindspore.int64)
 
         # End copy
         self.padding_idx = config.pad_token_id
@@ -1976,10 +1976,10 @@ class BridgeTowerTextEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -2008,7 +2008,7 @@ class BridgeTowerTextEmbeddings(nn.Module):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return ops.broadcast_to(position_ids.unsqueeze(0), input_shape)
 
 
 # Copied from transformers.models.roberta.modeling_roberta.create_position_ids_from_input_ids
@@ -2025,7 +2025,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -2061,21 +2061,20 @@ class BridgeTowerPreTrainedModel(PreTrainedModel):
             attn_std = cell.visual.transformer.hidden_size**-0.5
             fc_std = (2 * cell.visual.transformer.hidden_size) ** -0.5
             for block in cell.visual.transformer.resblocks:
-                block.attn.in_proj_weight.initialize(Normal(attn_std * self.config.initializer_factor))
-                block.attn.out_proj.weight.initialize(Normal(proj_std * self.config.initializer_factor))
-                block.mlp.c_fc.weight.initialize(Normal(fc_std * self.config.initializer_factor))
-                block.mlp.c_proj.weight.initialize(Normal(proj_std * self.config.initializer_factor))
+                ops.initialize(block.attn.in_proj_weight, Normal(attn_std * self.config.initializer_factor))
+                ops.initialize(block.attn.out_proj.weight, Normal(proj_std * self.config.initializer_factor))
+                ops.initialize(block.mlp.c_fc.weight, Normal(fc_std * self.config.initializer_factor))
+                ops.initialize(block.mlp.c_proj.weight, Normal(proj_std * self.config.initializer_factor))
 
-            cell.visual.embeddings.class_embedding.initialize(Normal(attn_std * self.config.initializer_factor))
-            cell.visual.embeddings.position_embedding.weight.initialize(Normal(attn_std * self.config.initializer_factor))
+            ops.initialize(cell.visual.embeddings.class_embedding, Normal(attn_std * self.config.initializer_factor))
+            ops.initialize(cell.visual.embeddings.position_embedding.weight, Normal(attn_std * self.config.initializer_factor))
         elif isinstance(cell, (nn.Linear, nn.Conv2d, nn.Embedding)):
-            cell.weight.initialize(Normal(0.05 * self.config.initializer_factor))
+            ops.initialize(cell.weight, Normal(0.05 * self.config.initializer_factor))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize('zeros')
-            cell.weight.initialize('ones')
-
-        if 'Dense' in str(type(cell)) and cell.bias is not None:
-            cell.bias.initialize('zeros')
+            ops.initialize(cell.bias, 'zeros')
+            ops.initialize(cell.weight, 'ones')
+        if isinstance(cell, nn.Linear) and cell.bias is not None:
+            ops.initialize(cell.bias, 'zeros')
 
 
 class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):
@@ -2301,15 +2300,15 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -2321,7 +2320,7 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -2468,8 +2467,8 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         self.cross_modal_text_pooler = BridgeTowerPooler(config)
 
         # Initialize BridgeTower Components
-        self.cross_modal_text_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.cross_modal_image_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.cross_modal_text_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.cross_modal_image_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if config.share_link_tower_layers:
             self.cross_modal_text_link_tower = BridgeTowerLinkTower(config)
@@ -2592,7 +2591,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
             all_hidden_states_text += (text_embeds,)
 
         if attention_mask is None:
-            attention_mask = ops.ones(input_shape, dtype=mindspore.int64)
+            attention_mask = ops.ones(*input_shape, dtype=mindspore.int64)
         extend_text_masks = self.text_model.get_extended_attention_mask(attention_mask, input_shape)
 
         # The split_index determines how many layers of the uni-modal encoder are applied before the cross-modal encoder
@@ -2640,7 +2639,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         cross_modal_image = self.cross_modal_image_layernorm(image_embeds_with_ln)
 
         pixel_mask = ops.ones(
-            (cross_modal_image.shape[0], cross_modal_image.shape[1]),
+            cross_modal_image.shape[0], cross_modal_image.shape[1],
             dtype=mindspore.int64,
         )
         extend_image_masks = self.text_model.get_extended_attention_mask(pixel_mask, pixel_mask.shape)
@@ -2764,7 +2763,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         """
         cls_features_text = self.cross_modal_text_pooler(text_features)
         cls_features_image = self.cross_modal_image_pooler(image_features)
-        return ops.cat([cls_features_text, cls_features_image], axis=-1)
+        return ops.cat([cls_features_text, cls_features_image], dim=-1)
 
 
 # Copied from transformers.models.vilt.modeling_vilt.ViltPredictionHeadTransform with Vilt->BridgeTower
@@ -2809,7 +2808,7 @@ class BridgeTowerPredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states):
         """
@@ -3102,7 +3101,7 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
         mlm_logits = self.mlm_score(outputs.text_features if return_dict else outputs[0])
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(mlm_logits.view(-1, self.config.text_config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(mlm_logits.view(-1, self.config.text_config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = tuple(mlm_logits)
@@ -3237,7 +3236,7 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
 
         itm_loss = None
         if labels is not None:
-            itm_loss = ops.cross_entropy(logits, labels)
+            itm_loss = F.cross_entropy(logits, labels)
 
         if not return_dict:
             output = tuple(logits)
@@ -3429,10 +3428,10 @@ class BridgeTowerForContrastiveLearning(BridgeTowerPreTrainedModel):
         image_embeds = self.bridgetower.cross_modal_image_transform(image_embeds_with_ln) + image_token_type_embeddings
 
         # normalized features
-        text_embeds = normalize(self.itc_text_head(text_embeds[:, 0, :]), dim=-1, p=2)
-        image_embeds = normalize(self.itc_image_head(image_embeds[:, 0, :]), dim=-1, p=2)
-        cross_embeds = normalize(self.itc_cross_modal_head(pooler_output), dim=-1, p=2)
-        logits = ops.stack([text_embeds, image_embeds, cross_embeds], axis=-2)
+        text_embeds = F.normalize(self.itc_text_head(text_embeds[:, 0, :]), dim=-1, p=2)
+        image_embeds = F.normalize(self.itc_image_head(image_embeds[:, 0, :]), dim=-1, p=2)
+        cross_embeds = F.normalize(self.itc_cross_modal_head(pooler_output), dim=-1, p=2)
+        logits = ops.stack([text_embeds, image_embeds, cross_embeds], dim=-2)
 
         logit_scale = self.logit_scale.exp()
         logits_text_to_image = ops.matmul(text_embeds, image_embeds.t()) * logit_scale
@@ -3443,9 +3442,9 @@ class BridgeTowerForContrastiveLearning(BridgeTowerPreTrainedModel):
 
         if return_loss:
             labels = ops.arange(len(logits))
-            text_to_image_loss = ops.cross_entropy(logits_text_to_image, labels)
-            text_to_cross_loss = ops.cross_entropy(logits_text_to_cross, labels)
-            image_to_cross_loss = ops.cross_entropy(logits_image_to_cross, labels)
+            text_to_image_loss = F.cross_entropy(logits_text_to_image, labels)
+            text_to_cross_loss = F.cross_entropy(logits_text_to_cross, labels)
+            image_to_cross_loss = F.cross_entropy(logits_image_to_cross, labels)
             itc_loss = (text_to_image_loss + text_to_cross_loss + image_to_cross_loss) / 3.0
 
         if not return_dict:

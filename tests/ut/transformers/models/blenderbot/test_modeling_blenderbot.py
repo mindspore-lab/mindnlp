@@ -45,7 +45,6 @@ if is_mindspore_available():
         BlenderbotForCausalLM,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 
 def prepare_blenderbot_inputs_dict(
     config,

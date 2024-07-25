@@ -28,7 +28,7 @@ def aminmax(input, *, dim=None, keepdim=False):
     return amin(input, dim, keepdim), amax(input, dim, keepdim)
 
 # all
-def all(input, dim, keepdim=False, *, dtype=None):
+def all(input, dim=None, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.all(input, dim, keepdim)
     return ops.all(input, dim, keepdim)

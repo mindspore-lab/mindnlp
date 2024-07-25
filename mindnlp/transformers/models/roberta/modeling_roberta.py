@@ -18,12 +18,12 @@ import math
 from typing import Optional, Tuple, Union, List
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp._legacy.functional import einsum
 from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertPreTrainedModel
 from ...modeling_outputs import (
@@ -372,11 +372,11 @@ class RobertaSelfAttention(nn.Module):
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
-                relative_position_scores = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores
             elif self.position_embedding_type == "relative_key_query":
-                relative_position_scores_query = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
-                relative_position_scores_key = einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
+                relative_position_scores_query = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)

@@ -42,7 +42,6 @@ if is_mindspore_available():
     from mindspore import ops
     from mindnlp.transformers import DetaForObjectDetection, DetaModel
 
-#ms.set_context(pynative_synchronize=True)
 
 if is_vision_available():
     from PIL import Image

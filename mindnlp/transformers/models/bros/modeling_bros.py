@@ -20,10 +20,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -152,7 +153,7 @@ class BrosPositionalEmbedding1D(nn.Module):
         seq_size = pos_seq.shape
         b1, b2, b3 = seq_size
         sinusoid_inp = pos_seq.view(b1, b2, b3, 1) * self.inv_freq.view(1, 1, 1, self.dim_bbox_sinusoid_emb_1d // 2)
-        pos_emb = ops.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], axis=-1)
+        pos_emb = ops.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
         return pos_emb
 
 
@@ -234,7 +235,7 @@ class BrosPositionalEmbedding2D(nn.Module):
                 stack.append(self.x_pos_emb(bbox[..., i]))
             else:
                 stack.append(self.y_pos_emb(bbox[..., i]))
-        bbox_pos_emb = ops.cat(stack, axis=-1)
+        bbox_pos_emb = ops.cat(stack, dim=-1)
         return bbox_pos_emb
 
 
@@ -328,12 +329,12 @@ class BrosTextEmbeddings(nn.Module):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).reshape(1, -1)
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.token_type_ids = ops.zeros(*self.position_ids.shape, dtype=mindspore.int64)
 
     def forward(
         self,
@@ -375,10 +376,10 @@ class BrosTextEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -553,8 +554,8 @@ class BrosSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -605,7 +606,7 @@ class BrosSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -673,7 +674,7 @@ class BrosSelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -983,7 +984,7 @@ class BrosOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1494,8 +1495,8 @@ class BrosRelationExtractor(nn.Module):
         """
         query_layer = self.query(self.drop(query_layer))
 
-        dummy_vec = self.dummy_node.unsqueeze(0).repeat(1, key_layer.shape[1], 1)
-        key_layer = ops.cat([key_layer, dummy_vec], axis=0)
+        dummy_vec = ops.tile(self.dummy_node.unsqueeze(0), (1, key_layer.shape[1], 1))
+        key_layer = ops.cat([key_layer, dummy_vec], dim=0)
         key_layer = self.key(self.drop(key_layer))
 
         query_layer = query_layer.view(
@@ -1523,16 +1524,16 @@ class BrosPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.initialize(Normal(self.config.initializer_range))
+            ops.initialize(cell.weight, Normal(self.config.initializer_range))
             if cell.bias is not None:
-                cell.bias.initialize('zeros')
+                ops.initialize(cell.bias, 'zeros')
         elif isinstance(cell, nn.Embedding):
-            cell.weight.initialize(Normal(self.config.initializer_range))
+            ops.initialize(cell.weight, Normal(self.config.initializer_range))
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize('zeros')
-            cell.weight.initialize('ones')
+            ops.initialize(cell.bias, 'zeros')
+            ops.initialize(cell.weight, 'ones')
 
 
 class BrosModel(BrosPreTrainedModel):
@@ -1709,15 +1710,15 @@ class BrosModel(BrosPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(input_shape)
+            attention_mask = ops.ones(*input_shape)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -1729,7 +1730,7 @@ class BrosModel(BrosPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -1898,11 +1899,11 @@ class BrosForTokenClassification(BrosPreTrainedModel):
         if labels is not None:
             if bbox_first_token_mask is not None:
                 bbox_first_token_mask = bbox_first_token_mask.view(-1)
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels)[bbox_first_token_mask], labels.view(-1)[bbox_first_token_mask]
                 )
             else:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1982,7 +1983,7 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
         )
 
         # Initial token classification for Entity Extraction (NER)
-        self.initial_token_classifier = nn.SequentialCell(
+        self.initial_token_classifier = nn.Sequential(
             nn.Dropout(p=classifier_dropout),
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.Dropout(p=classifier_dropout),
@@ -2054,13 +2055,13 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
         # make subsequent token (sequence token classification) mask
         inv_attention_mask = 1 - attention_mask
         batch_size, max_seq_length = inv_attention_mask.shape
-        invalid_token_mask = ops.cat([inv_attention_mask, ops.zeros((batch_size, 1)).astype(inv_attention_mask.dtype)], axis=1).bool()
+        invalid_token_mask = ops.cat([inv_attention_mask, ops.zeros(batch_size, 1).astype(inv_attention_mask.dtype)], dim=1).bool()
         subsequent_token_logits = subsequent_token_logits.masked_fill(
-            invalid_token_mask[:, None, :], finfo(subsequent_token_logits.dtype, 'min')
+            invalid_token_mask[:, None, :], float(ops.finfo(subsequent_token_logits.dtype).min)
         )
         self_token_mask = ops.eye(max_seq_length, max_seq_length + 1).bool()
         subsequent_token_logits = subsequent_token_logits.masked_fill(
-            self_token_mask[None, :, :], finfo(subsequent_token_logits.dtype, 'min')
+            self_token_mask[None, :, :], float(ops.finfo(subsequent_token_logits.dtype).min)
         )
         subsequent_token_mask = attention_mask.view(-1).bool()
 
@@ -2070,15 +2071,15 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
             initial_token_labels = initial_token_labels.view(-1)
             if bbox_first_token_mask is not None:
                 bbox_first_token_mask = bbox_first_token_mask.view(-1)
-                initial_token_loss = ops.cross_entropy(
+                initial_token_loss = F.cross_entropy(
                     initial_token_logits.view(-1, self.num_labels)[bbox_first_token_mask],
                     initial_token_labels[bbox_first_token_mask],
                 )
             else:
-                initial_token_loss = ops.cross_entropy(initial_token_logits.view(-1, self.num_labels), initial_token_labels)
+                initial_token_loss = F.cross_entropy(initial_token_logits.view(-1, self.num_labels), initial_token_labels)
 
             subsequent_token_labels = subsequent_token_labels.view(-1)
-            subsequent_token_loss = ops.cross_entropy(
+            subsequent_token_loss = F.cross_entropy(
                 subsequent_token_logits.view(-1, max_seq_length + 1)[subsequent_token_mask],
                 subsequent_token_labels[subsequent_token_mask],
             )
@@ -2249,14 +2250,14 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
             bbox_first_token_mask = ops.cat(
                 [
                     ~bbox_first_token_mask,
-                    ops.zeros((batch_size, 1), dtype=mindspore.bool_),
+                    ops.zeros(batch_size, 1, dtype=mindspore.bool_),
                 ],
-                axis=1,
+                dim=1,
             )
-            logits = logits.masked_fill(bbox_first_token_mask[:, None, :], finfo(logits.dtype, 'min'))
-            logits = logits.masked_fill(self_token_mask[None, :, :], finfo(logits.dtype, 'min'))
+            logits = logits.masked_fill(bbox_first_token_mask[:, None, :], float(ops.finfo(logits.dtype).min))
+            logits = logits.masked_fill(self_token_mask[None, :, :], float(ops.finfo(logits.dtype).min))
 
-            loss = ops.cross_entropy(logits.view(-1, max_seq_length + 1)[mask], labels.view(-1)[mask])
+            loss = F.cross_entropy(logits.view(-1, max_seq_length + 1)[mask], labels.view(-1)[mask])
 
         if not return_dict:
             output = (logits,) + outputs[2:]

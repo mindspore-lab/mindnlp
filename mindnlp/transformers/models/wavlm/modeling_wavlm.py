@@ -20,18 +20,11 @@ from typing import Optional, Tuple, Union, List
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal, Uniform, HeNormal
-# from mindnlp._legacy.functional import multi_head_attention_forward
-from mindnlp._legacy.functional import _mha_shape_check, is_floating_point, _in_projection, _scaled_dot_product_attention
-# from mindspore.ops.function.nn_func import multi_head_attention_forward
+from mindnlp.core import nn, ops
 from mindnlp.utils import logging
-import mindnlp
-# from mindnlp.modules.weight_norm import weight_norm
-
-
 
 from .configuration_wavlm import WavLMConfig
 from ...activations import ACT2FN
@@ -44,8 +37,6 @@ from ...modeling_outputs import (
     XVectorOutput,
 )
 from ...modeling_utils import PreTrainedModel
-
-
 
 logger = logging.get_logger(__name__)
 

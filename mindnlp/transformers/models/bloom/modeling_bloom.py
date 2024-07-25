@@ -21,9 +21,10 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -86,7 +87,7 @@ def build_alibi_tensor(attention_mask: mindspore.Tensor, num_heads: int, dtype) 
         )
         num_remaining_heads = min(closest_power_of_2, num_heads - closest_power_of_2)
         extra_powers = ops.arange(1, 1 + 2 * num_remaining_heads, 2, dtype=mindspore.int32)
-        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], axis=0)
+        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], dim=0)
 
     # Note: alibi will added to the attention bias that will be applied to the query, key product of attention
     # => therefore alibi will have to be of shape (batch_size, num_heads, query_length, key_length)
@@ -94,7 +95,7 @@ def build_alibi_tensor(attention_mask: mindspore.Tensor, num_heads: int, dtype) 
     # => the query_length dimension will then be broadcasted correctly
     # This is more or less identical to T5's relative position bias:
     # https://github.com/huggingface/transformers/blob/f681437203baa7671de3174b0fa583c349d9d5e1/src/transformers/models/t5/modeling_t5.py#L527
-    arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
+    arange_tensor = ((ops.cumsum(attention_mask, dim=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None] * arange_tensor
     return alibi.reshape(batch_size * num_heads, 1, seq_length).to(dtype)
 
@@ -113,7 +114,7 @@ def dropout_add(x: mindspore.Tensor, residual: mindspore.Tensor, prob: float, tr
         training (`bool`, *required*):
             training mode
     """
-    out = ops.dropout(x, p=prob, training=training)
+    out = F.dropout(x, p=prob, training=training)
     out = residual + out
     return out
 
@@ -262,8 +263,8 @@ class BloomAttention(nn.Module):
             # concatenate along seq_length dimension:
             #  - key: [batch_size * self.num_heads, head_dim, kv_length]
             #  - value: [batch_size * self.num_heads, kv_length, head_dim]
-            key_layer = ops.cat((past_key, key_layer), axis=2)
-            value_layer = ops.cat((past_value, value_layer), axis=1)
+            key_layer = ops.cat((past_key, key_layer), dim=2)
+            value_layer = ops.cat((past_value, value_layer), dim=1)
 
         _, _, kv_length = key_layer.shape
 
@@ -289,8 +290,8 @@ class BloomAttention(nn.Module):
         # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
         if input_dtype == mindspore.float16:
             attention_scores = attention_scores.to(mindspore.float32)
-        attn_weights = ops.masked_fill(attention_scores, attention_mask, finfo(attention_scores.dtype, 'min'))
-        attention_probs = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(input_dtype)
+        attn_weights = ops.masked_fill(attention_scores, attention_mask, float(ops.finfo(attention_scores.dtype).min))
+        attention_probs = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(input_dtype)
 
         # [batch_size, num_heads, q_length, kv_length]
         attention_probs = self.attention_dropout(attention_probs)
@@ -312,7 +313,7 @@ class BloomAttention(nn.Module):
             slices = self.hidden_size / self.pretraining_tp
             output_tensor = ops.zeros_like(context_layer)
             for i in range(self.pretraining_tp):
-                output_tensor = output_tensor + ops.dense(
+                output_tensor = output_tensor + F.linear(
                     context_layer[:, :, int(i * slices) : int((i + 1) * slices)],
                     self.dense.weight[:, int(i * slices) : int((i + 1) * slices)],
                 )
@@ -408,7 +409,7 @@ class BloomMLP(nn.Module):
             intermediate_output = ops.zeros_like(residual)
             slices = self.dense_4h_to_h.weight.shape[-1] / self.pretraining_tp
             for i in range(self.pretraining_tp):
-                intermediate_output = intermediate_output + ops.dense(
+                intermediate_output = intermediate_output + F.linear(
                     hidden_states[:, :, int(i * slices) : int((i + 1) * slices)],
                     self.dense_4h_to_h.weight[:, int(i * slices) : int((i + 1) * slices)],
                 )
@@ -461,10 +462,10 @@ class BloomBlock(nn.Module):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         self.num_heads = config.n_head
         self.self_attention = BloomAttention(config)
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         self.mlp = BloomMLP(config)
 
@@ -682,13 +683,13 @@ class BloomModel(BloomPreTrainedModel):
 
         # Embedding + LN Embedding
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
-        self.word_embeddings_layernorm = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.word_embeddings_layernorm = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Transformer blocks
         self.h = nn.ModuleList([BloomBlock(config) for _ in range(config.num_hidden_layers)])
 
         # Final Layer Norm
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
 
@@ -865,7 +866,7 @@ class BloomModel(BloomPreTrainedModel):
             past_key_values_length = past_key_values[0][0].shape[2]
             seq_length_with_past = seq_length_with_past + past_key_values_length
         if attention_mask is None:
-            attention_mask = ops.ones((batch_size, seq_length_with_past))
+            attention_mask = ops.ones(batch_size, seq_length_with_past)
 
         alibi = self.build_alibi_tensor(attention_mask, self.num_heads, dtype=hidden_states.dtype)
 
@@ -1113,7 +1114,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length)
             )
 
@@ -1264,10 +1265,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        if isinstance(sequence_lengths, int):
-            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
-        else:
-            pooled_logits = ops.gather(logits, sequence_lengths, 1, 1)
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
@@ -1285,7 +1283,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
                 else:
                     loss = ops.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits, labels)
+                loss = F.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
@@ -1424,7 +1422,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
         loss = None
         if labels is not None:
             batch_size, seq_length = labels.shape
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(batch_size * seq_length, self.num_labels), labels.view(batch_size * seq_length)
             )
 
@@ -1536,8 +1534,8 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

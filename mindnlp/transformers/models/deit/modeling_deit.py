@@ -24,7 +24,6 @@ from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import TruncatedNormal
 
-from mindnlp._legacy.functional import _scaled_dot_product_attention
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,

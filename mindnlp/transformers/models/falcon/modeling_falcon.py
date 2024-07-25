@@ -25,12 +25,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore.nn import Dense as FalconLinear
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp._legacy import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
@@ -44,6 +43,7 @@ from ...modeling_utils import PreTrainedModel
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from .configuration_falcon import FalconConfig
 
+FalconLinear = nn.Linear
 
 logger = logging.get_logger(__name__)
 
