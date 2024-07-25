@@ -1407,7 +1407,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         vectors = vectors / sqrt_num
         return vectors
 
-    def _len_norm(self, x, epsilon=1e-6):
+    def _len_norm(self, x, eps=1e-6):
         """
         length normalization
         """
@@ -1965,7 +1965,7 @@ class ReformerAttention(nn.Module):
         self.layer_id = layer_id
         self.attn_layers = config.attn_layers
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if len(set(self.attn_layers)) == 1 and self.attn_layers[0] == "lsh":
             self.self_attention = LSHSelfAttention(config)
@@ -2287,7 +2287,7 @@ class ChunkReformerFeedForward(nn.Module):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dense = ReformerFeedForwardDense(config)
         self.output = ReformerFeedForwardOutput(config)
 
@@ -2735,7 +2735,7 @@ class ReformerEncoder(nn.Module):
         self.layers = nn.ModuleList([ReformerLayer(config, i) for i in range(config.num_hidden_layers)])
         # Reformer is using Rev Nets, thus last layer outputs are concatenated and
         # Layer Norm is done over 2 * hidden_size
-        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,

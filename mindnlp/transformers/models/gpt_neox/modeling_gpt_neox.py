@@ -757,8 +757,8 @@ class GPTNeoXLayer(nn.Module):
         """
         super().__init__()
         self.use_parallel_residual = config.use_parallel_residual
-        self.input_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.post_attention_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.post_attention_dropout = nn.Dropout(p=config.hidden_dropout)
         self.post_mlp_dropout = nn.Dropout(p=config.hidden_dropout)
         # self.attention = GPT_NEOX_ATTENTION_CLASSES[config._attn_implementation](config)
@@ -852,7 +852,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.embed_in = nn.Embedding(config.vocab_size, config.hidden_size)
         self.emb_dropout = nn.Dropout(p=config.hidden_dropout)
         self.layers = nn.ModuleList([GPTNeoXLayer(config) for _ in range(config.num_hidden_layers)])
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         # Not support flash_attention_2
         # self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
         self._use_flash_attention_2 = False

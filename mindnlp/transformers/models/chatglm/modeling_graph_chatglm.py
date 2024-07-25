@@ -606,7 +606,7 @@ class GLMBlock(nn.Module):
         self.layer_id = layer_id
 
         # Layernorm on the input data.
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.position_encoding_2d = position_encoding_2d
 
@@ -623,7 +623,7 @@ class GLMBlock(nn.Module):
         )
 
         # Layernorm on the input data.
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.num_layers = num_layers
 
@@ -828,7 +828,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             [get_layer(layer_id) for layer_id in range(self.num_layers)]
         )
         # Final layer norm before output.
-        self.final_layernorm = nn.LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
+        self.final_layernorm = nn.LayerNorm([self.hidden_size], eps=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
             # for param in self.parameters():

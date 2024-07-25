@@ -179,8 +179,8 @@ class EncoderLayer(nn.Module):
         self.multi_head_attention = MultiHeadAttention(d_model_size, num_heads)
         self.ffn = point_wise_feed_forward_network(d_model_size, dff)
 
-        self.layernorm1 = nn.LayerNorm([d_model_size], epsilon=1e-6)
-        self.layernorm2 = nn.LayerNorm([d_model_size], epsilon=1e-6)
+        self.layernorm1 = nn.LayerNorm([d_model_size], eps=1e-6)
+        self.layernorm2 = nn.LayerNorm([d_model_size], eps=1e-6)
 
         self.dropout1 = nn.Dropout(p=rate)
         self.dropout2 = nn.Dropout(p=rate)
@@ -282,7 +282,7 @@ class CTRLModel(CTRLPreTrainedModel):
             ]
         )
         self.layernorm = nn.LayerNorm(
-            [config.n_embd], epsilon=config.layer_norm_epsilon
+            [config.n_embd], eps=config.layer_norm_epsilon
         )
 
         # Initialize weights and apply final processing

@@ -221,10 +221,10 @@ class PersimmonAttention(nn.Module):
 
         if self.qk_layernorm:
             self.q_layernorm = nn.LayerNorm(
-                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps
+                config.hidden_size // self.num_heads, eps=config.layer_norm_eps
             )
             self.k_layernorm = nn.LayerNorm(
-                config.hidden_size // self.num_heads, epsilon=config.layer_norm_eps
+                config.hidden_size // self.num_heads, eps=config.layer_norm_eps
             )
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self._init_rope()
@@ -378,8 +378,8 @@ class PersimmonDecoderLayer(nn.Module):
         self.hidden_size = config.hidden_size
         self.self_attn = PersimmonAttention(config=config, layer_idx=layer_idx)
         self.mlp = PersimmonMLP(config)
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
     def forward(
@@ -485,7 +485,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
         self.layers = nn.ModuleList(
             [PersimmonDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
-        self.final_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing

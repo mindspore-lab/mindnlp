@@ -13,6 +13,8 @@ def from_numpy(ndarray):
 # zeros
 _zeros = ops.Zeros()
 def zeros(*size, dtype=None):
+    if isinstance(size[0], (tuple, list)):
+        size = size[0]
     if USE_PYBOOST:
         return mindspore.mint.zeros(size, dtype=dtype)
     if dtype is None:
@@ -28,6 +30,8 @@ def zeros_like(input, *, dtype=None):
 # ones
 _ones = ops.Ones()
 def ones(*size, dtype=None):
+    if isinstance(size[0], (tuple, list)):
+        size = size[0]
     if USE_PYBOOST:
         return mindspore.mint.ones(size, dtype=dtype)
     if dtype is None:

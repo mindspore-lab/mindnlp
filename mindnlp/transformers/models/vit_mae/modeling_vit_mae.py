@@ -470,8 +470,8 @@ class ViTMAELayer(nn.Module):
         self.attention = ViTMAEAttention(config)
         self.intermediate = ViTMAEIntermediate(config)
         self.output = ViTMAEOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -589,7 +589,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         self.embeddings = ViTMAEEmbeddings(config)
         self.encoder = ViTMAEEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -690,7 +690,7 @@ class ViTMAEDecoder(nn.Module):
             [ViTMAELayer(decoder_config) for _ in range(config.decoder_num_hidden_layers)]
         )
 
-        self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], epsilon=config.layer_norm_eps)
+        self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], eps=config.layer_norm_eps)
         self.decoder_pred = nn.Linear(
             config.decoder_hidden_size, config.patch_size**2 * config.num_channels, bias=True
         )  # encoder to decoder

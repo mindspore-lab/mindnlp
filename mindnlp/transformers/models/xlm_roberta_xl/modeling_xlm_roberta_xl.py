@@ -348,7 +348,7 @@ class XLMRobertaXLSelfOutput(nn.Module):
 class XLMRobertaXLAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        self.self_attn_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.self_attn_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.self = XLMRobertaXLSelfAttention(config, position_embedding_type=position_embedding_type)
         self.output = XLMRobertaXLSelfOutput(config)
         self.pruned_heads = set()
@@ -436,7 +436,7 @@ class XLMRobertaXLLayer(nn.Module):
             self.crossattention = XLMRobertaXLAttention(config, position_embedding_type="absolute")
         self.intermediate = XLMRobertaXLIntermediate(config)
         self.output = XLMRobertaXLOutput(config)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -515,7 +515,7 @@ class XLMRobertaXLEncoder(nn.Module):
         super().__init__()
         self.config = config
         self.layer = nn.ModuleList([XLMRobertaXLLayer(config) for _ in range(config.num_hidden_layers)])
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
     def forward(
@@ -1160,7 +1160,7 @@ class XLMRobertaXLLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
         self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')

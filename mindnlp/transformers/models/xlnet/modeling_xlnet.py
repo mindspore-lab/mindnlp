@@ -130,7 +130,7 @@ class XLNetRelativeAttention(nn.Module):
         self.r_w_bias = Parameter(ops.zeros((self.n_head, self.d_head), dtype=mindspore.float32))
         self.seg_embed = Parameter(ops.zeros((2, self.n_head, self.d_head), dtype=mindspore.float32))
 
-        self.layer_norm = nn.LayerNorm(config.d_model, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.d_model, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.dropout)
 
     def prune_heads(self, heads):
@@ -505,7 +505,7 @@ class XLNetFeedForward(nn.Module):
             - The 'config.ff_activation' parameter can be either a string or a custom activation function.
         """
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.d_model, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.d_model, eps=config.layer_norm_eps)
         self.layer_1 = nn.Linear(config.d_model, config.d_inner)
         self.layer_2 = nn.Linear(config.d_inner, config.d_model)
         self.dropout = nn.Dropout(p=config.dropout)

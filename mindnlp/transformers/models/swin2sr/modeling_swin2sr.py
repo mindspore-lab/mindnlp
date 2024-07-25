@@ -167,7 +167,7 @@ class Swin2SRPatchEmbeddings(nn.Module):
         self.num_patches = patches_resolution[0] * patches_resolution[1]
 
         self.projection = nn.Conv2d(num_channels, config.embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
-        self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=1e-5) if normalize_patches else None
+        self.layernorm = nn.LayerNorm([config.embed_dim], eps=1e-5) if normalize_patches else None
 
     def forward(self, embeddings: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
         embeddings = self.projection(embeddings)
@@ -486,11 +486,11 @@ class Swin2SRLayer(nn.Module):
             if isinstance(pretrained_window_size, collections.abc.Iterable)
             else (pretrained_window_size, pretrained_window_size),
         )
-        self.layernorm_before = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([dim], eps=config.layer_norm_eps)
         self.drop_path = Swin2SRDropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
         self.intermediate = Swin2SRIntermediate(config, dim)
         self.output = Swin2SROutput(config, dim)
-        self.layernorm_after = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([dim], eps=config.layer_norm_eps)
 
     def _compute_window_shift(self, target_window_size, target_shift_size) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         window_size = [r if r <= w else w for r, w in zip(self.input_resolution, target_window_size)]
@@ -773,7 +773,7 @@ class Swin2SRModel(Swin2SRPreTrainedModel):
         self.embeddings = Swin2SREmbeddings(config)
         self.encoder = Swin2SREncoder(config, grid_size=self.embeddings.patch_embeddings.patches_resolution)
 
-        self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.embed_dim], eps=config.layer_norm_eps)
         self.patch_unembed = Swin2SRPatchUnEmbeddings(config)
         self.conv_after_body = nn.Conv2d(config.embed_dim, config.embed_dim, 3, 1, pad_mode='pad', padding=1, bias=True)
 

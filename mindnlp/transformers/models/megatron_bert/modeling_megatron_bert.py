@@ -482,7 +482,7 @@ class MegatronBertAttention(nn.Module):
             None
         """
         super().__init__()
-        self.ln = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.ln = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.self = MegatronBertSelfAttention(config)
         self.output = MegatronBertSelfOutput(config)
         self.pruned_heads = set()
@@ -806,7 +806,7 @@ class MegatronBertLayer(nn.Module):
             if not self.is_decoder:
                 raise TypeError(f"{self} should be used as a decoder model if cross attention is added")
             self.crossattention = MegatronBertAttention(config)
-        self.ln = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.ln = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.intermediate = MegatronBertIntermediate(config)
         self.output = MegatronBertOutput(config)
 
@@ -984,7 +984,7 @@ class MegatronBertEncoder(nn.Module):
 
         # The final layer norm. We removed the 1st LN, moved LN to each hidden layer and this one
         # is simply the final LN (Transformer's BERT has it attached to each hidden layer).
-        self.ln = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.ln = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
     def forward(
@@ -1212,7 +1212,7 @@ class MegatronBertPredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """

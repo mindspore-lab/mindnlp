@@ -61,7 +61,7 @@ class SqueezeBertEmbeddings(nn.Module):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -128,7 +128,7 @@ class SqueezeBertLayerNorm(nn.LayerNorm):
     N = batch C = channels W = sequence length
     """
 
-    def __init__(self, hidden_size, epsilon=1e-12):
+    def __init__(self, hidden_size, eps=1e-12):
         nn.LayerNorm.__init__(
             self,
             normalized_shape=hidden_size,
@@ -444,7 +444,7 @@ class SqueezeBertPredictionHeadTransform(nn.Module):
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
     def forward(self, hidden_states):

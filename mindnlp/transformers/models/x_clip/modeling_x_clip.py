@@ -301,10 +301,10 @@ class XCLIPEncoderLayer(nn.Module):
         self.embed_dim = config.hidden_size
         self.self_attn = XCLIPAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = XCLIPMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -396,7 +396,7 @@ class XCLIPVisionEncoderLayer(nn.Module):
 
         self.message_fc = nn.Linear(self.embed_dim, self.embed_dim)
         self.message_ln = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.message_attn = XCLIPAttention(config)
 
         self.drop_path = XCLIPDropPath(
@@ -404,10 +404,10 @@ class XCLIPVisionEncoderLayer(nn.Module):
 
         self.self_attn = XCLIPAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = XCLIPMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -658,7 +658,7 @@ class XCLIPTextTransformer(nn.Module):
         self.embeddings = XCLIPTextEmbeddings(config)
         self.encoder = XCLIPEncoder(config)
         self.final_layer_norm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -890,10 +890,10 @@ class XCLIPVisionTransformer(nn.Module):
         embed_dim = config.hidden_size
 
         self.embeddings = XCLIPVisionEmbeddings(config)
-        self.pre_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         self.encoder = XCLIPVisionEncoder(config)
         self.post_layernorm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -1151,9 +1151,9 @@ class PromptGeneratorLayer(nn.Module):
         embed_dim = config.projection_dim
         self.cross_attn = XCLIPCrossAttention(config)
         self.norm1 = nn.LayerNorm(
-            embed_dim, epsilon=config.text_config.layer_norm_eps)
+            embed_dim, eps=config.text_config.layer_norm_eps)
         self.norm3 = nn.LayerNorm(
-            embed_dim, epsilon=config.text_config.layer_norm_eps)
+            embed_dim, eps=config.text_config.layer_norm_eps)
         self.mlp = nn.SequentialCell([
             nn.Linear(embed_dim, embed_dim * 4),
             ACT2FN[config.prompt_hidden_act],
@@ -1174,7 +1174,7 @@ class XCLIPPromptGenerator(nn.Module):
         super().__init__()
         embed_dim = config.projection_dim
         self.layernorm = nn.LayerNorm(
-            embed_dim, epsilon=config.vision_config.layer_norm_eps)
+            embed_dim, eps=config.vision_config.layer_norm_eps)
         self.decoder = nn.ModuleList([PromptGeneratorLayer(
             config) for _ in range(config.prompt_layers)])
         self.alpha = ms.Parameter(ops.ones(embed_dim) * config.prompt_alpha)
@@ -1223,7 +1223,7 @@ class XCLIPModel(XCLIPPreTrainedModel):
             ms.Tensor(self.config.logit_scale_init_value))
 
         self.prompts_visual_layernorm = nn.LayerNorm(
-            self.vision_embed_dim, epsilon=config.vision_config.layer_norm_eps)
+            self.vision_embed_dim, eps=config.vision_config.layer_norm_eps)
         self.prompts_visual_projection = ms.Parameter(
             ops.randn(self.vision_embed_dim, self.projection_dim))
 

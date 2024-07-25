@@ -358,9 +358,9 @@ class CLIPSegEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPSegAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = CLIPSegMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -574,7 +574,7 @@ class CLIPSegTextTransformer(nn.Module):
         embed_dim = config.hidden_size
         self.embeddings = CLIPSegTextEmbeddings(config)
         self.encoder = CLIPSegEncoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
@@ -722,9 +722,9 @@ class CLIPSegVisionTransformer(nn.Module):
         embed_dim = config.hidden_size
 
         self.embeddings = CLIPSegVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         self.encoder = CLIPSegEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
     # Copied from transformers.models.clip.modeling_clip.CLIPVisionTransformer.forward
     def forward(
         self,
@@ -1051,9 +1051,9 @@ class CLIPSegDecoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPSegAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = CLIPSegMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,

@@ -575,7 +575,7 @@ class VanStage(nn.Module):
                 for _ in range(depth)
             ]
         )
-        self.normalization = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_eps)
+        self.normalization = nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -757,7 +757,7 @@ class VanModel(VanPreTrainedModel):
         self.config = config
         self.encoder = VanEncoder(config)
         # final layernorm layer
-        self.layernorm = nn.LayerNorm(config.hidden_sizes[-1], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_sizes[-1], eps=config.layer_norm_eps)
         # Initialize weights and apply final processing
         self.post_init()
 

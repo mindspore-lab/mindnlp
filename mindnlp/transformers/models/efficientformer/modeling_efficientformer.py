@@ -285,8 +285,8 @@ class EfficientFormerMeta3D(nn.Module):
             resolution=config.resolution,
         )
 
-        self.layernorm1 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
-        self.layernorm2 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.layernorm1 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
+        self.layernorm2 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
 
         mlp_hidden_dim = int(dim * config.mlp_expansion_ratio)
         self.mlp = EfficientFormerDenseMlp(config, in_features=dim, hidden_features=mlp_hidden_dim)
@@ -516,7 +516,7 @@ class EfficientFormerModel(EfficientFormerPreTrainedModel):
 
         self.patch_embed = EfficientFormerConvStem(config, config.hidden_sizes[0])
         self.encoder = EfficientFormerEncoder(config)
-        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()

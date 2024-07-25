@@ -102,7 +102,7 @@ class FNetEmbeddings(nn.Module):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         # NOTE: This is the project layer and will be needed. The original code allows for different embedding and different model dimensions.
         self.projection = nn.Linear(config.hidden_size, config.hidden_size)
@@ -199,7 +199,7 @@ class FNetBasicOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
     def forward(self, hidden_states, input_tensor):
@@ -243,7 +243,7 @@ class FNetOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -346,7 +346,7 @@ class FNetPredictionHeadTransform(nn.Module):
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
     def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:

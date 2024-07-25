@@ -497,9 +497,9 @@ class Owlv2EncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = Owlv2Attention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = Owlv2MLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -719,7 +719,7 @@ class Owlv2TextTransformer(nn.Module):
         embed_dim = config.hidden_size
         self.embeddings = Owlv2TextEmbeddings(config)
         self.encoder = Owlv2Encoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -856,11 +856,11 @@ class Owlv2VisionTransformer(nn.Module):
 
         self.embeddings = Owlv2VisionEmbeddings(config)
         self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
         self.encoder = Owlv2Encoder(config)
         self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
 
     def forward(

@@ -296,15 +296,15 @@ class DecisionTransformerGPT2Block(nn.Module):
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.ln_1 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         self.attn = DecisionTransformerGPT2Attention(config, layer_idx=layer_idx)
-        self.ln_2 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             self.crossattention = DecisionTransformerGPT2Attention(
                 config, is_cross_attention=True, layer_idx=layer_idx
             )
-            self.ln_cross_attn = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+            self.ln_cross_attn = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         self.mlp = DecisionTransformerGPT2MLP(inner_dim, config)
 
@@ -425,7 +425,7 @@ class DecisionTransformerGPT2Model(DecisionTransformerGPT2PreTrainedModel):
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
         self.h = nn.ModuleList([DecisionTransformerGPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -203,10 +203,31 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 
     return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
 
-def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, *, ceil_mode=False, return_indices=False):
+def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
     return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+
+def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    if stride is None:
+        stride = kernel_size
+
+    kernel_size = (1, kernel_size)
+    stride = (1, stride)
+    padding = (0, padding)
+    dilation = (1, dilation)
+
+    input_2d = input.unsqueeze(2)
+
+    if return_indices:
+        output_2d, indices_2d = max_pool2d(input_2d, kernel_size, stride, padding, dilation, ceil_mode, return_indices)
+        output_1d = output_2d.squeeze(2)
+        indices_1d = indices_2d.squeeze(2)
+        return output_1d, indices_1d
+    else:
+        output_2d = max_pool2d(input_2d, kernel_size, stride, padding, dilation, ceil_mode)
+        output_1d = output_2d.squeeze(2)
+        return output_1d
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if USE_PYBOOST:

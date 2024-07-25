@@ -425,9 +425,9 @@ class Block(nn.Module):
         super().__init__()
         nx = config.n_embd
         self.attn = Attention(nx, n_positions, config, scale)
-        self.ln_1 = nn.LayerNorm([nx], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm([nx], eps=config.layer_norm_epsilon)
         self.mlp = MLP(4 * nx, config)
-        self.ln_2 = nn.LayerNorm([nx], epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm([nx], eps=config.layer_norm_epsilon)
 
     def forward(self, x, attention_mask=None, head_mask=None, output_attentions=False):
         """

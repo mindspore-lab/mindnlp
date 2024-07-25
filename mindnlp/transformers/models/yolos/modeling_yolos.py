@@ -402,8 +402,8 @@ class YolosLayer(nn.Module):
         self.attention = YolosAttention(config)
         self.intermediate = YolosIntermediate(config)
         self.output = YolosOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -547,7 +547,7 @@ class YolosModel(YolosPreTrainedModel):
         self.embeddings = YolosEmbeddings(config)
         self.encoder = YolosEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pooler = YolosPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing

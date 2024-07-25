@@ -488,7 +488,7 @@ class DebertaV2SelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -774,7 +774,7 @@ class DebertaV2Output(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
 
@@ -966,7 +966,7 @@ class DebertaV2Encoder(nn.Module):
         self.norm_rel_ebd = [x.strip() for x in getattr(config, "norm_rel_ebd", "none").lower().split("|")]
 
         if "layer_norm" in self.norm_rel_ebd:
-            self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+            self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.conv = ConvLayer(config) if getattr(config, "conv_kernel_size", 0) > 0 else None
         self.gradient_checkpointing = False
@@ -1382,7 +1382,7 @@ class DebertaV2Embeddings(nn.Module):
 
         if self.embedding_size != config.hidden_size:
             self.embed_proj = nn.Linear(self.embedding_size, config.hidden_size, bias=False)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
 
@@ -1760,7 +1760,7 @@ class DebertaV2PredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([self.embedding_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([self.embedding_size], eps=config.layer_norm_eps)
 
     def forward(self, hidden_states):
         """

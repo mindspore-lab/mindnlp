@@ -569,7 +569,7 @@ class SeamlessM4TConformerFeatureProjection(nn.Module):
             None.
         """
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.feature_projection_input_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.feature_projection_input_dim], eps=config.layer_norm_eps)
         self.projection = nn.Linear(config.feature_projection_input_dim, config.hidden_size)
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
 
@@ -1186,7 +1186,7 @@ class SeamlessM4TConformerEncoder(nn.Module):
             [SeamlessM4TConformerEncoderLayer(config) for _ in range(config.speech_encoder_layers)]
         )
 
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.gradient_checkpointing = False
 

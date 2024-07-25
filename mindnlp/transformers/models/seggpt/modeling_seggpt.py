@@ -450,9 +450,9 @@ class SegGptLayer(nn.Module):
         self.drop_path = SegGptDropPath(
             drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
         self.layernorm_before = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.layernorm_after = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -504,7 +504,7 @@ class SegGptEncoder(nn.Module):
         self.layers = nn.ModuleList([SegGptLayer(config, dpr[i])
                                   for i in range(config.num_hidden_layers)])
         self.layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
     def forward(

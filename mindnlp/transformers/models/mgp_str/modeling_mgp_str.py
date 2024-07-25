@@ -242,13 +242,13 @@ class MgpstrAttention(nn.Module):
 class MgpstrLayer(nn.Module):
     def __init__(self, config: MgpstrConfig, drop_path=None):
         super().__init__()
-        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.attn = MgpstrAttention(config)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = (
             MgpstrDropPath(drop_path) if drop_path is not None else nn.Identity()
         )
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         mlp_hidden_dim = int(config.hidden_size * config.mlp_ratio)
         self.mlp = MgpstrMlp(config, mlp_hidden_dim)
 
@@ -325,7 +325,7 @@ class MgpstrA3Module(nn.Module):
     def __init__(self, config: MgpstrConfig):
         super().__init__()
         self.token_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         if self.token_norm.bias is None:
             self.token_norm.bias.set_data(
@@ -361,7 +361,7 @@ class MgpstrA3Module(nn.Module):
             bias=False,
             pad_mode="pad",
         )
-        self.norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""

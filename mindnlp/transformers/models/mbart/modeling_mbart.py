@@ -315,13 +315,13 @@ class MBartEncoderLayer(nn.Module):
             num_heads=config.encoder_attention_heads,
             dropout=config.attention_dropout,
         )
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], eps=1e-5)
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim], eps=1e-5)
 
     def forward(
             self,
@@ -412,17 +412,17 @@ class MBartDecoderLayer(nn.Module):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], eps=1e-5)
         self.encoder_attn = MBartAttention(
             self.embed_dim,
             config.decoder_attention_heads,
             dropout=config.attention_dropout,
             is_decoder=True,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)
+        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim], eps=1e-5)
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim], eps=1e-5)
 
     def forward(
             self,
@@ -834,8 +834,8 @@ class MBartDecoder(MBartPreTrainedModel):
             config.d_model,
         )
         self.layers = nn.ModuleList([MBartDecoderLayer(config) for _ in range(config.decoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([config.d_model], epsilon=1e-5)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=1e-5)
+        self.layernorm_embedding = nn.LayerNorm([config.d_model], eps=1e-5)
+        self.layer_norm = nn.LayerNorm([config.d_model], eps=1e-5)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing

@@ -423,7 +423,7 @@ class UniSpeechSatFeatureExtractor(UniSpeechSatFeatureEncoder):
 class UniSpeechSatFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
         self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p=config.feat_proj_dropout)
 
@@ -638,9 +638,9 @@ class UniSpeechSatEncoderLayer(nn.Module):
         )
 
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = UniSpeechSatFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         attn_residual = hidden_states
@@ -700,9 +700,9 @@ class UniSpeechSatEncoderLayerStableLayerNorm(nn.Module):
             is_decoder=False,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = UniSpeechSatFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if getattr(config, "adapter_attn_dim", None) is not None:
             self.adapter_layer = UniSpeechSatAttnAdapterLayer(config)
@@ -741,7 +741,7 @@ class UniSpeechSatEncoder(nn.Module):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechSatPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
         self.layers = nn.ModuleList([UniSpeechSatEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
@@ -828,7 +828,7 @@ class UniSpeechSatEncoderStableLayerNorm(nn.Module):
         super().__init__()
         self.config = config
         self.pos_conv_embed = UniSpeechSatPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
         self.layers = nn.ModuleList(
             [UniSpeechSatEncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
@@ -1276,7 +1276,7 @@ class UniSpeechSatForPreTraining(UniSpeechSatPreTrainedModel):
                                                                      dtype=mindspore.float32),
                                                            name="label_embeddings_concat")
 
-        self.layer_norm_for_extract = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm_for_extract = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         if self.config.do_stable_layer_norm:
             self.layer_norm_for_extract.requires_grad = False
 

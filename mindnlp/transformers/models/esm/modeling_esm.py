@@ -307,7 +307,7 @@ class EsmEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
 
         if config.emb_layer_norm_before:
-            self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+            self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         else:
             self.layer_norm = None
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
@@ -724,7 +724,7 @@ class EsmAttention(nn.Module):
         self.self = EsmSelfAttention(config)
         self.output = EsmSelfOutput(config)
         self.pruned_heads = set()
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def prune_heads(self, heads):
         """
@@ -1002,7 +1002,7 @@ class EsmLayer(nn.Module):
             self.crossattention = EsmAttention(config)
         self.intermediate = EsmIntermediate(config)
         self.output = EsmOutput(config)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -1189,7 +1189,7 @@ class EsmEncoder(nn.Module):
         super().__init__()
         self.config = config
         self.layer = nn.ModuleList([EsmLayer(config) for _ in range(config.num_hidden_layers)])
-        self.emb_layer_norm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.emb_layer_norm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
     def forward(
@@ -1819,7 +1819,7 @@ class EsmLMHead(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(ops.zeros(config.vocab_size))

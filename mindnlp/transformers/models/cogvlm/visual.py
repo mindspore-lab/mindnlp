@@ -221,10 +221,10 @@ class TransformerLayer(nn.Module):
             TypeError: If the config object is not of the expected type.
         """
         super().__init__()
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.attention = Attention(config)
         self.mlp = MLP(config)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states):
         """

@@ -560,7 +560,7 @@ class Wav2Vec2ConformerFeatureEncoder(nn.Module):
 class Wav2Vec2ConformerFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.conv_dim[-1]], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.conv_dim[-1]], eps=config.layer_norm_eps)
         self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p = config.feat_proj_dropout)
 
@@ -887,7 +887,7 @@ class Wav2Vec2ConformerEncoder(nn.Module):
             self.embed_positions = None
 
         self.pos_conv_embed = Wav2Vec2ConformerPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout)
         self.layers = nn.ModuleList([Wav2Vec2ConformerEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False

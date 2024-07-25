@@ -74,7 +74,7 @@ class MSBertEmbeddings(nn.Module):
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm(
-            (config.hidden_size,), epsilon=config.layer_norm_eps
+            (config.hidden_size,), eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -406,7 +406,7 @@ class MSBertSelfOutput(nn.Module):
             config.hidden_size,
             config.hidden_size,
         )
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -569,7 +569,7 @@ class MSBertOutput(nn.Module):
             config.intermediate_size,
             config.hidden_size,
         )
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
@@ -892,7 +892,7 @@ class MSBertPredictionHeadTransform(nn.Module):
         )
         self.transform_act_fn = ACT2FN[config.hidden_act]
         self.LayerNorm = nn.LayerNorm(
-            (config.hidden_size,), epsilon=config.layer_norm_eps
+            (config.hidden_size,), eps=config.layer_norm_eps
         )
 
     def forward(self, hidden_states):

@@ -373,10 +373,10 @@ class GPTNeoBlock(nn.Module):
         hidden_size = config.hidden_size
         inner_dim = config.intermediate_size if config.intermediate_size is not None else 4 * hidden_size
         self.ln_1 = nn.LayerNorm(
-            (hidden_size,), epsilon=config.layer_norm_epsilon)
+            (hidden_size,), eps=config.layer_norm_epsilon)
         self.attn = GPTNeoAttention(config, layer_id)
         self.ln_2 = nn.LayerNorm(
-            (hidden_size,), epsilon=config.layer_norm_epsilon)
+            (hidden_size,), eps=config.layer_norm_epsilon)
         self.mlp = GPTNeoMLP(inner_dim, config)
 
     def forward(
@@ -577,7 +577,7 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         self.h = nn.ModuleList([GPTNeoBlock(config, layer_id=i)
                               for i in range(config.num_layers)])
         self.ln_f = nn.LayerNorm(
-            (self.embed_dim,), epsilon=config.layer_norm_epsilon)
+            (self.embed_dim,), eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing

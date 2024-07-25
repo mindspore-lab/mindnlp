@@ -422,10 +422,10 @@ class GPTBigCodeBlock(nn.Module):
         self.inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
         self.ln_1 = nn.LayerNorm(
-            [hidden_size], epsilon=config.layer_norm_epsilon)
+            [hidden_size], eps=config.layer_norm_epsilon)
         self.attn = GPTBigCodeAttention(config, layer_idx=layer_idx)
         self.ln_2 = nn.LayerNorm(
-            [hidden_size], epsilon=config.layer_norm_epsilon)
+            [hidden_size], eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             if config.multi_query:
@@ -434,7 +434,7 @@ class GPTBigCodeBlock(nn.Module):
             self.crossattention = GPTBigCodeAttention(
                 config, is_cross_attention=True, layer_idx=layer_idx)
             self.ln_cross_attn = nn.LayerNorm(
-                hidden_size, epsilon=config.layer_norm_epsilon)
+                hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = GPTBigCodeMLP(self.inner_dim, config)
 
@@ -671,7 +671,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.h = nn.ModuleList([GPTBigCodeBlock(config, layer_idx=i)
                               for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm(
-            [self.embed_dim], epsilon=config.layer_norm_epsilon)
+            [self.embed_dim], eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
 

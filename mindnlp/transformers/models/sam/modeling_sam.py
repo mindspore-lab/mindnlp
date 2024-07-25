@@ -514,15 +514,15 @@ class SamTwoWayAttentionBlock(nn.Module):
         self.layer_norm_eps = config.layer_norm_eps
 
         self.self_attn = SamAttention(config, downsample_rate=1)
-        self.layer_norm1 = nn.LayerNorm(self.hidden_size, epsilon=self.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
 
         self.cross_attn_token_to_image = SamAttention(config, downsample_rate=attention_downsample_rate)
-        self.layer_norm2 = nn.LayerNorm(self.hidden_size, epsilon=self.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
 
         self.mlp = SamMLPBlock(config)
-        self.layer_norm3 = nn.LayerNorm(self.hidden_size, epsilon=self.layer_norm_eps)
+        self.layer_norm3 = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
 
-        self.layer_norm4 = nn.LayerNorm(self.hidden_size, epsilon=self.layer_norm_eps)
+        self.layer_norm4 = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
         self.cross_attn_image_to_token = SamAttention(config, downsample_rate=attention_downsample_rate)
 
         self.skip_first_layer_pe = skip_first_layer_pe
@@ -1533,9 +1533,9 @@ class SamVisionLayer(nn.Module):
             None.
         """
         super().__init__()
-        self.layer_norm1 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.attn = SamVisionAttention(config, window_size)
-        self.layer_norm2 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = SamMLPBlock(config)
         self.window_size = window_size
 
