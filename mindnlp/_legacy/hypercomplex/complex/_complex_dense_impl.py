@@ -100,7 +100,7 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
 
     where :math:`inp` is the complex input tensors, :math:`\text{kernel}` is a complex weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a complex bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{Re(...)}` and
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{Re(...)}` and
     :math:`\text{Im(...)}` are respectively real and imaginary parts of the complex-valued expression inside
     the parentheses.
 

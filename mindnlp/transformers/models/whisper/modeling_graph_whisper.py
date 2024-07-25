@@ -219,16 +219,16 @@ class WhisperGraphAttention(nn.Module):
         units = num_attention_heads * self.size_per_head
         self.query_layer = nn.Linear(hidden_size,
                                     units,
-                                    has_bias=True, dtype=compute_type).to_float(compute_type)
+                                    bias=True, dtype=compute_type).to_float(compute_type)
         self.key_layer = nn.Linear(hidden_size,
                                   units,
-                                  has_bias=False, dtype=compute_type).to_float(compute_type)
+                                  bias=False, dtype=compute_type).to_float(compute_type)
         self.value_layer = nn.Linear(hidden_size,
                                     units,
-                                    has_bias=True, dtype=compute_type).to_float(compute_type)
+                                    bias=True, dtype=compute_type).to_float(compute_type)
         self.out_layer = nn.Linear(units,
                                   hidden_size,
-                                  has_bias=True, dtype=compute_type).to_float(compute_type)
+                                  bias=True, dtype=compute_type).to_float(compute_type)
 
         self.matmul_trans_b = ops.BatchMatMul(transpose_b=True)
         self.multiply = ops.Mul()
@@ -617,7 +617,7 @@ class TransformerDecoderStep(nn.Module):
 
         self.tfm_embedding_lookup = embedding_lookup
         self.tfm_embedding_processor = embedding_processor
-        self.projection = nn.Linear(hidden_size, vocab_size, has_bias=False, dtype=compute_type).to_float(compute_type)
+        self.projection = nn.Linear(hidden_size, vocab_size, bias=False, dtype=compute_type).to_float(compute_type)
 
         self.tfm_decoder = WhisperGraphDecoder(
             batch_size=batch_size,
@@ -772,10 +772,10 @@ class WhisperGraphModel(nn.Module):
         self.expand = ops.ExpandDims()
         self.multiply = ops.Mul()
         self.conv1 = nn.Conv1d(config.seq_length, config.hidden_size, kernel_size=3, padding=1, pad_mode='pad',
-                               has_bias=True).to_float(config.compute_type)
+                               bias=True).to_float(config.compute_type)
         self.conv2 = nn.Conv1d(config.hidden_size, config.hidden_size, kernel_size=3, stride=2, padding=1,
                                pad_mode='pad',
-                               has_bias=True).to_float(config.compute_type)
+                               bias=True).to_float(config.compute_type)
         self._create_attention_mask_from_input_mask = CreateAttentionMaskFromInputMask()
 
     def forward(self, source_ids, source_mask, target_ids=None, target_mask=None):

@@ -132,10 +132,10 @@ class OPTAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -358,8 +358,8 @@ class OPTDecoderLayer(nn.Module):
         self.self_attn_layer_norm = nn.LayerNorm(
             [self.embed_dim], elementwise_affine=config.layer_norm_elementwise_affine
         )
-        self.fc1 = nn.Linear(self.embed_dim, config.ffn_dim, has_bias=config.enable_bias)
-        self.fc2 = nn.Linear(config.ffn_dim, self.embed_dim, has_bias=config.enable_bias)
+        self.fc1 = nn.Linear(self.embed_dim, config.ffn_dim, bias=config.enable_bias)
+        self.fc2 = nn.Linear(config.ffn_dim, self.embed_dim, bias=config.enable_bias)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim], elementwise_affine=config.layer_norm_elementwise_affine)
 
     def forward(
@@ -494,7 +494,7 @@ class OPTPreTrainedModel(PreTrainedModel):
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -544,12 +544,12 @@ class OPTDecoder(OPTPreTrainedModel):
         self.embed_positions = OPTLearnedPositionalEmbedding(config.max_position_embeddings, config.hidden_size)
 
         if config.word_embed_proj_dim != config.hidden_size:
-            self.project_out = nn.Linear(config.hidden_size, config.word_embed_proj_dim, has_bias=False)
+            self.project_out = nn.Linear(config.hidden_size, config.word_embed_proj_dim, bias=False)
         else:
             self.project_out = None
 
         if config.word_embed_proj_dim != config.hidden_size:
-            self.project_in = nn.Linear(config.word_embed_proj_dim, config.hidden_size, has_bias=False)
+            self.project_in = nn.Linear(config.word_embed_proj_dim, config.hidden_size, bias=False)
         else:
             self.project_in = None
 
@@ -998,7 +998,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
         self.model = OPTModel(config)
 
         # the lm_head weight is automatically tied to the embed tokens weight
-        self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1374,7 +1374,7 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = OPTModel(config)
-        self.score = nn.Linear(config.word_embed_proj_dim, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.word_embed_proj_dim, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

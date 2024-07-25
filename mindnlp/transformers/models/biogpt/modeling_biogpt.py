@@ -20,10 +20,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -80,7 +81,7 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
         attention_mask = attention_mask.long()
 
         # create positions depending on attention_mask
-        positions = (ops.cumsum(attention_mask, axis=1).type_as(attention_mask) * attention_mask).long() - 1
+        positions = (ops.cumsum(attention_mask, dim=1).type_as(attention_mask) * attention_mask).long() - 1
 
         # cut positions if `past_key_values_length` is > 0
         positions = positions[:, past_key_values_length:]
@@ -137,10 +138,10 @@ class BioGptAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -198,8 +199,8 @@ class BioGptAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -237,7 +238,7 @@ class BioGptAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -258,7 +259,7 @@ class BioGptAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -387,7 +388,7 @@ class BioGptDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Fully Connected
@@ -395,9 +396,9 @@ class BioGptDecoderLayer(nn.Module):
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -427,7 +428,7 @@ class BioGptPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -590,7 +591,7 @@ class BioGptModel(BioGptPreTrainedModel):
 
         if attention_mask is None:
             attention_mask = ops.ones(
-                (inputs_embeds.shape[0], inputs_embeds.shape[1] + past_key_values_length),
+                inputs_embeds.shape[0], inputs_embeds.shape[1] + past_key_values_length,
                 dtype=mindspore.bool_,
             )
         elif attention_mask.shape[1] != past_key_values_length + input_shape[1]:
@@ -608,7 +609,7 @@ class BioGptModel(BioGptPreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -729,7 +730,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         super().__init__(config)
 
         self.biogpt = BioGptModel(config)
-        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -809,7 +810,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = F.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[1:]
@@ -990,9 +991,9 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
                 active_labels = ops.where(
                     active_loss, labels.view(-1), mindspore.tensor(-100).type_as(labels)
                 )
-                loss = ops.cross_entropy(active_logits, active_labels)
+                loss = F.cross_entropy(active_logits, active_labels)
             else:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[2:]
@@ -1048,7 +1049,7 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.biogpt = BioGptModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1120,13 +1121,13 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

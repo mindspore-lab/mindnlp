@@ -99,7 +99,7 @@ class MobileViTConvLayer(nn.Module):
             padding=padding,
             dilation=dilation,
             group=groups,
-            has_bias=bias,
+            bias=bias,
             pad_mode="pad",
         )
 
@@ -220,11 +220,11 @@ class MobileViTSelfAttention(nn.Module):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Linear(
-            hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+            hidden_size, self.all_head_size, bias=config.qkv_bias)
         self.key = nn.Linear(hidden_size, self.all_head_size,
-                            has_bias=config.qkv_bias)
+                            bias=config.qkv_bias)
         self.value = nn.Linear(
-            hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+            hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 

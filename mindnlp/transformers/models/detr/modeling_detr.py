@@ -532,10 +532,10 @@ class DetrAttention(nn.Module):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1141,7 +1141,7 @@ class DetrModel(DetrPreTrainedModel):
         self.backbone = DetrConvModel(backbone, object_queries)
 
         # Create projection layer
-        self.input_projection = nn.Conv2d(backbone.intermediate_channel_sizes[-1], config.d_model, kernel_size=1, has_bias=True)
+        self.input_projection = nn.Conv2d(backbone.intermediate_channel_sizes[-1], config.d_model, kernel_size=1, bias=True)
 
         self.query_position_embeddings = nn.Embedding(config.num_queries, config.d_model)
 
@@ -1694,23 +1694,23 @@ class DetrMaskHeadSmallConv(nn.Module):
 
         inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
 
-        self.lay1 = nn.Conv2d(dim, dim, 3, pad_mode='pad', padding=1, has_bias=True)
+        self.lay1 = nn.Conv2d(dim, dim, 3, pad_mode='pad', padding=1, bias=True)
         self.gn1 = nn.GroupNorm(8, dim)
-        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, pad_mode='pad', padding=1, has_bias=True)
+        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, pad_mode='pad', padding=1, bias=True)
         self.gn2 = nn.GroupNorm(min(8, inter_dims[1]), inter_dims[1])
-        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, pad_mode='pad', padding=1, has_bias=True)
+        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, pad_mode='pad', padding=1, bias=True)
         self.gn3 = nn.GroupNorm(min(8, inter_dims[2]), inter_dims[2])
-        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, pad_mode='pad', padding=1, has_bias=True)
+        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, pad_mode='pad', padding=1, bias=True)
         self.gn4 = nn.GroupNorm(min(8, inter_dims[3]), inter_dims[3])
-        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, pad_mode='pad', padding=1, has_bias=True)
+        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, pad_mode='pad', padding=1, bias=True)
         self.gn5 = nn.GroupNorm(min(8, inter_dims[4]), inter_dims[4])
-        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, pad_mode='pad', padding=1, has_bias=True)
+        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, pad_mode='pad', padding=1, bias=True)
 
         self.dim = dim
 
-        self.adapter1 = nn.Conv2d(fpn_dims[0], inter_dims[1], 1, has_bias=True)
-        self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1, has_bias=True)
-        self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1, has_bias=True)
+        self.adapter1 = nn.Conv2d(fpn_dims[0], inter_dims[1], 1, bias=True)
+        self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1, bias=True)
+        self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1, bias=True)
 
         for m in self.cells():
             if isinstance(m, nn.Conv2d):
@@ -1762,14 +1762,14 @@ class DetrMaskHeadSmallConv(nn.Module):
 class DetrMHAttentionMap(nn.Module):
     """This is a 2D attention module, which only returns the attention softmax (no multiplication by value)"""
 
-    def __init__(self, query_dim, hidden_dim, num_heads, dropout=0.0, has_bias=True, std=None):
+    def __init__(self, query_dim, hidden_dim, num_heads, dropout=0.0, bias=True, std=None):
         super().__init__()
         self.num_heads = num_heads
         self.hidden_dim = hidden_dim
         self.dropout = nn.Dropout(p=dropout)
 
-        self.q_linear = nn.Linear(query_dim, hidden_dim, has_bias=has_bias)
-        self.k_linear = nn.Linear(query_dim, hidden_dim, has_bias=has_bias)
+        self.q_linear = nn.Linear(query_dim, hidden_dim, bias=bias)
+        self.k_linear = nn.Linear(query_dim, hidden_dim, bias=bias)
 
         self.normalize_fact = float(hidden_dim / self.num_heads) ** -0.5
 

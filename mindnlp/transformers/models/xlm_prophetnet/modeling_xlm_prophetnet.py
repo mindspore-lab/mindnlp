@@ -1420,7 +1420,7 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.disable_ngram_loss = config.disable_ngram_loss
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1608,7 +1608,7 @@ class XLMProphetNetForCausalLM(XLMProphetNetPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.disable_ngram_loss = config.disable_ngram_loss
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

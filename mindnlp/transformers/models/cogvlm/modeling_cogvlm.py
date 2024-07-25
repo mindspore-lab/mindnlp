@@ -191,9 +191,9 @@ class MLP(nn.Module):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -675,10 +675,10 @@ class VisionExpertAttention(nn.Module):
         self.max_position_embeddings = config.max_position_embeddings
 
         self.rotary_emb = RotaryEmbedding(self.head_dim)
-        self.vision_expert_query_key_value = nn.Linear(self.hidden_size, self.hidden_size * 3, has_bias=False)
-        self.vision_expert_dense = nn.Linear(self.hidden_size, self.hidden_size, has_bias=False)
-        self.language_expert_query_key_value = nn.Linear(self.hidden_size, self.hidden_size * 3, has_bias=False)
-        self.language_expert_dense = nn.Linear(self.hidden_size, self.hidden_size, has_bias=False)
+        self.vision_expert_query_key_value = nn.Linear(self.hidden_size, self.hidden_size * 3, bias=False)
+        self.vision_expert_dense = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
+        self.language_expert_query_key_value = nn.Linear(self.hidden_size, self.hidden_size * 3, bias=False)
+        self.language_expert_dense = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
 
     def _swapaxes_for_scores(self, tensor):
         """Transpose a 3D tensor [B, L, H*HD] into a 4D tensor with size [B H L HD]."""
@@ -919,7 +919,7 @@ class CogVLMPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0,sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1429,7 +1429,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
         super().__init__(config)
         self.model = CogVLMModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

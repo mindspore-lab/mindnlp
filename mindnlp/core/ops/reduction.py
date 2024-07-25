@@ -125,7 +125,7 @@ def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=No
     pass
 
 # unique_consecutive
-def unique_consecutive(input, return_inverse, return_counts, dim=None):
+def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):
     return ops.unique_consecutive(input, return_inverse, return_counts, dim)
 
 # var

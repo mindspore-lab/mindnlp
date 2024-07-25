@@ -290,7 +290,7 @@ class ViTMAEPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -320,9 +320,9 @@ class ViTMAESelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -675,7 +675,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
 class ViTMAEDecoder(nn.Module):
     def __init__(self, config, num_patches):
         super().__init__()
-        self.decoder_embed = nn.Linear(config.hidden_size, config.decoder_hidden_size, has_bias=True)
+        self.decoder_embed = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=True)
         self.mask_token = Parameter(ops.zeros(1, 1, config.decoder_hidden_size), 'mask_token')
         self.decoder_pos_embed = Parameter(
             ops.zeros(1, num_patches + 1, config.decoder_hidden_size),  'decoder_pos_embed', requires_grad=False
@@ -692,7 +692,7 @@ class ViTMAEDecoder(nn.Module):
 
         self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], epsilon=config.layer_norm_eps)
         self.decoder_pred = nn.Linear(
-            config.decoder_hidden_size, config.patch_size**2 * config.num_channels, has_bias=True
+            config.decoder_hidden_size, config.patch_size**2 * config.num_channels, bias=True
         )  # encoder to decoder
         self.gradient_checkpointing = False
         self.config = config

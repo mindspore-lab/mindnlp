@@ -406,7 +406,7 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
         self.qkv_proj = nn.Linear(
             in_channels=config.model_dim,
             out_channels=(q_heads + k_heads + v_heads) * head_dim,
-            has_bias=False,
+            bias=False,
         )
 
         self.pos_embedding = OpenELMRotaryEmbedding(
@@ -429,7 +429,7 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
         self.out_proj = nn.Linear(
             in_channels=q_heads * head_dim,
             out_channels=config.model_dim,
-            has_bias=False,
+            bias=False,
         )
 
         self.head_dim = config.head_dim
@@ -600,12 +600,12 @@ class OpenELMFeedForwardNetwork(nn.Module):
             self.proj_1 = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=2 * intermediate_dim,
-                has_bias=False,
+                bias=False,
             )
             self.proj_2 = nn.Linear(
                 in_channels=intermediate_dim,
                 out_channels=config.model_dim,
-                has_bias=False,
+                bias=False,
             )
             self.ffn_with_glu = True
         else:
@@ -613,12 +613,12 @@ class OpenELMFeedForwardNetwork(nn.Module):
             self.proj_1 = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=intermediate_dim,
-                has_bias=False,
+                bias=False,
             )
             self.proj_2 = nn.Linear(
                 in_channels=intermediate_dim,
                 out_channels=config.model_dim,
-                has_bias=False,
+                bias=False,
             )
             self.ffn_with_glu = False
 
@@ -822,7 +822,7 @@ class OpenELMModel(OpenELMPreTrainedModel):
             self.classifier = nn.Linear(
                 in_channels=config.model_dim,
                 out_channels=config.vocab_size,
-                has_bias=False,
+                bias=False,
             )
         self.num_transformer_layers = config.num_transformer_layers
         self.gradient_checkpointing = False
@@ -1134,7 +1134,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
         if config.share_input_output_layers:
             self.lm_head = None
         else:
-            self.lm_head = nn.Linear(config.model_dim, config.vocab_size, has_bias=False)
+            self.lm_head = nn.Linear(config.model_dim, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

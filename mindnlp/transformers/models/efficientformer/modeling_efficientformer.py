@@ -65,7 +65,7 @@ class EfficientFormerPatchEmbeddings(nn.Module):
             kernel_size=config.downsample_patch_size,
             stride=config.downsample_stride,
             padding=config.downsample_pad,
-            has_bias=True,
+            bias=True,
             pad_mode="pad"
         )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps) if apply_norm else nn.Identity()
@@ -141,10 +141,10 @@ class EfficientFormerConvStem(nn.Module):
     def __init__(self, config: EfficientFormerConfig, out_channels: int):
         super().__init__()
 
-        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1,has_bias=True,pad_mode="pad")
+        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1,bias=True,pad_mode="pad")
         self.batchnorm_before = nn.BatchNorm2d(out_channels // 2, eps=config.batch_norm_eps)
 
-        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1,has_bias=True,pad_mode="pad")
+        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1,bias=True,pad_mode="pad")
         self.batchnorm_after = nn.BatchNorm2d(out_channels, eps=config.batch_norm_eps)
 
         self.activation = nn.ReLU()
@@ -208,9 +208,9 @@ class EfficientFormerConvMlp(nn.Module):
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
 
-        self.convolution1 = nn.Conv2d(in_features, hidden_features, 1, has_bias=True)
+        self.convolution1 = nn.Conv2d(in_features, hidden_features, 1, bias=True)
         self.activation = ACT2FN[config.hidden_act]
-        self.convolution2 = nn.Conv2d(hidden_features, out_features, 1, has_bias=True)
+        self.convolution2 = nn.Conv2d(hidden_features, out_features, 1, bias=True)
         self.dropout = nn.Dropout(p=drop)
 
         self.batchnorm_before = nn.BatchNorm2d(hidden_features, eps=config.batch_norm_eps)
@@ -500,7 +500,7 @@ class EfficientFormerPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))

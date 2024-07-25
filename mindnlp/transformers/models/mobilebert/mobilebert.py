@@ -1137,8 +1137,8 @@ class MobileBertLMPredictionHead(nn.Module):
         self.transform = MobileBertPredictionHeadTransform(config)
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.dense = nn.Linear(config.vocab_size, config.hidden_size - config.embedding_size, has_bias=False)
-        self.decoder = nn.Linear(config.embedding_size, config.vocab_size, has_bias=False)
+        self.dense = nn.Linear(config.vocab_size, config.hidden_size - config.embedding_size, bias=False)
+        self.decoder = nn.Linear(config.embedding_size, config.vocab_size, bias=False)
         self.bias = Parameter(ops.zeros(config.vocab_size))
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias

@@ -64,7 +64,7 @@ class VitDetEmbeddings(nn.Module):
         else:
             self.position_embeddings = None
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def get_absolute_positions(self, abs_pos_embeddings, has_cls_token, height, width):
         """
@@ -222,7 +222,7 @@ class VitDetAttention(nn.Module):
         head_dim = dim // num_heads
         self.scale = head_dim**-0.5
 
-        self.qkv = nn.Linear(dim, dim * 3, has_bias =config.qkv_bias)
+        self.qkv = nn.Linear(dim, dim * 3, bias =config.qkv_bias)
         self.proj = nn.Linear(dim, dim)
 
         self.use_relative_position_embeddings = config.use_relative_position_embeddings
@@ -341,15 +341,15 @@ class VitDetResBottleneckBlock(nn.Module):
                 Number of output channels for the 3x3 "bottleneck" conv layers.
         """
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, bottleneck_channels, 1, has_bias=False)
+        self.conv1 = nn.Conv2d(in_channels, bottleneck_channels, 1, bias=False)
         self.norm1 = VitDetLayerNorm(bottleneck_channels)
         self.act1 = ACT2FN[config.hidden_act]
 
-        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, pad_mode='pad', has_bias=False)
+        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, pad_mode='pad', bias=False)
         self.norm2 = VitDetLayerNorm(bottleneck_channels)
         self.act2 = ACT2FN[config.hidden_act]
 
-        self.conv3 = nn.Conv2d(bottleneck_channels, out_channels, 1, has_bias=False)
+        self.conv3 = nn.Conv2d(bottleneck_channels, out_channels, 1, bias=False)
         self.norm3 = VitDetLayerNorm(out_channels)
 
     def forward(self, x):

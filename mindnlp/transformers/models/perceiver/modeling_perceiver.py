@@ -619,7 +619,7 @@ class PerceiverPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif hasattr(cell, "latents"):
             cell.latents.set_data(initializer(Normal(self.config.initializer_range, 0.0), cell.latents.shape,
@@ -2577,7 +2577,7 @@ class Conv2DDownsample(nn.Module):
         super().__init__()
 
         self.conv = Conv2dSamePadding(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, has_bias=False,
+            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, bias=False,
             pad_mode='valid'
         )
         self.batchnorm = nn.BatchNorm2d(num_features=out_channels) if use_batchnorm else nn.Identity()
@@ -3078,7 +3078,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 # spatial_downsample is unconstrained for 1x1 convolutions.
                 stride=(spatial_downsample, spatial_downsample),
                 pad_mode='valid',
-                has_bias=True
+                bias=True
             )
 
         # Position embeddings

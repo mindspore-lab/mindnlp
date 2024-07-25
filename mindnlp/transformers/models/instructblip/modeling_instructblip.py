@@ -92,7 +92,7 @@ class InstructBlipVisionEmbeddings(nn.Module):
 
         self.patch_embedding = nn.Conv2d(
             in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size,
-            has_bias=True, pad_mode='valid'
+            bias=True, pad_mode='valid'
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -167,7 +167,7 @@ class InstructBlipAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_dropout)
 
         # small tweak here compared to CLIP, no bias here
-        self.qkv = nn.Linear(self.embed_dim, 3 * self.embed_dim, has_bias=False)
+        self.qkv = nn.Linear(self.embed_dim, 3 * self.embed_dim, bias=False)
 
         if config.qkv_bias:
             q_bias = mindspore.Parameter(ops.zeros(self.embed_dim))

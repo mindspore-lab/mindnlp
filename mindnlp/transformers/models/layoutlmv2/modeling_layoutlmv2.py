@@ -179,7 +179,7 @@ class LayoutLMv2SelfAttention(nn.Module):
         self.has_spatial_attention_bias = config.has_spatial_attention_bias
 
         if config.fast_qkv:
-            self.qkv_linear = nn.Linear(config.hidden_size, 3 * self.all_head_size, has_bias=False)
+            self.qkv_linear = nn.Linear(config.hidden_size, 3 * self.all_head_size, bias=False)
             self.q_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
             self.v_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
         else:
@@ -715,13 +715,13 @@ class LayoutLMv2Encoder(nn.Module):
         if self.has_relative_attention_bias:
             self.rel_pos_bins = config.rel_pos_bins
             self.max_rel_pos = config.max_rel_pos
-            self.rel_pos_bias = nn.Linear(self.rel_pos_bins, config.num_attention_heads, has_bias=False)
+            self.rel_pos_bias = nn.Linear(self.rel_pos_bins, config.num_attention_heads, bias=False)
 
         if self.has_spatial_attention_bias:
             self.max_rel_2d_pos = config.max_rel_2d_pos
             self.rel_2d_pos_bins = config.rel_2d_pos_bins
-            self.rel_pos_x_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, has_bias=False)
-            self.rel_pos_y_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, has_bias=False)
+            self.rel_pos_x_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, bias=False)
+            self.rel_pos_y_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, bias=False)
 
         self.gradient_checkpointing = False
 
@@ -893,7 +893,7 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)

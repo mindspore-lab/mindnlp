@@ -139,9 +139,9 @@ class AdditiveAttention(nn.Module):
             TypeError: If the input types are not as expected.
         """
         super().__init__()
-        self.w_q = nn.Linear(hidden_dims, hidden_dims, has_bias=False)
-        self.w_k = nn.Linear(hidden_dims, hidden_dims, has_bias=False)
-        self.w_output = nn.Linear(hidden_dims, 1, has_bias=True)
+        self.w_q = nn.Linear(hidden_dims, hidden_dims, bias=False)
+        self.w_k = nn.Linear(hidden_dims, hidden_dims, bias=False)
+        self.w_output = nn.Linear(hidden_dims, 1, bias=True)
         self.dropout = Dropout(p=dropout)
         self.tanh = nn.Tanh()
         # Set bias parameter
@@ -225,10 +225,10 @@ class LinearAttention(nn.Module):
             None.
         """
         super().__init__()
-        self.w_linear = nn.Linear(query_dim + key_dim, query_dim, has_bias=False)
+        self.w_linear = nn.Linear(query_dim + key_dim, query_dim, bias=False)
         self.softmax = nn.Softmax(axis=-1)
         self.tanh = nn.Tanh()
-        self.v_linear = nn.Linear(hidden_dim, key_dim, has_bias=False)
+        self.v_linear = nn.Linear(hidden_dim, key_dim, bias=False)
         self.dropout = Dropout(p=dropout)
         #set bias parameter
         uniformreal = ops.UniformReal(seed=0)
@@ -492,10 +492,10 @@ class SelfAttention(nn.Module):
         def __init__(self, d_model=512, dropout_rate=0.1, bias=False, attention_mode='dot'):
             super().__init__()
             self.d_model = d_model
-            self.linear_query = nn.Linear(d_model, d_model, has_bias=bias)
-            self.linear_key = nn.Linear(d_model, d_model, has_bias=bias)
-            self.linear_value = nn.Linear(d_model, d_model, has_bias=bias)
-            self.linear_out = nn.Linear(d_model, d_model, has_bias=bias)
+            self.linear_query = nn.Linear(d_model, d_model, bias=bias)
+            self.linear_key = nn.Linear(d_model, d_model, bias=bias)
+            self.linear_value = nn.Linear(d_model, d_model, bias=bias)
+            self.linear_out = nn.Linear(d_model, d_model, bias=bias)
             if 'add' in attention_mode.lower():
                 self.attention_mode = AdditiveAttention(hidden_dims=self.d_model, dropout=1 - dropout_rate)
             elif 'cos' in attention_mode.lower():
@@ -505,10 +505,10 @@ class SelfAttention(nn.Module):
         """
         super().__init__()
         self.d_model = d_model
-        self.linear_query = nn.Linear(d_model, d_model, has_bias=bias)
-        self.linear_key = nn.Linear(d_model, d_model, has_bias=bias)
-        self.linear_value = nn.Linear(d_model, d_model, has_bias=bias)
-        self.linear_out = nn.Linear(d_model, d_model, has_bias=bias)
+        self.linear_query = nn.Linear(d_model, d_model, bias=bias)
+        self.linear_key = nn.Linear(d_model, d_model, bias=bias)
+        self.linear_value = nn.Linear(d_model, d_model, bias=bias)
+        self.linear_out = nn.Linear(d_model, d_model, bias=bias)
         if "add" in attention_mode.lower():
             self.attention_mode = AdditiveAttention(hidden_dims=self.d_model, dropout=1-dropout_rate)
         elif "cos" in attention_mode.lower():
@@ -598,10 +598,10 @@ class LocationAwareAttention(nn.Module):
         self.hidden_dim = hidden_dim
         self.smoothing = smoothing
         self.conv = nn.Conv1d(
-            in_channels=1, out_channels=hidden_dim, kernel_size=3, pad_mode="pad", padding=1, has_bias=True)
-        self.w_linear = nn.Linear(hidden_dim, hidden_dim, has_bias=False)
-        self.v_linear = nn.Linear(hidden_dim, hidden_dim, has_bias=False)
-        self.fc_linear = nn.Linear(hidden_dim, 1, has_bias=True)
+            in_channels=1, out_channels=hidden_dim, kernel_size=3, pad_mode="pad", padding=1, bias=True)
+        self.w_linear = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.v_linear = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.fc_linear = nn.Linear(hidden_dim, 1, bias=True)
         # Set bias parameter
         uniformreal = ops.UniformReal(seed=0)
         bias_layer = uniformreal((hidden_dim,))

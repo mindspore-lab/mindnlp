@@ -454,23 +454,23 @@ class GraphormerMultiheadAttention(nn.Module):
             raise AssertionError("Self-attention requires query, key and value to be of the same size.")
 
         self.k_proj = quant_noise(
-            nn.Linear(self.kdim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(self.kdim, config.embedding_dim, bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.v_proj = quant_noise(
-            nn.Linear(self.vdim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(self.vdim, config.embedding_dim, bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.q_proj = quant_noise(
-            nn.Linear(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(config.embedding_dim, config.embedding_dim, bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
 
         self.out_proj = quant_noise(
-            nn.Linear(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
+            nn.Linear(config.embedding_dim, config.embedding_dim, bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
@@ -789,7 +789,7 @@ class GraphormerGraphEncoder(nn.Module):
 
         if config.q_noise > 0:
             self.quant_noise = quant_noise(
-                nn.Linear(self.embedding_dim, self.embedding_dim, has_bias=False),
+                nn.Linear(self.embedding_dim, self.embedding_dim, bias=False),
                 config.q_noise,
                 config.qn_block_size,
             )
@@ -937,7 +937,7 @@ class GraphormerDecoderHead(nn.Module):
         super().__init__()
         # num_classes should be 1 for regression, or the number of classes for classification
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
-        self.classifier = nn.Linear(embedding_dim, num_classes, has_bias=False)
+        self.classifier = nn.Linear(embedding_dim, num_classes, bias=False)
         self.num_classes = num_classes
 
     def forward(self, input_nodes: Tensor, **kwargs) -> Tensor:
@@ -976,7 +976,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         """
         if isinstance(module, nn.Linear):
             module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
-            if module.has_bias:
+            if module.bias:
                 module.bias.set_data(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
@@ -1002,7 +1002,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
             cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(init_zero(cell.bias))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=cell.weight.shape)

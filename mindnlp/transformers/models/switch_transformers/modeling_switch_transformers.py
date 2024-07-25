@@ -124,7 +124,7 @@ class SwitchTransformersTop1Router(nn.Module):
         super().__init__()
         self.num_experts = config.num_experts
         self.expert_capacity = config.expert_capacity
-        self.classifier = nn.Linear(config.hidden_size, self.num_experts, has_bias=config.router_bias)
+        self.classifier = nn.Linear(config.hidden_size, self.num_experts, bias=config.router_bias)
         self.jitter_noise = config.router_jitter_noise
         self.ignore_padding_tokens = config.router_ignore_padding_tokens
         self.dtype = getattr(mindspore, config.router_dtype)
@@ -241,8 +241,8 @@ ALL_LAYERNORM_LAYERS.append(SwitchTransformersLayerNorm)
 class SwitchTransformersDenseActDense(nn.Module):
     def __init__(self, config: SwitchTransformersConfig):
         super().__init__()
-        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
@@ -359,10 +359,10 @@ class SwitchTransformersAttention(nn.Module):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -1325,7 +1325,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = SwitchTransformersStack(decoder_config, self.shared)
 
-        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         self.router_z_loss_coef = config.router_z_loss_coef
         self.router_aux_loss_coef = config.router_aux_loss_coef

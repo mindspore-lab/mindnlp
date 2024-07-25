@@ -210,7 +210,7 @@ class MSRobertaLMHead(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
         self.gelu = nn.GELU()
 

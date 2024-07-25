@@ -43,8 +43,8 @@ class LinearTDLayer(nn.Module):
             TypeError: If bias is not a boolean value.
         """
         super().__init__()
-        self.linear0 = Dense(in_ch, rank, has_bias=False)
-        self.linear1 = Dense(rank, out_ch, has_bias=bias)
+        self.linear0 = Dense(in_ch, rank, bias=False)
+        self.linear1 = Dense(rank, out_ch, bias=bias)
     
     def forward(self, u: mindspore.Tensor, v: mindspore.Tensor):
         r"""

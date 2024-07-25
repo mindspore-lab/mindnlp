@@ -89,7 +89,7 @@ class MobileNetV1ConvLayer(nn.Module):
             stride=stride,
             padding=padding,
             group=groups,
-            has_bias=bias,
+            bias=bias,
             pad_mode="pad",
         )
 

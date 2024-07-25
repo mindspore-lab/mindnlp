@@ -146,7 +146,7 @@ class SamPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
     def forward(self, pixel_values):
         """
@@ -896,8 +896,8 @@ class SamMaskDecoder(nn.Module):
         self.transformer = SamTwoWayTransformer(config)
 
         # should we create a new class for this?
-        self.upscale_conv1 = nn.Conv2dTranspose(self.hidden_size, self.hidden_size // 4, kernel_size=2, stride=2, pad_mode='valid', has_bias=True)
-        self.upscale_conv2 = nn.Conv2dTranspose(self.hidden_size // 4, self.hidden_size // 8, kernel_size=2, stride=2, pad_mode='valid', has_bias=True)
+        self.upscale_conv1 = nn.Conv2dTranspose(self.hidden_size, self.hidden_size // 4, kernel_size=2, stride=2, pad_mode='valid', bias=True)
+        self.upscale_conv2 = nn.Conv2dTranspose(self.hidden_size // 4, self.hidden_size // 8, kernel_size=2, stride=2, pad_mode='valid', bias=True)
         self.upscale_layer_norm = SamLayerNorm(self.hidden_size // 4, data_format="channels_first")
         self.activation = nn.GELU()
 
@@ -1096,9 +1096,9 @@ class SamMaskEmbedding(nn.Module):
         super().__init__()
         self.mask_input_channels = config.mask_input_channels // 4
         self.activation = ACT2FN[config.hidden_act]
-        self.conv1 = nn.Conv2d(1, self.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', has_bias=True)
-        self.conv2 = nn.Conv2d(self.mask_input_channels, config.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', has_bias=True)
-        self.conv3 = nn.Conv2d(config.mask_input_channels, config.hidden_size, kernel_size=1, pad_mode='valid', has_bias=True)
+        self.conv1 = nn.Conv2d(1, self.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', bias=True)
+        self.conv2 = nn.Conv2d(self.mask_input_channels, config.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', bias=True)
+        self.conv3 = nn.Conv2d(config.mask_input_channels, config.hidden_size, kernel_size=1, pad_mode='valid', bias=True)
         self.layer_norm1 = SamLayerNorm(
             self.mask_input_channels, eps=config.layer_norm_eps, data_format="channels_first"
         )
@@ -1334,7 +1334,7 @@ class SamVisionAttention(nn.Module):
         self.scale = head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.qkv = nn.Linear(config.hidden_size, config.hidden_size * 3, has_bias=config.qkv_bias)
+        self.qkv = nn.Linear(config.hidden_size, config.hidden_size * 3, bias=config.qkv_bias)
         self.proj = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.use_rel_pos = config.use_rel_pos
@@ -1688,9 +1688,9 @@ class SamVisionNeck(nn.Module):
         super().__init__()
         self.config = config
 
-        self.conv1 = nn.Conv2d(config.hidden_size, config.output_channels, kernel_size=1, has_bias=False, pad_mode='valid')
+        self.conv1 = nn.Conv2d(config.hidden_size, config.output_channels, kernel_size=1, bias=False, pad_mode='valid')
         self.layer_norm1 = SamLayerNorm(config.output_channels, data_format="channels_first")
-        self.conv2 = nn.Conv2d(config.output_channels, config.output_channels, kernel_size=3, padding=1, has_bias=False, pad_mode='pad')
+        self.conv2 = nn.Conv2d(config.output_channels, config.output_channels, kernel_size=3, padding=1, bias=False, pad_mode='pad')
         self.layer_norm2 = SamLayerNorm(config.output_channels, data_format="channels_first")
 
     def forward(self, hidden_states):

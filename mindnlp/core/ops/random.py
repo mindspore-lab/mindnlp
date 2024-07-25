@@ -45,6 +45,8 @@ def normal(mean=0.0, std=1.0, size=None):
 
 # rand
 def rand(*size, dtype=None):
+    if size[0] == []:
+        size = ()
     if USE_PYBOOST:
         return mindspore.mint.rand(*size, dtype=dtype)
     return ops.rand(*size, dtype=dtype)

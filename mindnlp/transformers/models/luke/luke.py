@@ -162,7 +162,7 @@ class LukeEntityEmbeddings(nn.Module):
 
         self.entity_embeddings = nn.Embedding(config.entity_vocab_size, config.entity_emb_size, padding_idx=0)
         if config.entity_emb_size != config.hidden_size:
-            self.entity_embedding_dense = nn.Linear(config.entity_emb_size, config.hidden_size, has_bias=False)
+            self.entity_embedding_dense = nn.Linear(config.entity_emb_size, config.hidden_size, bias=False)
 
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
@@ -1018,7 +1018,7 @@ class EntityPredictionHead(nn.Module):
         super().__init__()
         self.config = config
         self.transform = EntityPredictionHeadTransform(config)
-        self.decoder = nn.Linear(config.entity_emb_size, config.entity_vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.entity_emb_size, config.entity_vocab_size, bias=False)
         self.bias = mindspore.Parameter(ops.zeros((config.entity_vocab_size,)))
 
     def construct(self, hidden_states):
@@ -1123,7 +1123,7 @@ class LukePreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             if cell.embedding_size == 1:  # embedding for bias parameters
@@ -1770,7 +1770,7 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
 
         self.num_labels = config.num_labels
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Linear(config.hidden_size * 2, config.num_labels, has_bias=False)
+        self.classifier = nn.Linear(config.hidden_size * 2, config.num_labels, bias=False)
 
     def construct(
             self,

@@ -286,7 +286,7 @@ class EsmFoldLinear(nn.Linear):
         self,
         in_dim: int,
         out_dim: int,
-        has_bias: bool = True,
+        bias: bool = True,
         init: str = "default",
         init_fn: Optional[Callable[[mindspore.Tensor, mindspore.Tensor], None]] = None,
     ):
@@ -309,11 +309,11 @@ class EsmFoldLinear(nn.Linear):
             init_fn:
                 A custom initializer taking weight and bias as inputs. Overrides init if not None.
         """
-        super().__init__(in_dim, out_dim, has_bias=has_bias)
+        super().__init__(in_dim, out_dim, bias=bias)
 
         self.init = init
         self.init_fn = init_fn
-        if has_bias:
+        if bias:
             self.bias.set_data(ops.zeros_like(self.bias))
 
         if init not in ["default", "relu", "glorot", "gating", "normal", "final"]:
@@ -437,9 +437,9 @@ class EsmFoldAttention(nn.Module):
         # DISCREPANCY: c_hidden is not the per-head channel dimension, as
         # stated in the supplement, but the overall channel dimension.
 
-        self.linear_q = EsmFoldLinear(self.c_q, self.c_hidden * self.no_heads, has_bias=False, init="glorot")
-        self.linear_k = EsmFoldLinear(self.c_k, self.c_hidden * self.no_heads, has_bias=False, init="glorot")
-        self.linear_v = EsmFoldLinear(self.c_v, self.c_hidden * self.no_heads, has_bias=False, init="glorot")
+        self.linear_q = EsmFoldLinear(self.c_q, self.c_hidden * self.no_heads, bias=False, init="glorot")
+        self.linear_k = EsmFoldLinear(self.c_k, self.c_hidden * self.no_heads, bias=False, init="glorot")
+        self.linear_v = EsmFoldLinear(self.c_v, self.c_hidden * self.no_heads, bias=False, init="glorot")
         self.linear_o = EsmFoldLinear(self.c_hidden * self.no_heads, self.c_q, init="final")
 
         self.linear_g = None
@@ -642,7 +642,7 @@ class EsmFoldTriangleAttention(nn.Module):
 
         self.layer_norm = nn.LayerNorm(self.c_in)
 
-        self.linear = EsmFoldLinear(c_in, self.no_heads, has_bias=False, init="normal")
+        self.linear = EsmFoldLinear(c_in, self.no_heads, bias=False, init="normal")
 
         self.mha = EsmFoldAttention(self.c_in, self.c_in, self.c_in, self.c_hidden, self.no_heads)
 
@@ -1200,8 +1200,8 @@ class EsmFoldSelfAttention(nn.Module):
         self.num_heads = num_heads
         self.head_width = head_width
 
-        self.proj = nn.Linear(embed_dim, embed_dim * 3, has_bias=False)
-        self.o_proj = nn.Linear(embed_dim, embed_dim, has_bias=True)
+        self.proj = nn.Linear(embed_dim, embed_dim * 3, bias=False)
+        self.o_proj = nn.Linear(embed_dim, embed_dim, bias=True)
         self.gated = gated
         if gated:
             self.g_proj = nn.Linear(embed_dim, embed_dim)
@@ -1362,8 +1362,8 @@ class EsmFoldSequenceToPair(nn.Module):
         super().__init__()
 
         self.layernorm = nn.LayerNorm(sequence_state_dim)
-        self.proj = nn.Linear(sequence_state_dim, inner_dim * 2, has_bias=True)
-        self.o_proj = nn.Linear(2 * inner_dim, pairwise_state_dim, has_bias=True)
+        self.proj = nn.Linear(sequence_state_dim, inner_dim * 2, bias=True)
+        self.o_proj = nn.Linear(2 * inner_dim, pairwise_state_dim, bias=True)
         self.proj.bias.set_data(ops.zeros_like(self.proj.bias))
         self.o_proj.bias.set_data(ops.zeros_like(self.o_proj.bias))
 
@@ -1441,7 +1441,7 @@ class EsmFoldPairToSequence(nn.Module):
         super().__init__()
 
         self.layernorm = nn.LayerNorm(pairwise_state_dim)
-        self.linear = nn.Linear(pairwise_state_dim, num_heads, has_bias=False)
+        self.linear = nn.Linear(pairwise_state_dim, num_heads, bias=False)
 
     def forward(self, pairwise_state):
         """

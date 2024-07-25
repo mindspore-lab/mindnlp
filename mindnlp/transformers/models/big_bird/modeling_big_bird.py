@@ -20,11 +20,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -90,14 +90,13 @@ class BigBirdEmbeddings(nn.Module):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.position_ids = ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1))
+        self.token_type_ids = ops.zeros(*self.position_ids.shape, dtype=mindspore.int64)
         # End copy
-
         self.rescale_embeddings = config.rescale_embeddings
         self.hidden_size = config.hidden_size
 
@@ -145,10 +144,10 @@ class BigBirdEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -232,9 +231,9 @@ class BigBirdSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.is_decoder = config.is_decoder
@@ -310,8 +309,8 @@ class BigBirdSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -337,7 +336,7 @@ class BigBirdSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -436,9 +435,9 @@ class BigBirdBlockSparseAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.use_bias)
 
     def swapaxes_for_scores(self, x):
         """
@@ -670,7 +669,7 @@ class BigBirdBlockSparseAttention(nn.Module):
         rand_attn = np.stack(rand_attn, axis=0)
         rand_attn = mindspore.tensor(rand_attn, dtype=mindspore.int64)
         rand_attn = rand_attn.unsqueeze(0)
-        rand_attn = ops.cat([rand_attn for _ in range(batch_size)], axis=0)
+        rand_attn = ops.cat([rand_attn for _ in range(batch_size)], dim=0)
 
         rand_mask = self._create_rand_mask_from_inputs(
             from_blocked_mask, to_blocked_mask, rand_attn, n_heads, n_rand_blocks, bsz, from_seq_len, from_block_size
@@ -700,7 +699,7 @@ class BigBirdBlockSparseAttention(nn.Module):
         first_product = first_product * rsqrt_d
         first_product += (1.0 - to_mask) * attn_mask_penalty
         first_attn_weights = ops.softmax(
-            first_product, axis=-1
+            first_product, dim=-1
         )  # [bsz, n_heads, from_block_size, to_seq_len]
 
         # [bsz, n_heads, from_block_size, to_seq_len] x [bsz, n_heads, to_seq_len, -1] ==> [bsz, n_heads, from_block_size, -1]
@@ -721,7 +720,7 @@ class BigBirdBlockSparseAttention(nn.Module):
                 blocked_key_matrix[:, :, -1],
                 gathered_key[:, :, 0],
             ],
-            axis=2,
+            dim=2,
         )  # [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1]
         second_value_mat = ops.cat(
             [
@@ -731,7 +730,7 @@ class BigBirdBlockSparseAttention(nn.Module):
                 blocked_value_matrix[:, :, -1],
                 gathered_value[:, :, 0],
             ],
-            axis=2,
+            dim=2,
         )  # [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1]
 
         # [bsz, n_heads, from_block_size, -1] x [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1] ==> [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size]
@@ -742,19 +741,19 @@ class BigBirdBlockSparseAttention(nn.Module):
                 to_mask[:, :, :, -to_block_size:],
                 to_mask.new_ones([bsz, 1, 1, n_rand_blocks * to_block_size]),
             ],
-            axis=3,
+            dim=3,
         )
         second_rand_pad = ops.cat(
             [
-                rand_mask.new_ones([bsz, n_heads, from_block_size, 4 * to_block_size]),
+                ops.ones(bsz, n_heads, from_block_size, 4 * to_block_size, dtype=rand_mask.dtype),
                 rand_mask[:, :, 0],
             ],
-            axis=3,
+            dim=3,
         )
         second_product = second_product * rsqrt_d
         second_product += (1.0 - ops.minimum(second_seq_pad, second_rand_pad)) * attn_mask_penalty
         second_attn_weights = ops.softmax(
-            second_product, axis=-1
+            second_product, dim=-1
         )  # [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size]
 
         # [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size] x [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1] ==> [bsz, n_heads, from_block_size, -1]
@@ -770,11 +769,11 @@ class BigBirdBlockSparseAttention(nn.Module):
         # global keys -> 1st & last block
 
         exp_blocked_key_matrix = ops.cat(
-            [blocked_key_matrix[:, :, 1:-3], blocked_key_matrix[:, :, 2:-2], blocked_key_matrix[:, :, 3:-1]], axis=3
+            [blocked_key_matrix[:, :, 1:-3], blocked_key_matrix[:, :, 2:-2], blocked_key_matrix[:, :, 3:-1]], dim=3
         )  # [bsz, n_heads, from_seq_len//from_block_size-4, 3*to_block_size, -1]
         exp_blocked_value_matrix = ops.cat(
             [blocked_value_matrix[:, :, 1:-3], blocked_value_matrix[:, :, 2:-2], blocked_value_matrix[:, :, 3:-1]],
-            axis=3,
+            dim=3,
         )  # [bsz, n_heads, from_seq_len//from_block_size-4, 3*to_block_size, -1]
         middle_query_matrix = blocked_query_matrix[:, :, 2:-2]
 
@@ -810,12 +809,12 @@ class BigBirdBlockSparseAttention(nn.Module):
 
         # completing attention scores matrix for all q[-2:2]
         band_product = ops.cat(
-            [first_band_product, inner_band_product, rand_band_product, last_band_product], axis=-1
+            [first_band_product, inner_band_product, rand_band_product, last_band_product], dim=-1
         )  # [bsz, n_heads, from_seq_len//from_block_size-4, from_block_size, (5+n_rand_blocks)*to_block_size]
 
         # safely doing softmax since attention matrix is completed
         attn_weights = ops.softmax(
-            band_product, axis=-1
+            band_product, dim=-1
         )  # [bsz, n_heads, from_seq_len//from_block_size-4, from_block_size, (5+n_rand_blocks)*to_block_size]
 
         # contribution of sliding keys
@@ -855,7 +854,7 @@ class BigBirdBlockSparseAttention(nn.Module):
                 blocked_key_matrix[:, :, -1],
                 gathered_key[:, :, -1],
             ],
-            axis=2,
+            dim=2,
         )  # [bsz, n_heads, (4+n_random_blocks)*to_block_size, -1]
         second_last_value_mat = ops.cat(
             [
@@ -865,7 +864,7 @@ class BigBirdBlockSparseAttention(nn.Module):
                 blocked_value_matrix[:, :, -1],
                 gathered_value[:, :, -1],
             ],
-            axis=2,
+            dim=2,
         )  # [bsz, n_heads, (4+r)*to_block_size, -1]
 
         # [bsz, n_heads, from_block_size, -1] x [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1] ==> [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size]
@@ -876,19 +875,19 @@ class BigBirdBlockSparseAttention(nn.Module):
                 to_mask[:, :, :, -3 * to_block_size :],
                 to_mask.new_ones([bsz, 1, 1, n_rand_blocks * to_block_size]),
             ],
-            axis=3,
+            dim=3,
         )
         second_last_rand_pad = ops.cat(
             [
-                rand_mask.new_ones([bsz, n_heads, from_block_size, 4 * to_block_size]),
+                ops.ones(bsz, n_heads, from_block_size, 4 * to_block_size, dtype=rand_mask.dtype),
                 rand_mask[:, :, -1],
             ],
-            axis=3,
+            dim=3,
         )
         second_last_product = second_last_product * rsqrt_d
         second_last_product += (1.0 - ops.minimum(second_last_seq_pad, second_last_rand_pad)) * attn_mask_penalty
         second_last_attn_weights = ops.softmax(
-            second_last_product, axis=-1
+            second_last_product, dim=-1
         )  # [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size]
 
         # [bsz, n_heads, from_block_size, (4+n_rand_blocks)*to_block_size] x [bsz, n_heads, (4+n_rand_blocks)*to_block_size, -1] ==> [bsz, n_heads, from_block_size, -1]
@@ -903,7 +902,7 @@ class BigBirdBlockSparseAttention(nn.Module):
         last_product = self.ms_bmm_nd_swapaxes(blocked_query_matrix[:, :, -1], key_layer, ndim=4)
         last_product = last_product * rsqrt_d
         last_product += (1.0 - to_mask) * attn_mask_penalty
-        last_attn_weights = ops.softmax(last_product, axis=-1)  # [bsz, n_heads, from_block_size, n]
+        last_attn_weights = ops.softmax(last_product, dim=-1)  # [bsz, n_heads, from_block_size, n]
 
         # [bsz, n_heads, from_block_size, to_seq_len] x [bsz, n_heads, to_seq_len, -1] ==> [bsz, n_heads, from_block_size, -1]
         last_context_layer = self.ms_bmm_nd(last_attn_weights, value_layer, ndim=4)
@@ -912,7 +911,7 @@ class BigBirdBlockSparseAttention(nn.Module):
         # combining representations of all tokens
         context_layer = ops.cat(
             [first_context_layer, second_context_layer, context_layer, second_last_context_layer, last_context_layer],
-            axis=2,
+            dim=2,
         )
         context_layer = context_layer.view((bsz, n_heads, from_seq_len, -1)) * from_mask
         context_layer = ops.swapaxes(context_layer, 1, 2)
@@ -1454,7 +1453,7 @@ class BigBirdSelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1732,7 +1731,7 @@ class BigBirdOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -2219,7 +2218,7 @@ class BigBirdPredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -2286,7 +2285,7 @@ class BigBirdLMPredictionHead(nn.Module):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size))
 
@@ -2552,7 +2551,7 @@ class BigBirdPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -2883,14 +2882,14 @@ class BigBirdModel(BigBirdPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # in order to use block_sparse attention, sequence_length has to be at least
         # bigger than all global attentions: 2 * block_size
@@ -2957,7 +2956,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -3061,7 +3060,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
                 3*to_block_size].
             """
             exp_blocked_to_pad = ops.cat(
-                [to_blocked_mask[:, 1:-3], to_blocked_mask[:, 2:-2], to_blocked_mask[:, 3:-1]], axis=2
+                [to_blocked_mask[:, 1:-3], to_blocked_mask[:, 2:-2], to_blocked_mask[:, 3:-1]], dim=2
             )
             band_mask = ops.einsum("blq,blk->blqk", from_blocked_mask[:, 2:-2], exp_blocked_to_pad)
             band_mask = band_mask.unsqueeze(1)
@@ -3109,7 +3108,7 @@ class BigBirdModel(BigBirdPreTrainedModel):
                     dtype=mindspore.int64,
                 )
                 inputs_embeds_padding = self.embeddings(input_ids_padding)
-                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], axis=-2)
+                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], dim=-2)
 
             attention_mask = ops.pad(
                 attention_mask, (0, padding_len), value=False
@@ -3265,10 +3264,10 @@ class BigBirdForPreTraining(BigBirdPreTrainedModel):
 
         total_loss = None
         if labels is not None:
-            total_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            total_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if next_sentence_label is not None and total_loss is not None:
-            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            next_sentence_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
             total_loss = total_loss + next_sentence_loss
 
         if not return_dict:
@@ -3318,7 +3317,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
         ...     logits = model(**inputs).logits
         >>> # retrieve index of [MASK]
         >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
-        >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+        >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
         >>> tokenizer.decode(predicted_token_id)
         'maximum'
         ```
@@ -3435,7 +3434,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
             ...     logits = model(**inputs).logits
             >>> # retrieve index of [MASK]
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
-            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
             >>> tokenizer.decode(predicted_token_id)
             'maximum'
             ```
@@ -3469,7 +3468,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -3511,11 +3510,11 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
         #  add a dummy token
         if self.config.pad_token_id is None:
             raise ValueError("The PAD token should be defined for generation")
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
+        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], dim=-1)
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 
@@ -3684,7 +3683,7 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = F.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -3959,7 +3958,7 @@ class BigBirdForSequenceClassification(BigBirdPreTrainedModel):
                 else:
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
@@ -4068,7 +4067,7 @@ class BigBirdForMultipleChoice(BigBirdPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -4175,7 +4174,7 @@ class BigBirdForTokenClassification(BigBirdPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -4387,7 +4386,7 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
             # setting lengths logits to `-inf`
             logits_mask = self.prepare_question_mask(question_lengths, seqlen)
             if token_type_ids is None:
-                token_type_ids = ops.ones(logits_mask.shape, dtype=mindspore.int32) - logits_mask
+                token_type_ids = ops.ones(*logits_mask.shape, dtype=mindspore.int32) - logits_mask
             logits_mask[:, 0] = False
             logits_mask = logits_mask.unsqueeze(2)
 
@@ -4426,8 +4425,8 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

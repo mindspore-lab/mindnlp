@@ -139,10 +139,10 @@ class MarianAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -458,7 +458,7 @@ class MarianPreTrainedModel(PreTrainedModel):
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, MarianSinusoidalPositionalEmbedding):
             pass
@@ -1096,7 +1096,7 @@ class MarianMTModel(MarianPreTrainedModel):
 
         target_vocab_size = config.vocab_size if config.share_encoder_decoder_embeddings else config.decoder_vocab_size
         self.final_logits_bias=mindspore.Parameter(ops.zeros((1, target_vocab_size)),requires_grad=False)
-        self.lm_head = nn.Linear(config.d_model, target_vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, target_vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1364,7 +1364,7 @@ class MarianForCausalLM(MarianPreTrainedModel):
         super().__init__(config)
         self.model = MarianDecoderWrapper(config)
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -112,10 +112,10 @@ class MvpAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1105,7 +1105,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         super().__init__(config)
         self.model = MvpModel(config)
         self.final_logits_bias=ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1506,7 +1506,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
         config.is_encoder_decoder = False
         super().__init__(config)
         self.model = MvpDecoderWrapper(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 

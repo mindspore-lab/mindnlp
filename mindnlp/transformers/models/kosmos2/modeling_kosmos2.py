@@ -238,7 +238,7 @@ class Kosmos2VisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -701,10 +701,10 @@ class KosmosTextAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
         # End opy
         self.inner_attn_ln = None
@@ -1205,22 +1205,22 @@ class Kosmos2PreTrainedModel(PreTrainedModel):
             cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),cell.k_proj.weight.shape,cell.k_proj.weight.dtype))
             cell.v_proj.weight.set_data(initializer(Normal(in_proj_std),cell.v_proj.weight.shape,cell.v_proj.weight.dtype))
             cell.out_proj.weight.set_data(initializer(Normal(out_proj_std),cell.out_proj.weight.shape,cell.out_proj.weight.dtype))
-            if cell.q_proj.has_bias:
+            if cell.q_proj.bias:
                 cell.q_proj.bias.data.set_data(initializer("zeros",cell.q_proj.bias.data.shape,cell.q_proj.bias.data.dtype))
-            if cell.k_proj.has_bias:
+            if cell.k_proj.bias:
                 cell.k_proj.bias.data.set_data(initializer("zeros",cell.k_proj.bias.data.shape,cell.k_proj.bias.data.dtype))
-            if cell.v_proj.has_bias:
+            if cell.v_proj.bias:
                 cell.v_proj.bias.data.set_data(initializer("zeros",cell.v_proj.bias.data.shape,cell.v_proj.bias.data.dtype))
-            if cell.out_proj.has_bias:
+            if cell.out_proj.bias:
                 cell.out_proj.bias.data.set_data(initializer("zeros",cell.out_proj.bias.data.shape,cell.out_proj.bias.data.dtype))
         elif isinstance(cell, Kosmos2VisionMLP):
             in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
             cell.fc1.weight.set_data(initializer(Normal(fc_std),cell.fc1.weight.shape,cell.fc1.weight.dtype))
             cell.fc2.weight.set_data(initializer(Normal(in_proj_std),cell.fc2.weight.shape,cell.fc2.weight.dtype))
-            if cell.fc1.has_bias:
+            if cell.fc1.bias:
                 cell.fc1.bias.set_data(initializer("zeros",cell.fc1.bias.shape,cell.fc1.bias.dtype))
-            if cell.fc2.has_bias:
+            if cell.fc2.bias:
                 cell.fc2.bias.set_data(initializer("zeros",cell.fc2.bias.shape,cell.fc2.bias.dtype))
         elif isinstance(cell, Kosmos2VisionEncoderLayer):
             cell.layer_norm1.bias.data.set_data(initializer("zeros",cell.layer_norm1.bias.data.shape,cell.layer_norm1.bias.data.dtype))
@@ -1237,28 +1237,28 @@ class Kosmos2PreTrainedModel(PreTrainedModel):
             cell.k_proj.weight.set_data(initializer(Normal(std),cell.k_proj.weight.shape,cell.k_proj.weight.dtype))
             cell.v_proj.weight.set_data(initializer(Normal(std),cell.v_proj.weight.shape,cell.v_proj.weight.dtype))
             cell.out_proj.weight.set_data(initializer(Normal(std),cell.out_proj.weight.shape,cell.out_proj.weight.dtype))
-            if cell.q_proj.has_bias:
+            if cell.q_proj.bias:
                 cell.q_proj.bias.data.set_data(initializer("zeros",cell.q_proj.bias.data.shape,cell.q_proj.bias.data.dtype))
-            if cell.k_proj.has_bias:
+            if cell.k_proj.bias:
                 cell.k_proj.bias.data.set_data(initializer("zeros",cell.k_proj.bias.data.shape,cell.k_proj.bias.data.dtype))
-            if cell.v_proj.has_bias:
+            if cell.v_proj.bias:
                 cell.v_proj.bias.data.set_data(initializer("zeros",cell.v_proj.bias.data.shape,cell.v_proj.bias.data.dtype))
-            if cell.out_proj.has_bias:
+            if cell.out_proj.bias:
                 cell.out_proj.bias.data.set_data(initializer("zeros",cell.out_proj.bias.data.shape,cell.out_proj.bias.data.dtype))
         elif isinstance(cell, Kosmos2TextFFN):
             cell.fc1.weight.set_data(initializer(Normal(std),cell.fc1.weight.shape,cell.fc1.weight.dtype))
             cell.fc2.weight.set_data(initializer(Normal(std),cell.fc2.weight.shape,cell.fc2.weight.dtype))
-            if cell.fc1.has_bias:
+            if cell.fc1.bias:
                 cell.fc1.bias.set_data(initializer("zeros",cell.fc1.bias.shape,cell.fc1.bias.dtype))
-            if cell.fc2.has_bias:
+            if cell.fc2.bias:
                 cell.fc2.bias.set_data(initializer("zeros",cell.fc2.bias.shape,cell.fc2.bias.dtype))
         elif isinstance(cell, Kosmos2TextForCausalLM):
             cell.lm_head.weight.set_data(initializer(Normal(std),cell.lm_head.weight.shape,cell.lm_head.weight.dtype))
-            if cell.lm_head.has_bias:
+            if cell.lm_head.bias:
                 cell.lm_head.bias.set_data(initializer("zeros",cell.lm_head.bias.shape,cell.lm_head.bias.dtype))
         elif isinstance(cell, Kosmos2ImageToTextProjection):
             cell.dense.weight.set_data(initializer(Normal(std),cell.dense.weight.shape,cell.dense.weight.dtype))
-            if cell.dense.has_bias:
+            if cell.dense.bias:
                 cell.dense.bias.set_data(initializer("zeros",cell.dense.bias.shape,cell.dense.bias.dtype))
         elif isinstance(cell, Kosmos2TextTransformer):
             cell.embed_tokens.weight.data.set_data(initializer(Normal(std),cell.embed_tokens.weight.data.shape,cell.embed_tokens.weight.data.dtype))
@@ -1365,7 +1365,7 @@ class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel):
         super().__init__(config)
 
         self.model = Kosmos2TextTransformer(config)
-        self.lm_head = nn.Linear(in_channels=config.embed_dim, out_channels=config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(in_channels=config.embed_dim, out_channels=config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

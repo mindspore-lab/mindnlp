@@ -215,8 +215,8 @@ class PersimmonAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, has_bias=True)
-        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
+        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=True)
+        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=True)
         self.qk_layernorm = config.qk_layernorm
 
         if self.qk_layernorm:
@@ -706,7 +706,7 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
         super().__init__(config)
         self.model = PersimmonModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -897,7 +897,7 @@ class PersimmonForSequenceClassification(PersimmonPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = PersimmonModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -139,7 +139,7 @@ class CellUtilMixin:
             prefix_seq_len = attention_mask.shape[1] - causal_mask.shape[1]
             causal_mask = ops.concat(
                 [
-                    ops.ones((batch_size, seq_length, prefix_seq_len), dtype=causal_mask.dtype),
+                    ops.ones(batch_size, seq_length, prefix_seq_len, dtype=causal_mask.dtype),
                     causal_mask,
                 ],
                 dim=-1,

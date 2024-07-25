@@ -293,7 +293,7 @@ class Wav2Vec2ConformerNoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -316,7 +316,7 @@ class Wav2Vec2ConformerLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.layer_norm = nn.LayerNorm([self.out_conv_dim])
@@ -345,7 +345,7 @@ class Wav2Vec2ConformerGroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -611,7 +611,7 @@ class Wav2Vec2ConformerConvolutionModule(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
             pad_mode='valid'
         )
         self.glu = nn.GLU(axis=1)
@@ -622,7 +622,7 @@ class Wav2Vec2ConformerConvolutionModule(nn.Module):
             stride=1,
             padding=(config.conv_depthwise_kernel_size - 1) // 2,
             group=config.hidden_size,
-            has_bias=False,
+            bias=False,
             pad_mode='pad'
         )
         self.batch_norm = nn.BatchNorm1d(config.hidden_size)
@@ -633,7 +633,7 @@ class Wav2Vec2ConformerConvolutionModule(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.dropout = nn.Dropout(p = config.conformer_conv_dropout)
 
@@ -681,7 +681,7 @@ class Wav2Vec2ConformerSelfAttention(nn.Module):
 
         if self.position_embeddings_type == "relative":
             # linear transformation for positional encoding
-            self.linear_pos = nn.Linear(config.hidden_size, config.hidden_size, has_bias=False)
+            self.linear_pos = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
             # these two learnable bias are used in matrix c and matrix d
             # as described in https://arxiv.org/abs/1901.02860 Section 3.3
             self.pos_bias_u = mindspore.Parameter(ops.zeros(self.num_heads, self.head_size),'pos_bias_u')

@@ -278,7 +278,7 @@ class OwlViTVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=config.patch_size,
             stride=config.patch_size,
-            has_bias=False,
+            bias=False,
             pad_mode='pad',
             padding=0
         )
@@ -1063,9 +1063,9 @@ class OwlViTModel(OwlViTPreTrainedModel):
         self.vision_model = OwlViTVisionTransformer(vision_config)
 
         self.visual_projection = nn.Linear(
-            self.vision_embed_dim, self.projection_dim, has_bias=False)
+            self.vision_embed_dim, self.projection_dim, bias=False)
         self.text_projection = nn.Linear(
-            self.text_embed_dim, self.projection_dim, has_bias=False)
+            self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = ms.Parameter(
             ms.Tensor(config.logit_scale_init_value))
 

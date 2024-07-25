@@ -608,7 +608,7 @@ class SplinterPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -836,10 +836,10 @@ class QuestionAwareSpanSelectionHead(nn.Module):
         )
 
         self.start_classifier = nn.Linear(
-            config.hidden_size, config.hidden_size, has_bias=False
+            config.hidden_size, config.hidden_size, bias=False
         )
         self.end_classifier = nn.Linear(
-            config.hidden_size, config.hidden_size, has_bias=False
+            config.hidden_size, config.hidden_size, bias=False
         )
 
     def forward(self, inputs, positions):

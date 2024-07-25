@@ -138,10 +138,10 @@ class PLBartAttention(nn.Module):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1215,7 +1215,7 @@ class PLBartForConditionalGeneration(PLBartPreTrainedModel):
         super().__init__(config)
         self.model = PLBartModel(config)
         self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, bias=False)
 
         self.init_weights()
 
@@ -1510,7 +1510,7 @@ class PLBartForCausalLM(PLBartPreTrainedModel):
         super().__init__(config)
         self.model = PLBartDecoderWrapper(config)
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

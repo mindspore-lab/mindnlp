@@ -659,7 +659,7 @@ class LxmertLMPredictionHead(nn.Module):
         self.decoder = nn.Linear(
             lxmert_model_embedding_weights.shape[1],
             lxmert_model_embedding_weights.shape[0],
-            has_bias=False,
+            bias=False,
         )
         self.decoder.weight = lxmert_model_embedding_weights
         self.bias = ms.Parameter(ops.zeros(lxmert_model_embedding_weights.shape[0]))
@@ -1128,7 +1128,7 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
         if getattr(cur_qa_logit_layer, "bias", None) is not None:
             new_qa_logit_layer = nn.Linear(hidden_dim, num_labels)
         else:
-            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, has_bias=False)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, bias=False)
 
         # new_qa_logit_layer.to(cur_qa_logit_layer.weight.device)
 
@@ -1378,7 +1378,7 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
         if getattr(cur_qa_logit_layer, "bias", None) is not None:
             new_qa_logit_layer = nn.Linear(hidden_dim, num_labels)
         else:
-            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, has_bias=False)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, bias=False)
 
         # new_qa_logit_layer.to(cur_qa_logit_layer.weight.device)
 

@@ -111,7 +111,7 @@ class _ConvNd(Cell):
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. If the group is equal to `in_channels` and `out_channels`,
             this convolution layer also can be called depthwise convolution layer.
-        has_bias (bool): Whether the convolution layer has a bias parameter.
+        bias (bool): Whether the convolution layer has a bias parameter.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -158,7 +158,7 @@ class _ConvNd(Cell):
                  padding: Tuple[int, ...],
                  dilation: Tuple[int, ...],
                  group: int,
-                 has_bias: bool,
+                 bias: bool,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  bias_init: Union[Tensor, str, Initializer, numbers.Number],
                  data_format: str = 'NCHW',
@@ -175,7 +175,7 @@ class _ConvNd(Cell):
                               padding,
                               dilation,
                               group,
-                              has_bias,
+                              bias,
                               weight_init,
                               bias_init,
                               data_format,
@@ -185,7 +185,7 @@ class _ConvNd(Cell):
         self.conv_impl = conv_impl(self.weight_init, self.shape, data_format=data_format)
 
         # Bias initialization
-        if Validator.check_bool(has_bias, "has_bias", self.cls_name):
+        if Validator.check_bool(bias, "bias", self.cls_name):
             if isinstance(bias_init, Tensor):
                 if self.dtype is None:
                     self.dtype = bias_init.dtype
@@ -199,7 +199,7 @@ class _ConvNd(Cell):
             self.bias_y = Parameter(initializer(bias_init_y, [out_channels]), name='bias_y')
         else:
             if self.bias_init != 'zeros':
-                logger.warning("Value of 'has_bias' is False, value of 'bias_init' will be ignored.")
+                logger.warning("Value of 'bias' is False, value of 'bias_init' will be ignored.")
             self.bias_x = None
             self.bias_y = None
 
@@ -212,7 +212,7 @@ class _ConvNd(Cell):
                          padding: Tuple[int, ...],
                          dilation: Tuple[int, ...],
                          group: int,
-                         has_bias: bool,
+                         bias: bool,
                          weight_init: Union[Tensor, str, Initializer, numbers.Number],
                          bias_init: Union[Tensor, str, Initializer, numbers.Number],
                          data_format: str = 'NCHW',
@@ -243,7 +243,7 @@ class _ConvNd(Cell):
 
         self.dilation = dilation
         self.group = Validator.check_positive_int(group)
-        self.has_bias = has_bias
+        self.bias = bias
         for kernel_size_elem in kernel_size:
             Validator.check_positive_int(kernel_size_elem, 'kernel_size item', self.cls_name)
         for stride_elem in stride:
@@ -299,7 +299,7 @@ class _ConvNd(Cell):
         """extend representation"""
         s = 'input_channels={}, output_channels={}, kernel_size={}, ' \
             'stride={}, pad_mode={}, padding={}, dilation={}, ' \
-            'group={}, has_bias={}, ' \
+            'group={}, bias={}, ' \
             'weight_init={}, bias_init={}, format={}'.format(
                 self.in_channels,
                 self.out_channels,
@@ -309,7 +309,7 @@ class _ConvNd(Cell):
                 self.padding,
                 self.dilation,
                 self.group,
-                self.has_bias,
+                self.bias,
                 self.weight_init,
                 self.bias_init,
                 self.data_format)
@@ -431,7 +431,7 @@ class Conv2d(_ConvNd):
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. If the group is equal to `in_channels` and `out_channels`,
             this 2D convolution layer also can be called 2D depthwise convolution layer. Default: 1.
-        has_bias (bool): Whether the Conv2d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv2d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -506,7 +506,7 @@ class Conv2d(_ConvNd):
                  padding: _size_2_t = 0,
                  dilation: _size_2_t = 1,
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW') -> None:
@@ -524,7 +524,7 @@ class Conv2d(_ConvNd):
                                      padding,
                                      dilation,
                                      group,
-                                     has_bias,
+                                     bias,
                                      weight_init,
                                      bias_init,
                                      data_format)
@@ -551,7 +551,7 @@ class Conv2d(_ConvNd):
         """
         out_x, out_y = self.conv_impl(P.conv2d, x, y, pad_mode=self.pad_mode, padding=self.padding,
                                       stride=self.stride, dilation=self.dilation, group=self.group)
-        if self.has_bias:
+        if self.bias:
             out_x = P.bias_add(out_x, self.bias_x)
             out_y = P.bias_add(out_y, self.bias_y)
         return out_x, out_y
@@ -612,7 +612,7 @@ class Conv1d(_ConvNd):
             every `k` elements. The value of `k` is in range of [1, L]. Default: 1.
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. Default: 1.
-        has_bias (bool): Whether the Conv1d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv1d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -668,7 +668,7 @@ class Conv1d(_ConvNd):
                  padding: _size_1_t = 0,
                  dilation: _size_1_t = 1,
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros') -> None:
         """Initialize Conv1d."""
@@ -700,7 +700,7 @@ class Conv1d(_ConvNd):
                                      padding,
                                      dilation,
                                      group,
-                                     has_bias,
+                                     bias,
                                      weight_init,
                                      bias_init)
         self.padding = (0, 0, padding, padding)
@@ -752,7 +752,7 @@ class Conv1d(_ConvNd):
         y = P.expand_dims(y, 2)
         out_x, out_y = self.conv_impl(P.conv2d, x, y, pad_mode=self.pad_mode, padding=self.padding,
                                       stride=self.stride, dilation=self.dilation, group=self.group)
-        if self.has_bias:
+        if self.bias:
             out_x = P.bias_add(out_x, self.bias_x)
             out_y = P.bias_add(out_y, self.bias_y)
         out_x = P.squeeze(out_x)
@@ -832,7 +832,7 @@ class Conv3d(_ConvNd):
             [1, D], [1, H] and [1, W] respectively. Default: 1.
         group (int): Splits filter into groups, `in_channels` and `out_channels` must be
             divisible by `group`. Default: 1. Only 1 is currently supported.
-        has_bias (bool): Whether the Conv3d layer has a bias parameter. Default: False.
+        bias (bool): Whether the Conv3d layer has a bias parameter. Default: False.
         weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method of weight parameter.
             It can be a Tensor, a string, an Initializer or a numbers.Number. When a string is specified,
             values from 'TruncatedNormal', 'Normal', 'Uniform', 'HeUniform' and 'XavierUniform' distributions as well
@@ -911,7 +911,7 @@ class Conv3d(_ConvNd):
                  padding: _size_3_t = 0,
                  dilation: _size_3_t = (1, 1, 1),
                  group: int = 1,
-                 has_bias: bool = False,
+                 bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW') -> None:
@@ -932,7 +932,7 @@ class Conv3d(_ConvNd):
                                      padding,
                                      dilation,
                                      group,
-                                     has_bias,
+                                     bias,
                                      weight_init,
                                      bias_init,
                                      data_format)
@@ -961,7 +961,7 @@ class Conv3d(_ConvNd):
         self._check_input_5dims(x_shape)
         out_x, out_y = self.conv_impl(P.conv3d, x, y, pad_mode=self.pad_mode, padding=self.padding,
                                       stride=self.stride, dilation=self.dilation, group=self.group)
-        if self.has_bias:
+        if self.bias:
             out_x = P.bias_add(out_x, self.bias_x)
             out_y = P.bias_add(out_y, self.bias_y)
         return out_x, out_y

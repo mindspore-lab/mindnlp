@@ -206,7 +206,7 @@ class SpeechT5NoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -229,7 +229,7 @@ class SpeechT5LayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm([self.out_conv_dim])
@@ -258,7 +258,7 @@ class SpeechT5GroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -348,7 +348,7 @@ class SpeechT5PositionalConvEmbedding(nn.Module):
             padding=config.num_conv_pos_embeddings // 2,
             pad_mode='pad',
             group=config.num_conv_pos_embedding_groups,
-            has_bias=True,
+            bias=True,
         )
 
         self.conv = weight_norm(self.conv, name='weight', axis=2)
@@ -671,7 +671,7 @@ class SpeechT5BatchNormConvLayer(nn.Module):
             stride=1,
             padding=(config.speech_decoder_postnet_kernel - 1) // 2,
             pad_mode='pad',
-            has_bias=False,
+            bias=False,
         )
         self.batch_norm = nn.BatchNorm1d(out_conv_dim)
 
@@ -786,7 +786,7 @@ class SpeechT5TextDecoderPostnet(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
     def forward(self, hidden_states: mindspore.Tensor):
         return self.lm_head(hidden_states)
@@ -826,10 +826,10 @@ class SpeechT5Attention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1176,7 +1176,7 @@ class SpeechT5PreTrainedModel(PreTrainedModel):
                 initializer(Uniform(k), cell.projection.bias.shape, cell.projection.bias.dtype))
         elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -3028,7 +3028,7 @@ class SpeechT5HifiGan(PreTrainedModel):
         """Initialize the weights."""
         if isinstance(cell, (nn.Linear, nn.Conv1d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
     def apply_weight_norm(self):

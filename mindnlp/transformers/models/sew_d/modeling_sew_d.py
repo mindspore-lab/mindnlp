@@ -288,7 +288,7 @@ class SEWDNoLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -311,7 +311,7 @@ class SEWDLayerNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
@@ -340,7 +340,7 @@ class SEWDGroupNormConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -368,7 +368,7 @@ class SEWDPositionalConvEmbedding(nn.Module):
             group=config.num_conv_pos_embedding_groups,
             stride=config.squeeze_factor,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.conv = weight_norm(self.conv, dim=2)
 
@@ -699,11 +699,11 @@ class DisentangledSelfAttention(nn.Module):
         )
         self.all_head_size = self.num_attention_heads * self.attention_head_size
         self.query_proj = nn.Linear(
-            config.hidden_size, self.all_head_size, has_bias=True
+            config.hidden_size, self.all_head_size, bias=True
         )
-        self.key_proj = nn.Linear(config.hidden_size, self.all_head_size, has_bias=True)
+        self.key_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
         self.value_proj = nn.Linear(
-            config.hidden_size, self.all_head_size, has_bias=True
+            config.hidden_size, self.all_head_size, bias=True
         )
 
         self.share_att_key = getattr(config, "share_att_key", False)
@@ -726,7 +726,7 @@ class DisentangledSelfAttention(nn.Module):
             if not self.share_att_key:
                 if "c2p" in self.pos_att_type:
                     self.pos_key_proj = nn.Linear(
-                        config.hidden_size, self.all_head_size, has_bias=True
+                        config.hidden_size, self.all_head_size, bias=True
                     )
                 if "p2c" in self.pos_att_type:
                     self.pos_query_proj = nn.Linear(
@@ -1035,7 +1035,7 @@ class ConvLayer(nn.Module):
             padding=(kernel_size - 1) // 2,
             group=groups,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size], epsilon=config.layer_norm_eps

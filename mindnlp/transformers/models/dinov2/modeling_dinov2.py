@@ -134,7 +134,7 @@ class Dinov2PatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         num_channels = pixel_values.shape[1]
@@ -161,9 +161,9 @@ class Dinov2SelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -317,12 +317,12 @@ class Dinov2MLP(nn.Module):
         super().__init__()
         in_features = out_features = config.hidden_size
         hidden_features = int(config.hidden_size * config.mlp_ratio)
-        self.fc1 = nn.Linear(in_features, hidden_features, has_bias=True)
+        self.fc1 = nn.Linear(in_features, hidden_features, bias=True)
         if isinstance(config.hidden_act, str):
             self.activation = ACT2FN[config.hidden_act]
         else:
             self.activation = config.hidden_act
-        self.fc2 = nn.Linear(hidden_features, out_features, has_bias=True)
+        self.fc2 = nn.Linear(hidden_features, out_features, bias=True)
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.fc1(hidden_state)
@@ -338,8 +338,8 @@ class Dinov2SwiGLUFFN(nn.Module):
         hidden_features = int(config.hidden_size * config.mlp_ratio)
         hidden_features = (int(hidden_features * 2 / 3) + 7) // 8 * 8
 
-        self.weights_in = nn.Linear(in_features, 2 * hidden_features, has_bias=True)
-        self.weights_out = nn.Linear(hidden_features, out_features, has_bias=True)
+        self.weights_in = nn.Linear(in_features, 2 * hidden_features, bias=True)
+        self.weights_out = nn.Linear(hidden_features, out_features, bias=True)
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.weights_in(hidden_state)

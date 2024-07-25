@@ -1281,7 +1281,7 @@ class OneFormerPixelDecoder(nn.Module):
             for in_channels in transformer_in_channels[::-1]:
                 input_projections_list.append(
                     nn.SequentialCell(
-                        nn.Conv2d(in_channels, config.conv_dim, kernel_size=1, has_bias=True),
+                        nn.Conv2d(in_channels, config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
                 )
@@ -1290,7 +1290,7 @@ class OneFormerPixelDecoder(nn.Module):
             self.input_projections = nn.ModuleList(
                 [
                     nn.SequentialCell(
-                        nn.Conv2d(transformer_in_channels[-1], config.conv_dim, kernel_size=1, has_bias=True),
+                        nn.Conv2d(transformer_in_channels[-1], config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
                 ]
@@ -1304,7 +1304,7 @@ class OneFormerPixelDecoder(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=True,
+            bias=True,
         )
 
         self.common_stride = config.common_stride
@@ -1322,7 +1322,7 @@ class OneFormerPixelDecoder(nn.Module):
                     in_channels,
                     config.conv_dim,
                     kernel_size=1,
-                    has_bias=False,
+                    bias=False,
                 ),
                 nn.GroupNorm(32, config.conv_dim),
             )
@@ -1334,7 +1334,7 @@ class OneFormerPixelDecoder(nn.Module):
                     stride=1,
                     pad_mode='pad',
                     padding=1,
-                    has_bias=False,
+                    bias=False,
                 ),
                 nn.GroupNorm(32, config.conv_dim),
                 nn.ReLU(),
@@ -1515,10 +1515,10 @@ class OneFormerAttention(nn.Module):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -2171,7 +2171,7 @@ class OneFormerTransformerDecoder(nn.Module):
             [OneFormerTransformerDecoderLayer(config) for _ in range(config.decoder_layers - 1)]
         )
 
-        self.query_input_projection = nn.Conv2d(in_channels, config.hidden_dim, kernel_size=1, has_bias=True)
+        self.query_input_projection = nn.Conv2d(in_channels, config.hidden_dim, kernel_size=1, bias=True)
 
         self.class_embed = nn.Linear(config.hidden_dim, config.num_labels + 1)
         self.mask_embed = OneFormerMLPPredictionHead(
@@ -2315,7 +2315,7 @@ class OneFormerTransformerModule(nn.Module):
 
         for _ in range(self.num_feature_levels):
             if in_features != hidden_dim or config.enforce_input_proj:
-                self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1, has_bias=True))
+                self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1, bias=True))
             else:
                 self.input_projections.append(nn.SequentialCell())
 
@@ -2435,9 +2435,9 @@ class OneFormerTextMapperAttention(nn.Module):
         # NOTE scale factor was wrong in my original version, can set manually to be compat with prev weights
         self.scale = qk_scale or head_dim**-0.5
 
-        self.q_proj = nn.Linear(dim, dim, has_bias=qkv_bias)
-        self.k_proj = nn.Linear(dim, dim, has_bias=qkv_bias)
-        self.v_proj = nn.Linear(dim, dim, has_bias=qkv_bias)
+        self.q_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.k_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.v_proj = nn.Linear(dim, dim, bias=qkv_bias)
 
         self.attn_drop = nn.Dropout(p=attn_drop)
         self.proj = nn.Linear(dim, dim)

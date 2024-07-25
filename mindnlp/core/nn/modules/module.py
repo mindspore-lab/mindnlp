@@ -505,7 +505,7 @@ class Module:
                                 input_param.requires_grad_(param.requires_grad)
                         setattr(self, name, input_param)
                     else:
-                        param.copy_(input_param)
+                        param.set_data(input_param)
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '

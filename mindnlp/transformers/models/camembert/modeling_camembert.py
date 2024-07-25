@@ -586,7 +586,7 @@ class CamembertPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.initialize(Normal(self.config.initializer_range))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.initialize('zeros')
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)

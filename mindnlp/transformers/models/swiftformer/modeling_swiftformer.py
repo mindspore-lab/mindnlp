@@ -67,7 +67,7 @@ class SwiftFormerPatchEmbedding(nn.Module):
                 stride=2,
                 padding=1,
                 pad_mode="pad",
-                has_bias=True,
+                bias=True,
             ),
             nn.BatchNorm2d(out_chs // 2, eps=config.batch_norm_eps),
             nn.ReLU(),
@@ -78,7 +78,7 @@ class SwiftFormerPatchEmbedding(nn.Module):
                 stride=2,
                 padding=1,
                 pad_mode="pad",
-                has_bias=True,
+                bias=True,
             ),
             nn.BatchNorm2d(out_chs, eps=config.batch_norm_eps),
             nn.ReLU(),
@@ -171,7 +171,7 @@ class SwiftFormerEmbeddings(nn.Module):
             stride=stride,
             padding=padding,
             pad_mode="pad",
-            has_bias=True,
+            bias=True,
         )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps)
 
@@ -195,15 +195,15 @@ class SwiftFormerConvEncoder(nn.Module):
         hidden_dim = int(config.mlp_ratio * dim)
 
         self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", has_bias=True
+            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", bias=True
         )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
         self.point_wise_conv1 = nn.Conv2d(
-            dim, hidden_dim, kernel_size=1, pad_mode="pad", has_bias=True
+            dim, hidden_dim, kernel_size=1, pad_mode="pad", bias=True
         )
         self.act = nn.GELU()
         self.point_wise_conv2 = nn.Conv2d(
-            hidden_dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+            hidden_dim, dim, kernel_size=1, pad_mode="pad", bias=True
         )
         self.drop_path = nn.Dropout(p=config.drop_conv_encoder_rate)
         self.layer_scale = mindspore.Parameter(
@@ -235,7 +235,7 @@ class SwiftFormerMlp(nn.Module):
         hidden_features = int(in_features * config.mlp_ratio)
         self.norm1 = nn.BatchNorm2d(in_features, eps=config.batch_norm_eps)
         self.fc1 = nn.Conv2d(
-            in_features, hidden_features, 1, pad_mode="pad", has_bias=True
+            in_features, hidden_features, 1, pad_mode="pad", bias=True
         )
         self.act = ACT2FN["gelu_new"]
         # if isinstance(config.hidden_act, str):
@@ -243,7 +243,7 @@ class SwiftFormerMlp(nn.Module):
         # else:
         #     self.act_layer = config.hidden_act
         self.fc2 = nn.Conv2d(
-            hidden_features, in_features, 1, pad_mode="pad", has_bias=True
+            hidden_features, in_features, 1, pad_mode="pad", bias=True
         )
         self.drop = nn.Dropout(p=config.drop_mlp_rate)
 
@@ -310,15 +310,15 @@ class SwiftFormerLocalRepresentation(nn.Module):
         super().__init__()
 
         self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", has_bias=True
+            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", bias=True
         )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
         self.point_wise_conv1 = nn.Conv2d(
-            dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+            dim, dim, kernel_size=1, pad_mode="pad", bias=True
         )
         self.act = nn.GELU()
         self.point_wise_conv2 = nn.Conv2d(
-            dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+            dim, dim, kernel_size=1, pad_mode="pad", bias=True
         )
         self.drop_path = nn.Identity()
         self.layer_scale = mindspore.Parameter(

@@ -496,10 +496,10 @@ class PhiAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=True)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.dense = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=True)
 
         self.qk_layernorm = config.qk_layernorm
         if self.qk_layernorm:
@@ -834,7 +834,7 @@ class PhiPreTrainedModel(PreTrainedModel):
         std = self.config.initializer_range
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -1113,7 +1113,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
     """
     _tied_weights_keys = ["lm_head.weight"]
 
-    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.__init__ with Llama->Phi,bias=False->has_bias=True
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.__init__ with Llama->Phi,bias=False->bias=True
     def __init__(self, config):
         """
         Initializes an instance of the 'PhiForCausalLM' class.
@@ -1135,7 +1135,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
         super().__init__(config)
         self.model = PhiModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=True)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1487,7 +1487,7 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = PhiModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -171,7 +171,7 @@ class BloomAttention(nn.Module):
         self.inv_norm_factor = 1.0 / math.sqrt(self.head_dim)
         self.beta = 1.0
 
-        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, has_bias=True)
+        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=True)
         self.dense = nn.Linear(self.hidden_size, self.hidden_size)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
@@ -960,7 +960,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = BloomModel(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1190,7 +1190,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = BloomModel(config)
-        self.score = nn.Linear(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

@@ -202,7 +202,7 @@ class Data2VecAudioConvLayer(nn.Module):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
@@ -341,10 +341,10 @@ class Data2VecAudioAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
         self.is_causal = is_causal
-        self.k_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -655,7 +655,7 @@ class Data2VecAudioAdapterLayer(nn.Module):
             stride=config.adapter_stride,
             padding=1,
             pad_mode='pad',
-            has_bias=True,
+            bias=True,
         )
 
     def forward(self, hidden_states):
@@ -685,7 +685,7 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
             cell.conv.bias.set_data(initializer(0, cell.conv.bias.shape, cell.conv.bias.dtype))
         elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
 
@@ -699,7 +699,7 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
                 )
         elif isinstance(cell, nn.Conv1d):
             cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k), cell.bias.shape, cell.bias.dtype))
 

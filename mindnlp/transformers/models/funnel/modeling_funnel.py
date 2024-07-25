@@ -368,7 +368,7 @@ class FunnelRelMultiheadAttention(nn.Module):
         self.hidden_dropout = nn.Dropout(p=config.hidden_dropout)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
-        self.q_head = nn.Linear(d_model, n_head * d_head, has_bias=False)
+        self.q_head = nn.Linear(d_model, n_head * d_head, bias=False)
         self.k_head = nn.Linear(d_model, n_head * d_head)
         self.v_head = nn.Linear(d_model, n_head * d_head)
 

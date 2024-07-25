@@ -228,7 +228,7 @@ class CvtConvEmbeddings(nn.Module):
         super().__init__()
         patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
         self.patch_size = patch_size
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding, pad_mode='pad', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding, pad_mode='pad', bias=True)
         self.normalization = nn.LayerNorm(embed_dim)
 
     def forward(self, pixel_values):
@@ -301,7 +301,7 @@ class CvtSelfAttentionConvProjection(nn.Module):
             padding=padding,
             pad_mode='pad',
             stride=stride,
-            has_bias=False,
+            bias=False,
             group=embed_dim,
         )
         self.normalization = nn.BatchNorm2d(embed_dim)
@@ -531,9 +531,9 @@ class CvtSelfAttention(nn.Module):
             embed_dim, kernel_size, padding_kv, stride_kv, projection_method=qkv_projection_method
         )
 
-        self.projection_query = nn.Linear(embed_dim, embed_dim, has_bias=qkv_bias)
-        self.projection_key = nn.Linear(embed_dim, embed_dim, has_bias=qkv_bias)
-        self.projection_value = nn.Linear(embed_dim, embed_dim, has_bias=qkv_bias)
+        self.projection_query = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
+        self.projection_key = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
+        self.projection_value = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
 
         self.dropout = nn.Dropout(p=attention_drop_rate)
 

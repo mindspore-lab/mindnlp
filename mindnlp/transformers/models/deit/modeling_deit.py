@@ -162,7 +162,7 @@ class DeiTPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size,
-                                    padding=0, pad_mode="valid", has_bias=True)
+                                    padding=0, pad_mode="valid", bias=True)
 
     def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -188,9 +188,9 @@ class DeiTSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 

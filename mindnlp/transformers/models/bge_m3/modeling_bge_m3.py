@@ -143,10 +143,10 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             self.config.vocab_size),
             dtype=token_weights.dtype,
         )
-        sparse_embedding = ops.scatter(sparse_embedding, axis=-1, index=input_ids.unsqueeze(-1), src=token_weights)
+        sparse_embedding = ops.scatter(sparse_embedding, dim=-1, index=input_ids.unsqueeze(-1), src=token_weights)
 
         unused_tokens = self.config.unused_tokens
-        sparse_embedding = ops.max(sparse_embedding, axis=1)[0]
+        sparse_embedding = ops.max(sparse_embedding, dim=1)[0]
         sparse_embedding[:, unused_tokens] *= 0.0
         return sparse_embedding
 

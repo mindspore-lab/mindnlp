@@ -707,13 +707,13 @@ class SelfAttention(nn.Module):
                     self.projection_size + 2 * self.hidden_size_per_attention_head * config.multi_query_group_num
             )
         self.query_key_value = nn.Linear(config.hidden_size, self.qkv_hidden_size,
-                                        has_bias=config.add_bias_linear or config.add_qkv_bias,
+                                        bias=config.add_bias_linear or config.add_qkv_bias,
                                         **_config_to_kwargs(config))
 
         self.core_attention = CoreAttention(config, self.layer_number)
 
         # Output.
-        self.dense = nn.Linear(self.projection_size, config.hidden_size, has_bias=config.add_bias_linear,
+        self.dense = nn.Linear(self.projection_size, config.hidden_size, bias=config.add_bias_linear,
                               **_config_to_kwargs(config))
 
     def forward(
@@ -883,7 +883,7 @@ class MLP(nn.Module):
         self.dense_h_to_4h = nn.Linear(
             config.hidden_size,
             config.ffn_hidden_size * 2,
-            has_bias=self.add_bias,
+            bias=self.add_bias,
             **_config_to_kwargs(config)
         )
 
@@ -897,7 +897,7 @@ class MLP(nn.Module):
         self.dense_4h_to_h = nn.Linear(
             config.ffn_hidden_size,
             config.hidden_size,
-            has_bias=self.add_bias,
+            bias=self.add_bias,
             **_config_to_kwargs(config)
         )
 
@@ -1345,7 +1345,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
         self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope,
                                               dtype=config.ms_dtype)
         self.encoder = init_method(GLMTransformer, config, **init_kwargs)
-        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size, has_bias=False,
+        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size, bias=False,
                                         dtype=config.ms_dtype, **init_kwargs)
         self.pre_seq_len = config.pre_seq_len
         self.prefix_projection = config.prefix_projection
@@ -2123,7 +2123,7 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = ChatGLM2Model(config, empty_init=empty_init)
 
-        self.classifier_head = nn.Linear(config.hidden_size, config.num_labels, has_bias=True, dtype=mindspore.float16)
+        self.classifier_head = nn.Linear(config.hidden_size, config.num_labels, bias=True, dtype=mindspore.float16)
         if config.classifier_dropout is not None:
             self.dropout = nn.Dropout(p=config.classifier_dropout)
         else:

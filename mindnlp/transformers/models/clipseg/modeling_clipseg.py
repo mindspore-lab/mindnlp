@@ -153,7 +153,7 @@ class CLIPSegVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -849,8 +849,8 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         self.text_model = CLIPSegTextTransformer(text_config)
         self.vision_model = CLIPSegVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = mindspore.Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing

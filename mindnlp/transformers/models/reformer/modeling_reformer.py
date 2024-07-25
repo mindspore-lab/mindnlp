@@ -567,8 +567,8 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         self.hidden_size = config.hidden_size
 
         # projection matrices
-        self.query_key = nn.Linear(self.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Linear(self.hidden_size, self.all_head_size, has_bias=False)
+        self.query_key = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
 
         # save mask value here. Need fp32 and fp16 mask values
         self.self_mask_value_float16 = mindspore.tensor(-1e3)
@@ -1562,9 +1562,9 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         self.hidden_size = config.hidden_size
 
         # projection matrices
-        self.query = nn.Linear(self.hidden_size, self.all_head_size, has_bias=False)
-        self.key = nn.Linear(self.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Linear(self.hidden_size, self.all_head_size, has_bias=False)
+        self.query = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.key = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
 
         self.dropout = float(config.local_attention_probs_dropout_prob)
 
@@ -1889,7 +1889,7 @@ class ReformerSelfOutput(nn.Module):
         all_head_size = config.num_attention_heads * config.attention_head_size
         self.dropout = float(config.hidden_dropout_prob)
 
-        self.dense = nn.Linear(all_head_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(all_head_size, config.hidden_size, bias=False)
 
     def forward(self, hidden_states):
 
@@ -2864,7 +2864,7 @@ class ReformerOnlyLMHead(nn.Module):
         # Layer Norm is done over 2 * hidden_size
         self.seq_len_dim = 1
         self.chunk_size_lm_head = config.chunk_size_lm_head
-        self.decoder = nn.Linear(2 * config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(2 * config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(initializer('zeros', (config.vocab_size,)), 'bias')
         self.decoder.bias = self.bias
 
@@ -2969,7 +2969,7 @@ class ReformerPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)

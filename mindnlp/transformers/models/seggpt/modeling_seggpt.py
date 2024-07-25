@@ -115,7 +115,7 @@ class SegGptPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(
-            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True, pad_mode='pad', padding=0)
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True, pad_mode='pad', padding=0)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -244,7 +244,7 @@ class SegGptAttention(nn.Module):
         self.scale = head_dim**-0.5
 
         self.qkv = nn.Linear(config.hidden_size,
-                            config.hidden_size * 3, has_bias=config.qkv_bias)
+                            config.hidden_size * 3, bias=config.qkv_bias)
         self.proj = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.use_relative_position_embeddings = config.use_relative_position_embeddings
@@ -613,14 +613,14 @@ class SegGptDecoderHead(nn.Module):
             kernel_size=3,
             pad_mode='pad',
             padding=1,
-            has_bias=True
+            bias=True
         )
         self.layernorm = SegGptLayerNorm(
             normalized_shape=config.decoder_hidden_size, eps=config.layer_norm_eps, data_format="channels_first"
         )
         self.act_fct = ACT2FN[config.hidden_act]
         self.head = nn.Conv2d(config.decoder_hidden_size, 3,
-                              kernel_size=1, has_bias=True, pad_mode='pad', padding=0)  # decoder to patch
+                              kernel_size=1, bias=True, pad_mode='pad', padding=0)  # decoder to patch
 
     def forward(self, hidden_states: ms.Tensor):
         hidden_states = self.conv(hidden_states)
@@ -637,7 +637,7 @@ class SegGptDecoder(nn.Module):
         self.decoder_embed = nn.Linear(
             config.hidden_size * len(config.intermediate_hidden_state_indices),
             config.patch_size**2 * config.decoder_hidden_size,
-            has_bias=True,
+            bias=True,
         )
         self.decoder_pred = SegGptDecoderHead(config)
         self.patch_size = config.patch_size

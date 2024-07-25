@@ -318,7 +318,7 @@ class GPTPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(self.config.initializer_range),
@@ -502,7 +502,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         super().__init__(config)
         self.config = config
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
     def get_output_embeddings(self):
         """
@@ -617,7 +617,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         self.config = config
         config.num_labels = 1
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
         self.post_init()
 
@@ -750,7 +750,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         self.config = config
         self.num_labels = config.num_labels
         self.transformer = GPTModel(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         self.pad_token_id = self.config.pad_token_id
         problem_type = config.problem_type

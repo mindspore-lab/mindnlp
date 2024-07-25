@@ -378,7 +378,7 @@ class PatchEmbeddings(nn.Module):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode="valid", has_bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode="valid", bias=True)
 
     def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -458,9 +458,9 @@ class FlavaSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -733,7 +733,7 @@ class FlavaPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1292,13 +1292,13 @@ class FlavaImageCodebookResPath(nn.Module):
 
         path = OrderedDict()
         path["relu_1"] = nn.ReLU()
-        path["conv_1"] = nn.Conv2d(in_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", has_bias=True)
+        path["conv_1"] = nn.Conv2d(in_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
         path["relu_2"] = nn.ReLU()
-        path["conv_2"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", has_bias=True)
+        path["conv_2"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
         path["relu_3"] = nn.ReLU()
-        path["conv_3"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", has_bias=True)
+        path["conv_3"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
         path["relu_4"] = nn.ReLU()
-        path["conv_4"] = nn.Conv2d(hid_size, out_size, kernel_size=1, padding=0, pad_mode="valid", has_bias=True)
+        path["conv_4"] = nn.Conv2d(hid_size, out_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
 
         self.path = nn.SequentialCell(path)
 
@@ -1313,7 +1313,7 @@ class FlavaImageCodebookBlock(nn.Module):
         self.post_gain = 1 / (num_layers**2)
 
         if in_size != out_size:
-            self.id_path = nn.Conv2d(in_size, out_size, kernel_size=1, padding=0, pad_mode="valid", has_bias=True)
+            self.id_path = nn.Conv2d(in_size, out_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
         else:
             self.id_path = nn.Identity()
 
@@ -1366,10 +1366,10 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
 
         output_blocks = OrderedDict()
         output_blocks["relu"] = nn.ReLU()
-        output_blocks["conv"] = nn.Conv2d(8 * self.hidden_size, self.vocab_size, kernel_size=1, padding=0, pad_mode="valid", has_bias=True)
+        output_blocks["conv"] = nn.Conv2d(8 * self.hidden_size, self.vocab_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
 
         blocks = OrderedDict()
-        blocks["input"] = nn.Conv2d(self.input_channels, 1 * self.hidden_size, kernel_size=7, padding=3, pad_mode='pad', has_bias=True)
+        blocks["input"] = nn.Conv2d(self.input_channels, 1 * self.hidden_size, kernel_size=7, padding=3, pad_mode='pad', bias=True)
         blocks["group_1"] = FlavaImageCodebookLayerGroup(
             self.num_blocks_per_group, num_layers, 1 * self.hidden_size, 1 * self.hidden_size
         )
@@ -1481,7 +1481,7 @@ class FlavaMaskedPredictionHead(nn.Module):
         super().__init__()
         self.config = config
         self.transform = FlavaPredictionHeadTransform(config)
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size), name='bias')
         if weight is not None:
             self.decoder.weight = weight

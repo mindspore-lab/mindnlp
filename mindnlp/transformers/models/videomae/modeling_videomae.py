@@ -176,7 +176,7 @@ class VideoMAEPatchEmbeddings(nn.Module):
             out_channels=hidden_size,
             kernel_size=(self.tubelet_size, patch_size[0], patch_size[1]),
             stride=(self.tubelet_size, patch_size[0], patch_size[1]),
-            has_bias=True
+            bias=True
         )
 
     def forward(self, pixel_values):
@@ -209,9 +209,9 @@ class VideoMAESelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, has_bias=False)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
 
         if config.qkv_bias:
             self.q_bias = mindspore.Parameter(ops.zeros([self.all_head_size]),name="q_bias")
@@ -480,7 +480,7 @@ class VideoMAEPreTrainedModel(PreTrainedModel):
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -633,7 +633,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
 
         self.videomae = VideoMAEModel(config)
 
-        self.encoder_to_decoder = nn.Linear(config.hidden_size, config.decoder_hidden_size, has_bias=False)
+        self.encoder_to_decoder = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=False)
         self.mask_token = mindspore.Parameter(ops.zeros((1, 1, config.decoder_hidden_size)),name="mask_token")
         self.position_embeddings = get_sinusoid_encoding_table(
             self.videomae.embeddings.num_patches, config.decoder_hidden_size

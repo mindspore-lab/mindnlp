@@ -143,7 +143,7 @@ class NystromformerSelfAttention(nn.Module):
                 kernel_size=(self.conv_kernel_size, 1),
                 # padding=(self.conv_kernel_size // 2, 0),
                 padding=(self.conv_kernel_size//2, self.conv_kernel_size//2, 0, 0),
-                has_bias=False,
+                bias=False,
                 group=self.num_attention_heads,
                 pad_mode="pad"
             )
@@ -419,7 +419,7 @@ class NystromformerLMPredictionHead(nn.Module):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -463,7 +463,7 @@ class NystromformerPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)

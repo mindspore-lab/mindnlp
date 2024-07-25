@@ -328,9 +328,9 @@ class InternLMMLP(nn.Module):
             ValueError: If the hidden_act parameter does not correspond to a supported activation function.
         """
         super().__init__()
-        self.gate_proj = nn.Linear(hidden_size, intermediate_size, has_bias=False)
-        self.down_proj = nn.Linear(intermediate_size, hidden_size, has_bias=False)
-        self.up_proj = nn.Linear(hidden_size, intermediate_size, has_bias=False)
+        self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
+        self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
+        self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.act_fn = ACT2FN[hidden_act]
 
     def forward(self, x):
@@ -404,10 +404,10 @@ class InternLMAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.bias)
         self._init_rope()
 
     def _init_rope(self):
@@ -1047,7 +1047,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         super().__init__(config)
         self.model = InternLMModel(config)
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1385,7 +1385,7 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = InternLMModel(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

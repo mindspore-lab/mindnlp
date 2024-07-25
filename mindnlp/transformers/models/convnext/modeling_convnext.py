@@ -212,7 +212,7 @@ class ConvNextEmbeddings(nn.Module):
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
             config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size,
-            pad_mode='valid', has_bias=True
+            pad_mode='valid', bias=True
         )
         self.layernorm = ConvNextLayerNorm(config.hidden_sizes[0], eps=1e-6, data_format="channels_first")
         self.num_channels = config.num_channels
@@ -275,7 +275,7 @@ class ConvNextLayer(nn.Module):
             TypeError: If config.layer_scale_init_value is not a positive number.
         '''
         super().__init__()
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, pad_mode='pad', group=dim, has_bias=True)  # depthwise conv
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, pad_mode='pad', group=dim, bias=True)  # depthwise conv
         self.layernorm = ConvNextLayerNorm(dim, eps=1e-6)
         self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
         self.act = ACT2FN[config.hidden_act]
@@ -352,7 +352,7 @@ class ConvNextStage(nn.Module):
         if in_channels != out_channels or stride > 1:
             self.downsampling_layer = nn.SequentialCell(
                 ConvNextLayerNorm(in_channels, eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', has_bias=True),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', bias=True),
             )
         else:
             self.downsampling_layer = nn.Identity()

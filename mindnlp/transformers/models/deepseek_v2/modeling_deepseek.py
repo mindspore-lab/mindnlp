@@ -347,9 +347,9 @@ class DeepseekV2MLP(nn.Module):
             config.intermediate_size if intermediate_size is None else intermediate_size
         )
 
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -554,34 +554,34 @@ class DeepseekV2Attention(nn.Module):
 
         if self.q_lora_rank is None:
             self.q_proj = nn.Linear(
-                self.hidden_size, self.num_heads * self.q_head_dim, has_bias=False
+                self.hidden_size, self.num_heads * self.q_head_dim, bias=False
             )
         else:
             self.q_a_proj = nn.Linear(
-                self.hidden_size, config.q_lora_rank, has_bias=config.attention_bias
+                self.hidden_size, config.q_lora_rank, bias=config.attention_bias
             )
             self.q_a_layernorm = DeepseekV2RMSNorm(config.q_lora_rank)
             self.q_b_proj = nn.Linear(
-                config.q_lora_rank, self.num_heads * self.q_head_dim, has_bias=False
+                config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False
             )
 
         self.kv_a_proj_with_mqa = nn.Linear(
             self.hidden_size,
             config.kv_lora_rank + config.qk_rope_head_dim,
-            has_bias=config.attention_bias,
+            bias=config.attention_bias,
         )
         self.kv_a_layernorm = DeepseekV2RMSNorm(config.kv_lora_rank)
         self.kv_b_proj = nn.Linear(
             config.kv_lora_rank,
             self.num_heads
             * (self.q_head_dim - self.qk_rope_head_dim + self.v_head_dim),
-            has_bias=False,
+            bias=False,
         )
 
         self.o_proj = nn.Linear(
             self.num_heads * self.v_head_dim,
             self.hidden_size,
-            has_bias=config.attention_bias,
+            bias=config.attention_bias,
         )
         self._init_rope()
 
@@ -885,7 +885,7 @@ class DeepseekV2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table)
@@ -1156,7 +1156,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
         super().__init__(config)
         self.model = DeepseekV2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1329,7 +1329,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = DeepseekV2Model(config)
-        self.score = nn.Linear(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

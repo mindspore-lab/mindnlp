@@ -149,7 +149,7 @@ class MgpstrEmbeddings(nn.Module):
             config.hidden_size,
             kernel_size=patch_size,
             stride=patch_size,
-            has_bias=True,
+            bias=True,
             pad_mode="pad",
         )
 
@@ -208,7 +208,7 @@ class MgpstrAttention(nn.Module):
         self.scale = head_dim**-0.5
 
         self.qkv = nn.Linear(
-            config.hidden_size, config.hidden_size * 3, has_bias=config.qkv_bias
+            config.hidden_size, config.hidden_size * 3, bias=config.qkv_bias
         )
         self.attn_drop = nn.Dropout(config.attn_drop_rate)
         self.proj = nn.Linear(config.hidden_size, config.hidden_size)
@@ -340,7 +340,7 @@ class MgpstrA3Module(nn.Module):
                 kernel_size=(1, 1),
                 stride=1,
                 group=8,
-                has_bias=False,
+                bias=False,
                 pad_mode="pad",
             ),
             nn.Conv2d(
@@ -348,7 +348,7 @@ class MgpstrA3Module(nn.Module):
                 config.max_token_length,
                 kernel_size=(1, 1),
                 stride=1,
-                has_bias=False,
+                bias=False,
                 pad_mode="pad",
             ),
         )
@@ -358,7 +358,7 @@ class MgpstrA3Module(nn.Module):
             kernel_size=(1, 1),
             stride=1,
             group=8,
-            has_bias=False,
+            bias=False,
             pad_mode="pad",
         )
         self.norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)

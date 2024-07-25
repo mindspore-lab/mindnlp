@@ -267,8 +267,8 @@ class LongT5DenseActDense(nn.Module):
             RuntimeError: If there is an issue with initializing the dense layers, dropout, or activation function.
         """
         super().__init__()
-        self.wi = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
@@ -318,9 +318,9 @@ class LongT5DenseGatedActDense(nn.Module):
             None.
         """
         super().__init__()
-        self.wi_0 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Linear(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Linear(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
@@ -423,10 +423,10 @@ class LongT5Attention(nn.Module):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -685,10 +685,10 @@ class LongT5LocalAttention(nn.Module):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -910,10 +910,10 @@ class LongT5TransientGlobalAttention(nn.Module):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Linear(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -2322,7 +2322,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = LongT5Stack(decoder_config, self.shared)
 
-        self.lm_head = nn.Linear(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
     def get_input_embeddings(self):
         """

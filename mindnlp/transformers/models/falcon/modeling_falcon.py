@@ -487,12 +487,12 @@ class FalconAttention(nn.Module):
         else:
             qkv_out_dim = 3 * self.hidden_size
         self.query_key_value = FalconLinear(
-            self.hidden_size, qkv_out_dim, has_bias=config.bias
+            self.hidden_size, qkv_out_dim, bias=config.bias
         )
         self.new_decoder_architecture = config.new_decoder_architecture
         self.multi_query = config.multi_query
         self.dense = FalconLinear(
-            self.hidden_size, self.hidden_size, has_bias=config.bias
+            self.hidden_size, self.hidden_size, bias=config.bias
         )
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self.num_kv_heads = (
@@ -811,11 +811,11 @@ class FalconMLP(nn.Module):
         hidden_size = config.hidden_size
 
         self.dense_h_to_4h = FalconLinear(
-            hidden_size, 4 * hidden_size, has_bias=config.bias
+            hidden_size, 4 * hidden_size, bias=config.bias
         )
         self.act = nn.GELU(approximate=False)
         self.dense_4h_to_h = FalconLinear(
-            4 * hidden_size, hidden_size, has_bias=config.bias
+            4 * hidden_size, hidden_size, bias=config.bias
         )
         self.hidden_dropout = config.hidden_dropout
 
@@ -1016,7 +1016,7 @@ class FalconPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -1342,7 +1342,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = FalconModel(config)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1569,7 +1569,7 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = FalconModel(config)
-        self.score = nn.Linear(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

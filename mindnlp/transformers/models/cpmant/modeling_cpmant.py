@@ -150,11 +150,11 @@ class CpmAntAttention(nn.Module):
         self.num_heads = config.num_attention_heads
         self.dim_head = config.dim_head
 
-        self.project_q = nn.Linear(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
-        self.project_k = nn.Linear(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
-        self.project_v = nn.Linear(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
+        self.project_q = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
+        self.project_k = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
+        self.project_v = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
 
-        self.attention_out = nn.Linear(self.num_heads * self.dim_head, self.dim_model, has_bias=False)
+        self.attention_out = nn.Linear(self.num_heads * self.dim_head, self.dim_model, bias=False)
 
         self.softmax = nn.Softmax(axis=-1)
 
@@ -379,8 +379,8 @@ class CpmAntDenseGatedACT(nn.Module):
             None.
         """
         super().__init__()
-        self.w_0 = nn.Linear(config.hidden_size, config.dim_ff, has_bias=False)
-        self.w_1 = nn.Linear(config.hidden_size, config.dim_ff, has_bias=False)
+        self.w_0 = nn.Linear(config.hidden_size, config.dim_ff, bias=False)
+        self.w_1 = nn.Linear(config.hidden_size, config.dim_ff, bias=False)
         self.act = nn.GELU()
 
     def forward(self, hidden_states: mindspore.Tensor):
@@ -448,7 +448,7 @@ class CpmAntFeedForward(nn.Module):
         else:
             self.dropout = None
 
-        self.w_out = nn.Linear(config.dim_ff, config.hidden_size, has_bias=False)
+        self.w_out = nn.Linear(config.dim_ff, config.hidden_size, bias=False)
 
     def forward(self, hidden_states: mindspore.Tensor):
         """
@@ -1447,7 +1447,7 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
 
         # lm_head.weight is tied to cpmant.input_embedding.weight
         self.lm_head = nn.Linear(
-            config.hidden_size, config.vocab_size + config.prompt_types * config.prompt_length, has_bias=False
+            config.hidden_size, config.vocab_size + config.prompt_types * config.prompt_length, bias=False
         )
         self.post_init()
 

@@ -376,7 +376,7 @@ class Wav2Vec2BertConvolutionModule(nn.Module):
             stride=1,
             pad_mode='pad',
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.glu = nn.GLU(axis=1)
         self.depthwise_conv = nn.Conv1d(
@@ -387,7 +387,7 @@ class Wav2Vec2BertConvolutionModule(nn.Module):
             pad_mode='pad',
             padding=0,
             group=config.hidden_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.depthwise_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
@@ -399,7 +399,7 @@ class Wav2Vec2BertConvolutionModule(nn.Module):
             stride=1,
             pad_mode='pad',
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.dropout = nn.Dropout(p=config.conformer_conv_dropout)
 
@@ -458,7 +458,7 @@ class Wav2Vec2BertSelfAttention(nn.Module):
 
         if self.position_embeddings_type == "relative":
             # linear transformation for positional encoding
-            self.linear_pos = nn.Linear(hidden_size, hidden_size, has_bias=False)
+            self.linear_pos = nn.Linear(hidden_size, hidden_size, bias=False)
             # these two learnable bias are used in matrix c and matrix d
             # as described in https://arxiv.org/abs/1901.02860 Section 3.3
             self.pos_bias_u = Parameter(ops.zeros(self.num_heads, self.head_size))

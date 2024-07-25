@@ -108,7 +108,7 @@ class XCLIPVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -1102,9 +1102,9 @@ class XCLIPCrossAttention(nn.Module):
         head_dim = dim // self.num_heads
         self.scale = head_dim**-0.5
 
-        self.q_proj = nn.Linear(dim, dim, has_bias=False)
-        self.k_proj = nn.Linear(dim, dim, has_bias=False)
-        self.v_proj = nn.Linear(dim, dim, has_bias=False)
+        self.q_proj = nn.Linear(dim, dim, bias=False)
+        self.k_proj = nn.Linear(dim, dim, bias=False)
+        self.v_proj = nn.Linear(dim, dim, bias=False)
 
         self.attn_drop = nn.Dropout(config.prompt_attention_dropout)
         self.proj = nn.Linear(dim, dim)
@@ -1216,9 +1216,9 @@ class XCLIPModel(XCLIPPreTrainedModel):
         self.vision_model = XCLIPVisionTransformer(vision_config)
 
         self.visual_projection = nn.Linear(
-            self.vision_embed_dim, self.projection_dim, has_bias=False)
+            self.vision_embed_dim, self.projection_dim, bias=False)
         self.text_projection = nn.Linear(
-            self.text_embed_dim, self.projection_dim, has_bias=False)
+            self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = ms.Parameter(
             ms.Tensor(self.config.logit_scale_init_value))
 
