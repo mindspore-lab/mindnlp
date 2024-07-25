@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -142,8 +143,7 @@ class Blip2VisionEmbeddings(nn.Module):
         self.class_embedding = Parameter(ops.randn(1, 1, self.embed_dim))
 
         self.patch_embedding = nn.Conv2d(
-            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size,
-            bias=True, pad_mode='valid'
+            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -174,8 +174,8 @@ class Blip2VisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1).to(target_dtype)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1)).to(target_dtype)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding[:, : embeddings.shape[1], :].to(target_dtype)
         return embeddings
 
@@ -274,7 +274,7 @@ class Blip2Attention(nn.Module):
         attention_scores = attention_scores * self.scale
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -420,9 +420,9 @@ class Blip2EncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = Blip2Attention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = Blip2MLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -645,7 +645,7 @@ class Blip2VisionModel(Blip2PreTrainedModel):
 
         self.embeddings = Blip2VisionEmbeddings(config)
         self.encoder = Blip2Encoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         self.post_init()
 
@@ -913,8 +913,8 @@ class Blip2QFormerMultiHeadAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -1017,7 +1017,7 @@ class Blip2QFormerSelfOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1329,7 +1329,7 @@ class Blip2QFormerOutput(nn.Module):
         """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1518,7 +1518,7 @@ class Blip2QFormerLayer(nn.Module):
                     self.seq_len_dim,
                     attention_output[:, query_length:, :],
                 )
-                layer_output = ops.cat([layer_output, layer_output_text], axis=1)
+                layer_output = ops.cat([layer_output, layer_output_text], dim=1)
         else:
             layer_output = apply_chunking_to_forward(
                 self.feed_forward_chunk,
@@ -1771,7 +1771,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
         super().__init__(config)
         self.config = config
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.encoder = Blip2QFormerEncoder(config)
@@ -1913,7 +1913,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
         batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -1931,7 +1931,7 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
             if isinstance(encoder_attention_mask, list):
                 encoder_extended_attention_mask = [self.invert_attention_mask(mask) for mask in encoder_attention_mask]
             elif encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
                 encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
             else:
                 encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
@@ -2332,9 +2332,9 @@ class Blip2Model(Blip2PreTrainedModel):
         image_embeds = vision_outputs[0]
 
         # step 2: forward the query tokens through the QFormer, using the image embeddings for cross-attention
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = ops.broadcast_to(self.query_tokens, (image_embeds.shape[0], -1, -1))
         query_outputs = self.qformer(
             query_embeds=query_tokens,
             encoder_hidden_states=image_embeds,
@@ -2396,9 +2396,9 @@ class Blip2Model(Blip2PreTrainedModel):
         image_embeds = vision_outputs[0]
 
         # step 2: forward the query tokens through the QFormer, using the image embeddings for cross-attention
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = ops.broadcast_to(self.query_tokens, (image_embeds.shape[0], -1, -1))
         query_outputs = self.qformer(
             query_embeds=query_tokens,
             encoder_hidden_states=image_embeds,
@@ -2412,14 +2412,14 @@ class Blip2Model(Blip2PreTrainedModel):
         # step 3: use the language model, conditioned on the query outputs and the prompt
         language_model_inputs = self.language_projection(query_output)
         language_model_attention_mask = ops.ones(
-            language_model_inputs.shape[:-1], dtype=mindspore.int64
+            *language_model_inputs.shape[:-1], dtype=mindspore.int64
         )
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
+        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
 
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_model_attention_mask, attention_mask], axis=1)
+        attention_mask = ops.cat([language_model_attention_mask, attention_mask], dim=1)
 
         if self.config.use_decoder_only_language_model:
             outputs = self.language_model(
@@ -2439,7 +2439,7 @@ class Blip2Model(Blip2PreTrainedModel):
                 shift_labels = labels[..., 1:]
 
                 # Flatten the tokens
-                loss = ops.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
+                loss = F.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
         else:
             outputs = self.language_model(
                 inputs_embeds=inputs_embeds,
@@ -2771,9 +2771,9 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         )
         image_embeds = vision_outputs[0]
         # step 2: forward the query tokens through the QFormer, using the image embeddings for cross-attention
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = ops.broadcast_to(self.query_tokens, (image_embeds.shape[0], -1, -1))
         query_outputs = self.qformer(
             query_embeds=query_tokens,
             encoder_hidden_states=image_embeds,
@@ -2787,14 +2787,14 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         # step 3: use the language model, conditioned on the query outputs and the prompt
         language_model_inputs = self.language_projection(query_output)
         language_model_attention_mask = ops.ones(
-            language_model_inputs.shape[:-1], dtype=mindspore.int64
+            *language_model_inputs.shape[:-1], dtype=mindspore.int64
         )
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
+        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
 
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_model_attention_mask.astype(mindspore.bool_), attention_mask.astype(mindspore.bool_)], axis=1)
+        attention_mask = ops.cat([language_model_attention_mask.astype(mindspore.bool_), attention_mask.astype(mindspore.bool_)], dim=1)
 
         if self.config.use_decoder_only_language_model:
             outputs = self.language_model(
@@ -2814,7 +2814,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
                 shift_labels = labels[..., 1:]
 
                 # Flatten the tokens
-                loss = ops.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
+                loss = F.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
         else:
             outputs = self.language_model(
                 inputs_embeds=inputs_embeds,
@@ -2865,9 +2865,9 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         batch_size = pixel_values.shape[0]
         image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
 
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = ops.broadcast_to(self.query_tokens, (image_embeds.shape[0], -1, -1))
         query_outputs = self.qformer(
             query_embeds=query_tokens,
             encoder_hidden_states=image_embeds,
@@ -2878,7 +2878,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
         language_model_inputs = self.language_projection(query_output)
         language_attention_mask = ops.ones(
-            language_model_inputs.shape[:-1], dtype=mindspore.int64
+            *language_model_inputs.shape[:-1], dtype=mindspore.int64
         )
         if input_ids is None:
             input_ids = (
@@ -2887,11 +2887,11 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             )
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_attention_mask, attention_mask], axis=1)
+        attention_mask = ops.cat([language_attention_mask, attention_mask], dim=1)
 
         # concatenate query embeddings with prompt embeddings
         inputs_embeds = self.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
+        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
 
         # add image_embeds length to max_length, so that the final max_length in counted only on token embeds
         # -1 is to account for the prepended BOS after `generate.`

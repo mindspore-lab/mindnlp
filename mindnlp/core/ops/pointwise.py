@@ -2,6 +2,7 @@
 import mindspore
 from mindspore import ops
 from mindnlp.configs import USE_PYBOOST
+from mindspore.common.initializer import initializer
 
 # abs
 def abs(input):
@@ -462,3 +463,28 @@ def trunc(input):
 # xlogy
 def xlogy(input, other):
     return ops.xlogy(input, other)
+
+def initialize(self, init_method):
+    r"""
+    Initializes the object with the given initialization method.
+    
+    Args:
+        self (object): The instance of the class.
+        init_method (str): The method used for initialization.
+            This parameter determines how the data is initialized.
+            Valid values for `init_method` are:
+                - "random": Initializes the data with random values.
+                - "zeros": Initializes the data with zeros.
+                - "ones": Initializes the data with ones.
+            Default value is "random".
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None.
+    
+    Note:
+        This function sets the data of the object using the specified `init_method` and the object's shape and data type.
+    """
+    self.set_data(initializer(init_method, self.shape, self.dtype))

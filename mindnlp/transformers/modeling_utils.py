@@ -38,7 +38,6 @@ from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, P
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
 from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
-from mindnlp._legacy.functional import arange
 from mindnlp.utils.serialization import load, safe_save_file
 
 from .generation import GenerationMixin
@@ -127,7 +126,7 @@ class CellUtilMixin:
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
         """create_extended_attention_mask_for_decoder"""
         batch_size, seq_length = input_shape
-        seq_ids = arange(seq_length)
+        seq_ids = ops.arange(seq_length)
         causal_mask = ops.tile((seq_ids[None, None, :]).astype(mindspore.int32),\
          (batch_size, seq_length, 1)) <= seq_ids[None, :, None] # mindspore 2.0
         # causal_mask = Tensor(np.tile(seq_ids[None, None, :].asnumpy(), (batch_size, seq_length, 1))) \

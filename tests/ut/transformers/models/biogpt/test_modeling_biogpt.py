@@ -30,6 +30,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 if is_mindspore_available():
     import mindspore
     from mindnlp.core import ops
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         BioGptForCausalLM,
@@ -439,7 +440,7 @@ class BioGptModelIntegrationTest(unittest.TestCase):
         model = BioGptForCausalLM.from_pretrained("microsoft/biogpt")
 
 
-        mindspore.set_seed(0)
+        set_seed(0)
         tokenized = tokenizer("COVID-19 is", return_tensors="ms")
         output_ids = model.generate(
             **tokenized,

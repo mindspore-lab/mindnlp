@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from ...modeling_utils import PreTrainedModel
@@ -71,7 +72,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     Raises:
         This function does not raise any exceptions.
     """
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->blip
@@ -375,8 +376,8 @@ class BlipVisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1).to(target_dtype)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1)).to(target_dtype)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding[:, : embeddings.shape[1], :].to(target_dtype)
         return embeddings
 
@@ -415,7 +416,7 @@ class BlipTextEmbeddings(nn.Module):
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
+        self.position_ids = ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1))
 
     def forward(
         self,
@@ -531,7 +532,7 @@ class BlipAttention(nn.Module):
         attention_scores = attention_scores * self.scale
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -683,9 +684,9 @@ class BlipEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = BlipAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = BlipMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -898,7 +899,7 @@ class BlipVisionModel(BlipPreTrainedModel):
 
         self.embeddings = BlipVisionEmbeddings(config)
         self.encoder = BlipEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         self.post_init()
 
@@ -1422,14 +1423,13 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
 
         image_embeds = vision_outputs[0]
 
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if isinstance(input_ids, list):
             input_ids = mindspore.Tensor(input_ids)
         elif input_ids is None:
             input_ids = (
-                mindspore.Tensor([[self.decoder_input_ids, self.config.text_config.eos_token_id]])
-                .repeat(batch_size, 1)
+                ops.tile((mindspore.Tensor([[self.decoder_input_ids, self.config.text_config.eos_token_id]])), (batch_size, 1))
             )
 
         input_ids[:, 0] = self.config.text_config.bos_token_id
@@ -1593,7 +1593,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
         )
 
         image_embeds = vision_outputs[0]
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         question_embeds = self.text_encoder(
             input_ids=input_ids,
@@ -1681,7 +1681,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
 
         image_embeds = vision_outputs[0]
 
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if isinstance(input_ids, list):
             input_ids = mindspore.Tensor(input_ids)
@@ -1696,7 +1696,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
 
         question_embeds = question_outputs[0]
 
-        question_attention_mask = ops.ones(question_embeds.shape[:-1], dtype=mindspore.int64)
+        question_attention_mask = ops.ones(*question_embeds.shape[:-1], dtype=mindspore.int64)
 
         bos_ids = ops.full(
             (question_embeds.shape[0], 1), fill_value=self.decoder_start_token_id
@@ -1845,7 +1845,7 @@ class BlipForImageTextRetrieval(BlipPreTrainedModel):
         )
 
         image_embeds = vision_outputs[0]
-        image_atts = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_atts = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if use_itm_head:
             question_embeds = self.text_encoder(
