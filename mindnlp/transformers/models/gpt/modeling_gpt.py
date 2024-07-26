@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -44,15 +44,12 @@ OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-ACT_FNS = {"relu": ops.relu, "silu": silu, "gelu": gelu_new, "swish": silu}
-
-
-class Attention(nn.Cell):
+class Attention(nn.Module):
 
     """
     This class represents an attention mechanism used in neural networks. 
-    It is designed to be used as a part of a larger model and inherits from the nn.Cell class.
-    
+    It is designed to be used as a part of a larger model and inherits from the nn.Module class.
+
     Attributes:
         bias (Tensor): A tensor representing the bias used in the attention computation.
         n_head (int): The number of attention heads.
@@ -70,7 +67,7 @@ class Attention(nn.Cell):
         _attn: Computes the attention weights.
         merge_heads: Merges the attention heads.
         split_heads: Splits the input into multiple attention heads.
-        construct: Constructs the attention mechanism.
+        forward: Constructs the attention mechanism.
 
     Note:
         - The Attention class assumes that the input tensors follow specific shapes and sizes. 
@@ -152,8 +149,8 @@ class Attention(nn.Cell):
         )
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
         # Prune conv1d layers
-        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
-        self.c_proj = prune_conv1d_layer(self.c_proj, index, axis=0)
+        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
+        self.c_proj = prune_conv1d_layer(self.c_proj, index, dim=0)
         # Update hyper params
         self.split_size = (self.split_size // self.n_head) * (self.n_head - len(heads))
         self.n_head = self.n_head - len(heads)
@@ -253,9 +250,9 @@ class Attention(nn.Cell):
             return x.permute(0, 2, 3, 1)
         return x.permute(0, 2, 1, 3)
 
-    def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
+    def forward(self, x, attention_mask=None, head_mask=None, output_attentions=False):
         """
-        This method 'construct' in the class 'Attention' processes the input data 'x' through attention mechanisms.
+        This method 'forward' in the class 'Attention' processes the input data 'x' through attention mechanisms.
 
         Args:
             self (object): The instance of the Attention class.
@@ -291,14 +288,14 @@ class Attention(nn.Cell):
         return outputs  # a, (attentions)
 
 
-class MLP(nn.Cell):
+class MLP(nn.Module):
 
     """
     MLP is a class that represents a multi-layer perceptron (MLP) model.
 
     MLP is a neural network model that consists of multiple layers of perceptrons or artificial neurons.
     Each layer is fully connected to the next layer, and the final layer produces the output. The MLP class
-    inherits from the nn.Cell class, which is a base class for all neural network modules in the PyTorch framework.
+    inherits from the nn.Module class, which is a base class for all neural network modules in the PyTorch framework.
 
     The MLP class has the following attributes:
 
@@ -310,12 +307,12 @@ class MLP(nn.Cell):
     - __init__(self, n_state, config): Initializes the MLP object. It takes two parameters: n_state, which represents
     the number of output channels in the first convolutional layer, and config, which is an object containing
     configuration parameters for the MLP model.
-    Inside the method, it initializes the parent class (nn.Cell), sets the number of input channels (nx) to the value
+    Inside the method, it initializes the parent class (nn.Module), sets the number of input channels (nx) to the value
     specified in the config, creates a 1-dimensional convolutional layer (self.c_fc) with n_state output channels and
     nx input channels, creates another 1-dimensional convolutional layer (self.c_proj) with nx output channels and
     n_state input channels, sets the activation function (self.act) to the value specified in the config, and sets the
     dropout probability (self.dropout) to the value specified in the config.
-    - construct(self, x): Constructs the MLP model. It takes one parameter, x, which represents the input tensor.
+    - forward(self, x): Constructs the MLP model. It takes one parameter, x, which represents the input tensor.
     Inside the method, it applies the activation function to the output of the first convolutional layer (self.c_fc),
     applies the second convolutional layer (self.c_proj) to the result, and returns the output after applying dropout
     (self.dropout).
@@ -329,7 +326,7 @@ class MLP(nn.Cell):
         >>> config = MLPConfig(n_embd=128, afn='relu', resid_pdrop=0.2)
         >>> mlp = MLP(n_state=64, config=config)
         >>> input_tensor = torch.randn(10, 128)
-        >>> output = mlp.construct(input_tensor)
+        >>> output = mlp.forward(input_tensor)
         ```
     """
     def __init__(self, n_state, config):  # in MLP: n_state=3072 (4 * n_embd)
@@ -354,7 +351,7 @@ class MLP(nn.Cell):
         self.act = ACT_FNS[config.afn]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the output of the Multi-Layer Perceptron (MLP) model.
 
@@ -363,7 +360,7 @@ class MLP(nn.Cell):
             x (tensor): The input tensor to be processed by the MLP.
 
         Returns:
-            The constructed output tensor after passing through the MLP layers.
+            The forwarded output tensor after passing through the MLP layers.
 
         Raises:
             None.
@@ -373,11 +370,11 @@ class MLP(nn.Cell):
         return self.dropout(h2)
 
 
-class Block(nn.Cell):
+class Block(nn.Module):
 
     """
     This class represents a block in a neural network model.
-    It is a subclass of nn.Cell and is used for building transformer models.
+    It is a subclass of nn.Module and is used for building transformer models.
 
     Attributes:
         attn (Attention): The attention module of the block.
@@ -395,7 +392,7 @@ class Block(nn.Cell):
             - config (object): The configuration object for the block.
             - scale (bool, optional): Whether to scale the attention scores. Defaults to False.
 
-        construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
+        forward(self, x, attention_mask=None, head_mask=None, output_attentions=False):
             Constructs the block by performing the necessary computations on the input.
 
             Args:
@@ -428,11 +425,11 @@ class Block(nn.Cell):
         super().__init__()
         nx = config.n_embd
         self.attn = Attention(nx, n_positions, config, scale)
-        self.ln_1 = nn.LayerNorm([nx], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm([nx], eps=config.layer_norm_epsilon)
         self.mlp = MLP(4 * nx, config)
-        self.ln_2 = nn.LayerNorm([nx], epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm([nx], eps=config.layer_norm_epsilon)
 
-    def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
+    def forward(self, x, attention_mask=None, head_mask=None, output_attentions=False):
         """
         Constructs a block in the given class.
 
@@ -449,7 +446,7 @@ class Block(nn.Cell):
         Raises:
             None.
 
-        This method constructs a block by performing the following steps:
+        This method forwards a block by performing the following steps:
 
         1. Calculate attention outputs using the 'attn' method, passing the input tensor, attention mask,
            head mask, and output attentions flag as parameters. Store the result in 'attn_outputs'.
@@ -488,7 +485,7 @@ class GPTPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -549,7 +546,7 @@ class GPTModel(GPTPreTrainedModel):
     This class represents a GPT (Generative Pre-trained Transformer) model for natural language processing tasks.
     It inherits from the GPTPreTrainedModel class and implements the GPT architecture for generating text based on
     input sequences.
-    The model includes methods for initializing embeddings, pruning heads, and constructing the model for inference
+    The model includes methods for initializing embeddings, pruning heads, and forwarding the model for inference
     or training.
 
     Attributes:
@@ -562,7 +559,7 @@ class GPTModel(GPTPreTrainedModel):
         set_input_embeddings: Sets new input embeddings for the model.
         _prune_heads): Prunes specified heads of the model based on the provided dictionary
             of layer numbers and heads to prune.
-        construct: Constructs the GPTModel for inference or training based on the input data and configuration.
+        forward: Constructs the GPTModel for inference or training based on the input data and configuration.
     """
     def __init__(self, config):
         """
@@ -591,7 +588,7 @@ class GPTModel(GPTPreTrainedModel):
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
+        self.h = nn.ModuleList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
 
         self.position_ids = ops.arange(config.n_positions)
         # Initialize weights and apply final processing
@@ -654,7 +651,7 @@ class GPTModel(GPTPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -793,17 +790,17 @@ class GPTLMHeadModel(GPTPreTrainedModel):
 
     The GPTLMHeadModel class provides methods for initializing the model with a configuration, getting and
     setting output embeddings,
-    constructing language model outputs, and preparing inputs for generation.
+    forwarding language model outputs, and preparing inputs for generation.
     It inherits from the GPTPreTrainedModel class.
 
     Methods:
         __init__: Initializes the model with a given configuration.
         get_output_embeddings: Returns the output embeddings of the model.
         set_output_embeddings: Sets new output embeddings for the model.
-        construct: Constructs language model outputs based on input features.
+        forward: Constructs language model outputs based on input features.
         prepare_inputs_for_generation: Prepares input data for language generation.
 
-    The construct method takes various input arguments for language modeling and returns model outputs, including logits
+    The forward method takes various input arguments for language modeling and returns model outputs, including logits
     and hidden states.
     The prepare_inputs_for_generation method prepares input data specifically for language generation tasks.
 
@@ -831,7 +828,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -870,7 +867,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -950,7 +947,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
     The GPTDoubleHeadsModel inherits from the GPTPreTrainedModel class.
 
     The GPTDoubleHeadsModel class contains methods for initializing the model, getting and setting the output embeddings,
-    and constructing the model. It also includes a detailed docstring for the `construct` method,
+    and forwarding the model. It also includes a detailed docstring for the `forward` method,
     which describes the input parameters, return values, and provides examples of how to use the method.
 
     To use the GPTDoubleHeadsModel, follow these steps:
@@ -958,7 +955,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
     1. Instantiate the GPTDoubleHeadsModel class, passing the `config` parameter.
     2. Use the `get_output_embeddings` method to get the output embeddings of the model.
     3. Use the `set_output_embeddings` method to set new embeddings for the model.
-    4. Use the `construct` method to perform language modeling and multiple choice classification tasks.
+    4. Use the `forward` method to perform language modeling and multiple choice classification tasks.
     The method takes various input tensors and returns the model outputs, including logits for language
     modeling and multiple choice classification.
 
@@ -975,7 +972,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         >>> input_ids = tokenizer.encode_batch(choices)
         >>> mc_token_ids = [len(ids) - 1 for ids in input_ids]
         ...
-        >>> outputs = model.construct(input_ids, mc_token_ids=mc_token_ids)
+        >>> outputs = model.forward(input_ids, mc_token_ids=mc_token_ids)
         >>> lm_logits = outputs.logits
         >>> mc_logits = outputs.mc_logits
         ```
@@ -1002,7 +999,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         config.num_labels = 1
         self.transformer = GPTModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
 
         # Initialize weights and apply final processing
@@ -1039,7 +1036,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1150,7 +1147,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
     Additionally, it creates a 'score' attribute which is a neural network layer with a dense layer of shape
     '(config.n_embd, num_labels)' and no bias. Finally, it calls the 'post_init' method.
 
-    The 'construct' method is responsible for constructing the sequence classification model.
+    The 'forward' method is responsible for forwarding the sequence classification model.
     It takes several optional input tensors as parameters, including 'input_ids', 'attention_mask', 'token_type_ids',
     'position_ids', 'head_mask', 'inputs_embeds', 'labels', 'output_attentions', 'output_hidden_states',
     and 'return_dict'. It returns a Tuple of tensors or a 'SequenceClassifierOutput' object.
@@ -1209,12 +1206,12 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

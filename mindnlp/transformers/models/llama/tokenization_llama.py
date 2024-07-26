@@ -305,7 +305,7 @@ class LlamaTokenizer(PreTrainedTokenizer):
         Args:
             self (object): The instance of the class.
             d (dict): A dictionary containing the state information to be restored.
-                It should include the necessary data to reconstruct the object's state.
+                It should include the necessary data to reforward the object's state.
 
         Returns:
             None: The method does not explicitly return any value,
@@ -314,7 +314,7 @@ class LlamaTokenizer(PreTrainedTokenizer):
         Raises:
             TypeError: If the provided 'd' parameter is not a dictionary.
             AttributeError: If the necessary attributes are not present in the dictionary 'd'.
-            ValueError: If there are issues with loading or reconstructing the 'sp_model' using the provided data.
+            ValueError: If there are issues with loading or reforwarding the 'sp_model' using the provided data.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)

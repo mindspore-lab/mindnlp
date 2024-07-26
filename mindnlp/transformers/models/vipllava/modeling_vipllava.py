@@ -20,7 +20,9 @@ from functools import reduce
 import numpy as np
 
 import mindspore as ms
-from mindspore import nn, Tensor, ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
@@ -81,24 +83,24 @@ class VipLlavaCausalLMOutputWithPast(ModelOutput):
     image_hidden_states: Optional[Tuple[Tensor]] = None
 
 
-class VipLlavaMultiModalProjector(nn.Cell):
+class VipLlavaMultiModalProjector(nn.Module):
 
     """
     Represents a multi-modal projector for the VipLlava model, used to project hidden states from both vision and
     text modalities.
     
-    This class inherits from nn.Cell and contains methods to initialize the projector and construct the projection
+    This class inherits from nn.Module and contains methods to initialize the projector and forward the projection
     process.
     
     Attributes:
         projector_layernorm (nn.LayerNorm): Layer normalization for the projector.
-        linear_1 (nn.Dense): First linear transformation for the projector.
+        linear_1 (nn.Linear): First linear transformation for the projector.
         act (function): Activation function applied after the first linear transformation.
-        linear_2 (nn.Dense): Second linear transformation for the projector.
+        linear_2 (nn.Linear): Second linear transformation for the projector.
     
     Methods:
         __init__: Initializes the multi-modal projector with the provided configuration.
-        construct: Constructs the projection process by applying layer normalization, linear transformations,
+        forward: Constructs the projection process by applying layer normalization, linear transformations,
             and activation function.
     
     """
@@ -118,20 +120,20 @@ class VipLlavaMultiModalProjector(nn.Cell):
         """
         super().__init__()
         self.projector_layernorm = nn.LayerNorm(
-            len(config.vision_feature_layers) * config.vision_config.hidden_size, epsilon=config.projector_layernorm_eps
+            len(config.vision_feature_layers) * config.vision_config.hidden_size, eps=config.projector_layernorm_eps
         )
 
-        self.linear_1 = nn.Dense(
+        self.linear_1 = nn.Linear(
             len(config.vision_feature_layers) *
             config.vision_config.hidden_size,
             config.text_config.hidden_size,
-            has_bias=True,
+            bias=True,
         )
         self.act = ACT2FN[config.projector_hidden_act]
-        self.linear_2 = nn.Dense(
-            config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_2 = nn.Linear(
+            config.text_config.hidden_size, config.text_config.hidden_size, bias=True)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the multi-modal projector for the VipLlava model.
 
@@ -185,7 +187,7 @@ class VipLlavaPreTrainedModel(PreTrainedModel):
 
             - If the module has a class_embedding attribute, it sets the data of the class_embedding tensor with random
             values.
-            - If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random
+            - If the module is an instance of nn.Linear or nn.Conv2d, it sets the data of the weight tensor with random
             values and initializes the bias tensor with zeros.
             - If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and
             initializes the padding_idx tensor with zeros.
@@ -240,7 +242,7 @@ class VipLlavaPreTrainedModel(PreTrainedModel):
             module.class_embedding.set_data(Tensor(np.random.normal(
                 0.0, std, module.class_embedding.shape), dtype=module.class_embedding.dtype))
 
-        if isinstance(module, (nn.Dense, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             module.weight.set_data(Tensor(np.random.normal(
                 0.0, std, module.weight.shape), dtype=module.weight.dtype))
             if module.bias is not None:
@@ -333,11 +335,11 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
 
     """
     This class represents a model for conditional generation using the VipLlava architecture.
-    It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the
+    It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, forwarding the
     model, and reordering cache.
 
     Methods:
-        construct: Generates output based on input tokens, image features, attention mask, and other optional parameters.
+        forward: Generates output based on input tokens, image features, attention mask, and other optional parameters.
             It returns a tuple or VipLlavaCausalLMOutputWithPast object.
         prepare_inputs_for_generation: Prepares model inputs for generation, considering past key values, inputs embeds,
             pixel values, attention mask, and position ids.
@@ -623,7 +625,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         return final_embedding, final_attention_mask, final_labels, position_ids
 
     # Ignore copy
-    def construct(
+    def forward(
         self,
         input_ids: Tensor = None,
         pixel_values: Tensor = None,

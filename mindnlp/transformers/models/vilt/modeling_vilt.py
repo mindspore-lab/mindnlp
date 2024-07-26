@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
@@ -52,27 +53,27 @@ class ViltForImagesAndTextClassificationOutput(ModelOutput):
     Class for outputs of [`ViltForImagesAndTextClassification`].
 
     Args:
-        loss (`ops.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Classification (or regression if config.num_labels==1) loss.
-        logits (`ops.Tensor` of shape `(batch_size, config.num_labels)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        hidden_states (`List[tuple(ops.Tensor)]`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            List of tuples of `ops.Tensor` (one for each image-text pair, each tuple containing the output of
+        hidden_states (`List[tuple(mindspore.Tensor)]`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            List of tuples of `mindspore.Tensor` (one for each image-text pair, each tuple containing the output of
             the embeddings + one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`List[tuple(ops.Tensor)]`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            List of tuples of `ops.Tensor` (one for each image-text pair, each tuple containing the attention
+        attentions (`List[tuple(mindspore.Tensor)]`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            List of tuples of `mindspore.Tensor` (one for each image-text pair, each tuple containing the attention
             weights of shape `(batch_size, num_heads, sequence_length, sequence_length)`. Attentions weights after the
             attention softmax, used to compute the weighted average in the self-attention heads.
     """
 
-    loss: Optional[ops.Tensor] = None
-    logits: ops.Tensor = None
-    hidden_states: Optional[List[Tuple[ops.Tensor]]] = None
-    attentions: Optional[List[Tuple[ops.Tensor]]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[List[Tuple[mindspore.Tensor]]] = None
+    attentions: Optional[List[Tuple[mindspore.Tensor]]] = None
 
 
-class ViltEmbeddings(nn.Cell):
+class ViltEmbeddings(nn.Module):
     """
     Construct the text and patch embeddings.
 
@@ -184,7 +185,7 @@ class ViltEmbeddings(nn.Cell):
 
         return x, x_mask, (patch_index, (height, width))
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask,
@@ -227,7 +228,7 @@ class ViltEmbeddings(nn.Cell):
         return embeddings, masks
 
 
-class TextEmbeddings(nn.Cell):
+class TextEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -238,14 +239,14 @@ class TextEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -256,7 +257,7 @@ class TextEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -280,7 +281,7 @@ class TextEmbeddings(nn.Cell):
         return embeddings
 
 
-class ViltPatchEmbeddings(nn.Cell):
+class ViltPatchEmbeddings(nn.Module):
     """
     Image to Patch Embedding.
     """
@@ -298,9 +299,9 @@ class ViltPatchEmbeddings(nn.Cell):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -311,7 +312,7 @@ class ViltPatchEmbeddings(nn.Cell):
         return x
 
 
-class ViltSelfAttention(nn.Cell):
+class ViltSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -324,9 +325,9 @@ class ViltSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
@@ -335,7 +336,7 @@ class ViltSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -346,7 +347,7 @@ class ViltSelfAttention(nn.Cell):
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in BertModel construct() function)
+            # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -372,7 +373,7 @@ class ViltSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->Vilt
-class ViltSelfOutput(nn.Cell):
+class ViltSelfOutput(nn.Module):
     """
     The residual connection is defined in ViltLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -380,17 +381,17 @@ class ViltSelfOutput(nn.Cell):
 
     def __init__(self, config: ViltConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ops.Tensor, input_tensor: ops.Tensor) -> ops.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
         return hidden_states
 
 
-class ViltAttention(nn.Cell):
+class ViltAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.attention = ViltSelfAttention(config)
@@ -408,14 +409,14 @@ class ViltAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
         self_outputs = self.attention(hidden_states, attention_mask, head_mask, output_attentions)
 
         attention_output = self.output(self_outputs[0], hidden_states)
@@ -425,16 +426,16 @@ class ViltAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->Vilt
-class ViltIntermediate(nn.Cell):
+class ViltIntermediate(nn.Module):
     def __init__(self, config: ViltConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: ops.Tensor) -> ops.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -442,13 +443,13 @@ class ViltIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTOutput with ViT->Vilt
-class ViltOutput(nn.Cell):
+class ViltOutput(nn.Module):
     def __init__(self, config: ViltConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ops.Tensor, input_tensor: ops.Tensor) -> ops.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -457,7 +458,7 @@ class ViltOutput(nn.Cell):
         return hidden_states
 
 
-class ViltLayer(nn.Cell):
+class ViltLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config):
@@ -467,10 +468,10 @@ class ViltLayer(nn.Cell):
         self.attention = ViltAttention(config)
         self.intermediate = ViltIntermediate(config)
         self.output = ViltOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
         self_attention_outputs = self.attention(
             self.layernorm_before(hidden_states),  # in ViLT, layernorm is applied before self-attention
             attention_mask,
@@ -495,14 +496,14 @@ class ViltLayer(nn.Cell):
         return outputs
 
 
-class ViltEncoder(nn.Cell):
+class ViltEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViltLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ViltLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -561,7 +562,7 @@ class ViltPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, (nn.Dense, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -580,7 +581,7 @@ class ViltPreTrainedModel(PreTrainedModel):
 
 
 VILT_START_DOCSTRING = r"""
-    This model is a PyTorch `ops.nn.Cell <https://pyops.org/docs/stable/nn.html#ops.nn.Cell>`_ subclass. Use
+    This model is a PyTorch `ops.nn.Module <https://pyops.org/docs/stable/nn.html#ops.nn.Module>`_ subclass. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -592,46 +593,46 @@ VILT_START_DOCSTRING = r"""
 
 VILT_INPUTS_DOCSTRING = r"""
     Args:
-        input_ids (`ops.Tensor` of shape `({0})`):
+        input_ids (`mindspore.Tensor` of shape `({0})`):
             Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
             IDs?](../glossary#input-ids)
 
-        attention_mask (`ops.Tensor` of shape `({0})`, *optional*):
+        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
             [What are attention masks?](../glossary#attention-mask)
 
-        token_type_ids (`ops.Tensor` of shape `({0})`, *optional*):
+        token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
             1]`:
             - 0 corresponds to a *sentence A* token,
             - 1 corresponds to a *sentence B* token.
             [What are token type IDs?](../glossary#token-type-ids)
 
-        pixel_values (`ops.Tensor` of shape `(batch_size, num_channels, height, width)`):
+        pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
             [`ViltImageProcessor.__call__`] for details.
 
-        pixel_mask (`ops.Tensor` of shape `(batch_size, height, width)`, *optional*):
+        pixel_mask (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):
             Mask to avoid performing attention on padding pixel values. Mask values selected in `[0, 1]`:
 
             - 1 for pixels that are real (i.e. **not masked**),
             - 0 for pixels that are padding (i.e. **masked**).
             `What are attention masks? <../glossary.html#attention-mask>`__
 
-        head_mask (`ops.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
-        inputs_embeds (`ops.Tensor` of shape `({0}, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
             is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
             model's internal embedding lookup matrix.
 
-        image_embeds (`ops.Tensor` of shape `(batch_size, num_patches, hidden_size)`, *optional*):
+        image_embeds (`mindspore.Tensor` of shape `(batch_size, num_patches, hidden_size)`, *optional*):
             Optionally, instead of passing `pixel_values`, you can choose to directly pass an embedded representation.
             This is useful if you want more control over how to convert `pixel_values` into patch embeddings.
 
@@ -647,46 +648,46 @@ VILT_INPUTS_DOCSTRING = r"""
 
 VILT_IMAGES_AND_TEXT_CLASSIFICATION_INPUTS_DOCSTRING = r"""
     Args:
-        input_ids (`ops.Tensor` of shape `({0})`):
+        input_ids (`mindspore.Tensor` of shape `({0})`):
             Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
             IDs?](../glossary#input-ids)
 
-        attention_mask (`ops.Tensor` of shape `({0})`, *optional*):
+        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
             [What are attention masks?](../glossary#attention-mask)
 
-        token_type_ids (`ops.Tensor` of shape `({0})`, *optional*):
+        token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
             1]`:
             - 0 corresponds to a *sentence A* token,
             - 1 corresponds to a *sentence B* token.
             [What are token type IDs?](../glossary#token-type-ids)
 
-        pixel_values (`ops.Tensor` of shape `(batch_size, num_images, num_channels, height, width)`):
+        pixel_values (`mindspore.Tensor` of shape `(batch_size, num_images, num_channels, height, width)`):
             Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
             [`ViltImageProcessor.__call__`] for details.
 
-        pixel_mask (`ops.Tensor` of shape `(batch_size, num_images, height, width)`, *optional*):
+        pixel_mask (`mindspore.Tensor` of shape `(batch_size, num_images, height, width)`, *optional*):
             Mask to avoid performing attention on padding pixel values. Mask values selected in `[0, 1]`:
 
             - 1 for pixels that are real (i.e. **not masked**),
             - 0 for pixels that are padding (i.e. **masked**).
             `What are attention masks? <../glossary.html#attention-mask>`__
 
-        head_mask (`ops.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
-        inputs_embeds (`ops.Tensor` of shape `({0}, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
             is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
             model's internal embedding lookup matrix.
 
-        image_embeds (`ops.Tensor` of shape `(batch_size, num_images, num_patches, hidden_size)`, *optional*):
+        image_embeds (`mindspore.Tensor` of shape `(batch_size, num_images, num_patches, hidden_size)`, *optional*):
             Optionally, instead of passing `pixel_values`, you can choose to directly pass an embedded representation.
             This is useful if you want more control over how to convert `pixel_values` into patch embeddings.
 
@@ -709,7 +710,7 @@ class ViltModel(ViltPreTrainedModel):
         self.embeddings = ViltEmbeddings(config)
         self.encoder = ViltEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.pooler = ViltPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
@@ -729,21 +730,21 @@ class ViltModel(ViltPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
         image_token_type_idx: Optional[int] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[BaseModelOutputWithPooling, Tuple[ops.Tensor]]:
+    ) -> Union[BaseModelOutputWithPooling, Tuple[mindspore.Tensor]]:
         r"""
         Returns:
 
@@ -843,13 +844,13 @@ class ViltModel(ViltPreTrainedModel):
         )
 
 
-class ViltPooler(nn.Cell):
+class ViltPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -878,23 +879,23 @@ class ViltForMaskedLM(ViltPreTrainedModel):
         self.mlm_score.decoder = new_embeddings
         self.mlm_score.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
-        labels: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[MaskedLMOutput, Tuple[ops.Tensor]]:
+    ) -> Union[MaskedLMOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (*ops.Tensor* of shape *(batch_size, sequence_length)*, *optional*):
+        labels (*mindspore.Tensor* of shape *(batch_size, sequence_length)*, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in *[-100, 0, ...,
             config.vocab_size]* (see *input_ids* docstring) Tokens with indices set to *-100* are ignored (masked), the
             loss is only computed for the tokens with labels in *[0, ..., config.vocab_size]*
@@ -920,7 +921,7 @@ class ViltForMaskedLM(ViltPreTrainedModel):
         >>> # prepare inputs
         >>> encoding = processor(image, text, return_tensors="pt")
 
-        >>> # construct pass
+        >>> # forward pass
         >>> outputs = model(**encoding)
 
         >>> tl = len(re.findall("\[MASK\]", text))
@@ -989,29 +990,29 @@ class ViltForMaskedLM(ViltPreTrainedModel):
         )
 
 
-class ViltPredictionHeadTransform(nn.Cell):
+class ViltPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class ViltMLMHead(nn.Cell):
+class ViltMLMHead(nn.Module):
     def __init__(self, config, weight=None):
         super().__init__()
         self.config = config
         self.transform = ViltPredictionHeadTransform(config)
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(ops.zeros(config.vocab_size), name="bias")
         if weight is not None:
             self.decoder.weight = weight
@@ -1022,7 +1023,7 @@ class ViltMLMHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, x):
+    def forward(self, x):
         x = self.transform(x)
         x = self.decoder(x)
         return x
@@ -1038,32 +1039,32 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
 
         # Classifier head
         self.classifier = nn.SequentialCell(
-            nn.Dense(config.hidden_size, config.hidden_size * 2),
-            nn.LayerNorm(config.hidden_size * 2, epsilon= 1e-5),
+            nn.Linear(config.hidden_size, config.hidden_size * 2),
+            nn.LayerNorm(config.hidden_size * 2, eps= 1e-5),
             nn.GELU(False),
-            nn.Dense(config.hidden_size * 2, config.num_labels),
+            nn.Linear(config.hidden_size * 2, config.num_labels),
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
-        labels: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[SequenceClassifierOutput, Tuple[ops.Tensor]]:
+    ) -> Union[SequenceClassifierOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`ops.Tensor` of shape `(batch_size, num_labels)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, num_labels)`, *optional*):
             Labels for computing the visual question answering loss. This tensor must be either a one-hot encoding of
             all answers that are applicable for a given example in the batch, or a soft encoding indicating which
             answers are applicable, where 1.0 is the highest score.
@@ -1087,7 +1088,7 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
         >>> # prepare inputs
         >>> encoding = processor(image, text, return_tensors="pt")
 
-        >>> # construct pass
+        >>> # forward pass
         >>> outputs = model(**encoding)
         >>> logits = outputs.logits
         >>> idx = logits.argmax(-1).item()
@@ -1140,28 +1141,28 @@ class ViltForImageAndTextRetrieval(ViltPreTrainedModel):
         self.vilt = ViltModel(config)
 
         # Classifier head
-        self.rank_output = nn.Dense(config.hidden_size, 1)
+        self.rank_output = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
-        labels: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[SequenceClassifierOutput, Tuple[ops.Tensor]]:
+    ) -> Union[SequenceClassifierOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`ops.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels are currently not supported.
 
         Returns:
@@ -1180,7 +1181,7 @@ class ViltForImageAndTextRetrieval(ViltPreTrainedModel):
         >>> processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-finetuned-coco")
         >>> model = ViltForImageAndTextRetrieval.from_pretrained("dandelin/vilt-b32-finetuned-coco")
 
-        >>> # construct pass
+        >>> # forward pass
         >>> scores = dict()
         >>> for text in texts:
         ...     # prepare inputs
@@ -1235,32 +1236,32 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
         # Classifier head
         num_images = config.num_images
         self.classifier = nn.SequentialCell(
-            nn.Dense(config.hidden_size * num_images, config.hidden_size * num_images),
-            nn.LayerNorm(config.hidden_size * num_images, epsilon= 1e-5),
+            nn.Linear(config.hidden_size * num_images, config.hidden_size * num_images),
+            nn.LayerNorm(config.hidden_size * num_images, eps= 1e-5),
             nn.GELU(False),
-            nn.Dense(config.hidden_size * num_images, config.num_labels),
+            nn.Linear(config.hidden_size * num_images, config.num_labels),
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
-        labels: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[ViltForImagesAndTextClassificationOutput, Tuple[ops.Tensor]]:
+    ) -> Union[ViltForImagesAndTextClassificationOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`ops.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Binary classification labels.
 
         Returns:
@@ -1282,7 +1283,7 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
         >>> # prepare inputs
         >>> encoding = processor([image1, image2], text, return_tensors="pt")
 
-        >>> # construct pass
+        >>> # forward pass
         >>> outputs = model(input_ids=encoding.input_ids, pixel_values=encoding.pixel_values.unsqueeze(0))
         >>> logits = outputs.logits
         >>> idx = logits.argmax(-1).item()
@@ -1314,7 +1315,7 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
         hidden_states = [] if output_hidden_states else None
         attentions = [] if output_attentions else None
         for i in range(num_images):
-            # construct every image through the model
+            # forward every image through the model
             outputs = self.vilt(
                 input_ids,
                 attention_mask=attention_mask,
@@ -1364,28 +1365,28 @@ class ViltForTokenClassification(ViltPreTrainedModel):
         self.vilt = ViltModel(config, add_pooling_layer=False)
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ops.Tensor] = None,
-        attention_mask: Optional[ops.Tensor] = None,
-        token_type_ids: Optional[ops.Tensor] = None,
-        pixel_values: Optional[ops.Tensor] = None,
-        pixel_mask: Optional[ops.Tensor] = None,
-        head_mask: Optional[ops.Tensor] = None,
-        inputs_embeds: Optional[ops.Tensor] = None,
-        image_embeds: Optional[ops.Tensor] = None,
-        labels: Optional[ops.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        image_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[TokenClassifierOutput, Tuple[ops.Tensor]]:
+    ) -> Union[TokenClassifierOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`ops.Tensor` of shape `(batch_size, text_sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, text_sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:

@@ -278,7 +278,7 @@ class FocalNetModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes[:-1]:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 

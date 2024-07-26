@@ -19,7 +19,7 @@ from ..utils import get_x_and_y as get_u1_and_u2, \
                                 to_2channel as to_double
 
 
-class J1J2ReLU(nn.Cell):
+class J1J2ReLU(nn.Module):
     r"""
     Rectified Linear Unit activation function for double-valued input in the diagonal representation.
 
@@ -60,16 +60,16 @@ class J1J2ReLU(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self, u: Tensor) -> Tensor:
+    def forward(self, u: Tensor) -> Tensor:
         r"""
         Constructs a new tensor based on the input tensor 'u' using a specific calculation.
         
         Args:
             self (J1J2ReLU): The instance of the J1J2ReLU class.
-            u (Tensor): The input tensor on which the construction is based. Should be a valid Tensor object.
+            u (Tensor): The input tensor on which the forwardion is based. Should be a valid Tensor object.
         
         Returns:
-            Tensor: A new tensor resulting from the construction process.
+            Tensor: A new tensor resulting from the forwardion process.
         
         Raises:
             ValueError: If the input 'u' is not a valid Tensor object.

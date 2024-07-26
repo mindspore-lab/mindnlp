@@ -18,12 +18,12 @@ import math
 from typing import Optional, Tuple, Union, List
 
 import mindspore
-from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp._legacy.functional import einsum
 from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertPreTrainedModel
 from ...modeling_outputs import (
@@ -49,7 +49,7 @@ ROBERTA_SUPPORT_LIST = [
 logger = logging.get_logger(__name__)
 
 
-class RobertaEmbeddings(nn.Cell):
+class RobertaEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -94,7 +94,7 @@ class RobertaEmbeddings(nn.Cell):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
@@ -112,7 +112,7 @@ class RobertaEmbeddings(nn.Cell):
             padding_idx=self.padding_idx,
         )
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         token_type_ids=None,
@@ -121,7 +121,7 @@ class RobertaEmbeddings(nn.Cell):
         past_key_values_length=0,
     ):
         """
-        This method constructs the embeddings for the Roberta model.
+        This method forwards the embeddings for the Roberta model.
 
         Args:
             self (object): The instance of the class.
@@ -158,7 +158,7 @@ class RobertaEmbeddings(nn.Cell):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -201,7 +201,7 @@ class RobertaEmbeddings(nn.Cell):
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
-class RobertaSelfAttention(nn.Cell):
+class RobertaSelfAttention(nn.Module):
     """RobertaSelfAttention"""
     def __init__(self, config, position_embedding_type=None):
         """
@@ -230,9 +230,9 @@ class RobertaSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -279,7 +279,7 @@ class RobertaSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -372,11 +372,11 @@ class RobertaSelfAttention(nn.Cell):
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
-                relative_position_scores = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores
             elif self.position_embedding_type == "relative_key_query":
-                relative_position_scores_query = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
-                relative_position_scores_key = einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
+                relative_position_scores_query = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
@@ -408,7 +408,7 @@ class RobertaSelfAttention(nn.Cell):
         return outputs
 
 
-class RobertaSelfOutput(nn.Cell):
+class RobertaSelfOutput(nn.Module):
 
     """
     This class represents the self-output module of the Roberta model. It applies a dense layer, layer normalization,
@@ -429,7 +429,7 @@ class RobertaSelfOutput(nn.Cell):
         >>> self_output = RobertaSelfOutput(config)
         >>> hidden_states = mindspore.Tensor(...)
         >>> input_tensor = mindspore.Tensor(...)
-        >>> output = self_output.construct(hidden_states, input_tensor)
+        >>> output = self_output.forward(hidden_states, input_tensor)
         ```
     """
     def __init__(self, config):
@@ -455,11 +455,11 @@ class RobertaSelfOutput(nn.Cell):
             ValueError: If the hidden_dropout_prob attribute in the config parameter is not a float between 0 and 1.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the output of the RobertaSelfOutput layer.
 
@@ -483,10 +483,10 @@ class RobertaSelfOutput(nn.Cell):
         return hidden_states
 
 
-class RobertaAttention(nn.Cell):
+class RobertaAttention(nn.Module):
 
     """
-    This class represents the attention mechanism used in the Roberta model. It is a subclass of nn.Cell.
+    This class represents the attention mechanism used in the Roberta model. It is a subclass of nn.Module.
 
     The RobertaAttention class implements the attention mechanism used in the Roberta model.
     It consists of a self-attention module and a self-output module. The self-attention module is responsible for
@@ -501,7 +501,7 @@ class RobertaAttention(nn.Cell):
     - prune_heads: Prunes the specified attention heads. It takes a list of heads to be pruned as input. This method updates the attention module by removing the pruned heads and adjusting the
     attention head size accordingly.
 
-    - construct: Constructs the attention output given the input hidden states and optional arguments.
+    - forward: Constructs the attention output given the input hidden states and optional arguments.
     It computes the attention scores using the self-attention module and applies the self-output module to generate
     the final attention output. This method returns a tuple containing the attention output and optional additional
     outputs.
@@ -563,14 +563,14 @@ class RobertaAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -621,33 +621,33 @@ class RobertaAttention(nn.Cell):
         return outputs
 
 
-class RobertaIntermediate(nn.Cell):
+class RobertaIntermediate(nn.Module):
 
     """
     Represents the intermediate layer of the Roberta model for processing hidden states.
 
-    This class inherits from nn.Cell and provides methods for constructing the intermediate layer of the Roberta model.
+    This class inherits from nn.Module and provides methods for forwarding the intermediate layer of the Roberta model.
 
     Attributes:
-        dense (nn.Dense): A dense layer with specified hidden size and intermediate size.
+        dense (nn.Linear): A dense layer with specified hidden size and intermediate size.
         intermediate_act_fn (function): Activation function applied to hidden states.
 
     Methods:
         __init__: Initializes the RobertaIntermediate instance with the given configuration.
-        construct: Constructs the intermediate layer by passing the hidden states through the dense layer and activation function.
+        forward: Constructs the intermediate layer by passing the hidden states through the dense layer and activation function.
 
     Example:
         ```python
         >>> config = RobertaConfig(hidden_size=768, intermediate_size=3072, hidden_act='gelu')
         >>> intermediate_layer = RobertaIntermediate(config)
-        >>> hidden_states = intermediate_layer.construct(input_hidden_states)
+        >>> hidden_states = intermediate_layer.forward(input_hidden_states)
         ```
 
     Example:
         ```python
         >>> config = RobertaConfig(hidden_size=768, intermediate_size=3072, hidden_act='gelu')
         >>> intermediate_layer = RobertaIntermediate(config)
-        >>> hidden_states = intermediate_layer.construct(input_hidden_states)
+        >>> hidden_states = intermediate_layer.forward(input_hidden_states)
         ```
     """
     def __init__(self, config):
@@ -667,15 +667,15 @@ class RobertaIntermediate(nn.Cell):
             ValueError: If the 'config' parameter does not contain the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the intermediate representation of the Roberta model.
+        This method forwards the intermediate representation of the Roberta model.
 
         Args:
             self (RobertaIntermediate): The instance of the RobertaIntermediate class.
@@ -692,22 +692,22 @@ class RobertaIntermediate(nn.Cell):
         return hidden_states
 
 
-class RobertaOutput(nn.Cell):
+class RobertaOutput(nn.Module):
 
     """
     This class represents the output of a Roberta model, which is used for fine-tuning tasks.
-    It inherits from the `nn.Cell` class.
+    It inherits from the `nn.Module` class.
 
     The `RobertaOutput` class applies a series of transformations to the input hidden states and produces
     the final output tensor.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer that maps the input hidden states to an intermediate size.
+        dense (nn.Linear): A fully connected layer that maps the input hidden states to an intermediate size.
         LayerNorm (nn.LayerNorm): A layer normalization module that normalizes the hidden states.
         dropout (nn.Dropout): A dropout module that applies dropout to the hidden states.
 
     Methods:
-        construct:
+        forward:
             Applies the transformation operations to the hidden states and returns the final output tensor.
 
     Example:
@@ -716,7 +716,7 @@ class RobertaOutput(nn.Cell):
         >>> output = RobertaOutput(config)
         ...
         >>> # Apply the transformation operations to the hidden states
-        >>> output_tensor = output.construct(hidden_states, input_tensor)
+        >>> output_tensor = output.forward(hidden_states, input_tensor)
         ```
     """
     def __init__(self, config):
@@ -734,13 +734,13 @@ class RobertaOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output tensor for the Roberta model.
+        This method forwards the output tensor for the Roberta model.
 
         Args:
             self: The instance of the RobertaOutput class.
@@ -750,7 +750,7 @@ class RobertaOutput(nn.Cell):
                 It is expected to be a tensor of the same shape as hidden_states.
 
         Returns:
-            mindspore.Tensor: The constructed output tensor of the same shape as hidden_states,
+            mindspore.Tensor: The forwarded output tensor of the same shape as hidden_states,
                 representing the final output of the Roberta model.
 
         Raises:
@@ -763,13 +763,13 @@ class RobertaOutput(nn.Cell):
         return hidden_states
 
 
-class RobertaLayer(nn.Cell):
+class RobertaLayer(nn.Module):
 
     """
     Represents a layer of the Roberta model for natural language processing tasks.
     This layer includes self-attention and cross-attention mechanisms.
 
-    This class inherits from nn.Cell and contains methods for initializing the layer and constructing the
+    This class inherits from nn.Module and contains methods for initializing the layer and forwarding the
     layer's functionality.
 
     Attributes:
@@ -784,7 +784,7 @@ class RobertaLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the RobertaLayer with the given configuration.
-        construct: Constructs the layer using the given input and arguments,
+        forward: Constructs the layer using the given input and arguments,
             applying self-attention and cross-attention if applicable.
         feed_forward_chunk: Performs the feed-forward computation using the given attention output.
     """
@@ -816,7 +816,7 @@ class RobertaLayer(nn.Cell):
         self.intermediate = RobertaIntermediate(config)
         self.output = RobertaOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -935,20 +935,20 @@ class RobertaLayer(nn.Cell):
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
 
-class RobertaEncoder(nn.Cell):
+class RobertaEncoder(nn.Module):
 
     """
     This class represents a RobertaEncoder, which is a neural network encoder for the RoBERTa model.
-    It inherits from the nn.Cell class and is responsible for encoding input sequences using a stack of
+    It inherits from the nn.Module class and is responsible for encoding input sequences using a stack of
     multiple RobertaLayer modules.
 
     The RobertaEncoder class contains an __init__ method to initialize the encoder with a given configuration,
-    and a construct method to perform the encoding process. The construct method takes in various input tensors and
+    and a forward method to perform the encoding process. The forward method takes in various input tensors and
     optional parameters, and returns the encoded output and optional additional information such as hidden states,
     attentions, and cross-attentions.
 
     The encoder utilizes a stack of RobertaLayer modules, where each layer applies a series of transformations to the
-    input hidden states using self-attention and optionally cross-attention mechanisms. The construct method iterates
+    input hidden states using self-attention and optionally cross-attention mechanisms. The forward method iterates
     through the layers, applying the transformations and updating the hidden states accordingly.
 
     Additionally, the encoder supports gradient checkpointing and caching of past key values for efficient training
@@ -975,10 +975,10 @@ class RobertaEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([RobertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([RobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1096,19 +1096,19 @@ class RobertaEncoder(nn.Cell):
         )
 
 
-class RobertaPooler(nn.Cell):
+class RobertaPooler(nn.Module):
 
     """
-    This class represents a pooler for the Roberta model. It inherits from the nn.Cell class and is responsible
+    This class represents a pooler for the Roberta model. It inherits from the nn.Module class and is responsible
     for processing hidden states to generate a pooled output.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer that maps the input hidden state to the hidden size.
+        dense (nn.Linear): A fully connected layer that maps the input hidden state to the hidden size.
         activation (nn.Tanh): The activation function applied to the output of the dense layer.
 
     Methods:
         __init__: Initializes the RobertaPooler instance with the specified configuration.
-        construct: Constructs the pooled output from the input hidden states.
+        forward: Constructs the pooled output from the input hidden states.
 
     """
     def __init__(self, config):
@@ -1128,10 +1128,10 @@ class RobertaPooler(nn.Cell):
             TypeError: If the 'config' parameter is not of the expected type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a pooled output tensor from the given hidden states using the RobertaPooler module.
 
@@ -1157,7 +1157,7 @@ class RobertaPooler(nn.Cell):
             ```python
             >>> roberta_pooler = RobertaPooler()
             >>> hidden_states = mindspore.Tensor(np.random.randn(2, 5, 768), dtype=mindspore.float32)
-            >>> pooled_output = roberta_pooler.construct(hidden_states)
+            >>> pooled_output = roberta_pooler.forward(hidden_states)
             ```
         """
         # We "pool" the model by simply taking the hidden state corresponding
@@ -1284,7 +1284,7 @@ class RobertaModel(RobertaPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1440,7 +1440,7 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
                 Retrieve the output embeddings of the model.
             set_output_embeddings
                 Set new output embeddings for the model.
-            construct
+            forward
                 Perform the forward pass of the model for causal language modeling.
             prepare_inputs_for_generation
                 Prepare the inputs for generation by removing the prefix and adjusting the attention mask.
@@ -1511,7 +1511,7 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1702,8 +1702,8 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
     """
     `RobertaForMaskedLM` is a Python class that represents a RoBERTa model for masked language modeling tasks.
     This class inherits from `RobertaPreTrainedModel` and provides methods for initializing the model,
-    getting and setting output embeddings, and constructing the model for masked language modeling tasks.
-    It also includes a detailed `construct` method for processing input data and computing the masked language
+    getting and setting output embeddings, and forwarding the model for masked language modeling tasks.
+    It also includes a detailed `forward` method for processing input data and computing the masked language
     modeling loss.
 
     The class includes the following methods:
@@ -1711,9 +1711,9 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
     - `__init__`: Initializes the `RobertaForMaskedLM` instance.
     - `get_output_embeddings`: Returns the output embeddings of the model.
     - `set_output_embeddings`: Sets the output embeddings of the model to the specified new embeddings.
-    - `construct`: Constructs the model for masked language modeling tasks and computes the masked language modeling loss.
+    - `forward`: Constructs the model for masked language modeling tasks and computes the masked language modeling loss.
 
-    The `construct` method supports various input parameters such as input IDs, attention mask, token type IDs,
+    The `forward` method supports various input parameters such as input IDs, attention mask, token type IDs,
     position IDs, head mask, input embeddings, encoder hidden states, encoder attention mask, labels, output attentions,
     output hidden states, and return dictionary. It also includes detailed information about the expected shape and
     type of the input data, as well as the optional arguments.
@@ -1791,7 +1791,7 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1855,7 +1855,7 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
         )
 
 
-class RobertaLMHead(nn.Cell):
+class RobertaLMHead(nn.Module):
     """Roberta Head for masked language modeling."""
     def __init__(self, config):
         """
@@ -1878,30 +1878,30 @@ class RobertaLMHead(nn.Cell):
             ValueError: If the config object does not contain the required parameters.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(
-            (config.hidden_size,), epsilon=config.layer_norm_eps
+            (config.hidden_size,), eps=config.layer_norm_eps
         )
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
         self.decoder.bias = self.bias
 
-        # for mindspore.nn.Dense
-        self.decoder.has_bias = True
+        # for mindspore.nn.Linear
+        self.decoder.bias = True
         self.decoder.bias_add = ops.add
 
-    def construct(self, features):
+    def forward(self, features):
         """
         Constructs the output of the language model head for a given set of features.
 
         Args:
             self (RobertaLMHead): The instance of the RobertaLMHead class.
-            features (tensor): The input features for constructing the output.
+            features (tensor): The input features for forwarding the output.
                 It should be a tensor of shape (batch_size, sequence_length, hidden_size).
 
         Returns:
-            tensor: The constructed output tensor of shape (batch_size, sequence_length, hidden_size).
+            tensor: The forwarded output tensor of shape (batch_size, sequence_length, hidden_size).
 
         Raises:
             ValueError: If the input features tensor is not of the expected shape.
@@ -1939,13 +1939,13 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     This class represents a Roberta model for sequence classification tasks.
     It is a subclass of RobertaPreTrainedModel and is specifically designed for sequence classification tasks.
 
-    The class's code includes an initialization method (__init__) and a construct method.
+    The class's code includes an initialization method (__init__) and a forward method.
 
     The __init__ method initializes the RobertaForSequenceClassification object by taking a config argument.
     It calls the super() method to initialize the parent class (RobertaPreTrainedModel) with the
     provided config. It also initializes other attributes such as num_labels and classifier.
 
-    The construct method takes several input arguments and returns either a tuple of tensors or a
+    The forward method takes several input arguments and returns either a tuple of tensors or a
     SequenceClassifierOutput object. It performs the main computation of the model. It first calls the roberta()
     method of the parent class to obtain the sequence output. Then, it passes the sequence output to the classifier
     to obtain the logits. If labels are provided, it calculates the loss based on the problem type
@@ -1985,7 +1985,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2064,17 +2064,17 @@ class RobertaForMultipleChoice(RobertaPreTrainedModel):
     """
     RobertaForMultipleChoice is a class for fine-tuning a pre-trained Roberta model for multiple choice tasks.
 
-    This class inherits from RobertaPreTrainedModel and implements the necessary methods for constructing the model
+    This class inherits from RobertaPreTrainedModel and implements the necessary methods for forwarding the model
     architecture and computing the multiple choice classification loss.
 
     Attributes:
         roberta (RobertaModel): The RobertaModel instance for handling the main Roberta model.
         dropout (nn.Dropout): Dropout layer for regularization.
-        classifier (nn.Dense): Dense layer for classification.
+        classifier (nn.Linear): Dense layer for classification.
 
     Methods:
         __init__: Initializes the RobertaForMultipleChoice instance with the given configuration.
-        construct:
+        forward:
             Constructs the model architecture and computes the multiple choice classification loss.
 
     Parameters:
@@ -2113,12 +2113,12 @@ class RobertaForMultipleChoice(RobertaPreTrainedModel):
 
         self.roberta = RobertaModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -2214,7 +2214,7 @@ class RobertaForTokenClassification(RobertaPreTrainedModel):
 
     Methods:
         __init__(self, config): Initializes the RobertaForTokenClassification instance with the given configuration.
-        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels,
+        forward(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels,
             output_attentions, output_hidden_states, return_dict): Constructs the token classification model and
             returns the output.
 
@@ -2268,12 +2268,12 @@ class RobertaForTokenClassification(RobertaPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2328,7 +2328,7 @@ class RobertaForTokenClassification(RobertaPreTrainedModel):
         )
 
 
-class RobertaClassificationHead(nn.Cell):
+class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(self, config):
         """
@@ -2353,16 +2353,16 @@ class RobertaClassificationHead(nn.Cell):
             ValueError: If the config parameter is missing any of the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         classifier_dropout = (
             config.classifier_dropout
             if config.classifier_dropout is not None
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         """
         Constructs the classification head for a Roberta model.
 
@@ -2392,18 +2392,18 @@ class RobertaForQuestionAnswering(RobertaPreTrainedModel):
     """
     RobertaForQuestionAnswering is a class representing a model for question answering tasks based on the RoBERTa
     architecture.
-    It inherits from RobertaPreTrainedModel and provides functionalities for constructing the model and processing
+    It inherits from RobertaPreTrainedModel and provides functionalities for forwarding the model and processing
     inputs for question answering.
 
     Attributes:
         num_labels (int): The number of labels for the question answering task.
         roberta (RobertaModel): The RoBERTa model used for processing input sequences.
-        qa_outputs (mindspore.nn.Dense): A dense layer for outputting logits for the start and end positions of the
+        qa_outputs (mindspore.nn.Linear): A dense layer for outputting logits for the start and end positions of the
             labelled span.
 
     Methods:
         __init__: Initializes the RobertaForQuestionAnswering model with the provided configuration.
-        construct:
+        forward:
             Constructs the model using the input tensors and returns the output logits for start and end positions.
             Optionally computes the total loss if start and end positions are provided.
 
@@ -2450,12 +2450,12 @@ class RobertaForQuestionAnswering(RobertaPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.roberta = RobertaModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

@@ -17,19 +17,20 @@ from typing import Any, Set, Tuple
 from mindspore.common.initializer import HeUniform, initializer
 
 import mindspore
-from mindspore import nn, ops
-from mindnlp._legacy.abc import ParameterDict
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import ParameterDict
+
 from mindnlp.peft.tuners.lycoris_utils import LycorisLayer
 
 
-class LoHaLayer(nn.Cell, LycorisLayer):
+class LoHaLayer(nn.Module, LycorisLayer):
 
     r"""
-    The LoHaLayer class represents a layer that applies Local Harmonic Adaptation (LoHa) to a base layer. LoHaLayer inherits from nn.Cell and LycorisLayer. It provides methods to create, reset, and update
+    The LoHaLayer class represents a layer that applies Local Harmonic Adaptation (LoHa) to a base layer. LoHaLayer inherits from nn.Module and LycorisLayer. It provides methods to create, reset, and update
 adapter parameters, as well as to calculate delta weights and apply the adaptation to input data. 
     
     Attributes:
-        base_layer (nn.Cell): The base layer for which LoHa adaptation is applied.
+        base_layer (nn.Module): The base layer for which LoHa adaptation is applied.
     
     Methods:
         - create_adapter_parameters(adapter_name, r, shape): Creates adapter parameters for the specified adapter name, rank, and shape.
@@ -37,7 +38,7 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         - reset_adapter_parameters_random(adapter_name): Resets adapter parameters for the specified adapter name with random weights.
         - update_layer(adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, use_effective_conv2d, **kwargs): Updates the layer with a new adapter using the specified parameters.
         - get_delta_weight(adapter_name): Retrieves the delta weight for the specified adapter name.
-        - construct(x, *args, **kwargs): Constructs the layer by applying the base layer and active adapters to the input data.
+        - forward(x, *args, **kwargs): Constructs the layer by applying the base layer and active adapters to the input data.
     
     The class also provides internal functions for managing adapter parameters, updating the layer with new adapters, and applying the adaptation to the input data. 
     
@@ -54,13 +55,13 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
     )
     # other_param_names is defined on parent class
 
-    def __init__(self, base_layer: nn.Cell):
+    def __init__(self, base_layer: nn.Module):
         r"""
         Initializes the LoHaLayer class.
         
         Args:
             self: The instance of the class.
-            base_layer (nn.Cell): The base layer to be initialized with. It should be an instance of nn.Cell.
+            base_layer (nn.Module): The base layer to be initialized with. It should be an instance of nn.Module.
         
         Returns:
             None. This method does not return any value.
@@ -314,7 +315,7 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
 
         # Determine shape of LoHa weights
         base_layer = self.get_base_layer()
-        if isinstance(base_layer, nn.Dense):
+        if isinstance(base_layer, nn.Linear):
             shape = tuple(base_layer.weight.shape)
         elif isinstance(base_layer, nn.Conv2d):
             use_effective_conv2d = use_effective_conv2d and base_layer.kernel_size != (
@@ -400,9 +401,9 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
             weight *= drop
         return weight
 
-    def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
         r"""
-        This method constructs the output tensor by applying various operations based on the input tensor and layer configurations.
+        This method forwards the output tensor by applying various operations based on the input tensor and layer configurations.
         
         Args:
             self: An instance of the LoHaLayer class.
@@ -448,7 +449,7 @@ class Linear(LoHaLayer):
     """LoHa implemented in Linear layer"""
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str = "default",
         r: int = 0,
         alpha: float = 0.0,
@@ -464,7 +465,7 @@ class Linear(LoHaLayer):
         
         Args:
             self: The instance of the class itself.
-            base_layer (nn.Cell): The base layer for the linear adapter.
+            base_layer (nn.Module): The base layer for the linear adapter.
             adapter_name (str, optional): The name of the adapter. Defaults to 'default'.
             r (int, optional): The value for r. Defaults to 0.
             alpha (float, optional): The value for alpha. Defaults to 0.0.
@@ -530,7 +531,7 @@ class Conv2d(LoHaLayer):
     """LoHa implemented in Conv2d layer"""
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str = "default",
         r: int = 0,
         alpha: float = 0.0,
@@ -545,7 +546,7 @@ class Conv2d(LoHaLayer):
         
         Args:
             self: The instance of the class.
-            base_layer (nn.Cell): The base layer used for convolutional operations.
+            base_layer (nn.Module): The base layer used for convolutional operations.
             adapter_name (str, optional): The name of the adapter. Defaults to 'default'.
             r (int, optional): The value of r. Defaults to 0.
             alpha (float, optional): The value of alpha. Defaults to 0.0.
@@ -627,21 +628,21 @@ class Conv2d(LoHaLayer):
 # Below code is a direct copy from https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/loha.py#L9
 
 
-class HadaWeight(nn.Cell):
+class HadaWeight(nn.Module):
 
     r"""
     The HadaWeight class represents a module that calculates the Hadamard product of two sets of weights in a neural network. 
     
-    This class inherits from nn.Cell and provides methods for constructing the Hadamard product of two weight matrices, backpropagating through the operation, and computing the gradients with respect to the
+    This class inherits from nn.Module and provides methods for forwarding the Hadamard product of two weight matrices, backpropagating through the operation, and computing the gradients with respect to the
 input weights. 
     
-    The construct method computes the Hadamard product of two sets of weights scaled by a specified factor. 
+    The forward method computes the Hadamard product of two sets of weights scaled by a specified factor. 
     
     The bprop method calculates the gradients of the input weights with respect to the output gradients, considering the Hadamard product operation and the scaling factor. 
     
     Usage:
         hw = HadaWeight()
-        diff_weight = hw.construct(w1a, w1b, w2a, w2b, scale)
+        diff_weight = hw.forward(w1a, w1b, w2a, w2b, scale)
         grad_w1a, grad_w1b, grad_w2a, grad_w2b, scale = hw.bprop(w1a, w1b, w2a, w2b, scale, out, dout)
     """
     def __init__(self):
@@ -659,7 +660,7 @@ input weights.
         """
         super().__init__()
 
-    def construct(self, w1a, w1b, w2a, w2b, scale=mindspore.tensor(1)):
+    def forward(self, w1a, w1b, w2a, w2b, scale=mindspore.tensor(1)):
         r"""
         Constructs the Hadamard weight for the given inputs.
         
@@ -718,13 +719,13 @@ input weights.
         return grad_w1a, grad_w1b, grad_w2a, grad_w2b, scale
 
 
-class HadaWeightCP(nn.Cell):
+class HadaWeightCP(nn.Module):
 
     r"""
-    The HadaWeightCP class represents a cell for performing HadaWeightCP (Hadamard product with weight and channel permutation) operations. This class inherits from nn.Cell and provides methods for
-constructing the HadaWeightCP operation and its backward propagation.
+    The HadaWeightCP class represents a cell for performing HadaWeightCP (Hadamard product with weight and channel permutation) operations. This class inherits from nn.Module and provides methods for
+forwarding the HadaWeightCP operation and its backward propagation.
     
-    The construct method takes input tensors t1, w1a, w1b, t2, w2a, w2b, and optional scale, and returns the result of the HadaWeightCP operation. The HadaWeightCP operation involves performing einsum
+    The forward method takes input tensors t1, w1a, w1b, t2, w2a, w2b, and optional scale, and returns the result of the HadaWeightCP operation. The HadaWeightCP operation involves performing einsum
 operations on the input tensors and scaling the result by the provided scale.
     
     The bprop method takes input tensors t1, w1a, w1b, t2, w2a, w2b, scale, out, and dout, and computes the gradients with respect to the input tensors and weight matrices. The method involves performing
@@ -747,7 +748,7 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
         """
         super().__init__()
 
-    def construct(self, t1, w1a, w1b, t2, w2a, w2b, scale=mindspore.tensor(1)):
+    def forward(self, t1, w1a, w1b, t2, w2a, w2b, scale=mindspore.tensor(1)):
         r"""
         Constructs a weighted tensor product using the HadaWeightCP method.
         

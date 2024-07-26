@@ -14,13 +14,14 @@
 """layer for adaption prompt tuners."""
 import math
 import numpy as np
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 import mindspore.common.dtype as mstype
 from mindspore.ops import operations as P
 from .config import TRANSFORMERS_MODEL_CONFIG
 
 
-class AdaptedAttention(nn.Cell):
+class AdaptedAttention(nn.Module):
     """This cell wraps a LLamaAttention cell and injects adaption prompts."""
     def __init__(self, model_type: str, adapter_len: int, model):
         """
@@ -45,7 +46,7 @@ class AdaptedAttention(nn.Cell):
         # 使用零初始化器初始化门控参数
         zero_values = np.zeros((1,), dtype=np.float32)
         self.adaption_gate = Parameter(Tensor(zero_values, dtype=mstype.float32), name="adaption_gate")
-    def construct(self, **kwargs):
+    def forward(self, **kwargs):
         """
         Forward pass for the adapter which wraps the original LlamaAttention cell.
         Args:

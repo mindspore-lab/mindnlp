@@ -553,7 +553,7 @@ def find_labels(model_class):
         model_class (`type`): The class of the model.
     """
     model_name = model_class.__name__
-    signature = inspect.signature(model_class.construct)  # TensorFlow models
+    signature = inspect.signature(model_class.forward)  # TensorFlow models
 
     if "QuestionAnswering" in model_name:
         return [p for p in signature.parameters if "label" in p or p in ("start_positions", "end_positions")]
@@ -567,7 +567,7 @@ def can_return_loss(model_class):
     Args:
         model_class (`type`): The class of the model.
     """
-    signature = inspect.signature(model_class.construct)  # TensorFlow models
+    signature = inspect.signature(model_class.forward)  # TensorFlow models
 
     for p in signature.parameters:
         if p == "return_loss" and signature.parameters[p].default is True:

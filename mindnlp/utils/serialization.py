@@ -553,7 +553,7 @@ class _open_buffer_reader(_opener):
     A class representing an open buffer reader for reading files.
     
     This class is a subclass of _opener and provides functionality for reading files from a buffer. 
-    The class's constructor takes a buffer as input and initializes the buffer for reading. 
+    The class's forwardor takes a buffer as input and initializes the buffer for reading. 
     It also performs a check to ensure that the buffer is seekable before proceeding with reading operations.
     """
     def __init__(self, buffer):
@@ -710,9 +710,9 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         None: This function does not raise any exceptions.
     '''
     if size == ():
-        size = (1,)
-        stride = (1,)
-    num_elemets = reduce(operator.mul, size)
+        num_elemets = 1
+    else:
+        num_elemets = reduce(operator.mul, size)
     array = storage[storage_offset: storage_offset + num_elemets]
 
     if array.dtype == bfloat16:

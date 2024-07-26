@@ -23,7 +23,7 @@ amp_black_list = (
     nn.BatchNorm2d
 )
 
-class _OutputTo32(nn.Cell):
+class _OutputTo32(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
@@ -33,7 +33,7 @@ class _OutputTo32(nn.Cell):
     def construct(self, *x):
         return ops.cast(self._op(*x), mstype.float32)
 
-class _OutputTo16(nn.Cell):
+class _OutputTo16(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):

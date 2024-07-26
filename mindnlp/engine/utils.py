@@ -30,6 +30,7 @@ import numpy as np
 import mindspore
 from mindspore import ops
 
+from mindnlp.configs import GENERATOR_SEED
 from mindnlp.utils import is_mindspore_available, ExplicitEnum
 
 
@@ -214,6 +215,8 @@ def set_seed(seed: int):
     np.random.seed(seed)
     if is_mindspore_available():
         mindspore.set_seed(seed)
+        if GENERATOR_SEED:
+            mindspore.manual_seed(seed)
 
 def enable_full_determinism(seed: int, warn_only: bool = False):
     """

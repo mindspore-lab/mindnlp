@@ -38,6 +38,7 @@ FLAX_MODEL_MAPPING_NAMES = OrderedDict(
         ("blenderbot-small", "MSBlenderbotSmallModel"),
         ("bloom", "MSBloomModel"),
         ("clip", "MSCLIPModel"),
+        ("deepseek_v2", "DeepseekV2Model"),
         ("distilbert", "MSDistilBertModel"),
         ("electra", "MSElectraModel"),
         ("gpt-sw3", "MSGPT2Model"),
@@ -169,6 +170,7 @@ FLAX_MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("roberta-prelayernorm", "MSRobertaPreLayerNormForSequenceClassification"),
         ("roformer", "MSRoFormerForSequenceClassification"),
         ("xlm-roberta", "MSXLMRobertaForSequenceClassification"),
+        ("deepseek_v2", "DeepseekV2ForSequenceClassification")
     ]
 )
 

@@ -34,7 +34,7 @@ class _DenseImpl(BaseDenseImpl):
 
     where :math:`inp` is the double input tensors, :math:`\text{kernel}` is a double weight matrix with the same
     data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is a double bias vector with the same
-    data type as the :math:`inp` created by the layer (only if has_bias is True). :math:`\text{X(...)}` and
+    data type as the :math:`inp` created by the layer (only if bias is True). :math:`\text{X(...)}` and
     :math:`\text{Y(...)}` are respectively the first and the second parts of the double-valued expression
     inside the parentheses.
 
@@ -58,7 +58,7 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   real: Tensor,
                   double: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
@@ -103,7 +103,7 @@ class _J1J2DenseImpl(BaseDenseImpl):
     where :math:`inp` is the double input tensors in the diagonal form, :math:`\text{kernel}` is a double weight matrix
     in the diagonal form with the same data type as the :math:`inp` created by the layer, and :math:`\text{bias}` is
     a double bias vector in the diagonal form with the same data type as the :math:`inp` created by the layer
-    (only if has_bias is True). :math:`\text{X(...)}` and :math:`\text{Y(...)}` are respectively the first and the
+    (only if bias is True). :math:`\text{X(...)}` and :math:`\text{Y(...)}` are respectively the first and the
     second parts of the double-valued expression inside the parentheses.
 
     Args:
@@ -125,7 +125,7 @@ class _J1J2DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   u1: Tensor,
                   u2: Tensor) -> Tuple[Tensor, Tensor]:
         r"""

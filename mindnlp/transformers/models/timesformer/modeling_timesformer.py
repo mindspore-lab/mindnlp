@@ -19,7 +19,7 @@ import collections
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
 from mindnlp.utils import logging
@@ -33,7 +33,7 @@ from .configuration_timesformer import TimesformerConfig
 logger = logging.get_logger(__name__)
 
 
-class TimesformerPatchEmbeddings(nn.Cell):
+class TimesformerPatchEmbeddings(nn.Module):
     """Image to Patch Embedding"""
     def __init__(self, config):
         """
@@ -72,13 +72,13 @@ class TimesformerPatchEmbeddings(nn.Cell):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(config.num_channels, config.hidden_size, kernel_size=patch_size,
-                                    stride=patch_size, pad_mode='valid', has_bias=True)
+                                    stride=patch_size, pad_mode='valid', bias=True)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         '''
-        construct method in TimesformerPatchEmbeddings class.
+        forward method in TimesformerPatchEmbeddings class.
 
-        This method constructs patch embeddings from the input pixel_values.
+        This method forwards patch embeddings from the input pixel_values.
 
         Args:
             self (TimesformerPatchEmbeddings): The instance of the TimesformerPatchEmbeddings class.
@@ -89,10 +89,10 @@ class TimesformerPatchEmbeddings(nn.Cell):
             tuple:
                 A tuple containing the following values:
 
-                - embeddings (torch.Tensor): A 3-dimensional tensor representing the constructed embeddings,
+                - embeddings (torch.Tensor): A 3-dimensional tensor representing the forwarded embeddings,
                 with dimensions (batch_size * num_frames, patch_width, num_channels).
                 - num_frames (int): The number of frames in the input pixel_values.
-                - patch_width (int): The width of the patches in the constructed embeddings.
+                - patch_width (int): The width of the patches in the forwarded embeddings.
 
         Raises:
             None
@@ -106,7 +106,7 @@ class TimesformerPatchEmbeddings(nn.Cell):
         return embeddings, num_frames, patch_width
 
 
-class TimesformerEmbeddings(nn.Cell):
+class TimesformerEmbeddings(nn.Module):
     """
     Construct the patch and position embeddings.
     """
@@ -149,7 +149,7 @@ class TimesformerEmbeddings(nn.Cell):
             self.time_embeddings = mindspore.Parameter(ops.zeros(1, num_frames, embed_dim))
             self.time_drop = nn.Dropout(p=drop_rate)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         """
         Constructs the embeddings for the Timesformer model.
 
@@ -160,12 +160,12 @@ class TimesformerEmbeddings(nn.Cell):
 
         Returns:
             torch.Tensor: A tensor of shape (batch_size, total_patches, embedding_dim) representing the
-                constructed embeddings.
+                forwarded embeddings.
 
         Raises:
             None.
 
-        This method takes in a tensor of pixel values and constructs the embeddings for the Timesformer model.
+        This method takes in a tensor of pixel values and forwards the embeddings for the Timesformer model.
         The input tensor is expected to have dimensions (batch_size, num_frames, patch_height, patch_width).
         The method first computes patch embeddings using the `patch_embeddings` function. It then adds a special token
         (`cls_token`) to the embeddings. If the shape of the embeddings does not match the shape of the position
@@ -179,7 +179,7 @@ class TimesformerEmbeddings(nn.Cell):
         embeddings. The embeddings are then passed through a dropout layer (`time_drop`).
         Finally, the embeddings are reshaped and the `cls_token` is concatenated back to the embeddings.
 
-        The method returns the constructed embeddings.
+        The method returns the forwarded embeddings.
         """
         batch_size = pixel_values.shape[0]
 
@@ -257,7 +257,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->TimeSformer
-class TimeSformerDropPath(nn.Cell):
+class TimeSformerDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
@@ -277,7 +277,7 @@ class TimeSformerDropPath(nn.Cell):
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Method to apply drop path regularization to the hidden states.
 
@@ -321,20 +321,20 @@ class TimeSformerDropPath(nn.Cell):
 
 
 # Adapted from https://github.com/facebookresearch/TimeSformer/blob/a5ef29a7b7264baff199a30b3306ac27de901133/timesformer/models/vit.py#L57
-class TimesformerSelfAttention(nn.Cell):
+class TimesformerSelfAttention(nn.Module):
 
     """
-    This class represents the self-attention mechanism used in the Timesformer model. It is a subclass of nn.Cell.
+    This class represents the self-attention mechanism used in the Timesformer model. It is a subclass of nn.Module.
 
     Attributes:
         num_heads (int): The number of attention heads.
         scale (float): The scaling factor applied to the attention scores.
-        qkv (nn.Dense): The fully connected layer used to compute the query, key, and value representations.
+        qkv (nn.Linear): The fully connected layer used to compute the query, key, and value representations.
         attn_drop (nn.Dropout): The dropout layer applied to the attention scores.
 
     Methods:
         __init__: Initializes the TimesformerSelfAttention instance.
-        construct: Applies self-attention mechanism to the input hidden states.
+        forward: Applies self-attention mechanism to the input hidden states.
 
     """
     def __init__(self, config: TimesformerConfig):
@@ -360,10 +360,10 @@ class TimesformerSelfAttention(nn.Cell):
         self.num_heads = num_heads
         head_dim = config.hidden_size // num_heads
         self.scale = head_dim**-0.5
-        self.qkv = nn.Dense(config.hidden_size, config.hidden_size * 3, has_bias=qkv_bias)
+        self.qkv = nn.Linear(config.hidden_size, config.hidden_size * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(p=attention_dropout_prob)
 
-    def construct(self, hidden_states, output_attentions: bool = False):
+    def forward(self, hidden_states, output_attentions: bool = False):
         """
         Constructs the self-attention mechanism within a Timesformer model.
 
@@ -407,7 +407,7 @@ class TimesformerSelfAttention(nn.Cell):
         return outputs
 
 
-class TimesformerSelfOutput(nn.Cell):
+class TimesformerSelfOutput(nn.Module):
     """
     The residual connection is defined in TimesformerLayer instead of here (as is the case with other models), due to
     the layernorm applied before each block.
@@ -429,10 +429,10 @@ class TimesformerSelfOutput(nn.Cell):
             TypeError: If the config parameter is not of type TimesformerConfig.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the self output of the Timesformer model.
 
@@ -457,16 +457,16 @@ class TimesformerSelfOutput(nn.Cell):
         return hidden_states
 
 
-class TimeSformerAttention(nn.Cell):
+class TimeSformerAttention(nn.Module):
 
     """
     The TimeSformerAttention class represents the self-attention mechanism for the TimeSformer model. It inherits from
-    the nn.Cell class and is responsible for performing self-attention and generating attention-based outputs.
+    the nn.Module class and is responsible for performing self-attention and generating attention-based outputs.
 
     The class contains the following methods:
 
     - __init__: Initializes the TimeSformerAttention instance with the provided configuration.
-    - construct: Constructs the self-attention mechanism using the provided hidden states and optionally returns
+    - forward: Constructs the self-attention mechanism using the provided hidden states and optionally returns
     attention outputs.
 
     This class is an essential component of the TimeSformer model, providing the functionality for self-attention
@@ -505,13 +505,13 @@ class TimeSformerAttention(nn.Cell):
         self.attention = TimesformerSelfAttention(config)
         self.output = TimesformerSelfOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         '''
-        This method constructs the attention mechanism for the TimeSformer model.
+        This method forwards the attention mechanism for the TimeSformer model.
 
         Args:
             self: This parameter refers to the instance of the class itself.
@@ -539,20 +539,20 @@ class TimeSformerAttention(nn.Cell):
 
 
 # Adapted from https://github.com/facebookresearch/TimeSformer/blob/a5ef29a7b7264baff199a30b3306ac27de901133/timesformer/models/vit.py#L39
-class TimesformerIntermediate(nn.Cell):
+class TimesformerIntermediate(nn.Module):
 
     """
     The TimesformerIntermediate class represents a component of the Timesformer model that performs intermediate
-    computations on the input hidden states. This class inherits from the nn.Cell class.
+    computations on the input hidden states. This class inherits from the nn.Module class.
 
     Attributes:
-        dense (nn.Dense): A dense layer used for transforming the input hidden states.
+        dense (nn.Linear): A dense layer used for transforming the input hidden states.
         dropout (nn.Dropout): A dropout layer with a dropout probability specified in the configuration.
         intermediate_act_fn (function): The activation function applied to the intermediate hidden states.
 
     Methods:
         __init__: Initializes the TimesformerIntermediate instance with the provided configuration.
-        construct: Performs intermediate computations on the input hidden states and returns the result.
+        forward: Performs intermediate computations on the input hidden states and returns the result.
     """
     def __init__(self, config: TimesformerConfig) -> None:
         """
@@ -572,7 +572,7 @@ class TimesformerIntermediate(nn.Cell):
             KeyError: If the config.hidden_act is not a valid string key in the ACT2FN dictionary.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         if isinstance(config.hidden_act, str):
@@ -580,23 +580,23 @@ class TimesformerIntermediate(nn.Cell):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the intermediate representation for the Timesformer model.
+        This method forwards the intermediate representation for the Timesformer model.
 
         Args:
             self: An instance of the TimesformerIntermediate class.
             hidden_states (mindspore.Tensor): The input hidden states to be processed.
                 It should be a Tensor object containing the hidden states data required for intermediate representation
-                construction.
+                forwardion.
 
         Returns:
-            mindspore.Tensor: Returns a Tensor object representing the intermediate representation constructed using
+            mindspore.Tensor: Returns a Tensor object representing the intermediate representation forwarded using
                 the input hidden states data.
 
         Raises:
             ValueError: If the input hidden_states is not a valid mindspore.Tensor object.
-            RuntimeError: If any error occurs during the intermediate representation construction process.
+            RuntimeError: If any error occurs during the intermediate representation forwardion process.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -605,27 +605,27 @@ class TimesformerIntermediate(nn.Cell):
         return hidden_states
 
 
-class TimesformerOutput(nn.Cell):
+class TimesformerOutput(nn.Module):
 
     """
     TimesformerOutput represents the output of the Timesformer model, containing methods for processing hidden states.
 
-    This class inherits from nn.Cell and provides functionality for processing hidden states through dense and dropout
+    This class inherits from nn.Module and provides functionality for processing hidden states through dense and dropout
     layers.
 
     Attributes:
-        dense (nn.Dense): A dense layer used for transforming hidden states.
+        dense (nn.Linear): A dense layer used for transforming hidden states.
         dropout (nn.Dropout): A dropout layer used for regularization.
 
     Methods:
         __init__: Initializes the TimesformerOutput object with the provided configuration.
-        construct: Applies dense and dropout layers to the input hidden states.
+        forward: Applies dense and dropout layers to the input hidden states.
 
     Example:
         ```python
         >>> config = TimesformerConfig(intermediate_size=1024, hidden_size=512, hidden_dropout_prob=0.1)
         >>> output = TimesformerOutput(config)
-        >>> processed_states = output.construct(hidden_states)
+        >>> processed_states = output.forward(hidden_states)
         ```
 
     Note:
@@ -652,12 +652,12 @@ class TimesformerOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method 'construct' is defined within the class 'TimesformerOutput' and is used to process the input
+        This method 'forward' is defined within the class 'TimesformerOutput' and is used to process the input
         'hidden_states' through a series of operations and return the resulting tensor.
 
         Args:
@@ -680,14 +680,14 @@ class TimesformerOutput(nn.Cell):
 
 
 # Adapted from https://github.com/facebookresearch/TimeSformer/blob/a5ef29a7b7264baff199a30b3306ac27de901133/timesformer/models/vit.py#L89
-class TimesformerLayer(nn.Cell):
+class TimesformerLayer(nn.Module):
 
     """
     This class represents a Timesformer layer, which is a component of the Timesformer model. The Timesformer layer
     includes various operations such as attention, intermediate, and output layers. It supports different attention types,
     including divided space-time, space only, and joint space-time.
 
-    The TimesformerLayer class inherits from the nn.Cell class.
+    The TimesformerLayer class inherits from the nn.Module class.
 
     Attributes:
         config (TimesformerConfig): The configuration object for the Timesformer model.
@@ -703,7 +703,7 @@ class TimesformerLayer(nn.Cell):
             'divided_space_time' attention type.
         temporal_attention (TimeSformerAttention): The attention module applied to temporal embeddings in case of
             'divided_space_time' attention type.
-        temporal_dense (nn.Dense): The dense layer applied to temporal embeddings in case of 'divided_space_time'
+        temporal_dense (nn.Linear): The dense layer applied to temporal embeddings in case of 'divided_space_time'
             attention type.
 
     Methods:
@@ -711,14 +711,14 @@ class TimesformerLayer(nn.Cell):
             Initializes the TimesformerLayer object with the given configuration and layer index. Sets up the various
             modules and attributes of the layer.
 
-        construct:
+        forward:
             Constructs the TimesformerLayer by applying the attention and intermediate operations to the given hidden
             states. Returns the output hidden states and optionally the attention outputs.
 
     Note:
         - The TimesformerLayer class assumes that the following modules are defined: TimeSformerDropPath,
         TimeSformerAttention, TimesformerIntermediate, and TimesformerOutput.
-        - The construct method assumes that the following operations are defined: mindspore.Tensor.shape,
+        - The forward method assumes that the following operations are defined: mindspore.Tensor.shape,
         ops.linspace, ops.cat, ops.mean, ops.reshape, ops.tile, and ops.permute.
 
     Raises:
@@ -753,8 +753,8 @@ class TimesformerLayer(nn.Cell):
         self.attention = TimeSformerAttention(config)
         self.intermediate = TimesformerIntermediate(config)
         self.output = TimesformerOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.config = config
         self.attention_type = attention_type
@@ -763,11 +763,11 @@ class TimesformerLayer(nn.Cell):
 
         # Temporal Attention Parameters
         if self.attention_type == "divided_space_time":
-            self.temporal_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+            self.temporal_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
             self.temporal_attention = TimeSformerAttention(config)
-            self.temporal_dense = nn.Dense(config.hidden_size, config.hidden_size)
+            self.temporal_dense = nn.Linear(config.hidden_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor, output_attentions: bool = False):
+    def forward(self, hidden_states: mindspore.Tensor, output_attentions: bool = False):
         """
         Construct a Timesformer layer.
 
@@ -884,16 +884,16 @@ class TimesformerLayer(nn.Cell):
             return outputs
 
 
-class TimesformerEncoder(nn.Cell):
+class TimesformerEncoder(nn.Module):
 
     """
     The TimesformerEncoder class represents a Timesformer encoder module that is used for encoding input sequences.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
         config (TimesformerConfig): The configuration object that specifies the hyperparameters of the
             Timesformer encoder.
-        layer (nn.CellList): A list of TimesformerLayer instances that make up the encoder's layers.
+        layer (nn.ModuleList): A list of TimesformerLayer instances that make up the encoder's layers.
 
     Note:
         - The TimesformerEncoder is composed of multiple TimesformerLayer instances.
@@ -919,10 +919,10 @@ class TimesformerEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([TimesformerLayer(config, ind) for ind in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([TimesformerLayer(config, ind) for ind in range(config.num_hidden_layers)])
         # dady self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         output_attentions: bool = False,
@@ -1006,9 +1006,9 @@ class TimesformerPreTrainedModel(PreTrainedModel):
             None.
 
         This method initializes the weights and biases of the given cell based on its type.
-        It supports three types of cells: nn.Dense, nn.Conv2d, and nn.LayerNorm.
+        It supports three types of cells: nn.Linear, nn.Conv2d, and nn.LayerNorm.
 
-        For nn.Dense and nn.Conv2d cells:
+        For nn.Linear and nn.Conv2d cells:
 
         - The weights are initialized using the initializer function with a TruncatedNormal distribution with a
         standard deviation of self.config.initializer_range.
@@ -1031,7 +1031,7 @@ class TimesformerPreTrainedModel(PreTrainedModel):
         Note:
             This method modifies the weights and biases of the given cell in-place.
         """
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(TruncatedNormal(sigma=self.config.initializer_range), cell.weight.shape,
                                              cell.weight.dtype))
             if cell.bias is not None:
@@ -1054,11 +1054,11 @@ class TimesformerModel(TimesformerPreTrainedModel):
 
     This class inherits from TimesformerPreTrainedModel and implements the Timesformer model architecture for
     processing video data. It includes methods for initializing the model, getting input embeddings, pruning heads,
-    and constructing the model output.
+    and forwarding the model output.
 
     The __init__ method initializes the TimesformerModel with the provided configuration. The get_input_embeddings
     method returns the patch embeddings from the model's embeddings. The _prune_heads method prunes heads of the model
-    based on the provided heads_to_prune dictionary. The construct method processes the input pixel values and returns
+    based on the provided heads_to_prune dictionary. The forward method processes the input pixel values and returns
     the model output, with options to include attentions and hidden states in the returned dictionary.
 
     The class also contains additional methods and attributes inherited from the base class TimesformerPreTrainedModel.
@@ -1091,7 +1091,7 @@ class TimesformerModel(TimesformerPreTrainedModel):
         self.embeddings = TimesformerEmbeddings(config)
         self.encoder = TimesformerEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1120,7 +1120,7 @@ class TimesformerModel(TimesformerPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         output_attentions: Optional[bool] = None,
@@ -1197,7 +1197,7 @@ class TimesformerModel(TimesformerPreTrainedModel):
             >>> # prepare video for the model
             >>> inputs = image_processor(list(video), return_tensors="pt")
             ...
-            >>> # construct pass
+            >>> # forward pass
             >>> outputs = model(**inputs)
             >>> last_hidden_states = outputs.last_hidden_state
             >>> list(last_hidden_states.shape)
@@ -1242,12 +1242,12 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
     Attributes:
         num_labels (int): The number of labels for classification.
         timesformer (TimesformerModel): The Timesformer model for video classification.
-        classifier (nn.Dense or nn.Identity): The classifier layer for the model.
+        classifier (nn.Linear or nn.Identity): The classifier layer for the model.
         config (Config): The configuration object for the model.
 
     Methods:
         __init__: Initializes the TimesformerForVideoClassification instance.
-        construct: Constructs the model and computes the loss and output.
+        forward: Constructs the model and computes the loss and output.
 
     """
     def __init__(self, config):
@@ -1277,12 +1277,12 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
         self.timesformer = TimesformerModel(config)
 
         # Classifier head
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,

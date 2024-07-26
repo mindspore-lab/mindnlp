@@ -20,7 +20,8 @@ from functools import reduce
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 
 from ...modeling_utils import PreTrainedModel
@@ -82,24 +83,24 @@ class LlavaCausalLMOutputWithPast(ModelOutput):
     image_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
-class LlavaMultiModalProjector(nn.Cell):
+class LlavaMultiModalProjector(nn.Module):
 
     """
     LlavaMultiModalProjector is a class representing a multi-modal projector for processing image and text data
     simultaneously. It facilitates the transformation of image features through linear layers with activation functions
     to map them to text features.
     
-    This class inherits from nn.Cell and contains methods for initialization and constructing the projection of image
+    This class inherits from nn.Module and contains methods for initialization and forwarding the projection of image
     features to text features.
     The initialization method initializes the linear layers and activation function based on the provided configuration. 
-    The construct method applies the linear transformations and activation functions to the input image features to
+    The forward method applies the linear transformations and activation functions to the input image features to
     generate the final hidden states for text representation.
     
     Example:
         ```python
         >>> config = LlavaConfig(vision_config=..., text_config=..., projector_hidden_act=...)
         >>> projector = LlavaMultiModalProjector(config)
-        >>> hidden_states = projector.construct(image_features)
+        >>> hidden_states = projector.forward(image_features)
         ```
     """
     def __init__(self, config: LlavaConfig):
@@ -123,13 +124,13 @@ class LlavaMultiModalProjector(nn.Cell):
         """
         super().__init__()
 
-        self.linear_1 = nn.Dense(config.vision_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_1 = nn.Linear(config.vision_config.hidden_size, config.text_config.hidden_size, bias=True)
         self.act = ACT2FN[config.projector_hidden_act]
-        self.linear_2 = nn.Dense(config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_2 = nn.Linear(config.text_config.hidden_size, config.text_config.hidden_size, bias=True)
 
-    def construct(self, image_features):
+    def forward(self, image_features):
         '''
-        This method constructs a multi-modal projector within the LlavaMultiModalProjector class.
+        This method forwards a multi-modal projector within the LlavaMultiModalProjector class.
 
         Args:
             self (LlavaMultiModalProjector): The instance of the LlavaMultiModalProjector class.
@@ -198,7 +199,7 @@ class LlavaPreTrainedModel(PreTrainedModel):
         If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the
         calculated standard deviation.
 
-        If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal
+        If the cell is an instance of nn.Linear or nn.Conv2d, both the weight and bias are initialized using a normal
         distribution with the calculated standard deviation. If the cell has no bias, it remains unchanged.
 
         If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with
@@ -223,7 +224,7 @@ class LlavaPreTrainedModel(PreTrainedModel):
         if hasattr(cell, "class_embedding"):
             cell.class_embedding.initialize(Normal(std))
 
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.data.initialize(Normal(std))
             if cell.bias is not None:
                 cell.bias.initialize('zeros')
@@ -262,7 +263,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         >>> pixel_values = [0.1, 0.2, 0.3]
         >>> attention_mask = [1, 1, 1]
         ... 
-        >>> output = model.construct(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
+        >>> output = model.forward(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
         ```
     """
     def __init__(self, config: LlavaConfig):
@@ -519,7 +520,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
         return final_embedding, final_attention_mask, final_labels, position_ids
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         pixel_values: mindspore.Tensor = None,

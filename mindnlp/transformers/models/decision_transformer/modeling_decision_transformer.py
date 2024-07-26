@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import (
     ModelOutput,
@@ -36,7 +36,7 @@ logger = logging.get_logger(__name__)
 
 
 # Copied from transformers.models.gpt2.modeling_gpt2.GPT2Attention with GPT2->DecisionTransformerGPT2
-class DecisionTransformerGPT2Attention(nn.Cell):
+class DecisionTransformerGPT2Attention(nn.Module):
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         super().__init__()
 
@@ -83,8 +83,8 @@ class DecisionTransformerGPT2Attention(nn.Cell):
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
 
         # Prune conv1d layers
-        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
-        self.c_proj = prune_conv1d_layer(self.c_proj, index, axis=0)
+        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
+        self.c_proj = prune_conv1d_layer(self.c_proj, index, dim=0)
 
         # Update hyper params
         self.split_size = (self.split_size // self.num_heads) * (self.num_heads - len(heads))
@@ -215,7 +215,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -270,7 +270,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
 
 
 # Copied from transformers.models.gpt2.modeling_gpt2.GPT2MLP with GPT2->DecisionTransformerGPT2
-class DecisionTransformerGPT2MLP(nn.Cell):
+class DecisionTransformerGPT2MLP(nn.Module):
     def __init__(self, intermediate_size, config):
         super().__init__()
         embed_dim = config.hidden_size
@@ -279,7 +279,7 @@ class DecisionTransformerGPT2MLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.c_proj(hidden_states)
@@ -289,26 +289,26 @@ class DecisionTransformerGPT2MLP(nn.Cell):
 
 
 # Copied from transformers.models.gpt2.modeling_gpt2.GPT2Block with GPT2->DecisionTransformerGPT2
-class DecisionTransformerGPT2Block(nn.Cell):
+class DecisionTransformerGPT2Block(nn.Module):
     # Ignore copy
     def __init__(self, config, layer_idx=None):
         super().__init__()
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.ln_1 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         self.attn = DecisionTransformerGPT2Attention(config, layer_idx=layer_idx)
-        self.ln_2 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             self.crossattention = DecisionTransformerGPT2Attention(
                 config, is_cross_attention=True, layer_idx=layer_idx
             )
-            self.ln_cross_attn = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+            self.ln_cross_attn = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         self.mlp = DecisionTransformerGPT2MLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -382,7 +382,7 @@ class DecisionTransformerGPT2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -424,8 +424,8 @@ class DecisionTransformerGPT2Model(DecisionTransformerGPT2PreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([DecisionTransformerGPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([DecisionTransformerGPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -443,7 +443,7 @@ class DecisionTransformerGPT2Model(DecisionTransformerGPT2PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -615,7 +615,7 @@ class DecisionTransformerPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense)):
+        if isinstance(cell, (nn.Linear)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -649,23 +649,23 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
         self.encoder = DecisionTransformerGPT2Model(config)
 
         self.embed_timestep = nn.Embedding(config.max_ep_len, config.hidden_size)
-        self.embed_return = nn.Dense(1, config.hidden_size)
-        self.embed_state = nn.Dense(config.state_dim, config.hidden_size)
-        self.embed_action = nn.Dense(config.act_dim, config.hidden_size)
+        self.embed_return = nn.Linear(1, config.hidden_size)
+        self.embed_state = nn.Linear(config.state_dim, config.hidden_size)
+        self.embed_action = nn.Linear(config.act_dim, config.hidden_size)
 
         self.embed_ln = nn.LayerNorm([config.hidden_size])
 
         # note: we don't predict states or returns for the paper
-        self.predict_state = nn.Dense(config.hidden_size, config.state_dim)
+        self.predict_state = nn.Linear(config.hidden_size, config.state_dim)
         self.predict_action = nn.SequentialCell(
-            *([nn.Dense(config.hidden_size, config.act_dim)] + ([nn.Tanh()] if config.action_tanh else []))
+            *([nn.Linear(config.hidden_size, config.act_dim)] + ([nn.Tanh()] if config.action_tanh else []))
         )
-        self.predict_return = nn.Dense(config.hidden_size, 1)
+        self.predict_return = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         states: Optional[mindspore.Tensor] = None,
         actions: Optional[mindspore.Tensor] = None,

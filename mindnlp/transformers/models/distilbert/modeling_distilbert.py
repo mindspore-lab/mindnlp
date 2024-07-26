@@ -21,11 +21,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...activations import get_activation
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import (
@@ -115,20 +115,20 @@ def create_sinusoidal_embeddings(n_pos: int, dim: int, out: mindspore.Tensor):
     out[:, 1::2] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
 
 
-class Embeddings(nn.Cell):
+class Embeddings(nn.Module):
 
     """
     Represents a neural network cell for embedding tokens with position embeddings.
 
-    This class inherits from the nn.Cell module and provides methods for initializing and constructing embeddings
+    This class inherits from the nn.Module module and provides methods for initializing and forwarding embeddings
     for token sequences. The embedding process includes the use of word embeddings and optional pre-computed word
     embeddings, along with position embeddings.
 
-    The 'Embeddings' class initializes the word embeddings, position embeddings, LayerNorm, and dropout, and constructs
+    The 'Embeddings' class initializes the word embeddings, position embeddings, LayerNorm, and dropout, and forwards
     the embedded tokens by combining input embeddings with position embeddings.
-    Additionally, it provides a method for constructing embedded tokens with the option to pass pre-computed word embeddings.
+    Additionally, it provides a method for forwarding embedded tokens with the option to pass pre-computed word embeddings.
 
-    The 'construct' method takes input token ids and, if provided, pre-computed word embeddings to return the embedded
+    The 'forward' method takes input token ids and, if provided, pre-computed word embeddings to return the embedded
     tokens with position embeddings.
     The resulting embedded tokens have the shape (bs, max_seq_length, dim), where 'bs' represents the batch size,
     'max_seq_length' represents the maximum sequence length, and 'dim' represents the dimensionality of the embeddings.
@@ -178,11 +178,11 @@ class Embeddings(nn.Cell):
                 n_pos=config.max_position_embeddings, dim=config.dim, out=self.position_embeddings.weight
             )
 
-        self.LayerNorm = nn.LayerNorm(config.dim, epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm(config.dim, eps=1e-12)
         self.dropout = nn.Dropout(p=config.dropout)
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
-    def construct(self, input_ids: mindspore.Tensor, input_embeds: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
+    def forward(self, input_ids: mindspore.Tensor, input_embeds: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         """
         Parameters:
             input_ids (mindspore.Tensor):
@@ -200,7 +200,7 @@ class Embeddings(nn.Cell):
 
         seq_length = input_embeds.shape[1]
 
-        # Setting the position-ids to the registered buffer in constructor, it helps
+        # Setting the position-ids to the registered buffer in forwardor, it helps
         # when tracing the model without passing position-ids, solves
         # isues similar to issue #5664
         if hasattr(self, "position_ids"):
@@ -217,13 +217,13 @@ class Embeddings(nn.Cell):
         return embeddings
 
 
-class MultiHeadSelfAttention(nn.Cell):
+class MultiHeadSelfAttention(nn.Module):
 
     """
     This class represents a multi-head self-attention mechanism used in neural networks.
     It is designed to be used as a building block for Transformer-based models.
-    The class inherits from the nn.Cell class and implements methods for initializing the attention mechanism,
-    pruning heads, and constructing the attention weights and contextualized layer.
+    The class inherits from the nn.Module class and implements methods for initializing the attention mechanism,
+    pruning heads, and forwarding the attention weights and contextualized layer.
 
     Attributes:
         config (PretrainedConfig): The configuration object containing the parameters for the attention mechanism.
@@ -231,17 +231,17 @@ class MultiHeadSelfAttention(nn.Cell):
         dim (int): The dimensionality of the attention mechanism.
         dropout (nn.Dropout): The dropout layer applied to the attention weights.
         is_causal (bool): Indicates whether the attention mechanism is causal or not.
-        q_lin (nn.Dense): Linear layer for query projection.
-        k_lin (nn.Dense): Linear layer for key projection.
-        v_lin (nn.Dense): Linear layer for value projection.
-        out_lin (nn.Dense): Linear layer for the output projection.
+        q_lin (nn.Linear): Linear layer for query projection.
+        k_lin (nn.Linear): Linear layer for key projection.
+        v_lin (nn.Linear): Linear layer for value projection.
+        out_lin (nn.Linear): Linear layer for the output projection.
         pruned_heads (Set[int]): Set of pruned attention heads.
         attention_head_size (int): The size of each attention head.
 
     Methods:
         __init__: Initializes the MultiHeadSelfAttention object with the provided configuration.
         prune_heads: Prunes the specified attention heads from the attention mechanism.
-        construct:
+        forward:
           Constructs the attention weights and contextualized layer.
     """
     def __init__(self, config: PretrainedConfig):
@@ -275,10 +275,10 @@ class MultiHeadSelfAttention(nn.Cell):
             # Raise value errors for even multi-head attention nodes
             raise ValueError(f"self.n_heads: {self.n_heads} must divide self.dim: {self.dim} evenly")
 
-        self.q_lin = nn.Dense(config.dim, config.dim)
-        self.k_lin = nn.Dense(config.dim, config.dim)
-        self.v_lin = nn.Dense(config.dim, config.dim)
-        self.out_lin = nn.Dense(config.dim, config.dim)
+        self.q_lin = nn.Linear(config.dim, config.dim)
+        self.k_lin = nn.Linear(config.dim, config.dim)
+        self.v_lin = nn.Linear(config.dim, config.dim)
+        self.out_lin = nn.Linear(config.dim, config.dim)
 
         self.pruned_heads: Set[int] = set()
         self.attention_head_size = self.dim // self.n_heads
@@ -308,13 +308,13 @@ class MultiHeadSelfAttention(nn.Cell):
         self.q_lin = prune_linear_layer(self.q_lin, index)
         self.k_lin = prune_linear_layer(self.k_lin, index)
         self.v_lin = prune_linear_layer(self.v_lin, index)
-        self.out_lin = prune_linear_layer(self.out_lin, index, axis=1)
+        self.out_lin = prune_linear_layer(self.out_lin, index, dim=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.dim = self.attention_head_size * self.n_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -379,11 +379,11 @@ class MultiHeadSelfAttention(nn.Cell):
         return (context,)
 
 
-class FFN(nn.Cell):
+class FFN(nn.Module):
 
     """A class that represents a Feed-Forward Network (FFN) implemented as a neural network cell.
 
-    The FFN class inherits from the nn.Cell class of the MindSpore framework. It is designed to process input tensors using a
+    The FFN class inherits from the nn.Module class of the MindSpore framework. It is designed to process input tensors using a
     two-layer fully connected feed-forward network. The class implements the forward pass of the network, applying linear
     transformations, activation functions, and dropout regularization.
 
@@ -391,12 +391,12 @@ class FFN(nn.Cell):
         dropout (mindspore.nn.Dropout): The dropout regularization layer.
         chunk_size_feed_forward (int): The size of chunks used in the forward pass.
         seq_len_dim (int): The dimension corresponding to the sequence length in the input tensor.
-        lin1 (mindspore.nn.Dense): The first fully connected layer of the FFN.
-        lin2 (mindspore.nn.Dense): The second fully connected layer of the FFN.
+        lin1 (mindspore.nn.Linear): The first fully connected layer of the FFN.
+        lin2 (mindspore.nn.Linear): The second fully connected layer of the FFN.
         activation (Callable): The activation function used in the network.
 
     Methods:
-        construct:
+        forward:
             Applies the forward pass of the FFN to the input tensor.
 
         ff_chunk:
@@ -431,11 +431,11 @@ class FFN(nn.Cell):
         self.dropout = nn.Dropout(p=config.dropout)
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.lin1 = nn.Dense(config.dim, config.hidden_dim)
-        self.lin2 = nn.Dense(config.hidden_dim, config.dim)
+        self.lin1 = nn.Linear(config.dim, config.hidden_dim)
+        self.lin2 = nn.Linear(config.hidden_dim, config.dim)
         self.activation = get_activation(config.activation)
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """Constructs the feedforward network.
 
         Args:
@@ -480,16 +480,16 @@ DISTILBERT_ATTENTION_CLASSES = {
 }
 
 
-class TransformerBlock(nn.Cell):
+class TransformerBlock(nn.Module):
 
     """
     The TransformerBlock class represents a single block of the Transformer architecture.
     It is used to process the input data and produce contextualized outputs.
 
-    This class inherits from the nn.Cell class.
+    This class inherits from the nn.Module class.
 
     Methods:
-        construct:
+        forward:
             Constructs the TransformerBlock using the given input tensors and parameters.
 
             Parameters:
@@ -534,12 +534,12 @@ class TransformerBlock(nn.Cell):
             raise ValueError(f"config.n_heads {config.n_heads} must divide config.dim {config.dim} evenly")
 
         self.attention = DISTILBERT_ATTENTION_CLASSES["eager"](config)
-        self.sa_layer_norm = nn.LayerNorm(normalized_shape=config.dim, epsilon=1e-12)
+        self.sa_layer_norm = nn.LayerNorm(normalized_shape=config.dim, eps=1e-12)
 
         self.ffn = FFN(config)
-        self.output_layer_norm = nn.LayerNorm(normalized_shape=config.dim, epsilon=1e-12)
+        self.output_layer_norm = nn.LayerNorm(normalized_shape=config.dim, eps=1e-12)
 
-    def construct(
+    def forward(
         self,
         x: mindspore.Tensor,
         attn_mask: Optional[mindspore.Tensor] = None,
@@ -583,7 +583,7 @@ class TransformerBlock(nn.Cell):
         return output
 
 
-class Transformer(nn.Cell):
+class Transformer(nn.Module):
 
     """
     This class represents a Transformer model, which is a type of neural network architecture commonly used in
@@ -593,7 +593,7 @@ class Transformer(nn.Cell):
     It creates a list of TransformerBlock instances, one for each layer specified in the configuration.
     The number of layers is stored in the 'n_layers' attribute.
 
-    The 'construct' method takes as input an embedded input sequence tensor, 'x', and optionally an attention mask tensor,
+    The 'forward' method takes as input an embedded input sequence tensor, 'x', and optionally an attention mask tensor,
     'attn_mask'. It returns the hidden state tensor of the last layer, 'hidden_state', along with additional outputs
     depending on the specified options.
     If 'output_hidden_states' is True, it also returns a tuple containing the hidden states from each layer, 'all_hidden_states'.
@@ -602,7 +602,7 @@ class Transformer(nn.Cell):
     The method also supports returning the outputs as a 'BaseModelOutput' object if the 'return_dict' flag is set to True.
 
     Note:
-        The 'construct' method internally iterates through each layer of the Transformer model and applies the layer
+        The 'forward' method internally iterates through each layer of the Transformer model and applies the layer
         module to the input tensor.
         It accumulates the hidden states and attention weights if the corresponding output options are enabled.
 
@@ -621,7 +621,7 @@ class Transformer(nn.Cell):
         ValueError: If the length of 'layer_outputs' is not as expected based on the output options.
 
     Note:
-        The 'construct' method builds the Transformer model by sequentially applying the layer modules to the input tensor.
+        The 'forward' method builds the Transformer model by sequentially applying the layer modules to the input tensor.
         It uses the 'head_mask' tensor for applying head-wise masking during attention operations.
 
     Example:
@@ -629,7 +629,7 @@ class Transformer(nn.Cell):
         >>> config = PretrainedConfig(n_layers=6)
         >>> transformer = Transformer(config)
         >>> input_tensor = mindspore.Tensor(bs, seq_length, dim)
-        >>> output = transformer.construct(input_tensor, attn_mask, head_mask, output_attentions=True, output_hidden_states=True)
+        >>> output = transformer.forward(input_tensor, attn_mask, head_mask, output_attentions=True, output_hidden_states=True)
         ```
     """
     def __init__(self, config: PretrainedConfig):
@@ -650,10 +650,10 @@ class Transformer(nn.Cell):
         """
         super().__init__()
         self.n_layers = config.n_layers
-        self.layer = nn.CellList([TransformerBlock(config) for _ in range(config.n_layers)])
+        self.layer = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         x: mindspore.Tensor,
         attn_mask: Optional[mindspore.Tensor] = None,
@@ -726,12 +726,12 @@ class DistilBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -750,9 +750,9 @@ class DistilBertModel(DistilBertPreTrainedModel):
     Represents a DistilBERT model for natural language processing tasks.
 
     This class inherits from DistilBertPreTrainedModel and implements various methods for handling position embeddings,
-    input embeddings, head pruning, and model construction.
+    input embeddings, head pruning, and model forwardion.
     The class provides functionality to initialize the model, resize position embeddings, get position embeddings,
-    resize input embeddings, set input embeddings, prune heads, and construct the model for inference.
+    resize input embeddings, set input embeddings, prune heads, and forward the model for inference.
 
     Methods:
         get_position_embeddings: Returns the position embeddings.
@@ -760,7 +760,7 @@ class DistilBertModel(DistilBertPreTrainedModel):
         get_input_embeddings: Returns the input embeddings.
         set_input_embeddings: Sets new input embeddings.
         _prune_heads: Prunes heads of the model based on the provided dictionary.
-        construct: Constructs the model for inference with optional parameters.
+        forward: Constructs the model for inference with optional parameters.
 
     Note:
         This class assumes familiarity with the DistilBERT model architecture and its specific components.
@@ -890,7 +890,7 @@ class DistilBertModel(DistilBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.transformer.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -969,14 +969,14 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
     A class representing a DistilBERT model for Masked Language Modeling (MLM).
 
     This class inherits from the DistilBertPreTrainedModel class and includes methods for initializing the model,
-    resizing position embeddings, getting and setting output embeddings, and constructing the model.
+    resizing position embeddings, getting and setting output embeddings, and forwarding the model.
 
     Attributes:
         activation (function): Activation function used in the model.
         distilbert (DistilBertModel): DistilBERT model.
-        vocab_transform (nn.Dense): Dense layer for transforming the vocabulary.
+        vocab_transform (nn.Linear): Dense layer for transforming the vocabulary.
         vocab_layer_norm (nn.LayerNorm): Layer normalization for the vocabulary.
-        vocab_projector (nn.Dense): Dense layer for projecting the vocabulary.
+        vocab_projector (nn.Linear): Dense layer for projecting the vocabulary.
         mlm_loss_fct (nn.CrossEntropyLoss): Cross-entropy loss function for MLM.
 
     Methods:
@@ -985,7 +985,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         resize_position_embeddings: Resizes position embeddings of the model.
         get_output_embeddings: Returns the output embeddings.
         set_output_embeddings: Sets the output embeddings.
-        construct: Constructs the DistilBertForMaskedLM model.
+        forward: Constructs the DistilBertForMaskedLM model.
 
     Please see the documentation for the DistilBertPreTrainedModel class for more information on inherited attributes
     and methods.
@@ -1013,9 +1013,9 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         self.activation = get_activation(config.activation)
 
         self.distilbert = DistilBertModel(config)
-        self.vocab_transform = nn.Dense(config.dim, config.dim)
-        self.vocab_layer_norm = nn.LayerNorm(config.dim, epsilon=1e-12)
-        self.vocab_projector = nn.Dense(config.dim, config.vocab_size)
+        self.vocab_transform = nn.Linear(config.dim, config.dim)
+        self.vocab_layer_norm = nn.LayerNorm(config.dim, eps=1e-12)
+        self.vocab_projector = nn.Linear(config.dim, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1042,7 +1042,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         """
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
-    def get_output_embeddings(self) -> nn.Cell:
+    def get_output_embeddings(self) -> nn.Module:
         """
         Retrieves the output embeddings of the DistilBertForMaskedLM model.
 
@@ -1050,7 +1050,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
             self (DistilBertForMaskedLM): The instance of the DistilBertForMaskedLM class.
 
         Returns:
-            nn.Cell: The output embeddings of the DistilBertForMaskedLM model.
+            nn.Module: The output embeddings of the DistilBertForMaskedLM model.
                 The embeddings are projected using the vocab_projector.
 
         Raises:
@@ -1059,14 +1059,14 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         """
         return self.vocab_projector
 
-    def set_output_embeddings(self, new_embeddings: nn.Cell):
+    def set_output_embeddings(self, new_embeddings: nn.Module):
         """
         This method sets the output embeddings for the DistilBertForMaskedLM model.
 
         Args:
             self (DistilBertForMaskedLM): The instance of the DistilBertForMaskedLM class.
-            new_embeddings (nn.Cell): The new embeddings to set as the output embeddings for the model.
-                It should be an instance of nn.Cell representing the new embeddings to be used.
+            new_embeddings (nn.Module): The new embeddings to set as the output embeddings for the model.
+                It should be an instance of nn.Module representing the new embeddings to be used.
 
         Returns:
             None.
@@ -1076,7 +1076,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         """
         self.vocab_projector = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1138,14 +1138,14 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         num_labels (int): The number of labels for the sequence classification task.
         config (PretrainedConfig): The configuration object for the model.
         distilbert (DistilBertModel): The DistilBert encoder model.
-        pre_classifier (nn.Dense): A fully connected layer for the classification task.
-        classifier (nn.Dense): A fully connected layer for the classification task.
+        pre_classifier (nn.Linear): A fully connected layer for the classification task.
+        classifier (nn.Linear): A fully connected layer for the classification task.
         dropout (nn.Dropout): A dropout layer to prevent overfitting.
 
     Methods:
         get_position_embeddings: Returns the position embeddings.
         resize_position_embeddings: Resizes the position embeddings of the model.
-        construct:
+        forward:
             Constructs the model for sequence classification.
 
             Args:
@@ -1186,8 +1186,8 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         self.config = config
 
         self.distilbert = DistilBertModel(config)
-        self.pre_classifier = nn.Dense(config.dim, config.dim)
-        self.classifier = nn.Dense(config.dim, config.num_labels)
+        self.pre_classifier = nn.Linear(config.dim, config.dim)
+        self.classifier = nn.Linear(config.dim, config.num_labels)
         self.dropout = nn.Dropout(p=config.seq_classif_dropout)
 
         # Initialize weights and apply final processing
@@ -1215,7 +1215,7 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         """
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1309,7 +1309,7 @@ class DistilBertForQuestionAnswering(DistilBertPreTrainedModel):
         super().__init__(config)
 
         self.distilbert = DistilBertModel(config)
-        self.qa_outputs = nn.Dense(config.dim, config.num_labels)
+        self.qa_outputs = nn.Linear(config.dim, config.num_labels)
         if config.num_labels != 2:
             raise ValueError(f"config.num_labels should be 2, but it is {config.num_labels}")
 
@@ -1340,7 +1340,7 @@ class DistilBertForQuestionAnswering(DistilBertPreTrainedModel):
         """
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1418,7 +1418,7 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
     Represents a DistilBERT model for token classification.
 
     This class inherits from DistilBertPreTrainedModel and implements methods for initializing the model,
-    retrieving position embeddings, resizing position embeddings, and constructing the model for token
+    retrieving position embeddings, resizing position embeddings, and forwarding the model for token
     classification tasks.
 
     Attributes:
@@ -1428,7 +1428,7 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
         __init__: Initializes the DistilBertForTokenClassification model.
         get_position_embeddings: Returns the position embeddings.
         resize_position_embeddings: Resizes position embeddings of the model.
-        construct: Constructs the model for token classification tasks.
+        forward: Constructs the model for token classification tasks.
 
     Raises:
         NotImplementedError: If the method is not implemented.
@@ -1455,7 +1455,7 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
 
         self.distilbert = DistilBertModel(config)
         self.dropout = nn.Dropout(p=config.dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1482,7 +1482,7 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
         """
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1557,7 +1557,7 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
                 will add correct vectors at the end following the position encoding algorithm, whereas reducing the size
                 will remove vectors from the end.
 
-        construct:
+        forward:
             This method is used to compute the outputs of the model for multiple choice tasks.
 
             Args:
@@ -1640,8 +1640,8 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
         super().__init__(config)
 
         self.distilbert = DistilBertModel(config)
-        self.pre_classifier = nn.Dense(config.dim, config.dim)
-        self.classifier = nn.Dense(config.dim, 1)
+        self.pre_classifier = nn.Linear(config.dim, config.dim)
+        self.classifier = nn.Linear(config.dim, 1)
         self.dropout = nn.Dropout(p=config.seq_classif_dropout)
 
         # Initialize weights and apply final processing
@@ -1667,7 +1667,7 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
         """
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

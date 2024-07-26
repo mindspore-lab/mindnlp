@@ -12,11 +12,11 @@ activation_map = {
     'swish':nn.SiLU()
 }
 
-class Matmul(nn.Cell):
+class Matmul(nn.Module):
     def construct(self, a, b):
         return ops.matmul(a, b)
 
-class BertEmbeddings(nn.Cell):
+class BertEmbeddings(nn.Module):
     """
     Embeddings for BERT, include word, position and token_type
     """
@@ -44,7 +44,7 @@ class BertEmbeddings(nn.Cell):
         embeddings = self.dropout(embeddings)
         return embeddings
 
-class BertSelfAttention(nn.Cell):
+class BertSelfAttention(nn.Module):
     """
     Self attention layer for BERT.
     """
@@ -109,7 +109,7 @@ class BertSelfAttention(nn.Cell):
         outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
         return outputs
     
-class BertSelfOutput(nn.Cell):
+class BertSelfOutput(nn.Module):
     def __init__(self, config):
         super(BertSelfOutput, self).__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -122,7 +122,7 @@ class BertSelfOutput(nn.Cell):
         hidden_states = self.layer_norm(hidden_states + input_tensor)
         return hidden_states
     
-class BertAttention(nn.Cell):
+class BertAttention(nn.Module):
     def __init__(self, config):
         super(BertAttention, self).__init__()
         self.self_attn = BertSelfAttention(config)
@@ -134,7 +134,7 @@ class BertAttention(nn.Cell):
         outputs = (attention_output,) + self_outputs[1:]
         return outputs
 
-class BertIntermediate(nn.Cell):
+class BertIntermediate(nn.Module):
     def __init__(self, config):
         super(BertIntermediate, self).__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -145,7 +145,7 @@ class BertIntermediate(nn.Cell):
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
-class BertOutput(nn.Cell):
+class BertOutput(nn.Module):
     def __init__(self, config):
         super(BertOutput, self).__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -158,7 +158,7 @@ class BertOutput(nn.Cell):
         hidden_states = self. layer_norm(hidden_states + input_tensor)
         return hidden_states
 
-class BertLayer(nn.Cell):
+class BertLayer(nn.Module):
     def __init__(self, config):
         super(BertLayer, self).__init__()
         self.attention = BertAttention(config)
@@ -173,12 +173,12 @@ class BertLayer(nn.Cell):
         outputs = (layer_output,) + attention_outputs[1:]
         return outputs
 
-class BertEncoder(nn.Cell):
+class BertEncoder(nn.Module):
     def __init__(self, config):
         super(BertEncoder, self).__init__()
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
-        self.layer = nn.CellList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
     
     def construct(self, hidden_states, attention_mask=None, head_mask=None):
         all_hidden_states = ()
@@ -203,7 +203,7 @@ class BertEncoder(nn.Cell):
             outputs += (all_attentions,)
         return outputs
 
-class BertPooler(nn.Cell):
+class BertPooler(nn.Module):
     def __init__(self, config):
         super(BertPooler, self).__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
@@ -215,7 +215,7 @@ class BertPooler(nn.Cell):
         pooled_output = self.dense(first_token_tensor)
         return pooled_output
 
-class BertPredictionHeadTransform(nn.Cell):
+class BertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -228,7 +228,7 @@ class BertPredictionHeadTransform(nn.Cell):
         hidden_states = self.layer_norm(hidden_states)
         return hidden_states
 
-class BertLMPredictionHead(nn.Cell):
+class BertLMPredictionHead(nn.Module):
     def __init__(self, config):
         super(BertLMPredictionHead, self).__init__()
         self.transform = BertPredictionHeadTransform(config)
@@ -250,7 +250,7 @@ class BertLMPredictionHead(nn.Cell):
         hidden_states = self.decoder(hidden_states) + self.bias
         return hidden_states
 
-class BertPreTrainingHeads(nn.Cell):
+class BertPreTrainingHeads(nn.Module):
     def __init__(self, config):
         super(BertPreTrainingHeads, self).__init__()
         self.predictions = BertLMPredictionHead(config)
@@ -262,7 +262,7 @@ class BertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class BertModel(nn.Cell):
+class BertModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.embeddings = BertEmbeddings(config)
@@ -298,7 +298,7 @@ class BertModel(nn.Cell):
         outputs = (sequence_output, pooled_output,) + encoder_outputs[1:] # add hidden_states and attentions if they are here
         return outputs # sequence_output, pooled_output, (hidden_states), (attentions)
 
-class BertForPretraining(nn.Cell):
+class BertForPretraining(nn.Module):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.bert = BertModel(config)

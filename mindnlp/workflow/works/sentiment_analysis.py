@@ -80,16 +80,16 @@ class SentimentAnalysisWork(Work):
             TypeError: If the provided work or model parameters are not of type str.
             ValueError: If the work parameter is not a valid type for sentiment analysis.
             FileNotFoundError: If the required work files are not found.
-            RuntimeError: If there is an issue while constructing the tokenizer or model.
+            RuntimeError: If there is an issue while forwarding the tokenizer or model.
         """
         super().__init__(model, work, **kwargs)
         self._label_map = {0: "negative", 1: "neutral", 2: "positive"}
         self._check_work_files()
-        self._construct_tokenizer(model)
-        self._construct_model(model)
+        self._forward_tokenizer(model)
+        self._forward_model(model)
         self._usage = usage
 
-    def _construct_model(self, model):
+    def _forward_model(self, model):
         """
         Construct the model.
         """
@@ -108,7 +108,7 @@ class SentimentAnalysisWork(Work):
         self._model = model_instance
         self._model.set_train(False)
 
-    def _construct_tokenizer(self, model):
+    def _forward_tokenizer(self, model):
         """
         Construct the tokenizer.
         """

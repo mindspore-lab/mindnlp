@@ -19,11 +19,11 @@ import warnings
 from typing import Any, Optional, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import ParameterDict
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import HeUniform, Normal
 from ....transformers.ms_utils import Conv1D
-from ...._legacy.abc import ParameterDict
-from ....modules.functional import normalize, embedding
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from ...utils.other import transpose
 
@@ -37,13 +37,13 @@ class LoraLayer(BaseTunerLayer):
 scaling the layer's parameters, as well as performing mixed batch forward operations.
     
     Attributes:
-        base_layer (nn.Cell): The base layer used for computation.
+        base_layer (nn.Module): The base layer used for computation.
         r (dict): Dictionary of adapter names and associated integer values representing the r parameter in LORA.
         lora_alpha (dict): Dictionary of adapter names and associated float values representing the alpha parameter in LORA.
         scaling (dict): Dictionary of adapter names and associated float values representing the scaling factor in LORA.
-        lora_dropout (nn.CellDict): Dictionary of adapter names and associated dropout layers used in LORA.
-        lora_A (nn.CellDict): Dictionary of adapter names and associated nn.Dense layers used in LORA for input transformation.
-        lora_B (nn.CellDict): Dictionary of adapter names and associated nn.Dense layers used in LORA for output transformation.
+        lora_dropout (nn.ModuleDict): Dictionary of adapter names and associated dropout layers used in LORA.
+        lora_A (nn.ModuleDict): Dictionary of adapter names and associated nn.Linear layers used in LORA for input transformation.
+        lora_B (nn.ModuleDict): Dictionary of adapter names and associated nn.Linear layers used in LORA for output transformation.
         lora_embedding_A (ParameterDict): Dictionary of adapter names and associated parameter dictionaries used in LORA for input embedding.
         lora_embedding_B (ParameterDict): Dictionary of adapter names and associated parameter dictionaries used in LORA for output embedding.
         _disable_adapters (bool): Boolean flag indicating whether adapters are disabled.
@@ -73,7 +73,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
     # All names of other parameters that may contain adapter-related parameters
     other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout")
 
-    def __init__(self, base_layer: nn.Cell, **kwargs) -> None:
+    def __init__(self, base_layer: nn.Module, **kwargs) -> None:
         r"""
         __init__
         
@@ -82,8 +82,8 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         Args:
             self: LoraLayer object
                 The instance of the LoraLayer class.
-            base_layer: nn.Cell
-                The base layer to be used for the LoraLayer. It can be an instance of nn.Dense, nn.Conv2d, nn.Embedding, Conv1D, or other supported layer types.
+            base_layer: nn.Module
+                The base layer to be used for the LoraLayer. It can be an instance of nn.Linear, nn.Conv2d, nn.Embedding, Conv1D, or other supported layer types.
         
         Returns:
             None
@@ -97,9 +97,9 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self.r = {}
         self.lora_alpha = {}
         self.scaling = {}
-        self.lora_dropout = nn.CellDict({})
-        self.lora_A = nn.CellDict({})
-        self.lora_B = nn.CellDict({})
+        self.lora_dropout = nn.ModuleDict({})
+        self.lora_A = nn.ModuleDict({})
+        self.lora_B = nn.ModuleDict({})
         # For Embedding layer
         self.lora_embedding_A = ParameterDict({})
         self.lora_embedding_B = ParameterDict({})
@@ -112,7 +112,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self.kwargs = kwargs
 
         base_layer = self.get_base_layer()
-        if isinstance(base_layer, nn.Dense):
+        if isinstance(base_layer, nn.Linear):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
@@ -179,10 +179,10 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         else:
             lora_dropout_layer = nn.Identity()
 
-        self.lora_dropout.update(nn.CellDict({adapter_name: lora_dropout_layer}))
+        self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
-        self.lora_A[adapter_name] = nn.Dense(self.in_features, r, has_bias=False)
-        self.lora_B[adapter_name] = nn.Dense(r, self.out_features, has_bias=False)
+        self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+        self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
@@ -234,7 +234,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
 
         if adapter_name in self.lora_A.keys():
             if init_lora_weights is True:
-                # initialize A the same way as the default for nn.Dense and B to zero
+                # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
                 self.lora_A[adapter_name].weight.initialize(HeUniform(math.sqrt(5)))
             elif init_lora_weights.lower() == "gaussian":
@@ -243,7 +243,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
                 raise ValueError(f"Unknown initialization {init_lora_weights}")
             self.lora_B[adapter_name].weight.initialize('zeros')
         if adapter_name in self.lora_embedding_A.keys():
-            # initialize a the same way as the default for nn.Dense and b to zero
+            # initialize a the same way as the default for nn.Linear and b to zero
             self.lora_embedding_A[adapter_name].initialize('zeros')
             self.lora_embedding_B[adapter_name].initialize(Normal(1.0))
 
@@ -461,17 +461,17 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
 #  ------------------------------------------------------------------------------------------
 
 
-class Linear(nn.Cell, LoraLayer):
+class Linear(nn.Module, LoraLayer):
 
     r"""
-    The Linear class represents a customizable linear layer with support for LoRA (Learned Optimizer Rate Annealing) adapters. This class inherits from the nn.Cell and LoraLayer classes. 
+    The Linear class represents a customizable linear layer with support for LoRA (Learned Optimizer Rate Annealing) adapters. This class inherits from the nn.Module and LoraLayer classes. 
     
-    The class includes methods for initializing the layer, merging and unmerging adapter weights, computing delta weights for adapters, constructing the layer's forward pass, and generating a string
+    The class includes methods for initializing the layer, merging and unmerging adapter weights, computing delta weights for adapters, forwarding the layer's forward pass, and generating a string
 representation of the class.
     
     The __init__ method initializes the Linear layer with specified parameters and configures the LoRA adapters. The merge method combines the active adapter weights into the base weights, with an option to
 perform a safe merge operation. The unmerge method reverses the merge operation by unmerging all merged adapter layers from the base weights. The get_delta_weight method computes the delta weight for a given
-adapter. The construct method applies the constructed linear layer to input data, with support for adapter-specific adjustments. The __repr__ method returns a string representation of the Linear class prefixed
+adapter. The forward method applies the forwarded linear layer to input data, with support for adapter-specific adjustments. The __repr__ method returns a string representation of the Linear class prefixed
 with 'lora.'.
     """
     # Lora implemented in a dense layer
@@ -634,7 +634,7 @@ with 'lora.'.
 
         return output_tensor
 
-    def construct(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
         r"""
         Constructs the forward pass of the Linear class.
         
@@ -698,14 +698,14 @@ with 'lora.'.
         return "lora." + rep
 
 
-class Embedding(nn.Cell, LoraLayer):
+class Embedding(nn.Module, LoraLayer):
 
     r"""
-    The 'Embedding' class represents a customizable adapter layer that can be integrated into neural network architectures. It inherits functionalities from the nn.Cell and LoraLayer classes, providing a
+    The 'Embedding' class represents a customizable adapter layer that can be integrated into neural network architectures. It inherits functionalities from the nn.Module and LoraLayer classes, providing a
 flexible mechanism for adapting neural network behavior.
     
     The class includes methods for initializing the adapter layer, updating its parameters, merging adapter weights into base weights, unmerging adapter layers, computing delta weights, and performing mixed
-batch forward passes. It also allows for embedding computations and the construction of the adapted network output.
+batch forward passes. It also allows for embedding computations and the forwardion of the adapted network output.
     
     The 'Embedding' class is designed to enhance neural network performance by introducing adapter layers that can adapt to specific tasks or data characteristics, offering a versatile approach to model
 adaptation and specialization.
@@ -713,7 +713,7 @@ adaptation and specialization.
     # LoRA implemented in a Embedding layer
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str,
         r: int = 0,
         lora_alpha: int = 1,
@@ -728,7 +728,7 @@ adaptation and specialization.
         
         Args:
         - self: The instance of the class.
-        - base_layer (nn.Cell): The base layer to be used for initialization.
+        - base_layer (nn.Module): The base layer to be used for initialization.
         - adapter_name (str): The name of the adapter.
         - r (int): The value of r.
         - lora_alpha (int): The value of lora alpha.
@@ -955,7 +955,7 @@ adaptation and specialization.
             # sparse=base_layer.sparse,
         )
 
-    def construct(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
         r"""
         Constructs the embedding layer.
         
@@ -1018,13 +1018,13 @@ adaptation and specialization.
         return "lora." + rep
 
 
-class Conv2d(nn.Cell, LoraLayer):
+class Conv2d(nn.Module, LoraLayer):
 
     r"""
-    Represents a custom Conv2d class that incorporates LoRA (Locally Recurrent Adaptive) functionality for adaptive learning in neural networks. This class inherits from the nn.Cell and LoraLayer classes.
+    Represents a custom Conv2d class that incorporates LoRA (Locally Recurrent Adaptive) functionality for adaptive learning in neural networks. This class inherits from the nn.Module and LoraLayer classes.
     
     Attributes:
-        - base_layer (nn.Cell): The base layer for the Conv2d operation.
+        - base_layer (nn.Module): The base layer for the Conv2d operation.
         - adapter_name (str): The name of the adapter associated with the Conv2d operation.
         - r (int): The parameter 'r' representing the number of features in the Conv2d operation.
         - lora_alpha (int): The alpha value used in LoRA operations.
@@ -1041,15 +1041,15 @@ class Conv2d(nn.Cell, LoraLayer):
         - get_delta_weight: Computes the delta weight for a given adapter based on LoRA weights.
         - _get_weight_norm: Computes the norm of the weights based on scaling factors.
         - _apply_dora: Calculates the output with DoRA applied for LoRA operations.
-        - construct: Constructs the Conv2d operation, incorporating LoRA functionality based on active adapters.
+        - forward: Constructs the Conv2d operation, incorporating LoRA functionality based on active adapters.
         - __repr__: Returns a string representation of the Conv2d class prefixed with 'lora.'.
     
-    Note: The Conv2d class extends the functionality of the underlying nn.Cell and LoraLayer classes by incorporating adaptive learning mechanisms using LoRA operations.
+    Note: The Conv2d class extends the functionality of the underlying nn.Module and LoraLayer classes by incorporating adaptive learning mechanisms using LoRA operations.
     """
     # Lora implemented in a conv2d layer
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str,
         r: int = 0,
         lora_alpha: int = 1,
@@ -1064,7 +1064,7 @@ class Conv2d(nn.Cell, LoraLayer):
         
         Args:
             self: The instance of the Conv2d class.
-            base_layer (nn.Cell): The base layer to be adapted.
+            base_layer (nn.Module): The base layer to be adapted.
             adapter_name (str): The name of the adapter.
             r (int, optional): The value of r. Defaults to 0.
             lora_alpha (int, optional): The value of lora_alpha. Defaults to 1.
@@ -1130,8 +1130,8 @@ class Conv2d(nn.Cell, LoraLayer):
         kernel_size = base_layer.kernel_size
         stride = base_layer.stride
         padding = base_layer.padding
-        self.lora_A[adapter_name] = nn.Conv2d(self.in_features, r, kernel_size, stride, padding, has_bias=False)
-        self.lora_B[adapter_name] = nn.Conv2d(r, self.out_features, (1, 1), (1, 1), has_bias=False)
+        self.lora_A[adapter_name] = nn.Conv2d(self.in_features, r, kernel_size, stride, padding, bias=False)
+        self.lora_B[adapter_name] = nn.Conv2d(r, self.out_features, (1, 1), (1, 1), bias=False)
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
@@ -1330,7 +1330,7 @@ normalization required for the Conv2d layer's computations.
 
         return result_dora
 
-    def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
         r"""
         Constructs a forward pass of the Conv2d layer.
         
@@ -1400,21 +1400,21 @@ normalization required for the Conv2d layer's computations.
 
 
 def dispatch_default(
-    target: nn.Cell,
+    target: nn.Module,
     adapter_name: str,
     lora_config: LoraConfig,
     **kwargs,
-) -> Optional[nn.Cell]:
+) -> Optional[nn.Module]:
     r"""
     Dispatches the default adapter for different types of neural network layers.
     
     Args: 
-        target (nn.Cell): The target neural network layer for which the adapter is being dispatched.
+        target (nn.Module): The target neural network layer for which the adapter is being dispatched.
         adapter_name (str): The name of the adapter being used.
         lora_config (LoraConfig): Configuration object containing LoftQ configuration settings.
         
     Returns: 
-        Optional[nn.Cell]: The new cell representing the adapted version of the target neural network layer, or None if no adapter is dispatched.
+        Optional[nn.Module]: The new cell representing the adapted version of the target neural network layer, or None if no adapter is dispatched.
         
     Raises: 
         - KeyError: If required keys are not found in the input kwargs.
@@ -1436,10 +1436,10 @@ def dispatch_default(
     elif isinstance(target_base_layer, nn.Conv2d):
         kwargs.update(lora_config.loftq_config)
         new_cell = Conv2d(target, adapter_name, **kwargs)
-    elif isinstance(target_base_layer, nn.Dense):
+    elif isinstance(target_base_layer, nn.Linear):
         if kwargs["fan_in_fan_out"]:
             warnings.warn(
-                "fan_in_fan_out is set to True but the target cell is `torch.nn.Dense`. "
+                "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
                 "Setting fan_in_fan_out to False."
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False

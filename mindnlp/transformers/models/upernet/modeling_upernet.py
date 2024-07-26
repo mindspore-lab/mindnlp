@@ -17,7 +17,7 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.nn import CrossEntropyLoss
 
 from ...modeling_outputs import SemanticSegmenterOutput
@@ -88,7 +88,7 @@ def load_backbone(config):
     return backbone
 
 
-class UPerNetConvModule(nn.Cell):
+class UPerNetConvModule(nn.Module):
     """
     A convolutional block that bundles conv/norm/activation layers. This block simplifies the usage of convolution
     layers, which are commonly used with a norm layer (e.g., BatchNorm) and activation layer (e.g., ReLU).
@@ -110,7 +110,7 @@ class UPerNetConvModule(nn.Cell):
             kernel_size=kernel_size,
             padding=padding,
             pad_mode='pad',
-            has_bias=bias,
+            bias=bias,
             dilation=dilation,
             weight_init='ones',
             bias_init='zeros'
@@ -118,7 +118,7 @@ class UPerNetConvModule(nn.Cell):
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.activation = nn.ReLU()
 
-    def construct(self, input: ms.Tensor) -> ms.Tensor:
+    def forward(self, input: ms.Tensor) -> ms.Tensor:
         output = self.conv(input)
         output = self.batch_norm(output)
         output = self.activation(output)
@@ -126,7 +126,7 @@ class UPerNetConvModule(nn.Cell):
         return output
 
 
-class UPerNetPyramidPoolingBlock(nn.Cell):
+class UPerNetPyramidPoolingBlock(nn.Module):
     def __init__(self, pool_scale: int, in_channels: int, channels: int) -> None:
         super().__init__()
         self.layers = [
@@ -136,14 +136,14 @@ class UPerNetPyramidPoolingBlock(nn.Cell):
         for i, layer in enumerate(self.layers):
             self.insert_child_to_cell(str(i), layer)
 
-    def construct(self, input: ms.Tensor) -> ms.Tensor:
+    def forward(self, input: ms.Tensor) -> ms.Tensor:
         hidden_state = input
         for layer in self.layers:
             hidden_state = layer(hidden_state)
         return hidden_state
 
 
-class UPerNetPyramidPoolingModule(nn.Cell):
+class UPerNetPyramidPoolingModule(nn.Module):
     """
     Pyramid Pooling Module (PPM) used in PSPNet.
 
@@ -170,7 +170,7 @@ class UPerNetPyramidPoolingModule(nn.Cell):
             self.blocks.append(block)
             self.insert_child_to_cell(str(i), block)
 
-    def construct(self, x: ms.Tensor) -> List[ms.Tensor]:
+    def forward(self, x: ms.Tensor) -> List[ms.Tensor]:
         ppm_outs = []
         for ppm in self.blocks:
             ppm_out = ppm(x)
@@ -181,7 +181,7 @@ class UPerNetPyramidPoolingModule(nn.Cell):
         return ppm_outs
 
 
-class UPerNetHead(nn.Cell):
+class UPerNetHead(nn.Module):
     """
     Unified Perceptual Parsing for Scene Understanding. This head is the implementation of
     [UPerNet](https://arxiv.org/abs/1807.10221).
@@ -195,7 +195,7 @@ class UPerNetHead(nn.Cell):
         self.in_channels = in_channels
         self.channels = config.hidden_size
         self.align_corners = False
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
                                     bias_init='zeros')
 
         # PSP Module
@@ -212,8 +212,8 @@ class UPerNetHead(nn.Cell):
             padding=1,
         )
         # FPN Module
-        self.lateral_convs = nn.CellList()
-        self.fpn_convs = nn.CellList()
+        self.lateral_convs = nn.ModuleList()
+        self.fpn_convs = nn.ModuleList()
         for in_channels in self.in_channels[:-1]:  # skip the top layer
             l_conv = UPerNetConvModule(in_channels, self.channels, kernel_size=1)
             fpn_conv = UPerNetConvModule(self.channels, self.channels, kernel_size=3, padding=1)
@@ -247,7 +247,7 @@ class UPerNetHead(nn.Cell):
 
         return output
 
-    def construct(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
         # build laterals
         laterals = [lateral_conv(encoder_hidden_states[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
 
@@ -277,7 +277,7 @@ class UPerNetHead(nn.Cell):
         return output
 
 
-class UPerNetFCNHead(nn.Cell):
+class UPerNetFCNHead(nn.Module):
     """
     Fully Convolution Networks for Semantic Segmentation. This head is the implementation of
     [FCNNet]. It uses only the feature of a certain layer in encoder.
@@ -326,7 +326,7 @@ class UPerNetFCNHead(nn.Cell):
                 self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
             )
 
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
                                     bias_init='zeros')
 
     def init_weights(self):
@@ -340,7 +340,7 @@ class UPerNetFCNHead(nn.Cell):
         #     if module.bias is not None:
         #         module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
 
-    def construct(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
         # just take the relevant feature maps
         hidden_states = encoder_hidden_states[self.in_index]
         output = self.convs(hidden_states)
@@ -398,7 +398,7 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
             self,
             pixel_values: Optional[ms.Tensor] = None,
             output_hidden_states: Optional[bool] = None,

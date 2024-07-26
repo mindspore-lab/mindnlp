@@ -18,10 +18,10 @@ import warnings
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import nn ,ops
-from mindspore.common.initializer import Uniform
-from mindspore.common.initializer import HeNormal, initializer,Normal
-from mindnlp.modules.functional import finfo
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
+from mindspore.common.initializer import Uniform, HeNormal, initializer,Normal
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 #from ...integrations.deepspeed import is_deepspeed_zero3_enabled
@@ -191,7 +191,7 @@ def _compute_mask_indices(
     return spec_aug_mask
 
 
-class Data2VecAudioConvLayer(nn.Cell):
+class Data2VecAudioConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -202,13 +202,13 @@ class Data2VecAudioConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = hidden_states.swapaxes(-2, -1)
         hidden_states = self.layer_norm(hidden_states)
@@ -218,18 +218,18 @@ class Data2VecAudioConvLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2SamePadLayer with Wav2Vec2->Data2VecAudio
-class Data2VecAudioPadLayer(nn.Cell):
+class Data2VecAudioPadLayer(nn.Module):
     def __init__(self, num_conv_pos_embeddings):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         if self.num_pad_remove > 0:
             hidden_states = hidden_states[:, :, : -self.num_pad_remove]
         return hidden_states
 
 
-class Data2VecAudioPositionalConvLayer(nn.Cell):
+class Data2VecAudioPositionalConvLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -246,7 +246,7 @@ class Data2VecAudioPositionalConvLayer(nn.Cell):
         # no learnable parameters
         self.layer_norm = nn.LayerNorm([config.hidden_size])
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.padding(hidden_states)
         hidden_states = hidden_states.swapaxes(1, 2)
@@ -256,14 +256,14 @@ class Data2VecAudioPositionalConvLayer(nn.Cell):
         return hidden_states
 
 
-class Data2VecAudioPositionalConvEmbedding(nn.Cell):
+class Data2VecAudioPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Data2VecAudioPositionalConvLayer(config) for _ in range(config.num_conv_pos_embeddings)]
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = hidden_states.swapaxes(1, 2)
         for layer in self.layers:
             hidden_states = layer(hidden_states)
@@ -271,12 +271,12 @@ class Data2VecAudioPositionalConvEmbedding(nn.Cell):
         return hidden_states
 
 
-class Data2VecAudioFeatureEncoder(nn.Cell):
+class Data2VecAudioFeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
         super().__init__()
-        self.conv_layers = nn.CellList(
+        self.conv_layers = nn.ModuleList(
             [Data2VecAudioConvLayer(config, layer_id=i) for i in range(config.num_feat_extract_layers)]
         )
         self.gradient_checkpointing = False
@@ -289,7 +289,7 @@ class Data2VecAudioFeatureEncoder(nn.Cell):
         self._requires_grad = False
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureEncoder.forward
-    def construct(self, input_values):
+    def forward(self, input_values):
         hidden_states = input_values[:, None]
         for conv_layer in self.conv_layers:
             hidden_states = conv_layer(hidden_states)
@@ -297,14 +297,14 @@ class Data2VecAudioFeatureEncoder(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureProjection with Wav2Vec2->Data2VecAudio
-class Data2VecAudioFeatureProjection(nn.Cell):
+class Data2VecAudioFeatureProjection(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.conv_dim[-1]], epsilon=config.layer_norm_eps)
-        self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
+        self.layer_norm = nn.LayerNorm([config.conv_dim[-1]], eps=config.layer_norm_eps)
+        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p= config.feat_proj_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # non-projected hidden states are needed for quantization
         norm_hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.projection(norm_hidden_states)
@@ -313,7 +313,7 @@ class Data2VecAudioFeatureProjection(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Data2VecAudio
-class Data2VecAudioAttention(nn.Cell):
+class Data2VecAudioAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -341,15 +341,15 @@ class Data2VecAudioAttention(nn.Cell):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
         self.is_causal = is_causal
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -469,21 +469,21 @@ DATA2VEC2AUDIO_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeedForward with Wav2Vec2->Data2VecAudio
-class Data2VecAudioFeedForward(nn.Cell):
+class Data2VecAudioFeedForward(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(p = config.activation_dropout)
 
-        self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.intermediate_dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-        self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.output_dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p= config.hidden_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = self.intermediate_dropout(hidden_states)
@@ -494,7 +494,7 @@ class Data2VecAudioFeedForward(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayer with Wav2Vec2->Data2VecAudio, WAV2VEC2->DATA2VEC2AUDIO
-class Data2VecAudioEncoderLayer(nn.Cell):
+class Data2VecAudioEncoderLayer(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
         #self.attention = DATA2VEC2AUDIO_ATTENTION_CLASSES[config._attn_implementation](
@@ -506,11 +506,11 @@ class Data2VecAudioEncoderLayer(nn.Cell):
         )
 
         self.dropout = nn.Dropout(p = config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.feed_forward = Data2VecAudioFeedForward(config)
-        #self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+        #self.final_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         attn_residual = hidden_states
         hidden_states, attn_weights, _ = self.attention(
             hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
@@ -531,16 +531,16 @@ class Data2VecAudioEncoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Encoder with Wav2Vec2->Data2VecAudio
-class Data2VecAudioEncoder(nn.Cell):
+class Data2VecAudioEncoder(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
         self.config = config
         self.pos_conv_embed = Data2VecAudioPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout)
-        self.layers = nn.CellList([Data2VecAudioEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([Data2VecAudioEncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -612,22 +612,22 @@ class Data2VecAudioEncoder(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Adapter with Wav2Vec2->Data2VecAudio
-class Data2VecAudioAdapter(nn.Cell):
+class Data2VecAudioAdapter(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
 
         # feature dim might need to be down-projected
         if config.output_hidden_size != config.hidden_size:
-            self.proj = nn.Dense(config.hidden_size, config.output_hidden_size)
+            self.proj = nn.Linear(config.hidden_size, config.output_hidden_size)
             #self.proj_layer_norm = nn.LayerNorm([config.output_hidden_size])
             self.proj_layer_norm = nn.LayerNorm(config.output_hidden_size)
         else:
             self.proj = self.proj_layer_norm = None
 
-        self.layers = nn.CellList([Data2VecAudioAdapterLayer(config) for _ in range(config.num_adapter_layers)])
+        self.layers = nn.ModuleList([Data2VecAudioAdapterLayer(config) for _ in range(config.num_adapter_layers)])
         self.layerdrop = config.layerdrop
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # down project hidden_states if necessary
         if self.proj is not None and self.proj_layer_norm is not None:
             hidden_states = self.proj(hidden_states)
@@ -645,7 +645,7 @@ class Data2VecAudioAdapter(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2AdapterLayer with Wav2Vec2->Data2VecAudio
-class Data2VecAudioAdapterLayer(nn.Cell):
+class Data2VecAudioAdapterLayer(nn.Module):
     def __init__(self, config:Data2VecAudioConfig):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -655,10 +655,10 @@ class Data2VecAudioAdapterLayer(nn.Cell):
             stride=config.adapter_stride,
             padding=1,
             pad_mode='pad',
-            has_bias=True,
+            bias=True,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = ops.glu(hidden_states, axis=1)
 
@@ -683,9 +683,9 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
             cell.projection.bias.set_data(initializer(Uniform(scale=k), cell.projection.bias.shape, cell.projection.bias.dtype))
         elif isinstance(cell, Data2VecAudioPositionalConvLayer):
             cell.conv.bias.set_data(initializer(0, cell.conv.bias.shape, cell.conv.bias.dtype))
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
 
@@ -699,7 +699,7 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
                 )
         elif isinstance(cell, nn.Conv1d):
             cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k), cell.bias.shape, cell.bias.dtype))
 
@@ -852,7 +852,7 @@ class Data2VecAudioModel(Data2VecAudioPreTrainedModel):
         return hidden_states
 
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -913,7 +913,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         output_hidden_size = (
             config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
-        self.lm_head = nn.Dense(output_hidden_size, config.vocab_size)
+        self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -938,7 +938,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         self.data2vec_audio.feature_extractor._freeze_parameters()
 
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1014,8 +1014,8 @@ class Data2VecAudioForSequenceClassification(Data2VecAudioPreTrainedModel):
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
             #self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,'layer_weights')
-        self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
-        self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
+        self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
+        self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1047,7 +1047,7 @@ class Data2VecAudioForSequenceClassification(Data2VecAudioPreTrainedModel):
             param.requires_grad = False
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with wav2vec2->data2vec_audio
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1121,7 +1121,7 @@ class Data2VecAudioForAudioFrameClassification(Data2VecAudioPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,'layer_weights')
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.num_labels = config.num_labels
         self.init_weights()
 
@@ -1152,7 +1152,7 @@ class Data2VecAudioForAudioFrameClassification(Data2VecAudioPreTrainedModel):
         for param in self.data2vec_audio.get_parameters():
             param.requires_grad = False
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForAudioFrameClassification.forward with wav2vec2->data2vec_audio
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1206,7 +1206,7 @@ class Data2VecAudioForAudioFrameClassification(Data2VecAudioPreTrainedModel):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.AMSoftmaxLoss
-class AMSoftmaxLoss(nn.Cell):
+class AMSoftmaxLoss(nn.Module):
     def __init__(self, input_dim, num_labels, scale=30.0, margin=0.4):
         super(AMSoftmaxLoss, self).__init__()
         self.scale = scale
@@ -1216,7 +1216,7 @@ class AMSoftmaxLoss(nn.Cell):
         #self.loss = ops.cross_entropy()
 
 
-    def construct(self, hidden_states, labels):
+    def forward(self, hidden_states, labels):
         labels = labels.flatten()
         #weight = ops.normalize(self.weight, axis=0)
         weight = self.weight / ops.norm(self.weight, dim=0, keepdim=True)
@@ -1232,18 +1232,18 @@ class AMSoftmaxLoss(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.TDNNLayer
-class TDNNLayer(nn.Cell):
+class TDNNLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.tdnn_dim[layer_id - 1] if layer_id > 0 else config.tdnn_dim[layer_id]
         self.out_conv_dim = config.tdnn_dim[layer_id]
         self.kernel_size = config.tdnn_kernel[layer_id]
         self.dilation = config.tdnn_dilation[layer_id]
-        self.kernel = nn.Dense(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
+        self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
         self.activation = nn.ReLU()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        # for backward compatibility, we keep nn.Dense but call F.conv1d for speed up
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        # for backward compatibility, we keep nn.Linear but call F.conv1d for speed up
         # hidden_states = hidden_states.swapaxes(1, 2)
         # weight = self.kernel.weight.view(self.out_conv_dim, self.kernel_size, self.in_conv_dim).swapaxes(1, 2)
         # hidden_states = ops.conv1d(hidden_states, weight, self.kernel.bias, dilation=self.dilation)
@@ -1273,11 +1273,11 @@ class Data2VecAudioForXVector(Data2VecAudioPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,name = 'layer_weights')
-        self.projector = nn.Dense(config.hidden_size, config.tdnn_dim[0])
+        self.projector = nn.Linear(config.hidden_size, config.tdnn_dim[0])
         tdnn_layers = [TDNNLayer(config, i) for i in range(len(config.tdnn_dim))]
-        self.tdnn = nn.CellList(tdnn_layers)
-        self.feature_extractor = nn.Dense(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
-        self.classifier = nn.Dense(config.xvector_output_dim, config.xvector_output_dim)
+        self.tdnn = nn.ModuleList(tdnn_layers)
+        self.feature_extractor = nn.Linear(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
+        self.classifier = nn.Linear(config.xvector_output_dim, config.xvector_output_dim)
         self.objective = AMSoftmaxLoss(config.xvector_output_dim, config.num_labels)
         self.init_weights()
 
@@ -1322,7 +1322,7 @@ class Data2VecAudioForXVector(Data2VecAudioPreTrainedModel):
         return input_lengths
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForXVector.forward with wav2vec2->data2vec_audio
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,

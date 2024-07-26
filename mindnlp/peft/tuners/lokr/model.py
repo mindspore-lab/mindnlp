@@ -18,7 +18,7 @@ from typing import Optional, Union, Dict, Type, List
 from itertools import chain
 from tqdm import tqdm
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from ...utils import (
     ModulesToSaveWrapper,
@@ -42,12 +42,12 @@ class LoKrModel(BaseTuner):
     https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/cells/lokr.py
 
     Args:
-        model (`mindspore.nn.Cell`): The model to which the adapter tuner layers will be attached.
+        model (`mindspore.nn.Module`): The model to which the adapter tuner layers will be attached.
         peft_config ([`LoKrConfig`]): The configuration of the LoKr model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        LoKrModel ([`mindspore.nn.Cell`]): The LoKr model.
+        LoKrModel ([`mindspore.nn.Module`]): The LoKr model.
 
     Example:
         ```py
@@ -88,24 +88,24 @@ class LoKrModel(BaseTuner):
 
     > **Attributes**:  
 
-    >   - **model** ([`~nn.Cell`])— The model to be adapted. 
+    >   - **model** ([`~nn.Module`])— The model to be adapted. 
 
     >   - **peft_config** ([`LoKrConfig`]): The configuration of the LoKr  model. 
 
     """
     prefix: str = "lokr_"
-    layers_mapping: Dict[Type[nn.Cell], Type[LoKrLayer]] = {
+    layers_mapping: Dict[Type[nn.Module], Type[LoKrLayer]] = {
         nn.Conv2d: Conv2d,
-        nn.Dense: Dense,
+        nn.Linear: Dense,
     }
 
     def _create_and_replace(
         self,
         config: LoKrConfig,
         adapter_name: str,
-        target: Union[LoKrLayer, nn.Cell],
+        target: Union[LoKrLayer, nn.Module],
         target_name: str,
-        parent: nn.Cell,
+        parent: nn.Module,
         current_key: str,
         loaded_in_8bit: Optional[bool] = False,
         loaded_in_4bit: Optional[bool] = False,
@@ -134,7 +134,7 @@ class LoKrModel(BaseTuner):
 
     @classmethod
     def _create_new_cell(
-        cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs
+        cls, config: LoKrConfig, adapter_name: str, target: nn.Module, **kwargs
     ) -> LoKrLayer:
         r"""
         This method creates a new LoKrLayer instance based on the provided parameters.
@@ -143,7 +143,7 @@ class LoKrModel(BaseTuner):
             cls (class): The class reference. It is used to access the class-level layers_mapping attribute.
             config (LoKrConfig): The configuration object used for creating the new cell.
             adapter_name (str): The name of the adapter to be associated with the new cell.
-            target (nn.Cell): The target cell for which the new cell is being created.
+            target (nn.Module): The target cell for which the new cell is being created.
         
         Returns:
             LoKrLayer: Returns a new instance of LoKrLayer representing the created cell.
@@ -182,9 +182,9 @@ class LoKrModel(BaseTuner):
         else:
             target_base_layer = target
 
-        if isinstance(target_base_layer, nn.Cell):
+        if isinstance(target_base_layer, nn.Module):
             new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
-        elif isinstance(target_base_layer, nn.Cell):
+        elif isinstance(target_base_layer, nn.Module):
             new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
         else:
             supported_cells = ", ".join(
@@ -239,14 +239,14 @@ class LoKrModel(BaseTuner):
             else:
                 new_cell.state = child.state
 
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         r"""
         The _mark_only_adapters_as_trainable method in the LoKrModel class marks only the adapters in the provided model as trainable, by setting the requires_grad attribute to False for parameters not
 containing the specified prefix.
         
         Args:
             self (LoKrModel): The instance of the LoKrModel class.
-            model (nn.Cell): The model for which the adapters are to be marked as trainable.
+            model (nn.Module): The model for which the adapters are to be marked as trainable.
         
         Returns:
             None: This method does not return any value.

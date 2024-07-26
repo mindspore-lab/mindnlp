@@ -21,10 +21,11 @@ from typing import Optional, Tuple, List, Callable, Dict, Any
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 
 from mindnlp.utils import logging
-from mindnlp.modules.functional import embedding
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...generation.logits_process import LogitsProcessor
 from ...generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
@@ -59,7 +60,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     """
     The model to encode the prefix
     Input shape: (batch-size, prefix-length)
@@ -93,14 +94,14 @@ class PrefixEncoder(nn.Cell):
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
             self.trans = nn.SequentialCell(
-                nn.Dense(config.hidden_size, config.hidden_size),
+                nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
-                nn.Dense(config.hidden_size, config.num_layers * config.hidden_size * 2)
+                nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
             )
         else:
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
         Constructs past key values for the PrefixEncoder.
 
@@ -122,7 +123,7 @@ class PrefixEncoder(nn.Cell):
         return past_key_values
 
 
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     """Rotary Embedding."""
     def __init__(self, dim, base=10000, precision=mindspore.float16, max_seq_len=2048):
         """
@@ -151,13 +152,13 @@ class RotaryEmbedding(nn.Cell):
         self.cos_cached = Tensor(self.cos_cached, precision)
         self.sin_cached = Tensor(self.sin_cached, precision)
 
-    def construct(self, seq_len):
+    def forward(self, seq_len):
         """
         Constructs and returns the cached cosine and sine arrays of the specified length for the RotaryEmbedding class.
 
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
-            seq_len (int): The length of the sequence for which the cosine and sine arrays should be constructed.
+            seq_len (int): The length of the sequence for which the cosine and sine arrays should be forwarded.
 
         Returns:
             None
@@ -190,7 +191,7 @@ def default_init(cls, *args, **kwargs):
     return cls(*args, **kwargs)
 
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
     """Self Attention."""
     def __init__(self, config, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
@@ -243,17 +244,17 @@ class SelfAttention(nn.Cell):
         self.inner_hidden_size = num_attention_heads * self.hidden_size_per_attention_head
 
         # Strided linear layer.
-        self.query_key_value = nn.Dense(
+        self.query_key_value = nn.Linear(
             hidden_size,
             3 * self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             self.inner_hidden_size,
             hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -278,7 +279,7 @@ class SelfAttention(nn.Cell):
 
         return tensor_list
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -450,7 +451,7 @@ def gelu(x):
     return ops.gelu(x, approximate='tanh')
 
 
-class GEGLU(nn.Cell):
+class GEGLU(nn.Module):
     """GEGLU"""
     def __init__(self):
         """
@@ -468,7 +469,7 @@ class GEGLU(nn.Cell):
         super().__init__()
         self.activation_fn = ops.gelu
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a GEGLU object.
 
@@ -492,7 +493,7 @@ class GEGLU(nn.Cell):
             ```python
             >>> g = GEGLU()
             >>> x = torch.tensor([1, 2, 3, 4])
-            >>> g.construct(x)
+            >>> g.forward(x)
             ```
         """
         # dim=-1 breaks in jit for pt<1.10
@@ -500,7 +501,7 @@ class GEGLU(nn.Cell):
         return x1 * self.activation_fn(x2)
 
 
-class GLU(nn.Cell):
+class GLU(nn.Module):
     """GLU"""
     def __init__(self, hidden_size, inner_hidden_size=None,
                  layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
@@ -531,21 +532,21 @@ class GLU(nn.Cell):
         if inner_hidden_size is None:
             inner_hidden_size = 4 * hidden_size
         self.inner_hidden_size = inner_hidden_size
-        self.dense_h_to_4h = nn.Dense(
+        self.dense_h_to_4h = nn.Linear(
             self.hidden_size,
             self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
+        self.dense_4h_to_h = nn.Linear(
             self.inner_hidden_size,
             self.hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Args:
             hidden_states: [seq_len, batch, hidden_size]
@@ -560,7 +561,7 @@ class GLU(nn.Cell):
         return output
 
 
-class GLMBlock(nn.Cell):
+class GLMBlock(nn.Module):
     """GLM Block."""
     def __init__(
             self,
@@ -605,7 +606,7 @@ class GLMBlock(nn.Cell):
         self.layer_id = layer_id
 
         # Layernorm on the input data.
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.position_encoding_2d = position_encoding_2d
 
@@ -622,7 +623,7 @@ class GLMBlock(nn.Cell):
         )
 
         # Layernorm on the input data.
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.num_layers = num_layers
 
@@ -635,7 +636,7 @@ class GLMBlock(nn.Cell):
             params_dtype=params_dtype,
         )
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -701,7 +702,7 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GLMBlock"]
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         """Initialize the weights."""
     def get_masks(self, input_ids):
         """get masks"""
@@ -823,11 +824,11 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
                 position_encoding_2d=self.position_encoding_2d,
             )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [get_layer(layer_id) for layer_id in range(self.num_layers)]
         )
         # Final layer norm before output.
-        self.final_layernorm = nn.LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
+        self.final_layernorm = nn.LayerNorm([self.hidden_size], eps=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
             # for param in self.parameters():
@@ -893,7 +894,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         # past_key_values = [(v[0], v[1]) for v in past_key_values]
         return past_key_values
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -903,7 +904,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     ) -> Tuple[mindspore.Tensor, ...]:
         """Constructs the MSChatGLMModel.
 
-        This method is used to construct the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
+        This method is used to forward the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
 
         Args:
             self (MSChatGLMModel): The instance of the MSChatGLMModel class.
@@ -1041,10 +1042,10 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         self.max_sequence_length = config.max_sequence_length
         self.position_encoding_2d = config.position_encoding_2d
         self.transformer = MSChatGLMModel(config)
-        self.lm_head = nn.Dense(
+        self.lm_head = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
             dtype=mindspore.float16
         )
         self.quantized = False
@@ -1238,7 +1239,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,

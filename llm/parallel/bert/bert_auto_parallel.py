@@ -215,7 +215,7 @@ if __name__ == "__main__":
     train_dataloader = NumpySlicesDataset(train_ds, sampler=train_sampler)
     train_dataloader = train_dataloader.batch(args.batch_size)
 
-    class MyTrainNet(nn.Cell):
+    class MyTrainNet(nn.Module):
         def __init__(self, backbone, loss_fn):
             super(MyTrainNet, self).__init__(auto_prefix=False)
             self._backbone = backbone

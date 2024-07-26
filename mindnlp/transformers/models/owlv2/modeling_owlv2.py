@@ -19,9 +19,10 @@ from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Tensor, nn, ops
+from mindspore import Tensor
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import (
     _create_4d_causal_attention_mask,
@@ -284,7 +285,7 @@ class Owlv2ImageGuidedObjectDetectionOutput(ModelOutput):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTVisionEmbeddings with OwlViT->Owlv2
-class Owlv2VisionEmbeddings(nn.Cell):
+class Owlv2VisionEmbeddings(nn.Module):
     def __init__(self, config: Owlv2VisionConfig):
         super().__init__()
         self.config = config
@@ -296,7 +297,7 @@ class Owlv2VisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=config.patch_size,
             stride=config.patch_size,
-            has_bias=False,
+            bias=False,
             pad_mode="pad",
             padding=0,
         )
@@ -306,7 +307,7 @@ class Owlv2VisionEmbeddings(nn.Cell):
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
         self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
-    def construct(self, pixel_values: ms.Tensor) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size = pixel_values.shape[0]
         patch_embeds = self.patch_embedding(
             pixel_values
@@ -321,7 +322,7 @@ class Owlv2VisionEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTTextEmbeddings with OwlViT->Owlv2
-class Owlv2TextEmbeddings(nn.Cell):
+class Owlv2TextEmbeddings(nn.Module):
     def __init__(self, config: Owlv2TextConfig):
         super().__init__()
         self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
@@ -334,7 +335,7 @@ class Owlv2TextEmbeddings(nn.Cell):
             (1, -1)
         )
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         position_ids: Optional[ms.Tensor] = None,
@@ -357,7 +358,7 @@ class Owlv2TextEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTAttention with OwlViT->Owlv2
-class Owlv2Attention(nn.Cell):
+class Owlv2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -374,15 +375,15 @@ class Owlv2Attention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -475,15 +476,15 @@ class Owlv2Attention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->Owlv2
-class Owlv2MLP(nn.Cell):
+class Owlv2MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -491,16 +492,16 @@ class Owlv2MLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->Owlv2
-class Owlv2EncoderLayer(nn.Cell):
+class Owlv2EncoderLayer(nn.Module):
     def __init__(self, config: Owlv2Config):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = Owlv2Attention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = Owlv2MLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -600,12 +601,12 @@ class Owlv2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.LayerNorm):
             cell.bias.initialize("zeros")
             cell.weight.data.fill(1.0)
-        if isinstance(cell, nn.Dense) and cell.bias is not None:
+        if isinstance(cell, nn.Linear) and cell.bias is not None:
             cell.bias.initialize("zeros")
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTEncoder with OwlViT->Owlv2
-class Owlv2Encoder(nn.Cell):
+class Owlv2Encoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`Owlv2EncoderLayer`].
@@ -616,12 +617,12 @@ class Owlv2Encoder(nn.Cell):
 
     def __init__(self, config: Owlv2Config):
         super().__init__()
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Owlv2EncoderLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[ms.Tensor] = None,
@@ -711,16 +712,16 @@ class Owlv2Encoder(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTTextTransformer with OWLVIT->OWLV2,OwlViT->Owlv2
-class Owlv2TextTransformer(nn.Cell):
+class Owlv2TextTransformer(nn.Module):
     def __init__(self, config: Owlv2TextConfig):
         super().__init__()
         self.config = config
         embed_dim = config.hidden_size
         self.embeddings = Owlv2TextEmbeddings(config)
         self.encoder = Owlv2Encoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -806,13 +807,13 @@ class Owlv2TextModel(Owlv2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -848,21 +849,21 @@ class Owlv2TextModel(Owlv2PreTrainedModel):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTVisionTransformer with OWLVIT->OWLV2,OwlViT->Owlv2
-class Owlv2VisionTransformer(nn.Cell):
+class Owlv2VisionTransformer(nn.Module):
     def __init__(self, config: Owlv2VisionConfig):
         super().__init__()
         self.config = config
 
         self.embeddings = Owlv2VisionEmbeddings(config)
         self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
         self.encoder = Owlv2Encoder(config)
         self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,
@@ -927,10 +928,10 @@ class Owlv2VisionModel(Owlv2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -994,11 +995,11 @@ class Owlv2Model(Owlv2PreTrainedModel):
         self.text_model = Owlv2TextTransformer(text_config)
         self.vision_model = Owlv2VisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(
-            self.vision_embed_dim, self.projection_dim, has_bias=False
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False
         )
-        self.text_projection = nn.Dense(
-            self.text_embed_dim, self.projection_dim, has_bias=False
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False
         )
         self.logit_scale = ms.Parameter(ms.tensor(config.logit_scale_init_value))
 
@@ -1095,7 +1096,7 @@ class Owlv2Model(Owlv2PreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,
@@ -1203,17 +1204,17 @@ class Owlv2Model(Owlv2PreTrainedModel):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTBoxPredictionHead with OwlViT->Owlv2
-class Owlv2BoxPredictionHead(nn.Cell):
+class Owlv2BoxPredictionHead(nn.Module):
     def __init__(self, config: Owlv2Config, out_dim: int = 4):
         super().__init__()
 
         width = config.vision_config.hidden_size
-        self.dense0 = nn.Dense(width, width)
-        self.dense1 = nn.Dense(width, width)
+        self.dense0 = nn.Linear(width, width)
+        self.dense1 = nn.Linear(width, width)
         self.gelu = nn.GELU()
-        self.dense2 = nn.Dense(width, out_dim)
+        self.dense2 = nn.Linear(width, out_dim)
 
-    def construct(self, image_features: ms.Tensor) -> ms.Tensor:
+    def forward(self, image_features: ms.Tensor) -> ms.Tensor:
         output = self.dense0(image_features)
         output = self.gelu(output)
         output = self.dense1(output)
@@ -1223,19 +1224,19 @@ class Owlv2BoxPredictionHead(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTClassPredictionHead with OwlViT->Owlv2
-class Owlv2ClassPredictionHead(nn.Cell):
+class Owlv2ClassPredictionHead(nn.Module):
     def __init__(self, config: Owlv2Config):
         super().__init__()
 
         out_dim = config.text_config.hidden_size
         self.query_dim = config.vision_config.hidden_size
 
-        self.dense0 = nn.Dense(self.query_dim, out_dim)
-        self.logit_shift = nn.Dense(self.query_dim, 1)
-        self.logit_scale = nn.Dense(self.query_dim, 1)
+        self.dense0 = nn.Linear(self.query_dim, out_dim)
+        self.logit_shift = nn.Linear(self.query_dim, 1)
+        self.logit_scale = nn.Linear(self.query_dim, 1)
         self.elu = nn.ELU()
 
-    def construct(
+    def forward(
         self,
         image_embeds: ms.Tensor,
         query_embeds: Optional[ms.Tensor],
@@ -1649,7 +1650,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
             vision_model_output=vision_outputs,
         )
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         pixel_values: ms.Tensor,

@@ -39,7 +39,7 @@ __all__ = ['GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
            'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model']
 
 
-class GPT2Attention(nn.Cell):
+class GPT2Attention(nn.Module):
     r"""
     gpt2 Attention
     """
@@ -110,8 +110,8 @@ class GPT2Attention(nn.Cell):
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
 
         # Prune conv1d layers
-        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
-        self.c_proj = prune_conv1d_layer(self.c_proj, index, axis=0)
+        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
+        self.c_proj = prune_conv1d_layer(self.c_proj, index, dim=0)
 
         # Update hyper params
         self.split_size = (self.split_size // self.num_heads) * (self.num_heads - len(heads))
@@ -271,7 +271,7 @@ class GPT2Attention(nn.Cell):
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Tuple[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -282,7 +282,7 @@ class GPT2Attention(nn.Cell):
             use_cache: Optional[bool] = False,
     ):
         """
-        This method 'construct' is a part of the 'GPT2Attention' class and is responsible for constructing the
+        This method 'forward' is a part of the 'GPT2Attention' class and is responsible for forwarding the
         attention mechanism with various parameters.
 
         Args:
@@ -344,7 +344,7 @@ class GPT2Attention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class GPT2MLP(nn.Cell):
+class GPT2MLP(nn.Module):
     r"""
     gpt2 MLP
     """
@@ -370,7 +370,7 @@ class GPT2MLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Tuple[Tensor]):
+    def forward(self, hidden_states: Tuple[Tensor]):
         """
         Constructs the hidden states in the GPT2MLP class.
 
@@ -391,7 +391,7 @@ class GPT2MLP(nn.Cell):
         return hidden_states
 
 
-class GPT2Block(nn.Cell):
+class GPT2Block(nn.Module):
     r"""
     gpt2 Block
     """
@@ -424,17 +424,17 @@ class GPT2Block(nn.Cell):
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.ln_1 = nn.LayerNorm((hidden_size,), epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm((hidden_size,), eps=config.layer_norm_epsilon)
         self.attn = GPT2Attention(config, layer_idx=layer_idx)
-        self.ln_2 = nn.LayerNorm((hidden_size,), epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm((hidden_size,), eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             self.crossattention = GPT2Attention(config, is_cross_attention=True, layer_idx=layer_idx)
-            self.ln_cross_attn = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_epsilon)
+            self.ln_cross_attn = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = GPT2MLP(inner_dim, config)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Tuple[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -555,7 +555,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -626,8 +626,8 @@ class GPT2Model(GPT2PreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
-        self.ln_f = nn.LayerNorm((self.embed_dim,), epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
+        self.ln_f = nn.LayerNorm((self.embed_dim,), eps=config.layer_norm_epsilon)
 
         self.add_cross_attention = self.config.add_cross_attention
         self.num_hidden_layers = self.config.num_hidden_layers
@@ -657,7 +657,7 @@ class GPT2Model(GPT2PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -824,7 +824,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         ignore_index = kwargs.pop('ignore_index', -1)
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
@@ -874,7 +874,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -888,7 +888,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             labels: Optional[Tensor] = None,
     ):
         """
-        This method 'construct' is defined within the 'GPT2LMHeadModel' class and is responsible for processing
+        This method 'forward' is defined within the 'GPT2LMHeadModel' class and is responsible for processing
         input data through a transformer model and generating relevant outputs.
 
         Args:
@@ -974,7 +974,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         super().__init__(config)
         config.num_labels = 1
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
         # Initialize weights and apply final processing
         self.post_init()
@@ -1023,7 +1023,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None,
+    def forward(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None):
         """
         Constructs the GPT2DoubleHeadsModel.
@@ -1155,11 +1155,11 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         self.config = config
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -1171,7 +1171,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
             labels: Optional[Tensor] = None,
     ):
         """
-        Method 'construct' in the class 'GPT2ForSequenceClassification'.
+        Method 'forward' in the class 'GPT2ForSequenceClassification'.
 
         Args:
             self: The instance of the class.
@@ -1285,12 +1285,12 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
+    def forward(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, labels=None):
         """
         Args:

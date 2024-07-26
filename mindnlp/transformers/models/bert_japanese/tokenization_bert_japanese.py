@@ -83,11 +83,11 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         subword_tokenizer_type (`str`, *optional*, defaults to `"wordpiece"`):
             Type of subword tokenizer. Choose from ["wordpiece", "character", "sentencepiece",].
         mecab_kwargs (`dict`, *optional*):
-            Dictionary passed to the `MecabTokenizer` constructor.
+            Dictionary passed to the `MecabTokenizer` forwardor.
         sudachi_kwargs (`dict`, *optional*):
-            Dictionary passed to the `SudachiTokenizer` constructor.
+            Dictionary passed to the `SudachiTokenizer` forwardor.
         jumanpp_kwargs (`dict`, *optional*):
-            Dictionary passed to the `JumanppTokenizer` constructor.
+            Dictionary passed to the `JumanppTokenizer` forwardor.
     """
     vocab_files_names = VOCAB_FILES_NAMES
 
@@ -360,7 +360,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         Returns:
             a dictionary representing the vocabulary:
 
-                - If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs
+                - If the subword_tokenizer_type is 'sentencepiece', the vocabulary is forwarded by mapping token IDs
                 to their corresponding tokens for the range of 0 to vocab_size.
                 Any added tokens are then added to this vocabulary.
                 - If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of
@@ -552,7 +552,7 @@ class MecabTokenizer:
                 Name of dictionary to be used for MeCab initialization. If you are using a system-installed dictionary,
                 set this option to `None` and modify *mecab_option*.
             **mecab_option**: (*optional*) string
-                String passed to MeCab constructor.
+                String passed to MeCab forwardor.
         """
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []

@@ -19,13 +19,10 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
-
-from mindnlp.utils import logging
-from .configuration_canine import CanineConfig
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -37,8 +34,15 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import logging
+from .configuration_canine import CanineConfig
+
 
 logger = logging.get_logger(__name__)
+
+_CHECKPOINT_FOR_DOC = "google/canine-s"
+_CONFIG_FOR_DOC = "CanineConfig"
+
 
 # Support up to 16 hash functions.
 _PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
@@ -79,7 +83,7 @@ class CanineModelOutputWithPooling(ModelOutput):
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-class CanineEmbeddings(nn.Cell):
+class CanineEmbeddings(nn.Module):
     """Construct the character, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -97,11 +101,13 @@ class CanineEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+        self.register_buffer(
+            "position_ids", ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1)), persistent=False
+        )
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
     def _hash_bucket_tensors(self, input_ids, num_hashes: int, num_buckets: int):
@@ -139,9 +145,9 @@ class CanineEmbeddings(nn.Cell):
             shard_embeddings = getattr(self, name)(hash_bucket_ids)
             embedding_shards.append(shard_embeddings)
 
-        return ops.cat(embedding_shards, axis=-1)
+        return ops.cat(embedding_shards, dim=-1)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -178,7 +184,7 @@ class CanineEmbeddings(nn.Cell):
         return embeddings
 
 
-class CharactersToMolecules(nn.Cell):
+class CharactersToMolecules(nn.Module):
     """Convert character sequence to initial molecule sequence (i.e. downsample) using strided convolutions."""
 
     def __init__(self, config):
@@ -194,17 +200,17 @@ class CharactersToMolecules(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, char_encoding: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, char_encoding: mindspore.Tensor) -> mindspore.Tensor:
         # `cls_encoding`: [batch, 1, hidden_size]
         cls_encoding = char_encoding[:, 0:1, :]
 
         # char_encoding has shape [batch, char_seq, hidden_size]
         # We transpose it to be [batch, hidden_size, char_seq]
-        char_encoding = ops.swapaxes(char_encoding, 1, 2)
+        char_encoding = ops.transpose(char_encoding, 1, 2)
         downsampled = self.conv(char_encoding)
-        downsampled = ops.swapaxes(downsampled, 1, 2)
+        downsampled = ops.transpose(downsampled, 1, 2)
         downsampled = self.activation(downsampled)
 
         # Truncate the last molecule in order to reserve a position for [CLS].
@@ -217,14 +223,14 @@ class CharactersToMolecules(nn.Cell):
         # want to reserve a position (and the model capacity that goes along
         # with that) in the deep BERT stack.
         # `result`: [batch, molecule_seq, molecule_dim]
-        result = ops.cat([cls_encoding, downsampled_truncated], axis=1)
+        result = ops.cat([cls_encoding, downsampled_truncated], dim=1)
 
         result = self.LayerNorm(result)
 
         return result
 
 
-class ConvProjection(nn.Cell):
+class ConvProjection(nn.Module):
     """
     Project representations from hidden_size*2 back to hidden_size across a window of w = config.upsampling_kernel_size
     characters.
@@ -242,20 +248,29 @@ class ConvProjection(nn.Cell):
         self.activation = ACT2FN[config.hidden_act]
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self,
         inputs: mindspore.Tensor,
         final_seq_char_positions: Optional[mindspore.Tensor] = None,
     ) -> mindspore.Tensor:
         # inputs has shape [batch, mol_seq, molecule_hidden_size+char_hidden_final]
         # we transpose it to be [batch, molecule_hidden_size+char_hidden_final, mol_seq]
-        inputs = ops.swapaxes(inputs, 1, 2)
+        inputs = ops.transpose(inputs, 1, 2)
+
+        # PyTorch < 1.9 does not support padding="same" (which is used in the original implementation),
+        # so we pad the tensor manually before passing it to the conv layer
+        # based on https://github.com/google-research/big_transfer/blob/49afe42338b62af9fbe18f0258197a33ee578a6b/bit_tf2/models.py#L36-L38
+        pad_total = self.config.upsampling_kernel_size - 1
+        pad_beg = pad_total // 2
+        pad_end = pad_total - pad_beg
+
+        pad = nn.ConstantPad1d((pad_beg, pad_end), 0)
         # `result`: shape (batch_size, char_seq_len, hidden_size)
-        result = self.conv(inputs)
-        result = ops.swapaxes(result, 1, 2)
+        result = self.conv(pad(inputs))
+        result = ops.transpose(result, 1, 2)
         result = self.activation(result)
         result = self.LayerNorm(result)
         result = self.dropout(result)
@@ -273,7 +288,7 @@ class ConvProjection(nn.Cell):
         return query_seq
 
 
-class CanineSelfAttention(nn.Cell):
+class CanineSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -286,13 +301,13 @@ class CanineSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        if self.position_embedding_type in ["relative_key", "relative_key_query"]:
+        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -301,7 +316,7 @@ class CanineSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         from_tensor: mindspore.Tensor,
         to_tensor: mindspore.Tensor,
@@ -321,15 +336,15 @@ class CanineSelfAttention(nn.Cell):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
-        if self.position_embedding_type in ["relative_key", "relative_key_query"]:
+        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             seq_length = from_tensor.shape[1]
             position_ids_l = ops.arange(seq_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(seq_length, dtype=mindspore.int64).view(1, -1)
             distance = position_ids_l - position_ids_r
             positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
-            positional_embedding = positional_embedding.astype(dtype=query_layer.dtype)  # fp16 compatibility
+            positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
                 relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
@@ -347,12 +362,12 @@ class CanineSelfAttention(nn.Cell):
                 # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
                 # masked positions, this operation will create a tensor which is 0.0 for
                 # positions we want to attend and the dtype's smallest value for masked positions.
-                attention_mask = (1.0 - attention_mask.astype(mindspore.float32)) * np.finfo(mindspore.dtype_to_nptype(attention_scores.dtype)).min
+                attention_mask = (1.0 - attention_mask.float()) * float(ops.finfo(attention_scores.dtype).min)
             # Apply the attention mask (precomputed for all layers in CanineModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -373,14 +388,14 @@ class CanineSelfAttention(nn.Cell):
         return outputs
 
 
-class CanineSelfOutput(nn.Cell):
+class CanineSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, hidden_states: Tuple[mindspore.Tensor], input_tensor: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
         hidden_states = self.dense(hidden_states)
@@ -389,22 +404,21 @@ class CanineSelfOutput(nn.Cell):
         return hidden_states
 
 
-class CanineAttention(nn.Cell):
+class CanineAttention(nn.Module):
     """
     Additional arguments related to local attention:
 
-    - **local** (`bool`, *optional*, defaults to `False`): Whether to apply local attention.
-    - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`): Should all blocks be able to
-    attend to the `to_tensor`'s first position (e.g. a [CLS] position)?
-    - **first_position_attends_to_all** (`bool`, *optional*, defaults to `False`):
-    Should the *from_tensor*'s first position be able to attend to all positions within the *from_tensor*?
-    - **attend_from_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in `from_tensor`.
-    - **attend_from_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to skip when moving
-    to the next block in `from_tensor`.
-    - **attend_to_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in
-    *to_tensor*.
-    - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to
-    skip when moving to the next block in `to_tensor`.
+        - **local** (`bool`, *optional*, defaults to `False`) -- Whether to apply local attention.
+        - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`) -- Should all blocks be able to
+          attend
+        to the `to_tensor`'s first position (e.g. a [CLS] position)? - **first_position_attends_to_all** (`bool`,
+        *optional*, defaults to `False`) -- Should the *from_tensor*'s first position be able to attend to all
+        positions within the *from_tensor*? - **attend_from_chunk_width** (`int`, *optional*, defaults to 128) -- The
+        width of each block-wise chunk in `from_tensor`. - **attend_from_chunk_stride** (`int`, *optional*, defaults to
+        128) -- The number of elements to skip when moving to the next block in `from_tensor`. -
+        **attend_to_chunk_width** (`int`, *optional*, defaults to 128) -- The width of each block-wise chunk in
+        *to_tensor*. - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128) -- The number of elements to
+        skip when moving to the next block in `to_tensor`.
     """
 
     def __init__(
@@ -451,14 +465,14 @@ class CanineAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tuple[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -510,10 +524,10 @@ class CanineAttention(nn.Cell):
                 attention_mask_chunk = attention_mask[:, from_start:from_end, to_start:to_end]
                 if self.always_attend_to_first_position:
                     cls_attention_mask = attention_mask[:, from_start:from_end, 0:1]
-                    attention_mask_chunk = ops.cat([cls_attention_mask, attention_mask_chunk], axis=2)
+                    attention_mask_chunk = ops.cat([cls_attention_mask, attention_mask_chunk], dim=2)
 
                     cls_position = to_tensor[:, 0:1, :]
-                    to_tensor_chunk = ops.cat([cls_position, to_tensor_chunk], axis=1)
+                    to_tensor_chunk = ops.cat([cls_position, to_tensor_chunk], dim=1)
 
                 attention_outputs_chunk = self.self(
                     from_tensor_chunk, to_tensor_chunk, attention_mask_chunk, head_mask, output_attentions
@@ -522,7 +536,7 @@ class CanineAttention(nn.Cell):
                 if output_attentions:
                     attention_probs_chunks.append(attention_outputs_chunk[1])
 
-            attention_output = ops.cat(attention_output_chunks, axis=1)
+            attention_output = ops.cat(attention_output_chunks, dim=1)
 
         attention_output = self.output(attention_output, hidden_states)
         outputs = (attention_output,)
@@ -533,36 +547,36 @@ class CanineAttention(nn.Cell):
         return outputs
 
 
-class CanineIntermediate(nn.Cell):
+class CanineIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class CanineOutput(nn.Cell):
+class CanineOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: Tuple[mindspore.Tensor], input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: Tuple[mindspore.Tensor], input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class CanineLayer(nn.Cell):
+class CanineLayer(nn.Module):
     def __init__(
         self,
         config,
@@ -590,7 +604,7 @@ class CanineLayer(nn.Cell):
         self.intermediate = CanineIntermediate(config)
         self.output = CanineOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tuple[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -620,7 +634,7 @@ class CanineLayer(nn.Cell):
         return layer_output
 
 
-class CanineEncoder(nn.Cell):
+class CanineEncoder(nn.Module):
     def __init__(
         self,
         config,
@@ -634,7 +648,7 @@ class CanineEncoder(nn.Cell):
     ):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [
                 CanineLayer(
                     config,
@@ -649,8 +663,9 @@ class CanineEncoder(nn.Cell):
                 for _ in range(config.num_hidden_layers)
             ]
         )
+        self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tuple[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -667,7 +682,17 @@ class CanineEncoder(nn.Cell):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
-            layer_outputs = layer_module(hidden_states, attention_mask, layer_head_mask, output_attentions)
+
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = self._gradient_checkpointing_func(
+                    layer_module.__call__,
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask,
+                    output_attentions,
+                )
+            else:
+                layer_outputs = layer_module(hidden_states, attention_mask, layer_head_mask, output_attentions)
 
             hidden_states = layer_outputs[0]
             if output_attentions:
@@ -685,13 +710,13 @@ class CanineEncoder(nn.Cell):
         )
 
 
-class CaninePooler(nn.Cell):
+class CaninePooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -700,49 +725,49 @@ class CaninePooler(nn.Cell):
         return pooled_output
 
 
-class CaninePredictionHeadTransform(nn.Cell):
+class CaninePredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class CanineLMPredictionHead(nn.Cell):
+class CanineLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = CaninePredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = nn.Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Tuple[mindspore.Tensor]) -> mindspore.Tensor:
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
-class CanineOnlyMLMHead(nn.Cell):
+class CanineOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = CanineLMPredictionHead(config)
 
-    def construct(
+    def forward(
         self,
         sequence_output: Tuple[mindspore.Tensor],
     ) -> Tuple[mindspore.Tensor]:
@@ -762,12 +787,12 @@ class CaninePreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias is not None:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
@@ -832,12 +857,12 @@ class CanineModel(CaninePreTrainedModel):
 
         to_seq_length = to_mask.shape[1]
 
-        to_mask = ops.reshape(to_mask, (batch_size, 1, to_seq_length)).astype(mindspore.float32)
+        to_mask = ops.reshape(to_mask, (batch_size, 1, to_seq_length)).float()
 
         # We don't assume that `from_tensor` is a mask (although it could be). We
         # don't actually care if we attend *from* padding tokens (only *to* padding)
         # tokens so we create a tensor of all ones.
-        broadcast_ones = ops.ones((batch_size, from_seq_length, 1), dtype=mindspore.float32)
+        broadcast_ones = ops.ones(batch_size, from_seq_length, 1, dtype=mindspore.float32)
 
         # Here we broadcast along two dimensions to create the mask.
         mask = broadcast_ones * to_mask
@@ -853,11 +878,11 @@ class CanineModel(CaninePreTrainedModel):
 
         # next, apply MaxPool1d to get pooled_molecule_mask of shape (batch_size, 1, mol_seq_len)
         pooled_molecule_mask = nn.MaxPool1d(kernel_size=downsampling_rate, stride=downsampling_rate)(
-            poolable_char_mask.astype(mindspore.float32)
+            poolable_char_mask.float()
         )
 
         # finally, squeeze to get tensor of shape (batch_size, mol_seq_len)
-        molecule_attention_mask = ops.squeeze(pooled_molecule_mask, axis=-2)
+        molecule_attention_mask = ops.squeeze(pooled_molecule_mask, dim=-1)
 
         return molecule_attention_mask
 
@@ -868,23 +893,25 @@ class CanineModel(CaninePreTrainedModel):
 
         molecules_without_extra_cls = molecules[:, 1:, :]
         # `repeated`: [batch_size, almost_char_seq_len, molecule_hidden_size]
-        repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, axis=-2)
+        repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, dim=-2)
+
         # So far, we've repeated the elements sufficient for any `char_seq_length`
         # that's a multiple of `downsampling_rate`. Now we account for the last
         # n elements (n < `downsampling_rate`), i.e. the remainder of floor
         # division. We do this by repeating the last molecule a few extra times.
         last_molecule = molecules[:, -1:, :]
+        remainder_length = ops.fmod(mindspore.tensor(char_seq_length), mindspore.tensor(rate)).item()
         remainder_repeated = ops.repeat_interleave(
             last_molecule,
             # +1 molecule to compensate for truncation.
-            repeats=char_seq_length - rate if char_seq_length == 7 else char_seq_length % rate + rate,
-            axis=-2,
+            repeats=remainder_length + rate,
+            dim=-2,
         )
 
         # `repeated`: [batch_size, char_seq_len, molecule_hidden_size]
-        return ops.cat([repeated, remainder_repeated], axis=-2)
+        return ops.cat([repeated, remainder_repeated], dim=-2)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -917,7 +944,7 @@ class CanineModel(CaninePreTrainedModel):
         batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length)))
+            attention_mask = ops.ones(batch_size, seq_length)
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
@@ -995,7 +1022,7 @@ class CanineModel(CaninePreTrainedModel):
 
         # Concatenate representations (contextualized char embeddings and repeated molecules):
         # `concat`: shape [batch_size, char_seq_len, molecule_hidden_size+char_hidden_final]
-        concat = ops.cat([input_char_encoding, repeated_molecules], axis=-1)
+        concat = ops.cat([input_char_encoding, repeated_molecules], dim=-1)
 
         # Project representation dimension back to hidden_size
         # `sequence_output`: shape (batch_size, char_seq_len, hidden_size])
@@ -1048,13 +1075,13 @@ class CanineForSequenceClassification(CaninePreTrainedModel):
         self.num_labels = config.num_labels
 
         self.canine = CanineModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1097,20 +1124,20 @@ class CanineForSequenceClassification(CaninePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == ops.int):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1128,13 +1155,13 @@ class CanineForMultipleChoice(CaninePreTrainedModel):
         super().__init__(config)
 
         self.canine = CanineModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1161,7 +1188,7 @@ class CanineForMultipleChoice(CaninePreTrainedModel):
         token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
         position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
         inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1186,7 +1213,7 @@ class CanineForMultipleChoice(CaninePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1206,13 +1233,13 @@ class CanineForTokenClassification(CaninePreTrainedModel):
         self.num_labels = config.num_labels
 
         self.canine = CanineModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1226,43 +1253,41 @@ class CanineForTokenClassification(CaninePreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
-            `Union[Tuple, TokenClassifierOutput]`
 
         Example:
-            ```python
-            >>> from transformers import AutoTokenizer, CanineForTokenClassification
-            >>> import torch
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google/canine-s")
-            >>> model = CanineForTokenClassification.from_pretrained("google/canine-s")
-            ...
-            >>> inputs = tokenizer(
-            ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="pt"
-            ... )
-            ...
-            >>> with torch.no_grad():
-            ...     logits = model(**inputs).logits
-            ...
-            >>> predicted_token_class_ids = logits.argmax(-1)
-            ...
-            >>> # Note that tokens are classified rather then input words which means that
-            >>> # there might be more predicted token classes than words.
-            >>> # Multiple token classes might account for the same word
-            >>> predicted_tokens_classes = [model.config.id2label[t.item()] for t in predicted_token_class_ids[0]]
-            >>> predicted_tokens_classes  # doctest: +SKIP
-            ```
 
-            ```python
-            >>> labels = predicted_token_class_ids
-            >>> loss = model(**inputs, labels=labels).loss
-            >>> round(loss.item(), 2)  # doctest: +SKIP
-            ```
-        """
+        ```python
+        >>> from transformers import AutoTokenizer, CanineForTokenClassification
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/canine-s")
+        >>> model = CanineForTokenClassification.from_pretrained("google/canine-s")
+
+        >>> inputs = tokenizer(
+        ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="pt"
+        ... )
+
+        >>> with ops.no_grad():
+        ...     logits = model(**inputs).logits
+
+        >>> predicted_token_class_ids = logits.argmax(-1)
+
+        >>> # Note that tokens are classified rather then input words which means that
+        >>> # there might be more predicted token classes than words.
+        >>> # Multiple token classes might account for the same word
+        >>> predicted_tokens_classes = [model.config.id2label[t.item()] for t in predicted_token_class_ids[0]]
+        >>> predicted_tokens_classes  # doctest: +SKIP
+        ```
+
+        ```python
+        >>> labels = predicted_token_class_ids
+        >>> loss = model(**inputs, labels=labels).loss
+        >>> round(loss.item(), 2)  # doctest: +SKIP
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.canine(
@@ -1284,7 +1309,7 @@ class CanineForTokenClassification(CaninePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1304,12 +1329,12 @@ class CanineForQuestionAnswering(CaninePreTrainedModel):
         self.num_labels = config.num_labels
 
         self.canine = CanineModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1363,11 +1388,11 @@ class CanineForQuestionAnswering(CaninePreTrainedModel):
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
-            start_positions.clamp(0, ignored_index)
-            end_positions.clamp(0, ignored_index)
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1381,7 +1406,6 @@ class CanineForQuestionAnswering(CaninePreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-
 
 __all__ = [
     "CanineForMultipleChoice",

@@ -23,7 +23,9 @@ from typing import Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal, XavierUniform
 
 from mindnlp.utils import (
@@ -79,7 +81,7 @@ class ViTMAEDecoderOutput(ModelOutput):
 
     Args:
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, patch_size ** 2 * num_channels)`):
-            Pixel reconstruction logits.
+            Pixel reforwardion logits.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
@@ -102,9 +104,9 @@ class ViTMAEForPreTrainingOutput(ModelOutput):
 
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`):
-            Pixel reconstruction loss.
+            Pixel reforwardion loss.
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, patch_size ** 2 * num_channels)`):
-            Pixel reconstruction logits.
+            Pixel reforwardion logits.
         mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Tensor indicating which patches are masked (1) and which are not (0).
         ids_restore (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
@@ -188,7 +190,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
     return emb
 
 
-class ViTMAEEmbeddings(nn.Cell):
+class ViTMAEEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings.
 
@@ -213,7 +215,7 @@ class ViTMAEEmbeddings(nn.Cell):
             self.position_embeddings.shape[-1], int(self.patch_embeddings.num_patches**0.5), add_cls_token=True
         )
         self.position_embeddings.assign_value(Tensor.from_numpy(pos_embed).float().unsqueeze(0))
-        # initialize patch_embeddings like nn.Dense (instead of nn.Conv2d)
+        # initialize patch_embeddings like nn.Linear (instead of nn.Conv2d)
 
         w = self.patch_embeddings.projection.weight.data
         w.set_data(Tensor((initializer(XavierUniform(), shape=w.shape, dtype=mindspore.float32))))
@@ -251,7 +253,7 @@ class ViTMAEEmbeddings(nn.Cell):
 
         return sequence_unmasked, mask, ids_restore
 
-    def construct(self, pixel_values, noise=None):
+    def forward(self, pixel_values, noise=None):
         batch_size, num_channels, height, width = pixel_values.shape
         embeddings = self.patch_embeddings(pixel_values)
 
@@ -269,7 +271,7 @@ class ViTMAEEmbeddings(nn.Cell):
         return embeddings, mask, ids_restore
 
 
-class ViTMAEPatchEmbeddings(nn.Cell):
+class ViTMAEPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -288,9 +290,9 @@ class ViTMAEPatchEmbeddings(nn.Cell):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -305,7 +307,7 @@ class ViTMAEPatchEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfAttention ViT->ViTMAE
-class ViTMAESelfAttention(nn.Cell):
+class ViTMAESelfAttention(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -318,9 +320,9 @@ class ViTMAESelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -329,7 +331,7 @@ class ViTMAESelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -366,7 +368,7 @@ class ViTMAESelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->ViTMAE
-class ViTMAESelfOutput(nn.Cell):
+class ViTMAESelfOutput(nn.Module):
     """
     The residual connection is defined in ViTMAELayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -374,10 +376,10 @@ class ViTMAESelfOutput(nn.Cell):
 
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -385,7 +387,7 @@ class ViTMAESelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->ViTMAE
-class ViTMAEAttention(nn.Cell):
+class ViTMAEAttention(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
         self.attention = ViTMAESelfAttention(config)
@@ -403,14 +405,14 @@ class ViTMAEAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -425,16 +427,16 @@ class ViTMAEAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate ViT->ViTMAE
-class ViTMAEIntermediate(nn.Cell):
+class ViTMAEIntermediate(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -442,13 +444,13 @@ class ViTMAEIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTOutput ViT->ViTMAE
-class ViTMAEOutput(nn.Cell):
+class ViTMAEOutput(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor:mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor:mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -458,7 +460,7 @@ class ViTMAEOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMAE
-class ViTMAELayer(nn.Cell):
+class ViTMAELayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: ViTMAEConfig) -> None:
@@ -468,10 +470,10 @@ class ViTMAELayer(nn.Cell):
         self.attention = ViTMAEAttention(config)
         self.intermediate = ViTMAEIntermediate(config)
         self.output = ViTMAEOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -502,14 +504,14 @@ class ViTMAELayer(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTEncoder with ViT->ViTMAE
-class ViTMAEEncoder(nn.Cell):
+class ViTMAEEncoder(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViTMAELayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ViTMAELayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -567,7 +569,7 @@ class ViTMAEPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
@@ -587,7 +589,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         self.embeddings = ViTMAEEmbeddings(config)
         self.encoder = ViTMAEEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -603,7 +605,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         noise: Optional[mindspore.Tensor] = None,
@@ -670,10 +672,10 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         )
 
 
-class ViTMAEDecoder(nn.Cell):
+class ViTMAEDecoder(nn.Module):
     def __init__(self, config, num_patches):
         super().__init__()
-        self.decoder_embed = nn.Dense(config.hidden_size, config.decoder_hidden_size, has_bias=True)
+        self.decoder_embed = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=True)
         self.mask_token = Parameter(ops.zeros(1, 1, config.decoder_hidden_size), 'mask_token')
         self.decoder_pos_embed = Parameter(
             ops.zeros(1, num_patches + 1, config.decoder_hidden_size),  'decoder_pos_embed', requires_grad=False
@@ -684,13 +686,13 @@ class ViTMAEDecoder(nn.Cell):
         decoder_config.num_hidden_layers = config.decoder_num_hidden_layers
         decoder_config.num_attention_heads = config.decoder_num_attention_heads
         decoder_config.intermediate_size = config.decoder_intermediate_size
-        self.decoder_layers = nn.CellList(
+        self.decoder_layers = nn.ModuleList(
             [ViTMAELayer(decoder_config) for _ in range(config.decoder_num_hidden_layers)]
         )
 
-        self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], epsilon=config.layer_norm_eps)
-        self.decoder_pred = nn.Dense(
-            config.decoder_hidden_size, config.patch_size**2 * config.num_channels, has_bias=True
+        self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], eps=config.layer_norm_eps)
+        self.decoder_pred = nn.Linear(
+            config.decoder_hidden_size, config.patch_size**2 * config.num_channels, bias=True
         )  # encoder to decoder
         self.gradient_checkpointing = False
         self.config = config
@@ -706,7 +708,7 @@ class ViTMAEDecoder(nn.Cell):
         # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
         self.mask_token.set_data(Tensor((initializer(Normal(sigma=self.config.initializer_range), shape=self.mask_token.shape, dtype=mindspore.float32))))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         ids_restore,
@@ -866,7 +868,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
                 Tensor indicating which patches are masked (1) and which are not (0).
 
         Returns:
-            `mindspore.Tensor`: Pixel reconstruction loss.
+            `mindspore.Tensor`: Pixel reforwardion loss.
         """
         target = self.patchify(pixel_values)
         if self.config.norm_pix_loss:
@@ -880,7 +882,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         noise: Optional[mindspore.Tensor] = None,

@@ -21,11 +21,12 @@ from copy import deepcopy
 from typing import Dict, Optional
 
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.train.serialization import _exec_save
 
 from .config import PeftConfig, PromptLearningConfig
-from .._legacy.abc import CellDict
+from mindnlp.core.nn import ModuleDict
 from ..transformers import PreTrainedModel
 
 from .tuners import (
@@ -72,7 +73,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LN_TUNING: LNTuningModel,
 }
 
-class PeftModel(nn.Cell):
+class PeftModel(nn.Module):
     """
     Base model encompassing various Peft methods.
 
@@ -298,7 +299,7 @@ class PeftModel(nn.Cell):
             prompt_tokens = prompt_tokens[:, : self.peft_config[adapter_name].num_virtual_tokens]
 
         if self.peft_config[adapter_name].peft_type == PeftType.MULTITASK_PROMPT_TUNING:
-            prompt_embeddings = super(MultitaskPromptEmbedding, prompt_encoder).construct(prompt_tokens) # pylint: disable=bad-super-call
+            prompt_embeddings = super(MultitaskPromptEmbedding, prompt_encoder).forward(prompt_tokens) # pylint: disable=bad-super-call
         else:
             prompt_embeddings = prompt_encoder(prompt_tokens)
 
@@ -367,11 +368,11 @@ class PeftModel(nn.Cell):
         except AttributeError:
             return getattr(self.base_model, name)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         """
         Forward pass of the model.
         """
-        # print(self.get_base_model().layers[0].__class__.construct)
+        # print(self.get_base_model().layers[0].__class__.forward)
         return self.get_base_model()(*args, **kwargs)
 
     def generate(self, *args, **kwargs):
@@ -483,7 +484,7 @@ class PeftModelForSequenceClassification(PeftModel):
         # to make sure classifier layer is trainable
         _set_trainable(self, adapter_name)
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -579,7 +580,7 @@ class PeftModelForCausalLM(PeftModel):
         super().__init__(model, peft_config, adapter_name)
         self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -741,7 +742,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
             self.base_model._prepare_encoder_decoder_kwargs_for_generation
         )
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -965,7 +966,7 @@ class PeftModelForTokenClassification(PeftModel):
         # to make sure classifier layer is trainable
         _set_trainable(self, adapter_name)
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,

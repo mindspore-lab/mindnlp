@@ -15,7 +15,7 @@
 from abc import ABC, abstractmethod
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import Uniform, initializer
 
 # from torch.distributions.relaxed_bernoulli import RelaxedBernoulli
@@ -39,7 +39,7 @@ class RelaxedBernoulli:
         return ops.sigmoid(sample)
 
 
-def get_router(poly_config: PolyConfig) -> nn.Cell:
+def get_router(poly_config: PolyConfig) -> nn.Module:
     if poly_config.poly_type == "poly":
         return PolyRouter(poly_config)
     else:
@@ -50,12 +50,12 @@ def get_router(poly_config: PolyConfig) -> nn.Cell:
         )
 
 
-class Router(nn.Cell, ABC):
+class Router(nn.Module, ABC):
     @abstractmethod
     def reset(self): ...
 
     @abstractmethod
-    def construct(self, task_ids: mindspore.Tensor, input_ids: mindspore.Tensor): ...
+    def forward(self, task_ids: mindspore.Tensor, input_ids: mindspore.Tensor): ...
 
 
 class PolyRouter(Router):
@@ -82,7 +82,7 @@ class PolyRouter(Router):
             )
         )
 
-    def construct(self, task_ids: mindspore.Tensor, input_ids: mindspore.Tensor):
+    def forward(self, task_ids: mindspore.Tensor, input_ids: mindspore.Tensor):
         if task_ids is None:
             raise ValueError("task_ids should not be None.")
         if task_ids.max().item() >= self.n_tasks:

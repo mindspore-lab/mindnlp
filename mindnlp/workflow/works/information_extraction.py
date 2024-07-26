@@ -209,7 +209,7 @@ class UIEWork(Work):
 
         self._summary_token_num = 3  # [CLS] prompt [SEP] text [SEP]
 
-        self._construct_model(model)
+        self._forward_model(model)
 
         if not schema:
             logging.warning(
@@ -220,7 +220,7 @@ class UIEWork(Work):
             self.set_schema(schema)
 
         self._usage = usage
-        self._construct_tokenizer(model=model)
+        self._forward_tokenizer(model=model)
 
     def set_schema(self, schema):
         """
@@ -256,7 +256,7 @@ class UIEWork(Work):
                 )
         return schema_tree
 
-    def _construct_model(self, model):
+    def _forward_model(self, model):
         """
         Construct the model.
         """
@@ -264,7 +264,7 @@ class UIEWork(Work):
         self._model = model_instance
         self._model.set_train(False)
 
-    def _construct_tokenizer(self, model):
+    def _forward_tokenizer(self, model):
         """
         Construct the tokenizer.
         """

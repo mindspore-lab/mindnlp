@@ -19,7 +19,7 @@ from dataclasses import asdict
 from enum import Enum
 from typing import Any
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.peft.tuners.tuners_utils import (
     BaseTuner,
@@ -49,9 +49,9 @@ class PolyModel(BaseTuner):
         self,
         poly_config: PolyConfig,
         adapter_name: str,
-        target: nn.Cell,
+        target: nn.Module,
         target_name: str,
-        parent: nn.Cell,
+        parent: nn.Module,
         **optional_kwargs: Any,
     ):
         if isinstance(target, PolyLayer):
@@ -94,7 +94,7 @@ class PolyModel(BaseTuner):
         #         weight = child.qweight if hasattr(child, "qweight") else child.weight
         #         cell.to(weight.device)
 
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         for name, cell in model.parameters_and_names():
             if self.prefix not in name:
                 cell.requires_grad = False
@@ -106,18 +106,18 @@ class PolyModel(BaseTuner):
         else:
             target_base_layer = target
 
-        if isinstance(target_base_layer, nn.Dense):
+        if isinstance(target_base_layer, nn.Linear):
             return Dense(target, adapter_name, poly_config, **kwargs)
         else:
             raise ValueError(
                 f"Target cell {target} is not supported. Currently, only the following cells are supported: "
-                "`nn.Dense`."
+                "`nn.Linear`."
             )
 
     def __getattr__(self, name: str):
         """Construct missing attributes to the wrapped cell."""
         try:
-            return super().__getattr__(name)  # defer to nn.Cell's logic
+            return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
 
@@ -189,7 +189,7 @@ class PolyModel(BaseTuner):
             for handle in handles:
                 handle.remove()
 
-    def construct(self, *args, task_ids=None, **kwargs):
+    def forward(self, *args, task_ids=None, **kwargs):
         with self._manage_pre_hooks(task_ids):
             return self.model(*args, **kwargs)
 

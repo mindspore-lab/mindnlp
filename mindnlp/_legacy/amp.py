@@ -17,7 +17,7 @@ Auto mixed precision api.
 """
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter, context, jit_class
 from mindspore.ops import constexpr
 import mindspore.common.dtype as mstype
@@ -27,7 +27,7 @@ from mindnlp.utils import less_min_pynative_first
 
 # For AMP white list
 AMP_WHITE_LIST = (
-    nn.Dense,
+    nn.Linear,
     nn.Conv1d,
     nn.Conv2d,
     nn.Conv3d,
@@ -52,7 +52,7 @@ AMP_BLACK_LIST = (
     nn.LayerNorm
 )
 
-class _OutputTo32(nn.Cell):
+class _OutputTo32(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
     def __init__(self, op):
         r"""
@@ -71,7 +71,7 @@ class _OutputTo32(nn.Cell):
         super().__init__(auto_prefix=False)
         self._op = op
 
-    def construct(self, *x):
+    def forward(self, *x):
         r"""
         Constructs and returns a float32 tensor.
         
@@ -79,7 +79,7 @@ class _OutputTo32(nn.Cell):
             *x (tuple): The input tensor(s) to be cast to float32. Variable number of tensor inputs can be passed as arguments.
         
         Returns:
-            None. The method returns the constructed float32 tensor.
+            None. The method returns the forwarded float32 tensor.
         
         Raises:
             - TypeError: If the input tensor(s) cannot be cast to float32.
@@ -87,7 +87,7 @@ class _OutputTo32(nn.Cell):
         """
         return ops.cast(self._op(*x), mstype.float32)
 
-class _OutputTo16(nn.Cell):
+class _OutputTo16(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
     def __init__(self, op):
         r"""
@@ -106,9 +106,9 @@ class _OutputTo16(nn.Cell):
         super().__init__(auto_prefix=False)
         self._op = op
 
-    def construct(self, *x):
+    def forward(self, *x):
         r"""
-        This method constructs a new instance of _OutputTo16 class.
+        This method forwards a new instance of _OutputTo16 class.
         
         Args:
             *x: Variable length argument list. The input values to be cast to float16.

@@ -431,7 +431,7 @@ def spectrogram(
 
     Note: This function is not optimized for speed yet. It should be mostly compatible with `librosa.stft` and
     `torchaudio.functional.transforms.Spectrogram`, although it is more flexible due to the different ways spectrograms
-    can be constructed.
+    can be forwarded.
 
     Args:
         waveform (`np.ndarray` of shape `(length,)`):

@@ -17,12 +17,12 @@
 """p-tuning model"""
 import warnings
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from .config import PromptEncoderConfig, PromptEncoderReparameterizationType
 
 
-class PromptEncoder(nn.Cell):
+class PromptEncoder(nn.Module):
     """
     The prompt encoder network that is used to generate the virtual token embeddings for p-tuning.
 
@@ -117,9 +117,9 @@ class PromptEncoder(nn.Cell):
                 )
 
                 self.mlp_head = nn.SequentialCell(
-                    nn.Dense(self.hidden_size * 2, self.hidden_size * 2),
+                    nn.Linear(self.hidden_size * 2, self.hidden_size * 2),
                     nn.ReLU(),
-                    nn.Dense(self.hidden_size * 2, self.output_size),
+                    nn.Linear(self.hidden_size * 2, self.output_size),
                 )
 
             elif self.encoder_type == PromptEncoderReparameterizationType.MLP:
@@ -130,18 +130,18 @@ class PromptEncoder(nn.Cell):
                         f"Exactly {encoder_num_layers_default} MLP layers are used."
                     )
                 layers = [
-                    nn.Dense(self.input_size, self.hidden_size),
+                    nn.Linear(self.input_size, self.hidden_size),
                     nn.ReLU(),
-                    nn.Dense(self.hidden_size, self.hidden_size),
+                    nn.Linear(self.hidden_size, self.hidden_size),
                     nn.ReLU(),
-                    nn.Dense(self.hidden_size, self.output_size),
+                    nn.Linear(self.hidden_size, self.output_size),
                 ]
                 self.mlp_head = nn.SequentialCell(*layers)
 
             else:
                 raise ValueError("Prompt encoder type not recognized. Please use one of MLP (recommended) or LSTM.")
 
-    def construct(self, indices):
+    def forward(self, indices):
         """
         Forward method in the PromptEncoder class.
         
