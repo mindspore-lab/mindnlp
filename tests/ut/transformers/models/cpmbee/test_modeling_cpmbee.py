@@ -79,9 +79,9 @@ class CpmBeeModelTester:
 
     def prepare_config_and_inputs(self):
         input_ids = {}
-        input_ids["input_ids"] = ids_tensor([self.batch_size, self.seq_length], self.vocab_size).astype(mindspore.int32)
-        input_ids["span"] = ids_tensor([self.batch_size, self.seq_length], self.vocab_size).astype(mindspore.int32)
-        input_ids["length"] = ops.full((self.batch_size,), self.seq_length).astype(mindspore.int32)
+        input_ids["input_ids"] = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        input_ids["span"] = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        input_ids["length"] = ops.full((self.batch_size,), self.seq_length, dtype=mindspore.int64)
         input_ids["use_cache"] = False
 
         config = self.get_config()

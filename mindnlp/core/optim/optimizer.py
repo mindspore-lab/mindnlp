@@ -101,19 +101,7 @@ def _disable_dynamo_if_unsupported(single_tensor_fn=None):
         # the capturable flag. If capturable=True, this is not a problem.
         @functools.wraps(func)
         def maybe_fallback(*args, **kwargs):
-            if is_compiling() and (
-                not kwargs.get("capturable", False)
-                and has_state_steps
-                and (args[state_steps_ind] and args[state_steps_ind][0].is_cuda)
-                or (
-                    "state_steps" in kwargs
-                    and kwargs["state_steps"]
-                    and kwargs["state_steps"][0].is_cuda
-                )
-            ):
-                return disabled_func(*args, **kwargs)
-            else:
-                return func(*args, **kwargs)
+            return func(*args, **kwargs)
 
         return maybe_fallback
 

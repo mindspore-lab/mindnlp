@@ -557,6 +557,8 @@ def repeat_interleave(input, repeats, dim=None):
     return ops.repeat_elements(input, repeats, dim)
 
 # roll
+def roll(input, shifts, dims=None):
+    return mindspore.numpy.roll(input, shifts, dims)
 
 # searchsorted
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):
@@ -619,3 +621,28 @@ def contains(self, key):
     eq_res = eq(self, key)
     res = any(eq_res)
     return bool(res)
+
+def initialize(self, init_method):
+    r"""
+    Initializes the object with the given initialization method.
+    
+    Args:
+        self (object): The instance of the class.
+        init_method (str): The method used for initialization.
+            This parameter determines how the data is initialized.
+            Valid values for `init_method` are:
+                - "random": Initializes the data with random values.
+                - "zeros": Initializes the data with zeros.
+                - "ones": Initializes the data with ones.
+            Default value is "random".
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None.
+    
+    Note:
+        This function sets the data of the object using the specified `init_method` and the object's shape and data type.
+    """
+    self.set_data(initializer(init_method, self.shape, self.dtype))

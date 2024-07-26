@@ -28,7 +28,7 @@ from ...modeling_outputs import (
     QuestionAnsweringModelOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from .convbert_config import ConvBertConfig
+from .configuration_convbert import ConvBertConfig
 from ...ms_utils import (
     find_pruneable_heads_and_indices,
     prune_linear_layer,

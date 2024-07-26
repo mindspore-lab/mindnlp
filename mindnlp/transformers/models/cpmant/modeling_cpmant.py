@@ -156,7 +156,7 @@ class CpmAntAttention(nn.Module):
 
         self.attention_out = nn.Linear(self.num_heads * self.dim_head, self.dim_model, bias=False)
 
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         if config.dropout_p is not None:
             self.dropout = nn.Dropout(p=config.dropout_p)
@@ -204,8 +204,8 @@ class CpmAntAttention(nn.Module):
         value = value.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)
 
         if past_key_values is not None:
-            key = ops.cat([past_key_values[0], key], axis=-2)
-            value = ops.cat([past_key_values[1], value], axis=-2)
+            key = ops.cat([past_key_values[0], key], dim=-2)
+            value = ops.cat([past_key_values[1], value], dim=-2)
             len_k = key.shape[-2]
 
         # (batch_size, num_heads, len_q, dim_head) @ (batch_size, num_heads, dim_head, len_k) -> (batch_size, num_heads, len_q, len_k)
@@ -215,14 +215,14 @@ class CpmAntAttention(nn.Module):
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.Tensor(False),
-            ops.scalar_to_tensor(float("-inf"), dtype=score.dtype),
+            float("-inf"),
         )
         score = self.softmax(score)
 
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.Tensor(False),
-            ops.scalar_to_tensor(0, dtype=score.dtype),
+            0.,
         )
         if output_attentions:
             attn_weights = score
@@ -1233,17 +1233,17 @@ class CpmAntModel(CpmAntPreTrainedModel):
         seqlen = input_ids.shape[1]
         directional_mask_2d = ops.arange(seqlen) <= ops.arange(seqlen).view(-1, 1)
         attention_mask = context[:, None, :] | (
-            context[:, :, None].logical_not() & directional_mask_2d.view(1, seqlen, seqlen)
+            context[:, :, None].logical_not().to(mindspore.int32) & directional_mask_2d.view(1, seqlen, seqlen).to(mindspore.int32)
         )
-        attention_mask = attention_mask & (span[:, None, :] == span[:, :, None])
+        attention_mask = attention_mask.to(mindspore.int32) & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
         # mask for left padding
         mask_1d = (
-            mindspore.Tensor(list(range(seqlen - self.prompt_length))[::-1])[None, :].repeat(batch, 1)
+            ops.tile(mindspore.tensor(list(range(seqlen - self.prompt_length))[::-1])[None, :], (batch, 1))
             < length[:, None]
-        )
-        mask_1d = ops.cat((ops.ones(batch, self.prompt_length).bool(), mask_1d), axis=1)
+        ).to(mindspore.int32)
+        mask_1d = ops.cat((ops.ones(batch, self.prompt_length, dtype=mindspore.int32), mask_1d), dim=1)
         attention_mask = mask_1d.view(batch, seqlen, 1) & mask_1d.view(batch, 1, seqlen) & attention_mask
-        return attention_mask
+        return attention_mask.to(mindspore.bool_)
 
     def forward(
         self,
@@ -1310,12 +1310,12 @@ class CpmAntModel(CpmAntPreTrainedModel):
                 ).tile((input_ids.shape[0], 1)),
                 input_ids,
             ),
-            axis=1,
+            dim=1,
         )
         batch, seq_length = input_ids.shape
-        segment = ops.cat((ops.zeros(batch, self.prompt_length, dtype=dtype), segment), axis=1)
+        segment = ops.cat((ops.zeros(batch, self.prompt_length, dtype=dtype), segment), dim=1)
         context = ops.full((batch, seq_length), 1, dtype=dtype)
-        position = ops.arange(seq_length, dtype=dtype).repeat(batch, 1)
+        position = ops.tile(ops.arange(seq_length, dtype=dtype), (batch, 1))
         span = ops.full((batch, seq_length), 0, dtype=dtype)
 
         if past_key_values is None:
@@ -1516,7 +1516,7 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]

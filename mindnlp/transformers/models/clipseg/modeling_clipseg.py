@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-from mindspore.nn import BCEWithLogitsLoss
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -159,7 +159,7 @@ class CLIPSegVisionEmbeddings(nn.Module):
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
     def interpolate_position_embeddings(self, new_size):
         if len(new_size) != 2:
@@ -185,8 +185,8 @@ class CLIPSegVisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values)  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
 
         if embeddings.shape[1] != self.num_positions:
             new_shape = int(math.sqrt(embeddings.shape[1] - 1))
@@ -208,7 +208,7 @@ class CLIPSegTextEmbeddings(nn.Module):
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
 
     def forward(
@@ -305,7 +305,7 @@ class CLIPSegAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -317,7 +317,7 @@ class CLIPSegAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1013,8 +1013,8 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         text_embeds = self.text_projection(text_embeds)
 
         # normalized features
-        image_embeds = image_embeds / image_embeds.norm(ord=2, dim=-1, keepdim=True)
-        text_embeds = text_embeds / text_embeds.norm(ord=2, dim=-1, keepdim=True)
+        image_embeds = image_embeds / ops.norm(image_embeds, p=2, dim=-1, keepdim=True)
+        text_embeds = text_embeds / ops.norm(text_embeds, p=2, dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
@@ -1109,22 +1109,22 @@ class CLIPSegDecoder(CLIPSegPreTrainedModel):
         if config.use_complex_transposed_convolution:
             transposed_kernels = (config.vision_config.patch_size // 4, config.vision_config.patch_size // 4)
 
-            self.transposed_convolution = nn.SequentialCell(
+            self.transposed_convolution = nn.Sequential(
                 nn.Conv2d(config.reduce_dim, config.reduce_dim, kernel_size=3),
                 nn.ReLU(),
-                nn.Conv2dTranspose(
+                nn.ConvTranspose2d(
                     config.reduce_dim,
                     config.reduce_dim // 2,
                     kernel_size=transposed_kernels[0],
                     stride=transposed_kernels[0],
                 ),
                 nn.ReLU(),
-                nn.Conv2dTranspose(
+                nn.ConvTranspose2d(
                     config.reduce_dim // 2, 1, kernel_size=transposed_kernels[1], stride=transposed_kernels[1]
                 ),
             )
         else:
-            self.transposed_convolution = nn.Conv2dTranspose(
+            self.transposed_convolution = nn.ConvTranspose2d(
                 config.reduce_dim, 1, config.vision_config.patch_size, stride=config.vision_config.patch_size
             )
 
@@ -1344,8 +1344,7 @@ class CLIPSegForImageSegmentation(CLIPSegPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fn = BCEWithLogitsLoss()
-            loss = loss_fn(logits, labels)
+            loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits, conditional_embeddings, pooled_output, vision_outputs, decoder_outputs)
