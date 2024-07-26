@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...modeling_outputs import (
@@ -53,7 +54,7 @@ def positional_encoding(position, d_model_size, dtype):
     sines = ops.sin(angle_rads[:, 0::2])
     cosines = ops.cos(angle_rads[:, 1::2])
 
-    pos_encoding = ops.cat([sines, cosines], axis=-1)
+    pos_encoding = ops.cat([sines, cosines], dim=-1)
     return pos_encoding
 
 
@@ -72,7 +73,7 @@ def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=N
         # Apply the attention mask
         scaled_attention_logits = scaled_attention_logits + attention_mask
 
-    attention_weights = ops.softmax(scaled_attention_logits, axis=-1)
+    attention_weights = ops.softmax(scaled_attention_logits, dim=-1)
 
     # Mask heads if we want to
     if head_mask is not None:
@@ -144,8 +145,8 @@ class MultiHeadAttention(nn.Module):
         v = self.split_into_heads(v, batch_size)
         if layer_past is not None:
             past_key, past_value = layer_past[0], layer_past[1]
-            k = ops.cat((past_key, k), axis=-2)
-            v = ops.cat((past_value, v), axis=-2)
+            k = ops.cat((past_key, k), dim=-2)
+            v = ops.cat((past_value, v), dim=-2)
 
         if use_cache is True:
             present = ops.stack((k, v))
@@ -167,7 +168,7 @@ class MultiHeadAttention(nn.Module):
 
 
 def point_wise_feed_forward_network(d_model_size, dff):
-    return nn.SequentialCell(
+    return nn.Sequential(
         nn.Linear(d_model_size, dff), nn.ReLU(), nn.Linear(dff, d_model_size)
     )
 
@@ -241,7 +242,7 @@ class CTRLPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -583,7 +584,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1)
             )
 
@@ -782,15 +783,15 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     pooled_logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[2:]
             return ((loss,) + output) if loss is not None else output

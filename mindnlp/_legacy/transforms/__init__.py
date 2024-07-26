@@ -14,3 +14,5 @@
 # ============================================================================
 
 """dataset transforms for legacy mindspore"""
+from .add_token import AddToken
+from .truncate import Truncate

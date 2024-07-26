@@ -2,6 +2,7 @@
 import math
 import warnings
 from typing import Optional, Tuple, List
+import mindspore.mint.nn.functional
 import numpy as np
 import mindspore
 from mindspore import ops, Tensor
@@ -136,6 +137,9 @@ def pad(input, pad, mode='constant', value=0.0):
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
 
+def mse_loss(input, target, reduction='mean'):
+    return ops.mse_loss(input, target, reduction)
+
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.softmax(input, dim, dtype=dtype)
@@ -174,27 +178,27 @@ def normalize(input, p=2.0, dim=1):
     return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.batch_norm(
-                input,
-                running_mean,
-                running_var,
-                weight,
-                bias,
-                training,
-                momentum,
-                eps
-            )
-        return ops.batch_norm(
-                input,
-                running_mean,
-                running_var,
-                weight,
-                bias,
-                training,
-                momentum,
-                eps
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.batch_norm(
+            input,
+            running_mean,
+            running_var,
+            weight,
+            bias,
+            training,
+            momentum,
+            eps
         )
+    return ops.batch_norm(
+        input,
+        running_mean,
+        running_var,
+        weight,
+        bias,
+        training,
+        momentum,
+        eps
+    )
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
@@ -670,8 +674,8 @@ def multi_head_attention_forward(
     # add zero attention along batch dimension (now first)
     if add_zero_attn:
         zero_attn_shape = (bsz * num_heads, 1, head_dim)
-        k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], dim=1)
-        v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], dim=1)
+        k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], axis=1)
+        v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], axis=1)
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
@@ -788,3 +792,13 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     elif isinstance(input, mindspore.Tensor):
         return input.dtype
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
+
+def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
+    # if USE_PYBOOST:
+    #     return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
+    return ops.unfold(input, kernel_size, dilation, padding, stride)
+
+def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
+    return ops.fold(input, output_size, kernel_size, dilation, padding, stride)

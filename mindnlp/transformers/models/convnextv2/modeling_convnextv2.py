@@ -18,10 +18,11 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...backbone_utils import BackboneMixin
 from ...activations import ACT2FN
@@ -48,9 +49,6 @@ _IMAGE_CLASS_CHECKPOINT = "facebook/convnextv2-tiny-1k-224"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 
-#from ..deprecated._archive_maps import CONVNEXTV2_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
-
-
 # Copied from transformers.models.beit.modeling_beit.drop_path
 def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
@@ -67,7 +65,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor_()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -113,24 +111,22 @@ class ConvNextV2LayerNorm(nn.Module):
 
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         super().__init__()
-        self.weight = Parameter(ops.ones(normalized_shape), 'weight')
-        self.bias = Parameter(ops.zeros(normalized_shape), 'bias')
+        self.weight = nn.Parameter(ops.ones(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
         self.eps = eps
         self.data_format = data_format
         if self.data_format not in ["channels_last", "channels_first"]:
             raise NotImplementedError(f"Unsupported data format: {self.data_format}")
         self.normalized_shape = (normalized_shape,)
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                        begin_params_axis=-1,
-                                        epsilon=self.eps)
+
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         if self.data_format == "channels_last":
-            x, _, _ = self.layer_norm(x, self.weight, self.bias)
+            x = nn.functional.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
         elif self.data_format == "channels_first":
             input_dtype = x.dtype
             x = x.float()
-            u = x.mean(1, keep_dims =True)
-            s = (x - u).pow(2).mean(1, keep_dims =True)
+            u = x.mean(1, keep_dims=True)
+            s = (x - u).pow(2).mean(1, keep_dims=True)
             x = (x - u) / ops.sqrt(s + self.eps)
             x = x.to(dtype=input_dtype)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
@@ -146,7 +142,7 @@ class ConvNextV2Embeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
-            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size, pad_mode='valid', bias=True
+            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size
         )
         self.layernorm = ConvNextV2LayerNorm(config.hidden_sizes[0], eps=1e-6, data_format="channels_first")
         self.num_channels = config.num_channels
@@ -179,7 +175,8 @@ class ConvNextV2Layer(nn.Module):
     def __init__(self, config, dim, drop_path=0):
         super().__init__()
         # depthwise conv
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, group=dim, pad_mode='pad', bias=True)
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim)
+
         self.layernorm = ConvNextV2LayerNorm(dim, eps=1e-6)
         # pointwise/1x1 convs, implemented with linear layers
         self.pwconv1 = nn.Linear(dim, 4 * dim)
@@ -221,14 +218,14 @@ class ConvNextV2Stage(nn.Module):
         super().__init__()
 
         if in_channels != out_channels or stride > 1:
-            self.downsampling_layer = nn.SequentialCell(
+            self.downsampling_layer = nn.Sequential(
                 ConvNextV2LayerNorm(in_channels, eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', bias=True),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride),
             )
         else:
             self.downsampling_layer = nn.Identity()
         drop_path_rates = drop_path_rates or [0.0] * depth
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[ConvNextV2Layer(config, dim=out_channels, drop_path=drop_path_rates[j]) for j in range(depth)]
         )
 
@@ -304,7 +301,7 @@ class ConvNextV2PreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -415,13 +412,14 @@ class ConvNextV2ForImageClassification(ConvNextV2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops. binary_cross_entropy_with_logitst(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
+
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -431,7 +429,6 @@ class ConvNextV2ForImageClassification(ConvNextV2PreTrainedModel):
             logits=logits,
             hidden_states=outputs.hidden_states,
         )
-
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextBackbone with CONVNEXT->CONVNEXTV2,ConvNext->ConvNextV2,facebook/convnext-tiny-224->facebook/convnextv2-tiny-1k-224
