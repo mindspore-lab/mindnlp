@@ -38,7 +38,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import FSMTForConditionalGeneration, FSMTModel, FSMTTokenizer
     from mindnlp.transformers.models.fsmt.modeling_fsmt import (

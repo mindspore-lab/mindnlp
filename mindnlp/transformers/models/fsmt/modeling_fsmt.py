@@ -31,7 +31,8 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 import numpy as np
 
@@ -231,7 +232,7 @@ def _prepare_fsmt_decoder_inputs(
         decoder_padding_mask = make_padding_mask(decoder_input_ids, pad_token_id)
     else:
         decoder_padding_mask = invert_mask(decoder_padding_mask)
-    causal_mask = triu_onnx(fill_with_neg_inf(ops.zeros((tgt_len, tgt_len), dtype=causal_mask_dtype)), 1)
+    causal_mask = triu_onnx(fill_with_neg_inf(ops.zeros(tgt_len, tgt_len, dtype=causal_mask_dtype)), 1)
     return decoder_input_ids, decoder_padding_mask, causal_mask
 
 class PretrainedFSMTModel(PreTrainedModel):
@@ -240,7 +241,7 @@ class PretrainedFSMTModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -265,7 +266,7 @@ class PretrainedFSMTModel(PreTrainedModel):
 
 def _make_linear_from_emb(emb):
     vocab_size, emb_size = emb.weight.shape
-    lin_layer = nn.Dense(vocab_size, emb_size, has_bias=False)
+    lin_layer = nn.Linear(vocab_size, emb_size, bias=False)
     lin_layer.weight.data = emb.weight.data
     return lin_layer
 
@@ -300,7 +301,7 @@ def make_padding_mask(input_ids, padding_idx=1):
 # Helper Modules
 
 
-class EncoderLayer(nn.Cell):
+class EncoderLayer(nn.Module):
     def __init__(self, config: FSMTConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -309,11 +310,11 @@ class EncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(self, x, encoder_padding_mask, layer_head_mask, output_attentions=False):
+    def forward(self, x, encoder_padding_mask, layer_head_mask, output_attentions=False):
         """
         Args:
             x (`mindspore.Tensor`): input to the layer of shape *(seq_len, batch, embed_dim)*
@@ -335,21 +336,21 @@ class EncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.self_attn_layer_norm(x)
 
         residual = x
         x = self.activation_fn(self.fc1(x))
-        x = ops.dropout(x, p=self.activation_dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.activation_dropout, training=self.training)
         x = self.fc2(x)
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.final_layer_norm(x)
         return x, attn_weights
 
 
-class FSMTEncoder(nn.Cell):
+class FSMTEncoder(nn.Module):
     """
     Transformer encoder consisting of *config.encoder_layers* self attention layers. Each layer is a [`EncoderLayer`].
 
@@ -363,15 +364,15 @@ class FSMTEncoder(nn.Cell):
         self.layerdrop = config.encoder_layerdrop
         self.padding_idx = embed_tokens.padding_idx
         self.embed_tokens = embed_tokens
-        # embed_dim = embed_tokens.embedding_dim
-        embed_dim = embed_tokens.embedding_size
+        embed_dim = embed_tokens.embedding_dim
+        # embed_dim = embed_tokens.embedding_size
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
         self.embed_positions = SinusoidalPositionalEmbedding(
             config.max_position_embeddings + self.padding_idx + 1, embed_dim, self.padding_idx
         )
-        self.layers = nn.CellList([EncoderLayer(config) for _ in range(config.encoder_layers)])  # type: List[EncoderLayer]
+        self.layers = nn.ModuleList([EncoderLayer(config) for _ in range(config.encoder_layers)])  # type: List[EncoderLayer]
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -426,7 +427,7 @@ class FSMTEncoder(nn.Cell):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         x = inputs_embeds + embed_pos
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
 
         # B x T x C -> T x B x C
         x = x.swapaxes(0, 1)
@@ -469,7 +470,7 @@ class FSMTEncoder(nn.Cell):
         return BaseModelOutput(last_hidden_state=x, hidden_states=encoder_states, attentions=all_attentions)
 
 
-class DecoderLayer(nn.Cell):
+class DecoderLayer(nn.Module):
     def __init__(self, config: FSMTConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -491,11 +492,11 @@ class DecoderLayer(nn.Cell):
             encoder_decoder_attention=True,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         x,
         encoder_hidden_states,
@@ -522,7 +523,7 @@ class DecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.self_attn_layer_norm(x)
 
@@ -537,16 +538,16 @@ class DecoderLayer(nn.Cell):
             layer_head_mask=cross_attn_layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.encoder_attn_layer_norm(x)
 
         # Fully Connected
         residual = x
         x = self.activation_fn(self.fc1(x))
-        x = ops.dropout(x, p=self.activation_dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.activation_dropout, training=self.training)
         x = self.fc2(x)
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.final_layer_norm(x)
         return (
@@ -557,7 +558,7 @@ class DecoderLayer(nn.Cell):
         )  # layer_state = cache for decoding
 
 
-class FSMTDecoder(nn.Cell):
+class FSMTDecoder(nn.Module):
     """
     Transformer decoder consisting of *config.decoder_layers* layers. Each layer is a [`DecoderLayer`]
 
@@ -573,12 +574,12 @@ class FSMTDecoder(nn.Cell):
         self.padding_idx = embed_tokens.padding_idx
         self.embed_scale = math.sqrt(config.d_model) if config.scale_embedding else 1.0
         self.embed_tokens = embed_tokens
-        # embed_dim = embed_tokens.embedding_dim
-        embed_dim = embed_tokens.embedding_size
+        embed_dim = embed_tokens.embedding_dim
+        # embed_dim = embed_tokens.embedding_size
         self.embed_positions = SinusoidalPositionalEmbedding(
             config.max_position_embeddings + self.padding_idx + 1, embed_dim, self.padding_idx
         )
-        self.layers = nn.CellList([DecoderLayer(config) for _ in range(config.decoder_layers)])  # type: List[DecoderLayer]
+        self.layers = nn.ModuleList([DecoderLayer(config) for _ in range(config.decoder_layers)])  # type: List[DecoderLayer]
 
         # import deepspeed
 
@@ -588,13 +589,13 @@ class FSMTDecoder(nn.Cell):
 
         # else:
         #     embed_tokens_weight_shape = self.embed_tokens.weight.shape
-        self.output_projection = nn.Dense(embed_tokens_weight_shape[1], embed_tokens_weight_shape[0], has_bias=False)
+        self.output_projection = nn.Linear(embed_tokens_weight_shape[1], embed_tokens_weight_shape[0], bias=False)
         self.output_projection.weight = self.embed_tokens.weight
 
     def _tie_weights(self):
         self.embed_tokens.weight = self.output_projection.weight
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         encoder_hidden_states: mindspore.Tensor,
@@ -666,7 +667,7 @@ class FSMTDecoder(nn.Cell):
             raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
 
         x += positions
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
 
         # Convert to FSMT output format: (BS, seq_len, model_dim) -> (seq_len, BS, model_dim)
         x = x.swapaxes(0, 1)
@@ -751,7 +752,7 @@ def _reorder_buffer(attn_cache, new_order):
     return attn_cache
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -771,16 +772,16 @@ class Attention(nn.Cell):
         self.scaling = self.head_dim**-0.5
 
         self.encoder_decoder_attention = encoder_decoder_attention
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.cache_key = "encoder_decoder" if self.encoder_decoder_attention else "self"
 
     def _shape(self, tensor, seq_len, bsz):
         return tensor.view(seq_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
 
-    def construct(
+    def forward(
         self,
         query,
         key: Optional[mindspore.Tensor],
@@ -855,7 +856,7 @@ class Attention(nn.Cell):
             attn_weights = attn_weights.masked_fill(reshaped, np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             assert layer_head_mask.shape == (
@@ -871,7 +872,7 @@ class Attention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(
+        attn_probs = mindspore.ops.dropout(
             attn_weights,
             p=self.dropout,
             training=self.training,
@@ -895,7 +896,7 @@ class Attention(nn.Cell):
                 k = prev_key
             else:
                 assert k is not None
-                k = ops.cat([prev_key, k], axis=1)
+                k = ops.cat([prev_key, k], dim=1)
         if "prev_value" in saved_state:
             _prev_value = saved_state["prev_value"]
             assert _prev_value is not None
@@ -904,14 +905,14 @@ class Attention(nn.Cell):
                 v = prev_value
             else:
                 assert v is not None
-                v = ops.cat([prev_value, v], axis=1)
+                v = ops.cat([prev_value, v], dim=1)
         assert k is not None and v is not None
         prev_key_padding_mask: Optional[mindspore.Tensor] = saved_state.get("prev_key_padding_mask", None)
         if prev_key_padding_mask is not None:
             if static_kv:
                 new_key_padding_mask = prev_key_padding_mask
             else:
-                new_key_padding_mask = ops.cat([prev_key_padding_mask, key_padding_mask], axis=1)
+                new_key_padding_mask = ops.cat([prev_key_padding_mask, key_padding_mask], dim=1)
         else:
             new_key_padding_mask = key_padding_mask
         return k, v, new_key_padding_mask
@@ -954,7 +955,7 @@ class FSMTModel(PretrainedFSMTModel):
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.get_input_embeddings())
             self._tie_or_clone_weights(self.decoder.output_projection, self.get_input_embeddings())
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1071,7 +1072,7 @@ class FSMTForConditionalGeneration(PretrainedFSMTModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1125,7 +1126,7 @@ class FSMTForConditionalGeneration(PretrainedFSMTModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.tgt_vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.tgt_vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1235,10 +1236,10 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
         return emb
@@ -1255,9 +1256,9 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
         # prefers ints, cumsum defaults to output longs, and ONNX doesn't know
         # how to handle the dtype kwarg in cumsum.
         mask = tensor.ne(padding_idx).int()
-        return (ops.cumsum(mask, axis=1).type_as(mask) * mask).long() + padding_idx
+        return (ops.cumsum(mask, dim=1).type_as(mask) * mask).long() + padding_idx
 
-    def construct(
+    def forward(
         self,
         input,
         incremental_state: Optional[Any] = None,
@@ -1268,8 +1269,9 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
         max_pos = self.padding_idx + 1 + seq_len
         if max_pos > self.weight.shape[0]:
             # expand embeddings if needed
-            self.make_weight(max_pos, self.embedding_size, self.padding_idx)
+            # self.make_weight(max_pos, self.embedding_size, self.padding_idx)
+            self.make_weight(max_pos, self.embedding_dim, self.padding_idx)
         positions = self.make_positions(input, self.padding_idx)
-        return super().construct(positions)
+        return super().forward(positions)
 
 __all__ =  ["FSMTForConditionalGeneration", "FSMTModel", "PretrainedFSMTModel"]
