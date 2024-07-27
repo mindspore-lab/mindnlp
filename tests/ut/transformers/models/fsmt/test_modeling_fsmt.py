@@ -49,7 +49,7 @@ if is_mindspore_available():
     )
     # from mindnlp.transformers.pipelines import TranslationPipeline
 
-mindspore.set_context(device_target="CPU")
+# mindspore.set_context(device_target="CPU")
 
 class FSMTModelTester:
     def __init__(
