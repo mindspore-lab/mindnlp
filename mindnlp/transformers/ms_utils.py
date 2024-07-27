@@ -18,14 +18,14 @@ import inspect
 from typing import Union, Optional, List, Tuple
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp._legacy.nn import Matmul
+from mindnlp.core import nn
 
 ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 
-class Conv1D(nn.Cell):
+class Conv1D(nn.Module):
     """
     1D-convolutional layer Basically works like a linear layer but the weights are transposed.
 
@@ -52,9 +52,8 @@ class Conv1D(nn.Cell):
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
         self.bias = Parameter(ops.zeros(n_out))
-        self.matmul = Matmul()
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the 1D convolutional operation on the input tensor x.
         
@@ -71,12 +70,12 @@ class Conv1D(nn.Cell):
             RuntimeError: If there are any runtime issues during the convolution operation.
         """
         size_out = x.shape[:-1] + (self.n_out,)
-        x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
+        x = ops.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
 
 
-def prune_conv1d_layer(layer, index, axis=1):
+def prune_conv1d_layer(layer, index, dim=1):
     """
     Prune a Conv1D layer to keep only entries in index. A Conv1D work as a Linear layer (see e.g. BERT) but the weights
     are transposed.
@@ -91,13 +90,13 @@ def prune_conv1d_layer(layer, index, axis=1):
     Returns:
         [`~mindspore_utils.Conv1D`]: The pruned layer as a new layer with `requires_grad=True`.
     """
-    gama_l = layer.weight.index_select(axis, index)
-    if axis == 0:
+    gama_l = layer.weight.index_select(dim, index)
+    if dim == 0:
         beta_l = layer.bias
     else:
         beta_l = layer.bias[index]
     new_size = list(layer.weight.shape)
-    new_size[axis] = len(index)
+    new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
     new_layer.weight = gama_l.copy()
@@ -131,28 +130,28 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
     index = ops.arange(len(mask), dtype=mindspore.int64)[mask]
     return heads, index
 
-def prune_linear_layer(layer, index, axis=0):
+def prune_linear_layer(layer, index, dim=0):
     """
     Prune a linear layer to keep only entries in index.
     Used to remove heads.
 
     Args:
-        layer (`mindspore.nn.Dense`): The layer to prune.
+        layer (`mindspore.nn.Linear`): The layer to prune.
         index (`mindspore.Tensor[int64]`): The indices to keep in the layer.
         axis (`int`, *optional*, defaults to 0): The dimension on which to keep the indices.
 
     Returns:
-        `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
+        `mindspore.nn.Linear`: The pruned layer as a new layer with `requires_grad=True`.
     """
-    W = layer.weight.index_select(axis, index).copy()
+    W = layer.weight.index_select(dim, index).copy()
     if layer.bias is not None:
-        if axis == 1:
+        if dim == 1:
             b = layer.bias.copy()
         else:
             b = layer.bias[index].copy()
     new_size = list(layer.weight.shape)
-    new_size[axis] = len(index)
-    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.bias is not None)
+    new_size[dim] = len(index)
+    new_layer = nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None)
     new_layer.weight.requires_grad = False
     new_layer.weight.set_data(W)
     new_layer.weight.requires_grad = True

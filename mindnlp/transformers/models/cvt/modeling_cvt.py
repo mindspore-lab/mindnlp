@@ -20,9 +20,11 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_outputs import ImageClassifierOutputWithNoAttention, ModelOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -79,14 +81,14 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
+    random_tensor = keep_prob + ops.rand(*shape, dtype=input.dtype)
     random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath
-class CvtDropPath(nn.Cell):
+class CvtDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
@@ -106,9 +108,9 @@ class CvtDropPath(nn.Cell):
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a modified version of the input hidden_states tensor using the drop_path operation.
+        This method forwards a modified version of the input hidden_states tensor using the drop_path operation.
         
         Args:
             self (CvtDropPath): The instance of the CvtDropPath class.
@@ -141,7 +143,7 @@ class CvtDropPath(nn.Cell):
         return "p={}".format(self.drop_prob)
 
 
-class CvtEmbeddings(nn.Cell):
+class CvtEmbeddings(nn.Module):
     """
     Construct the CvT embeddings.
     """
@@ -171,7 +173,7 @@ class CvtEmbeddings(nn.Cell):
         )
         self.dropout = nn.Dropout(p=dropout_rate)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         """
         Constructs the hidden state using convolutional embeddings.
         
@@ -180,19 +182,19 @@ class CvtEmbeddings(nn.Cell):
             pixel_values (array-like): An array-like object containing pixel values for image data.
         
         Returns:
-            numpy.ndarray: The hidden state constructed using convolutional embeddings.
+            numpy.ndarray: The hidden state forwarded using convolutional embeddings.
         
         Raises:
             ValueError: If the pixel_values parameter is empty or not valid.
             TypeError: If the pixel_values parameter is not array-like.
-            RuntimeError: If an unexpected error occurs during the construction process.
+            RuntimeError: If an unexpected error occurs during the forwardion process.
         """
         hidden_state = self.convolution_embeddings(pixel_values)
         hidden_state = self.dropout(hidden_state)
         return hidden_state
 
 
-class CvtConvEmbeddings(nn.Cell):
+class CvtConvEmbeddings(nn.Module):
     """
     Image to Conv Embedding.
     """
@@ -227,10 +229,10 @@ class CvtConvEmbeddings(nn.Cell):
         super().__init__()
         patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
         self.patch_size = patch_size
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding, pad_mode='pad', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding)
         self.normalization = nn.LayerNorm(embed_dim)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         """
         Constructs the pixel embeddings for a given set of pixel values.
 
@@ -257,12 +259,12 @@ class CvtConvEmbeddings(nn.Cell):
         return pixel_values
 
 
-class CvtSelfAttentionConvProjection(nn.Cell):
+class CvtSelfAttentionConvProjection(nn.Module):
 
     """
     CvtSelfAttentionConvProjection represents a class for performing convolution and normalization operations
-    on input data. This class inherits from nn.Cell and provides methods for initializing the
-    convolution and normalization layers, as well as for constructing the output from the input hidden state.
+    on input data. This class inherits from nn.Module and provides methods for initializing the
+    convolution and normalization layers, as well as for forwarding the output from the input hidden state.
 
     Attributes:
         embed_dim (int): The dimension of the input embedding.
@@ -272,7 +274,7 @@ class CvtSelfAttentionConvProjection(nn.Cell):
 
     Methods:
         __init__: Initializes the CvtSelfAttentionConvProjection class with the specified parameters.
-        construct: Constructs the output from the input hidden state by applying convolution and normalization operations.
+        forward: Constructs the output from the input hidden state by applying convolution and normalization operations.
 
     """
     def __init__(self, embed_dim, kernel_size, padding, stride):
@@ -298,14 +300,13 @@ class CvtSelfAttentionConvProjection(nn.Cell):
             embed_dim,
             kernel_size=kernel_size,
             padding=padding,
-            pad_mode='pad',
             stride=stride,
-            has_bias=False,
-            group=embed_dim,
+            bias=False,
+            groups=embed_dim,
         )
         self.normalization = nn.BatchNorm2d(embed_dim)
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs a hidden state using convolution, normalization, and projection in the CvtSelfAttentionConvProjection class.
 
@@ -324,20 +325,20 @@ class CvtSelfAttentionConvProjection(nn.Cell):
         return hidden_state
 
 
-class CvtSelfAttentionLinearProjection(nn.Cell):
+class CvtSelfAttentionLinearProjection(nn.Module):
 
     """
-    The 'CvtSelfAttentionLinearProjection' class is a Python class that inherits from the 'nn.Cell' class.
+    The 'CvtSelfAttentionLinearProjection' class is a Python class that inherits from the 'nn.Module' class.
     It represents a linear projection operation applied to hidden states in a self-attention mechanism.
 
     Attributes:
         None.
 
     Methods:
-        construct(hidden_state): Applies a linear projection to the input hidden state.
+        forward(hidden_state): Applies a linear projection to the input hidden state.
 
     """
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs a linear projection of hidden state for self-attention in the CvtSelfAttentionLinearProjection class.
 
@@ -363,7 +364,7 @@ class CvtSelfAttentionLinearProjection(nn.Cell):
         return hidden_state
 
 
-class CvtSelfAttentionProjection(nn.Cell):
+class CvtSelfAttentionProjection(nn.Module):
 
     """
     A class representing the projection layer for self-attention in a Convolutional Transformer network.
@@ -382,12 +383,12 @@ class CvtSelfAttentionProjection(nn.Cell):
         __init__:
             Initializes the projection layer with the specified parameters.
 
-        construct:
+        forward:
             Applies the convolutional projection followed by the linear projection to the input hidden state.
             Returns the projected hidden state.
 
     Note:
-        This class inherits from nn.Cell and is designed to be used within a Convolutional Transformer network.
+        This class inherits from nn.Module and is designed to be used within a Convolutional Transformer network.
     """
     def __init__(self, embed_dim, kernel_size, padding, stride, projection_method="dw_bn"):
         """
@@ -412,7 +413,7 @@ class CvtSelfAttentionProjection(nn.Cell):
             self.convolution_projection = CvtSelfAttentionConvProjection(embed_dim, kernel_size, padding, stride)
         self.linear_projection = CvtSelfAttentionLinearProjection()
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs the self-attention projection for the CvtSelfAttentionProjection class.
 
@@ -431,10 +432,10 @@ class CvtSelfAttentionProjection(nn.Cell):
         return hidden_state
 
 
-class CvtSelfAttention(nn.Cell):
+class CvtSelfAttention(nn.Module):
 
     """
-    This class represents a Convolutional Self-Attention layer for a neural network model. It inherits from the nn.Cell class.
+    This class represents a Convolutional Self-Attention layer for a neural network model. It inherits from the nn.Module class.
 
     Attributes:
         num_heads (int): The number of attention heads.
@@ -456,7 +457,7 @@ class CvtSelfAttention(nn.Cell):
         rearrange_for_multi_head_attention(self, hidden_state):
             Rearranges the input hidden state for multi-head attention computations.
 
-        construct(self, hidden_state, height, width):
+        forward(self, hidden_state, height, width):
             Constructs the CvtSelfAttention layer by performing convolutional projections, multi-head attention calculations, and output rearrangement.
 
     Note:
@@ -530,9 +531,9 @@ class CvtSelfAttention(nn.Cell):
             embed_dim, kernel_size, padding_kv, stride_kv, projection_method=qkv_projection_method
         )
 
-        self.projection_query = nn.Dense(embed_dim, embed_dim, has_bias=qkv_bias)
-        self.projection_key = nn.Dense(embed_dim, embed_dim, has_bias=qkv_bias)
-        self.projection_value = nn.Dense(embed_dim, embed_dim, has_bias=qkv_bias)
+        self.projection_query = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
+        self.projection_key = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
+        self.projection_value = nn.Linear(embed_dim, embed_dim, bias=qkv_bias)
 
         self.dropout = nn.Dropout(p=attention_drop_rate)
 
@@ -568,7 +569,7 @@ class CvtSelfAttention(nn.Cell):
         # rearrange 'b t (h d) -> b h t d'
         return hidden_state.view(batch_size, hidden_size, self.num_heads, head_dim).permute(0, 2, 1, 3)
 
-    def construct(self, hidden_state, height, width):
+    def forward(self, hidden_state, height, width):
         """
         Constructs the self-attention context for the CvtSelfAttention class.
 
@@ -597,9 +598,9 @@ class CvtSelfAttention(nn.Cell):
         value = self.convolution_projection_value(hidden_state)
 
         if self.with_cls_token:
-            query = ops.cat((cls_token, query), axis=1)
-            key = ops.cat((cls_token, key), axis=1)
-            value = ops.cat((cls_token, value), axis=1)
+            query = ops.cat((cls_token, query), dim=1)
+            key = ops.cat((cls_token, key), dim=1)
+            value = ops.cat((cls_token, value), dim=1)
 
         head_dim = self.embed_dim // self.num_heads
 
@@ -608,7 +609,7 @@ class CvtSelfAttention(nn.Cell):
         value = self.rearrange_for_multi_head_attention(self.projection_value(value))
 
         attention_score = ops.einsum("bhlk,bhtk->bhlt", query, key) * self.scale
-        attention_probs = ops.softmax(attention_score, axis=-1)
+        attention_probs = ops.softmax(attention_score, dim=-1)
         attention_probs = self.dropout(attention_probs)
 
         context = ops.einsum("bhlt,bhtv->bhlv", attention_probs, value)
@@ -618,7 +619,7 @@ class CvtSelfAttention(nn.Cell):
         return context
 
 
-class CvtSelfOutput(nn.Cell):
+class CvtSelfOutput(nn.Module):
     """
     The residual connection is defined in CvtLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -639,10 +640,10 @@ class CvtSelfOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(embed_dim, embed_dim)
+        self.dense = nn.Linear(embed_dim, embed_dim)
         self.dropout = nn.Dropout(p=drop_rate)
 
-    def construct(self, hidden_state, input_tensor):
+    def forward(self, hidden_state, input_tensor):
         """
         Constructs the output of the CvtSelfOutput class.
 
@@ -652,7 +653,7 @@ class CvtSelfOutput(nn.Cell):
                 This tensor represents the current state of the model and is expected to have shape (batch_size, hidden_size).
                 It serves as input to the dense layer and will be transformed.
             input_tensor (Tensor): The input tensor to the method.
-                This tensor represents additional input to the construct method and can be of any shape.
+                This tensor represents additional input to the forward method and can be of any shape.
 
         Returns:
             None.
@@ -665,12 +666,12 @@ class CvtSelfOutput(nn.Cell):
         return hidden_state
 
 
-class CvtAttention(nn.Cell):
+class CvtAttention(nn.Module):
 
     """
     This class represents an attention mechanism for the Cvt model.
     It includes methods for initializing the attention mechanism, pruning specific attention heads,
-    and constructing the attention output.
+    and forwarding the attention output.
 
     Attributes:
         num_heads (int): Number of attention heads.
@@ -693,11 +694,11 @@ class CvtAttention(nn.Cell):
         prune_heads(heads):
             Prunes specified attention heads based on the provided indices.
 
-        construct(hidden_state, height, width):
+        forward(hidden_state, height, width):
             Constructs the attention output using the input hidden state and spatial dimensions.
 
     Inherits from:
-        nn.Cell
+        nn.Module
     """
     def __init__(
         self,
@@ -792,14 +793,14 @@ class CvtAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(self, hidden_state, height, width):
+    def forward(self, hidden_state, height, width):
         """
         Constructs an attention output based on the given hidden state, height, and width.
 
@@ -820,7 +821,7 @@ class CvtAttention(nn.Cell):
         return attention_output
 
 
-class CvtIntermediate(nn.Cell):
+class CvtIntermediate(nn.Module):
 
     """
     Represents an intermediate layer in a Convolutional Vision Transformer (CVT) network.
@@ -835,11 +836,11 @@ class CvtIntermediate(nn.Cell):
     Methods:
         __init__(self, embed_dim, mlp_ratio):
             Initializes the CvtIntermediate object with the specified embedding dimension and MLP ratio.
-        construct(self, hidden_state):
+        forward(self, hidden_state):
             Constructs the intermediate layer by applying a dense layer and GELU activation function to the input hidden state.
 
     Inherits from:
-        nn.Cell
+        nn.Module
     """
     def __init__(self, embed_dim, mlp_ratio):
         """
@@ -857,10 +858,10 @@ class CvtIntermediate(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(embed_dim, int(embed_dim * mlp_ratio))
+        self.dense = nn.Linear(embed_dim, int(embed_dim * mlp_ratio))
         self.activation = nn.GELU()
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs the hidden state of the CvtIntermediate class.
 
@@ -874,7 +875,7 @@ class CvtIntermediate(nn.Cell):
         Raises:
             None.
 
-        This method takes in the 'hidden_state' and applies transformations to it in order to construct the
+        This method takes in the 'hidden_state' and applies transformations to it in order to forward the
         hidden state of the CvtIntermediate class.
         The 'hidden_state' is first passed through a dense layer using the 'self.dense' function.
         Then, the resulting tensor is passed through the activation function specified by the 'self.activation' attribute.
@@ -887,12 +888,12 @@ class CvtIntermediate(nn.Cell):
         return hidden_state
 
 
-class CvtOutput(nn.Cell):
+class CvtOutput(nn.Module):
 
     """
     The 'CvtOutput' class represents a conversion output module that is used in neural network models.
 
-    This class inherits from the 'nn.Cell' class, which is a base class for all neural network cells in the MindSpore framework.
+    This class inherits from the 'nn.Module' class, which is a base class for all neural network cells in the MindSpore framework.
 
     Methods:
         __init__(self, embed_dim, mlp_ratio, drop_rate):
@@ -904,7 +905,7 @@ class CvtOutput(nn.Cell):
             - mlp_ratio (float): The ratio used to calculate the dimension of the MLP intermediate layer.
             - drop_rate (float): The probability of an element to be zeroed in the dropout layer.
 
-        construct(self, hidden_state, input_tensor):
+        forward(self, hidden_state, input_tensor):
             Constructs the conversion output module by applying operations to the input tensors.
 
             Args:
@@ -933,10 +934,10 @@ class CvtOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(int(embed_dim * mlp_ratio), embed_dim)
+        self.dense = nn.Linear(int(embed_dim * mlp_ratio), embed_dim)
         self.dropout = nn.Dropout(p=drop_rate)
 
-    def construct(self, hidden_state, input_tensor):
+    def forward(self, hidden_state, input_tensor):
         """
         Constructs the output of the CvtOutput class.
 
@@ -961,7 +962,7 @@ class CvtOutput(nn.Cell):
         return hidden_state
 
 
-class CvtLayer(nn.Cell):
+class CvtLayer(nn.Module):
     """
     CvtLayer composed by attention layers, normalization and multi-layer perceptrons (mlps).
     """
@@ -1030,9 +1031,9 @@ class CvtLayer(nn.Cell):
         self.layernorm_before = nn.LayerNorm(embed_dim)
         self.layernorm_after = nn.LayerNorm(embed_dim)
 
-    def construct(self, hidden_state, height, width):
+    def forward(self, hidden_state, height, width):
         """
-        This method constructs a layer in the CvtLayer class.
+        This method forwards a layer in the CvtLayer class.
 
         Args:
             self (object): The instance of the CvtLayer class.
@@ -1069,21 +1070,21 @@ class CvtLayer(nn.Cell):
         return layer_output
 
 
-class CvtStage(nn.Cell):
+class CvtStage(nn.Module):
 
     """
-    The CvtStage class represents a stage in the Cross Vision Transformer (Cvt) model. It inherits from nn.Cell and
+    The CvtStage class represents a stage in the Cross Vision Transformer (Cvt) model. It inherits from nn.Module and
     is designed to handle the processing and transformation of input data within a specific stage of the Cvt model.
 
     This class includes methods for initializing the stage with configuration and stage information, as well as
-    constructing the hidden state through a series of operations involving embeddings, layer processing,
+    forwarding the hidden state through a series of operations involving embeddings, layer processing,
     and token manipulation.
 
     The class supports the configuration of parameters such as patch size, stride, number of channels,
     embedding dimensions, padding, dropout rates, depth, number of heads, kernel size, attention and
     multi-layer perceptron (MLP) settings, and the inclusion of a classification (cls) token.
 
-    The construct method is responsible for processing the hidden state by applying the configured embeddings,
+    The forward method is responsible for processing the hidden state by applying the configured embeddings,
     manipulating the hidden state based on the existence of a cls token, and iterating through the
     layers to transform the hidden state. Additionally, it handles the splitting and reshaping of the hidden state
     before returning the updated hidden state and cls token.
@@ -1130,7 +1131,7 @@ class CvtStage(nn.Cell):
 
         drop_path_rates = [x.item() for x in ops.linspace(0, config.drop_path_rate[self.stage], config.depth[stage])]
 
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[
                 CvtLayer(
                     num_heads=config.num_heads[self.stage],
@@ -1152,20 +1153,20 @@ class CvtStage(nn.Cell):
             ]
         )
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs the hidden state for the CvtStage class.
 
         Args:
             self (CvtStage): The instance of the CvtStage class.
-            hidden_state: The hidden state input for constructing the hidden state. It should be a tensor.
+            hidden_state: The hidden state input for forwarding the hidden state. It should be a tensor.
 
         Returns:
             tuple:
-                A tuple containing the constructed hidden state and cls_token.
+                A tuple containing the forwarded hidden state and cls_token.
 
                 The hidden state is a tensor with dimensions (batch_size, num_channels, height, width), representing
-                the constructed hidden state. The cls_token is a tensor with dimensions (batch_size, 1, num_channels),
+                the forwarded hidden state. The cls_token is a tensor with dimensions (batch_size, 1, num_channels),
                 representing the cls_token if it exists, otherwise it is None.
 
         Raises:
@@ -1177,8 +1178,8 @@ class CvtStage(nn.Cell):
         # rearrange b c h w -> b (h w) c"
         hidden_state = hidden_state.view(batch_size, num_channels, height * width).permute(0, 2, 1)
         if self.config.cls_token[self.stage]:
-            cls_token = self.cls_token.expand(batch_size, -1, -1)
-            hidden_state = ops.cat((cls_token, hidden_state), axis=1)
+            cls_token = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+            hidden_state = ops.cat((cls_token, hidden_state), dim=1)
 
         for layer in self.layers:
             layer_outputs = layer(hidden_state, height, width)
@@ -1190,14 +1191,14 @@ class CvtStage(nn.Cell):
         return hidden_state, cls_token
 
 
-class CvtEncoder(nn.Cell):
+class CvtEncoder(nn.Module):
 
     """
-    This class represents a converter encoder used for converting pixel values to hidden states. It is a subclass of nn.Cell.
+    This class represents a converter encoder used for converting pixel values to hidden states. It is a subclass of nn.Module.
 
     Attributes:
         config (Config): The configuration object for the CvtEncoder.
-        stages (nn.CellList): A list of CvtStage instances representing the stages of the converter encoder.
+        stages (nn.ModuleList): A list of CvtStage instances representing the stages of the converter encoder.
 
     Methods:
         __init__(self, config)
@@ -1207,7 +1208,7 @@ class CvtEncoder(nn.Cell):
 
             - config (Config): The configuration object for the CvtEncoder.
 
-        construct(self, pixel_values, output_hidden_states=False, return_dict=True)
+        forward(self, pixel_values, output_hidden_states=False, return_dict=True)
             Constructs the converter encoder model.
 
             Args:
@@ -1239,11 +1240,11 @@ class CvtEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.stages = nn.CellList([])
+        self.stages = nn.ModuleList([])
         for stage_idx in range(len(config.depth)):
             self.stages.append(CvtStage(config, stage_idx))
 
-    def construct(self, pixel_values, output_hidden_states=False, return_dict=True):
+    def forward(self, pixel_values, output_hidden_states=False, return_dict=True):
         """
         Constructs the CvTEncoder.
 
@@ -1291,16 +1292,16 @@ class CvtPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, (nn.Dense, nn.Conv2d)):
-            module.weight.initialize(TruncatedNormal(self.config.initializer_range))
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            ops.initialize(module.weight, TruncatedNormal(self.config.initializer_range))
             if module.bias is not None:
-                module.bias.initialize('zeros')
+                ops.initialize(module.bias, 'zeros')
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize('zeros')
-            module.weight.initialize('ones')
+            ops.initialize(module.bias, 'zeros')
+            ops.initialize(module.weight, 'ones')
         elif isinstance(module, CvtStage):
             if self.config.cls_token[module.stage]:
-                module.cls_token.initialize(TruncatedNormal(self.config.initializer_range))
+                ops.initialize(module.cls_token, TruncatedNormal(self.config.initializer_range))
 
 
 class CvtModel(CvtPreTrainedModel):
@@ -1308,7 +1309,7 @@ class CvtModel(CvtPreTrainedModel):
     """
     CvtModel is a model class that represents a Convolutional Vision Transformer (Cvt) model for processing visual data.
     This class inherits from CvtPreTrainedModel and provides functionalities for initializing the model, pruning heads,
-    and constructing the model output.
+    and forwarding the model output.
 
     Attributes:
         config (CvtConfig): The configuration object for the model.
@@ -1321,7 +1322,7 @@ class CvtModel(CvtPreTrainedModel):
         _prune_heads:
             Prunes specified heads of the model based on the provided dictionary of layer numbers and heads to prune.
 
-        construct:
+        forward:
             Constructs the model output by processing the input pixel values and returning the output hidden states.
             If pixel_values is not provided, a ValueError is raised.
             The output format is determined based on the return_dict flag and the model configuration.
@@ -1356,7 +1357,7 @@ class CvtModel(CvtPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1373,7 +1374,7 @@ class CvtModel(CvtPreTrainedModel):
 
         Returns:
             Union[Tuple, BaseModelOutputWithCLSToken]:
-                The constructed model output.
+                The forwarded model output.
 
                 - If `return_dict` is False, a tuple is returned containing the sequence output and any additional
                 encoder outputs.
@@ -1413,18 +1414,18 @@ class CvtForImageClassification(CvtPreTrainedModel):
 
     """
     CvtForImageClassification is a class that represents a model for image classification utilizing the Cvt architecture.
-    It inherits from the CvtPreTrainedModel class and provides methods for constructing the model and computing
+    It inherits from the CvtPreTrainedModel class and provides methods for forwarding the model and computing
     image classification/regression loss.
 
     Attributes:
         num_labels (int): Number of labels for classification
         cvt (CvtModel): CvtModel instance used for image processing
         layernorm (nn.LayerNorm): Layer normalization module
-        classifier (nn.Dense or nn.Identity): Classifier module for final predictions
+        classifier (nn.Linear or nn.Identity): Classifier module for final predictions
 
     Methods:
         __init__(self, config): Initializes the CvtForImageClassification model with the provided configuration.
-        construct(self, pixel_values, labels, output_hidden_states, return_dict):
+        forward(self, pixel_values, labels, output_hidden_states, return_dict):
             Constructs the model and computes loss for image classification.
 
             Parameters:
@@ -1439,7 +1440,7 @@ class CvtForImageClassification(CvtPreTrainedModel):
           Otherwise, returns an ImageClassifierOutputWithNoAttention instance.
 
     Notes:
-        - The 'construct' method handles the processing of input pixel values, computation of logits,
+        - The 'forward' method handles the processing of input pixel values, computation of logits,
         and determination of loss based on the configuration settings.
         - The loss calculation depends on the problem type (regression, single_label_classification,
         or multi_label_classification) and the number of labels.
@@ -1471,13 +1472,13 @@ class CvtForImageClassification(CvtPreTrainedModel):
         self.layernorm = nn.LayerNorm(config.embed_dim[-1])
         # Classifier head
         self.classifier = (
-            nn.Dense(config.embed_dim[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.embed_dim[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
@@ -1523,13 +1524,13 @@ class CvtForImageClassification(CvtPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

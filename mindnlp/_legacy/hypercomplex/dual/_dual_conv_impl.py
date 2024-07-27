@@ -60,7 +60,7 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   dual: Tensor,
@@ -164,7 +164,7 @@ Initializer object, or a number.
         if self.c_idx < 0:
             raise ValueError(f"Data format {data_format} is unsupported")
 
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   dual: Tensor,
@@ -209,7 +209,7 @@ Initializer object, or a number.
             >>> stride = (1, 1)
             >>> dilation = (1, 1)
             >>> group = 1
-            >>> _ReDuConvImpl.construct(self, conv_fn, real_tensor, dual_tensor, pad_mode, padding, stride, dilation, group)
+            >>> _ReDuConvImpl.forward(self, conv_fn, real_tensor, dual_tensor, pad_mode, padding, stride, dilation, group)
             (tensor([...]), tensor([...]))
         """
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,

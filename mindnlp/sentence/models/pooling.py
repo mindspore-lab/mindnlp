@@ -22,7 +22,7 @@ import mindspore
 from mindspore import nn, Tensor
 
 
-class Pooling(nn.Cell):
+class Pooling(nn.Module):
     """Performs pooling (max or mean) on the token embeddings.
 
     Using pooling, it generates from a variable sized sentence a fixed sized sentence embedding. This layer also allows
@@ -135,7 +135,7 @@ class Pooling(nn.Cell):
 
         return "+".join(modes)
 
-    def construct(self, features: Dict[str, Tensor]):
+    def forward(self, features: Dict[str, Tensor]):
         token_embeddings = features["token_embeddings"]
         attention_mask = features["attention_mask"]
         if not self.include_prompt and "prompt_length" in features:

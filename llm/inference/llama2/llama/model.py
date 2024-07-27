@@ -32,7 +32,7 @@ class ModelArgs:
     max_seq_len: int = 2048
 
 
-class RMSNorm(nn.Cell):
+class RMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
         """
         Initialize the RMSNorm normalization layer.
@@ -173,7 +173,7 @@ def repeat_kv(x: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     )
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     """Multi-head attention module."""
     def __init__(self, args: ModelArgs):
         """
@@ -304,7 +304,7 @@ class Attention(nn.Cell):
         return self.wo(output)
 
 
-class FeedForward(nn.Cell):
+class FeedForward(nn.Module):
     def __init__(
         self,
         dim: int,
@@ -348,7 +348,7 @@ class FeedForward(nn.Cell):
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
 
-class TransformerBlock(nn.Cell):
+class TransformerBlock(nn.Module):
     def __init__(self, layer_id: int, args: ModelArgs):
         """
         Initialize a TransformerBlock.
@@ -410,7 +410,7 @@ class TransformerBlock(nn.Cell):
         return out
 
 
-class Transformer(nn.Cell):
+class Transformer(nn.Module):
     def __init__(self, params: ModelArgs):
         """
         Initialize a Transformer model.
@@ -438,7 +438,7 @@ class Transformer(nn.Cell):
             params.vocab_size, params.dim#, init_method=lambda x: x
         )
 
-        self.layers = nn.CellList()
+        self.layers = nn.ModuleList()
         for layer_id in range(params.n_layers):
             self.layers.append(TransformerBlock(layer_id, params))
 

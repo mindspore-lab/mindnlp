@@ -31,7 +31,7 @@ from ..utils import get_x_and_y, to_2channel
 TBatchNormImpl = TypeVar('TBatchNormImpl', bound=BatchNormImpl)
 
 
-class _BatchNorm(nn.Cell):
+class _BatchNorm(nn.Module):
     r"""
     The base class of the abstract part of Batch Normalization layer over a second-order hypercomplex input
     of some number of dimensions.
@@ -54,7 +54,7 @@ class _BatchNorm(nn.Cell):
     respectively, and :math:`\delta` is a small positive constant, which is needed to avoid division by zero in case
     statistical variance is close to zero.
 
-    This is not a self-sufficient class. In order to construct a fully connected layer, one should instantiate a child
+    This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate a child
     class and an implementor class, which acts like a bridge pattern and determines the exact set of hypercomplex
     numbers. That implies the rules of multiplication and therefore affects how a linear transformation works.
 
@@ -166,8 +166,8 @@ class _BatchNorm(nn.Cell):
 
         self.features_dim = data_format.lower().find('c')
 
-    def construct(self, u: Tensor) -> Tensor:
-        """construct"""
+    def forward(self, u: Tensor) -> Tensor:
+        """forward"""
         u_dtype = u.dtype
         u_shape = P.shape(u)
         self._check_input_dim(u_shape, u_dtype)
@@ -308,7 +308,7 @@ class BatchNorm1d(_BatchNorm):
     respectively, and :math:`\delta` is a small positive constant, which is needed to avoid division by zero in case
     statistical variance is close to zero.
 
-    This is not a self-sufficient class. In order to construct a fully connected layer, one should instantiate this
+    This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate this
     class and an implementor class, which acts like a bridge pattern and determines the exact set of hypercomplex
     numbers. That implies the rules of multiplication and therefore affects how a linear transformation works.
 
@@ -434,7 +434,7 @@ class BatchNorm2d(_BatchNorm):
     respectively, and :math:`\delta` is a small positive constant, which is needed to avoid division by zero in case
     statistical variance is close to zero.
 
-    This is not a self-sufficient class. In order to construct a fully connected layer, one should instantiate this
+    This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate this
     class and an implementor class, which acts like a bridge pattern and determines the exact set of hypercomplex
     numbers. That implies the rules of multiplication and therefore affects how a linear transformation works.
 
@@ -521,7 +521,7 @@ class BatchNorm2d(_BatchNorm):
             raise TypeError(f"Only float16, float32 and complex64 data types are supported, but got {dtype}.")
 
 
-class BatchNorm3d(nn.Cell):
+class BatchNorm3d(nn.Module):
     r"""
     The class of the abstract part of Batch Normalization layer over a second-order hypercomplex input
     of six dimensions, including three spatial dimensions.
@@ -544,7 +544,7 @@ class BatchNorm3d(nn.Cell):
     respectively, and :math:`\delta` is a small positive constant, which is needed to avoid division by zero in case
     statistical variance is close to zero.
 
-    This is not a self-sufficient class. In order to construct a fully connected layer, one should instantiate this
+    This is not a self-sufficient class. In order to forward a fully connected layer, one should instantiate this
     class and an implementor class, which acts like a bridge pattern and determines the exact set of hypercomplex
     numbers. That implies the rules of multiplication and therefore affects how a linear transformation works.
 
@@ -627,8 +627,8 @@ class BatchNorm3d(nn.Cell):
                                 use_batch_statistics=use_batch_statistics,
                                 data_format="NCHW")
 
-    def construct(self, u: Tensor) -> Tensor:
-        """construct"""
+    def forward(self, u: Tensor) -> Tensor:
+        """forward"""
         u_shape = F.shape(u)
         self._check_3d_shape(u_shape, F.dtype(u))
         reshape = list(u_shape)

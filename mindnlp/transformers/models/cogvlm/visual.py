@@ -3,11 +3,11 @@ vit part
 """
 from argparse import Namespace
 import mindspore
-from mindspore import nn,ops
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 
 
-class PatchEmbedding(nn.Cell):
+class PatchEmbedding(nn.Module):
     """
     patch embedding
     """
@@ -32,15 +32,15 @@ class PatchEmbedding(nn.Cell):
         """
         super().__init__()
         self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size,
-                              stride=config.patch_size,pad_mode='valid',has_bias=True)
+                              stride=config.patch_size,pad_mode='valid',bias=True)
         self.cls_embedding = mindspore.Parameter(ops.zeros(1, config.hidden_size))
         self.position_embedding = nn.Embedding(config.num_positions, config.hidden_size)
 
-    def construct(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
+    def forward(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
         """
         Construct method in the PatchEmbedding class.
         
-        This method constructs embeddings from input images.
+        This method forwards embeddings from input images.
         
         Args:
             self: The instance of the PatchEmbedding class.
@@ -62,7 +62,7 @@ class PatchEmbedding(nn.Cell):
         return x
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     """
     attention
     """
@@ -94,20 +94,20 @@ class Attention(nn.Cell):
         self.num_heads = config.num_heads
         head_dim = config.hidden_size // config.num_heads
         self.scale = head_dim ** -0.5
-        self.query_key_value = nn.Dense(config.hidden_size, config.hidden_size * 3)
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.query_key_value = nn.Linear(config.hidden_size, config.hidden_size * 3)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p = config.dropout_prob)
 
-    def construct(self, x: "tensor(B, L, D)") -> "tensor(B, L, D)":
+    def forward(self, x: "tensor(B, L, D)") -> "tensor(B, L, D)":
         """
-        This method 'construct' is a part of the 'Attention' class and is used to construct the output tensor based on the input tensor.
+        This method 'forward' is a part of the 'Attention' class and is used to forward the output tensor based on the input tensor.
         
         Args:
             self: A reference to the current instance of the class.
             x: A tensor of shape (B, L, D) representing the input data, where B is the batch size, L is the sequence length, and D is the input dimension.
         
         Returns:
-            Returns a tensor of shape (B, L, D) representing the constructed output based on the input tensor.
+            Returns a tensor of shape (B, L, D) representing the forwarded output based on the input tensor.
         
         Raises:
             This method does not explicitly raise any exceptions.
@@ -145,7 +145,7 @@ class Attention(nn.Cell):
         return output
 
 
-class MLP(nn.Cell):
+class MLP(nn.Module):
     """
     MLP
     """
@@ -171,12 +171,12 @@ class MLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a multi-layer perceptron (MLP) by applying linear transformations
+        This method forwards a multi-layer perceptron (MLP) by applying linear transformations
         and activation functions to the input tensor.
         
         Args:
@@ -197,7 +197,7 @@ class MLP(nn.Cell):
         return x
 
 
-class TransformerLayer(nn.Cell):
+class TransformerLayer(nn.Module):
     """
     transformer layer
     """
@@ -221,12 +221,12 @@ class TransformerLayer(nn.Cell):
             TypeError: If the config object is not of the expected type.
         """
         super().__init__()
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.attention = Attention(config)
         self.mlp = MLP(config)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the TransformerLayer.
         
@@ -241,7 +241,7 @@ class TransformerLayer(nn.Cell):
             None.
         
         Description:
-            This method constructs a TransformerLayer by applying various operations on the input hidden states.
+            This method forwards a TransformerLayer by applying various operations on the input hidden states.
             It follows the standard Transformer architecture.
         
         The method performs the following steps:
@@ -265,17 +265,17 @@ class TransformerLayer(nn.Cell):
         return output
 
 
-class Transformer(nn.Cell):
+class Transformer(nn.Module):
 
     """
     Represents a Transformer model for sequence-to-sequence tasks.
     
-    This class inherits from the nn.Cell class and implements the Transformer architecture, which consists of multiple
+    This class inherits from the nn.Module class and implements the Transformer architecture, which consists of multiple
     Transformer layers. Each layer module applies self-attention mechanism and position-wise feed-forward networks to
     input hidden states.
     
     The Transformer class initializes with a configuration object and creates a list of Transformer layers based on the
-    specified number of hidden layers in the configuration. The construct method applies the series of Transformer
+    specified number of hidden layers in the configuration. The forward method applies the series of Transformer
     layers to the input hidden states, resulting in transformed hidden states.
     
     This class provides an efficient and flexible implementation of the Transformer model for various natural language
@@ -300,9 +300,9 @@ class Transformer(nn.Cell):
             None.
         """
         super().__init__()
-        self.layers = nn.CellList([TransformerLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([TransformerLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the output by passing the hidden states through each layer module in the Transformer.
         
@@ -323,27 +323,27 @@ class Transformer(nn.Cell):
         return hidden_states
 
 
-class GLU(nn.Cell):
+class GLU(nn.Module):
 
     """ 
     This class represents a Gated Linear Unit (GLU) module, which is used in neural networks for processing
-    sequential data. It is implemented as a subclass of the nn.Cell class.
+    sequential data. It is implemented as a subclass of the nn.Module class.
     
     GLU applies a gating mechanism to the input data, allowing it to selectively pass through different branches of
     the network. It consists of several layers, including linear projections, layer normalization, activation functions,
     and dense transformations.
     
     Attributes:
-        linear_proj (nn.Dense): A linear projection layer that maps the input features to the hidden size.
+        linear_proj (nn.Linear): A linear projection layer that maps the input features to the hidden size.
         norm1 (nn.LayerNorm): A layer normalization module that normalizes the hidden size.
         act1 (nn.GELU): An activation function module that applies the Gaussian Error Linear Unit (GELU) function.
         act2 (ops.silu): An activation function module that applies the Sigmoid Linear Unit (SiLU) function.
-        dense_h_to_4h (nn.Dense): A dense transformation layer that maps the hidden size to the intermediate size.
-        gate_proj (nn.Dense): A dense transformation layer that maps the hidden size to the intermediate size.
-        dense_4h_to_h (nn.Dense): A dense transformation layer that maps the intermediate size back to the hidden size.
+        dense_h_to_4h (nn.Linear): A dense transformation layer that maps the hidden size to the intermediate size.
+        gate_proj (nn.Linear): A dense transformation layer that maps the hidden size to the intermediate size.
+        dense_4h_to_h (nn.Linear): A dense transformation layer that maps the intermediate size back to the hidden size.
     
     Methods:
-        construct(x): Performs the forward pass through the GLU module, taking the input data 'x' and returning
+        forward(x): Performs the forward pass through the GLU module, taking the input data 'x' and returning
             the transformed output.
     
     Example:
@@ -351,7 +351,7 @@ class GLU(nn.Cell):
         >>> in_features = 128
         >>> x = torch.randn(batch_size, in_features)
         >>> glu = GLU(config, in_features)
-        >>> output = glu.construct(x)
+        >>> output = glu.forward(x)
         ...
         >>> # 'output' now contains the transformed input data after passing through the GLU module.
     
@@ -372,15 +372,15 @@ class GLU(nn.Cell):
             None.
         """
         super().__init__()
-        self.linear_proj = nn.Dense(in_features, config.hidden_size, has_bias=False)
+        self.linear_proj = nn.Linear(in_features, config.hidden_size, bias=False)
         self.norm1 = nn.LayerNorm(config.hidden_size)
         self.act1 = nn.GELU(approximate=False)
         self.act2 = ops.silu
-        self.dense_h_to_4h = nn.Dense(config.hidden_size, config.intermediate_size, has_bias=False)
-        self.gate_proj = nn.Dense(config.hidden_size, config.intermediate_size, has_bias=False)
-        self.dense_4h_to_h = nn.Dense(config.intermediate_size, config.hidden_size, has_bias=False)
+        self.dense_h_to_4h = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_proj = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.dense_4h_to_h = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a GLU (Gated Linear Unit) using the given input.
         
@@ -401,12 +401,12 @@ class GLU(nn.Cell):
         return x3
 
 
-class EVA2CLIPModel(nn.Cell):
+class EVA2CLIPModel(nn.Module):
 
     """
     This class represents a model for EVA2CLIP (Embedding Vision and Audio to Clip) task, which combines vision and
     audio inputs to generate video embeddings.
-    It inherits from nn.Cell and contains methods for initializing the model and constructing the forward pass.
+    It inherits from nn.Module and contains methods for initializing the model and forwarding the forward pass.
     
     Attributes:
         patch_embedding (PatchEmbedding): Instance of PatchEmbedding class for extracting image patches.
@@ -417,12 +417,12 @@ class EVA2CLIPModel(nn.Cell):
     
     Methods:
         __init__: Initializes the EVA2CLIPModel with the provided configuration.
-        construct: Constructs the forward pass of the model using the input images.
+        forward: Constructs the forward pass of the model using the input images.
     
     Example:
         ```python
         >>> model = EVA2CLIPModel(config)
-        >>> output = model.construct(images)
+        >>> output = model.forward(images)
         ```
     """
     def __init__(self, config):
@@ -447,7 +447,7 @@ class EVA2CLIPModel(nn.Cell):
         self.boi = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)))
         self.eoi = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)))
 
-    def construct(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
+    def forward(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
         """
         Constructs the EVA2CLIP model by processing the input images.
         

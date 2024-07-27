@@ -19,9 +19,11 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, SequenceClassifierOutput
@@ -51,7 +53,7 @@ AUDIO_SPECTROGRAM_TRANSFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class ASTEmbeddings(nn.Cell):
+class ASTEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings.
     """
@@ -112,9 +114,9 @@ class ASTEmbeddings(nn.Cell):
 
         return frequency_out_dimension, time_out_dimension
 
-    def construct(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method to construct AST embeddings.
+        Method to forward AST embeddings.
 
         Args:
             self (ASTEmbeddings): An instance of the ASTEmbeddings class.
@@ -123,7 +125,7 @@ class ASTEmbeddings(nn.Cell):
 
         Returns:
             mindspore.Tensor:
-                The constructed AST embeddings tensor.
+                The forwarded AST embeddings tensor.
 
                 - Shape: (batch_size, sequence_length + 2, hidden_size). Type: float32.
                 - The tensor includes embeddings for special tokens (CLS token, distillation token),
@@ -135,16 +137,16 @@ class ASTEmbeddings(nn.Cell):
         batch_size = input_values.shape[0]
         embeddings = self.patch_embeddings(input_values)
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        distillation_tokens = self.distillation_token.expand(batch_size, -1, -1)
-        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), axis=1)
+        cls_tokens = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+        distillation_tokens = ops.broadcast_to(self.distillation_token, (batch_size, -1, -1))
+        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), dim=1)
         embeddings = embeddings + self.position_embeddings
         embeddings = self.dropout(embeddings)
 
         return embeddings
 
 
-class ASTPatchEmbeddings(nn.Cell):
+class ASTPatchEmbeddings(nn.Module):
     """
     This class turns `input_values` into the initial `hidden_states` (patch embeddings) of shape `(batch_size,
     seq_length, hidden_size)` to be consumed by a Transformer.
@@ -175,20 +177,16 @@ class ASTPatchEmbeddings(nn.Cell):
         time_stride = config.time_stride
 
         self.projection = nn.Conv2d(
-            1, config.hidden_size,
-            kernel_size=(patch_size, patch_size),
-            stride=(frequency_stride, time_stride),
-            pad_mode='valid',
-            has_bias=True
+            1, config.hidden_size, kernel_size=(patch_size, patch_size), stride=(frequency_stride, time_stride)
         )
 
-    def construct(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs patch embeddings for the input tensor.
 
         Args:
             self (ASTPatchEmbeddings): An instance of the ASTRootEmbeddings class.
-            input_values (mindspore.Tensor): The input tensor to construct patch embeddings from. It should have a shape
+            input_values (mindspore.Tensor): The input tensor to forward patch embeddings from. It should have a shape
                 of (batch_size, num_patches, embed_dim, embed_dim).
 
         Returns:
@@ -206,19 +204,19 @@ class ASTPatchEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfAttention with ViT->AST
-class ASTSelfAttention(nn.Cell):
+class ASTSelfAttention(nn.Module):
 
     """
     This class represents a self-attention mechanism for the AST (Abstract Syntax Tree) model.
     It calculates attention scores and performs attention operations on input hidden states to generate context layers.
     The class includes methods for initializing the self-attention mechanism, reshaping tensors for attention scores calculation,
-    and constructing the attention mechanism output.
+    and forwarding the attention mechanism output.
 
-    The class inherits from nn.Cell and contains the following methods:
+    The class inherits from nn.Module and contains the following methods:
 
     - __init__(self, config: ASTConfig): Initializes the self-attention mechanism with the provided configuration.
     - swapaxes_for_scores(self, x: mindspore.Tensor): Reshapes the input tensor for calculating attention scores.
-    - construct(self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False): Constructs the self-attention mechanism output by performing attention operations on the
+    - forward(self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False): Constructs the self-attention mechanism output by performing attention operations on the
     input hidden states.
 
     The self-attention mechanism involves calculating attention scores, applying softmax to obtain attention probabilities,
@@ -254,9 +252,9 @@ class ASTSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -284,7 +282,7 @@ class ASTSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         """
@@ -318,7 +316,7 @@ class ASTSelfAttention(nn.Cell):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -340,7 +338,7 @@ class ASTSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->AST
-class ASTSelfOutput(nn.Cell):
+class ASTSelfOutput(nn.Module):
     """
     The residual connection is defined in ASTLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -365,10 +363,10 @@ class ASTSelfOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the ASTSelfOutput.
 
@@ -393,15 +391,15 @@ class ASTSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->AST
-class ASTAttention(nn.Cell):
+class ASTAttention(nn.Module):
 
     """
     A class representing an attention mechanism in an Abstract Syntax Tree (AST) model.
 
     This class implements the attention mechanism used in the AST model.
-    It includes methods for pruning attention heads and constructing attention outputs.
+    It includes methods for pruning attention heads and forwarding attention outputs.
 
-    This class inherits from nn.Cell in the MindSpore framework.
+    This class inherits from nn.Module in the MindSpore framework.
 
     Attributes:
         attention (ASTSelfAttention): The self-attention module used in the AST model.
@@ -415,7 +413,7 @@ class ASTAttention(nn.Cell):
         prune_heads:
             Prunes specified attention heads from the model.
 
-        construct:
+        forward:
             Constructs attention outputs based on the provided inputs.
 
     Returns:
@@ -470,14 +468,14 @@ class ASTAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -513,20 +511,20 @@ class ASTAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->AST
-class ASTIntermediate(nn.Cell):
+class ASTIntermediate(nn.Module):
 
     """
     ASTIntermediate represents a neural network cell responsible for intermediate transformations in an Abstract Syntax Tree (AST) model.
 
-    This class inherits from nn.Cell and contains methods for initializing the cell and constructing intermediate transformations on input hidden states.
+    This class inherits from nn.Module and contains methods for initializing the cell and forwarding intermediate transformations on input hidden states.
 
     Attributes:
-        dense (nn.Dense): A dense layer with specified hidden size and intermediate size.
+        dense (nn.Linear): A dense layer with specified hidden size and intermediate size.
         intermediate_act_fn (function): The activation function used for intermediate transformations.
 
     Methods:
         __init__: Initializes the ASTIntermediate cell with the given configuration.
-        construct: Applies intermediate transformations on the input hidden states and returns the transformed tensor.
+        forward: Applies intermediate transformations on the input hidden states and returns the transformed tensor.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -552,7 +550,7 @@ class ASTIntermediate(nn.Cell):
             The method performs the following operations:
 
             - Calls the __init__ method of the superclass.
-            - Initializes the 'dense' attribute of the instance with an instance of the nn.Dense class, using the 'hidden_size' and 'intermediate_size' values from the 'config' object.
+            - Initializes the 'dense' attribute of the instance with an instance of the nn.Linear class, using the 'hidden_size' and 'intermediate_size' values from the 'config' object.
             - Checks if the 'hidden_act' attribute of the 'config' object is a string. If it is, it sets the 'intermediate_act_fn' attribute of the instance to the corresponding activation function from the
             ACT2FN dictionary. Otherwise, it sets it to the value of the 'hidden_act' attribute.
 
@@ -565,17 +563,17 @@ class ASTIntermediate(nn.Cell):
             ```
 
             In the example above, a new instance of the ASTIntermediate class is created with the provided 'config' object.
-            The 'dense' attribute is initialized with a nn.Dense instance, and the
+            The 'dense' attribute is initialized with a nn.Linear instance, and the
             'intermediate_act_fn' attribute is set to the 'relu' activation function.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs an intermediate layer of the ASTIntermediate class.
 
@@ -601,13 +599,13 @@ class ASTIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTOutput with ViT->AST
-class ASTOutput(nn.Cell):
+class ASTOutput(nn.Module):
 
     """
-    This class represents the output of an abstract syntax tree (AST) model. It is a subclass of nn.Cell.
+    This class represents the output of an abstract syntax tree (AST) model. It is a subclass of nn.Module.
 
     Attributes:
-        dense (nn.Dense): A fully connected layer that maps the input tensor to the intermediate size specified in the ASTConfig.
+        dense (nn.Linear): A fully connected layer that maps the input tensor to the intermediate size specified in the ASTConfig.
         dropout (nn.Dropout): A dropout layer that applies dropout regularization to the hidden states.
 
     Methods:
@@ -617,7 +615,7 @@ class ASTOutput(nn.Cell):
             Args:
                 config (ASTConfig): The configuration object that contains the model's hyperparameters.
 
-        construct:
+        forward:
             Constructs the output of the AST model.
 
             Args:
@@ -645,12 +643,12 @@ class ASTOutput(nn.Cell):
             None: This method does not raise any exceptions.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a new tensor by performing operations on the input hidden_states and input_tensor.
+        This method forwards a new tensor by performing operations on the input hidden_states and input_tensor.
 
         Args:
             self: The instance of the ASTOutput class.
@@ -661,7 +659,7 @@ class ASTOutput(nn.Cell):
 
         Returns:
             mindspore.Tensor:
-                A tensor representing the constructed output, which is the result of processing the hidden_states and adding the input_tensor.
+                A tensor representing the forwarded output, which is the result of processing the hidden_states and adding the input_tensor.
 
         Raises:
             None
@@ -675,7 +673,7 @@ class ASTOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->AST
-class ASTLayer(nn.Cell):
+class ASTLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -697,10 +695,10 @@ class ASTLayer(nn.Cell):
         self.attention = ASTAttention(config)
         self.intermediate = ASTIntermediate(config)
         self.output = ASTOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -748,24 +746,24 @@ class ASTLayer(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTEncoder with ViT->AST
-class ASTEncoder(nn.Cell):
+class ASTEncoder(nn.Module):
 
     """
     This class represents an AST (Abstract Syntax Tree) Encoder for a neural network model.
 
-    The ASTEncoder class is a subclass of nn.Cell and is responsible for encoding hidden states using multiple layers of ASTLayer.
+    The ASTEncoder class is a subclass of nn.Module and is responsible for encoding hidden states using multiple layers of ASTLayer.
     It supports optional gradient checkpointing and can output hidden states, self-attentions, or both.
 
     Attributes:
         config (ASTConfig): The configuration object for the ASTEncoder.
-        layer (nn.CellList): A list of ASTLayer instances representing the hidden layers of the encoder.
+        layer (nn.ModuleList): A list of ASTLayer instances representing the hidden layers of the encoder.
         gradient_checkpointing (bool): A flag indicating whether gradient checkpointing is enabled.
 
     Methods:
         __init__:
             Initializes the ASTEncoder instance with the given configuration object.
 
-        construct:
+        forward:
             Constructs the encoder by applying multiple layers of ASTLayer to the input hidden states.
             Optionally, it can apply head masks, output attentions and/or hidden states, and return the results as a tuple or a BaseModelOutput object.
 
@@ -795,10 +793,10 @@ class ASTEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ASTLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ASTLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -807,7 +805,7 @@ class ASTEncoder(nn.Cell):
         return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
         """
-        This method constructs the AST encoder using the provided parameters and returns the hidden states, hidden layers, and self-attentions.
+        This method forwards the AST encoder using the provided parameters and returns the hidden states, hidden layers, and self-attentions.
 
         Args:
             self: The instance of the class.
@@ -875,10 +873,10 @@ class ASTPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         elif isinstance(cell, nn.LayerNorm):
@@ -891,7 +889,7 @@ class ASTModel(ASTPreTrainedModel):
     """
     ASTModel is a class representing a model for Abstract Syntax Trees (AST) processing.
     This class inherits from ASTPreTrainedModel and includes methods for initializing the model, getting input embeddings,
-    pruning heads, and constructing the model's output.
+    pruning heads, and forwarding the model's output.
 
     Attributes:
         config: An instance of ASTConfig containing configuration parameters for the model.
@@ -903,9 +901,9 @@ class ASTModel(ASTPreTrainedModel):
         __init__: Initializes the ASTModel with the given configuration.
         get_input_embeddings: Returns the patch embeddings used by the model.
         _prune_heads: Prunes specified attention heads in the model.
-        construct: Constructs the model output based on input values and optional arguments.
+        forward: Constructs the model output based on input values and optional arguments.
 
-    The construct method handles input processing, encoding, and output generation based on the specified parameters.
+    The forward method handles input processing, encoding, and output generation based on the specified parameters.
     Pruning heads allows for fine-tuning the attention mechanism of the model.
     Overall, ASTModel provides a comprehensive solution for AST-based tasks.
     """
@@ -930,7 +928,7 @@ class ASTModel(ASTPreTrainedModel):
         self.embeddings = ASTEmbeddings(config)
         self.encoder = ASTEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -961,7 +959,7 @@ class ASTModel(ASTPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -970,7 +968,7 @@ class ASTModel(ASTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         '''
-        This method constructs the ASTModel by processing the input values through the model's layers.
+        This method forwards the ASTModel by processing the input values through the model's layers.
 
         Args:
             self (ASTModel): The instance of the ASTModel.
@@ -981,7 +979,7 @@ class ASTModel(ASTPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dict. Default is None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPooling]: The constructed output, which can be a tuple or BaseModelOutputWithPooling object.
+            Union[Tuple, BaseModelOutputWithPooling]: The forwarded output, which can be a tuple or BaseModelOutputWithPooling object.
 
         Raises:
             ValueError: If input_values is None, a ValueError is raised with the message 'You have to specify input_values'.
@@ -1027,11 +1025,11 @@ class ASTModel(ASTPreTrainedModel):
         )
 
 
-class ASTMLPHead(nn.Cell):
+class ASTMLPHead(nn.Module):
 
     """
     ASTMLPHead is a Python class that represents a multi-layer perceptron (MLP) head for an Abstract Syntax Tree (AST) model.
-    This class inherits from nn.Cell and contains methods for initializing and constructing the MLP head.
+    This class inherits from nn.Module and contains methods for initializing and forwarding the MLP head.
 
     Attributes:
         layernorm: A LayerNorm module for normalizing the input hidden state.
@@ -1039,7 +1037,7 @@ class ASTMLPHead(nn.Cell):
 
     Methods:
         __init__: Initializes the ASTMLPHead instance with the provided configuration.
-        construct: Constructs the output hidden state by applying layer normalization and linear transformation.
+        forward: Constructs the output hidden state by applying layer normalization and linear transformation.
 
     Note:
         The ASTMLPHead class is designed to be used in conjunction with an AST model for processing abstract syntax trees in natural language processing tasks.
@@ -1064,16 +1062,16 @@ class ASTMLPHead(nn.Cell):
             None
         """
         super().__init__()
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
-        self.dense = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         """
         Constructs the hidden state of the ASTMLPHead.
 
         Args:
             self (ASTMLPHead): An instance of the ASTMLPHead class.
-            hidden_state: The hidden state to be constructed. It should be a tensor-like object.
+            hidden_state: The hidden state to be forwarded. It should be a tensor-like object.
 
         Returns:
             None: This method modifies the hidden_state in-place.
@@ -1090,7 +1088,7 @@ class ASTForAudioClassification(ASTPreTrainedModel):
 
     """
     ASTForAudioClassification is a class that implements a model for audio classification using the AST (Audio Spectrogram Transformer) architecture.
-    This class inherits from ASTPreTrainedModel and provides methods for initializing the model with a configuration, and constructing the model for audio classification tasks.
+    This class inherits from ASTPreTrainedModel and provides methods for initializing the model with a configuration, and forwarding the model for audio classification tasks.
 
     Attributes:
         num_labels: Number of labels for the audio classification task.
@@ -1126,7 +1124,7 @@ class ASTForAudioClassification(ASTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -1167,13 +1165,13 @@ class ASTForAudioClassification(ASTPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

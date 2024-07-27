@@ -15,17 +15,17 @@
 import math
 
 import mindspore
-from mindspore import nn, Parameter
+from mindspore import Parameter
+from mindnlp.core import nn
 from .config import PromptTuningInit
 
-
-class PromptEmbedding(nn.Cell):
+class PromptEmbedding(nn.Module):
     """
     The model to encode virtual tokens into prompt embeddings.
 
     Args:
         config ([`PromptTuningConfig`]): The configuration of the prompt embedding.
-        word_embeddings (`nn.Cell`): The word embeddings of the base transformer model.
+        word_embeddings (`nn.Module`): The word embeddings of the base transformer model.
 
     **Attributes**:
         - **embedding** (`nn.Embedding`) -- The embedding layer of the prompt embedding.
@@ -105,7 +105,7 @@ class PromptEmbedding(nn.Cell):
             word_embedding_weights = word_embedding_weights.to(mindspore.float32)
             self.embedding.weight = Parameter(word_embedding_weights)
 
-    def construct(self, indices):
+    def forward(self, indices):
         r"""
         Construct the prompt embeddings based on the given indices.
         

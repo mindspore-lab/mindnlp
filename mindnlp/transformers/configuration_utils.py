@@ -125,7 +125,7 @@ class PretrainedConfig:
         else:
             self.num_labels = kwargs.pop("num_labels", 2)
 
-        if self.ms_dtype is not None and isinstance(self.ms_dtype, str):
+        if self.ms_dtype is not None and isinstance(self.ms_dtype, str) and self.ms_dtype != 'none':
             if is_mindspore_available():
                 import mindspore
 

@@ -19,7 +19,7 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging
@@ -75,7 +75,7 @@ _QA_TARGET_END_INDEX = 15
 # Maske language modeling
 
 
-class RoCBertEmbeddings(nn.Cell):
+class RoCBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position, shape, pronunciation and token_type embeddings."""
 
     def __init__(self, config):
@@ -111,14 +111,14 @@ class RoCBertEmbeddings(nn.Cell):
             if self.enable_shape:
                 shape_dim = config.shape_embed_dim
                 input_dim += shape_dim
-            self.map_inputs_layer = nn.Dense(input_dim, config.hidden_size)
+            self.map_inputs_layer = nn.Linear(input_dim, config.hidden_size)
         else:
             self.map_inputs_layer = None
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -131,7 +131,7 @@ class RoCBertEmbeddings(nn.Cell):
         )
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         input_shape_ids=None,
@@ -153,7 +153,7 @@ class RoCBertEmbeddings(nn.Cell):
                 :, past_key_values_length : seq_length + past_key_values_length
             ]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -228,7 +228,7 @@ class RoCBertEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->RoCBert
-class RoCBertSelfAttention(nn.Cell):
+class RoCBertSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
@@ -243,9 +243,9 @@ class RoCBertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -267,7 +267,7 @@ class RoCBertSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -388,16 +388,16 @@ class RoCBertSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->RoCBert
-class RoCBertSelfOutput(nn.Cell):
+class RoCBertSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor
     ) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -412,7 +412,7 @@ ROC_BERT_SELF_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->RoCBert,BERT->ROC_BERT
-class RoCBertAttention(nn.Cell):
+class RoCBertAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = ROC_BERT_SELF_ATTENTION_CLASSES[config._attn_implementation](
@@ -435,7 +435,7 @@ class RoCBertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -444,7 +444,7 @@ class RoCBertAttention(nn.Cell):
         )
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -471,32 +471,32 @@ class RoCBertAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->RoCBert
-class RoCBertIntermediate(nn.Cell):
+class RoCBertIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->RoCBert
-class RoCBertOutput(nn.Cell):
+class RoCBertOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor
     ) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -506,7 +506,7 @@ class RoCBertOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->RoCBert
-class RoCBertLayer(nn.Cell):
+class RoCBertLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -525,7 +525,7 @@ class RoCBertLayer(nn.Cell):
         self.intermediate = RoCBertIntermediate(config)
         self.output = RoCBertOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -608,16 +608,16 @@ class RoCBertLayer(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->RoCBert
-class RoCBertEncoder(nn.Cell):
+class RoCBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [RoCBertLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -706,13 +706,13 @@ class RoCBertEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->RoCBert
-class RoCBertPooler(nn.Cell):
+class RoCBertPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -722,19 +722,19 @@ class RoCBertPooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->RoCBert
-class RoCBertPredictionHeadTransform(nn.Cell):
+class RoCBertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -742,14 +742,14 @@ class RoCBertPredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->RoCBert
-class RoCBertLMPredictionHead(nn.Cell):
+class RoCBertLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = RoCBertPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -759,19 +759,19 @@ class RoCBertLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->RoCBert
-class RoCBertOnlyMLMHead(nn.Cell):
+class RoCBertOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = RoCBertLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -788,7 +788,7 @@ class RoCBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -798,7 +798,7 @@ class RoCBertPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -871,7 +871,7 @@ class RoCBertModel(RoCBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1050,7 +1050,7 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1262,7 +1262,7 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1417,7 +1417,7 @@ class RoCBertForCausalLM(RoCBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1600,12 +1600,12 @@ class RoCBertForSequenceClassification(RoCBertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1698,12 +1698,12 @@ class RoCBertForMultipleChoice(RoCBertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1815,12 +1815,12 @@ class RoCBertForTokenClassification(RoCBertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,
@@ -1886,12 +1886,12 @@ class RoCBertForQuestionAnswering(RoCBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.roc_bert = RoCBertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_shape_ids: Optional[mindspore.Tensor] = None,

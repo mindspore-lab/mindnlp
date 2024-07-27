@@ -685,14 +685,14 @@ class IBertModelIntegrationTest(unittest.TestCase):
         elif type(model) == nn.SequentialCell:
             for n, m in model.named_children():
                 self.quantize(m)
-        elif type(model) == nn.CellList:
+        elif type(model) == nn.ModuleList:
             for n in model:
                 self.quantize(n)
         else:
             for attr in dir(model):
                 if hasattr(model, attr):
                     mod = getattr(model, attr)
-                    if isinstance(mod, nn.Cell) and mod != model:
+                    if isinstance(mod, nn.Module) and mod != model:
                         self.quantize(mod)
 
     @slow

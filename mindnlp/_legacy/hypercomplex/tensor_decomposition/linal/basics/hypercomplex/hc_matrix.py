@@ -374,7 +374,7 @@ represents the y-coordinate values.
             self (Matrix): The Matrix instance.
             height (Optional[int]): The height of the ndarray. If None, it will be inferred from the items parameter.
             width (Optional[int]): The width of the ndarray. If None, it will be inferred from the items parameter.
-            items (np.ndarray): The input ndarray from which the height and width are inferred, and the items_x and items_y arrays are constructed.
+            items (np.ndarray): The input ndarray from which the height and width are inferred, and the items_x and items_y arrays are forwarded.
         
         Returns:
             Tuple[int, int]: A tuple containing the height and width of the ndarray.
@@ -631,7 +631,7 @@ same data type.
             - The method creates a new Matrix object using the same algebra factory as the current Matrix object.
             - The dimensions of the new Matrix object are determined by the height and width of the current Matrix object.
             - The new Matrix object is initialized with a grid of Scalar.zero values, where each Scalar.zero value is wrapped within a Vector object.
-            - The grid is constructed using list comprehension to create a list of Vectors, and then multiplying this list by the height of the current Matrix object.
+            - The grid is forwarded using list comprehension to create a list of Vectors, and then multiplying this list by the height of the current Matrix object.
             - The resulting list of Vectors is used to initialize the items parameter of the new Matrix object.
         
         Example:

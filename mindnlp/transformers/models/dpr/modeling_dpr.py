@@ -20,7 +20,8 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -135,12 +136,12 @@ class DPRReaderOutput(ModelOutput):
 class DPRPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -163,11 +164,11 @@ class DPREncoder(DPRPreTrainedModel):
             raise ValueError("Encoder hidden_size can't be zero")
         self.projection_dim = config.projection_dim
         if self.projection_dim > 0:
-            self.encode_proj = nn.Dense(self.bert_model.config.hidden_size, config.projection_dim, has_bias=True)
+            self.encode_proj = nn.Linear(self.bert_model.config.hidden_size, config.projection_dim, bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -215,12 +216,12 @@ class DPRSpanPredictor(DPRPreTrainedModel):
     def __init__(self, config: DPRConfig):
         super().__init__(config)
         self.encoder = DPREncoder(config)
-        self.qa_outputs = nn.Dense(self.encoder.embeddings_size, 2, has_bias=True)
-        self.qa_classifier = nn.Dense(self.encoder.embeddings_size, 1, has_bias=True)
+        self.qa_outputs = nn.Linear(self.encoder.embeddings_size, 2, bias=True)
+        self.qa_classifier = nn.Linear(self.encoder.embeddings_size, 1, bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Tensor,
         attention_mask: Tensor,
@@ -317,7 +318,7 @@ class DPRContextEncoder(DPRPretrainedContextEncoder):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -391,7 +392,7 @@ class DPRQuestionEncoder(DPRPretrainedQuestionEncoder):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -465,7 +466,7 @@ class DPRReader(DPRPretrainedReader):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,

@@ -23,7 +23,9 @@ import sys
 import numpy as np
 import mindspore as ms
 
-from mindspore import ops, nn, Tensor, Parameter, load_param_into_net
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+, load_param_into_net
 from mindspore.ops.primitive import constexpr
 from mindnlp.utils.serialization import load
 
@@ -76,7 +78,7 @@ class WhisperGraphConfig:
         self.init_decode_start_ids = init_decode_start_ids
 
 
-class WhisperGraphEmbedding(nn.Cell):
+class WhisperGraphEmbedding(nn.Module):
 
     def __init__(self,
                  vocab_size,
@@ -99,7 +101,7 @@ class WhisperGraphEmbedding(nn.Cell):
         self.reshape = ops.Reshape()
         self.shape = ops.Shape()
 
-    def construct(self, input_ids):
+    def forward(self, input_ids):
         input_shape = self.shape(input_ids)
 
         flat_ids = self.reshape(input_ids, self.shape_flat)
@@ -127,7 +129,7 @@ def position_encoding(length,
     return x
 
 
-class WhisperGraphEmbeddingPositionalProcessor(nn.Cell):
+class WhisperGraphEmbeddingPositionalProcessor(nn.Module):
     def __init__(self,
                  embedding_size,
                  max_position_embeddings=128,
@@ -144,7 +146,7 @@ class WhisperGraphEmbeddingPositionalProcessor(nn.Cell):
             Tensor(position_encoding(max_position_embeddings, embedding_size), dtype=compute_type))
         self.shape = ops.Shape()
 
-    def construct(self, word_embeddings):
+    def forward(self, word_embeddings):
         input_shape = self.shape(word_embeddings)
         input_len = input_shape[1]
 
@@ -160,17 +162,17 @@ class WhisperGraphEmbeddingPositionalProcessor(nn.Cell):
         return output
 
 
-class CastWrapper(nn.Cell):
+class CastWrapper(nn.Module):
     def __init__(self, src_type=ms.float32, dst_type=ms.float32):
         super(CastWrapper, self).__init__()
         self.cast = ops.Cast()
         self.dst_type = dst_type
 
-    def construct(self, x):
+    def forward(self, x):
         return self.cast(x, self.dst_type)
 
 
-class LayerPostprocess(nn.Cell):
+class LayerPostprocess(nn.Module):
     def __init__(self,
                  dropout_prob=0.1):
         super(LayerPostprocess, self).__init__()
@@ -178,7 +180,7 @@ class LayerPostprocess(nn.Cell):
         self.dropout = nn.Dropout(p=dropout_prob)
         self.use_dropout = dropout_prob > 0
 
-    def construct(self, hidden_tensor, input_tensor):
+    def forward(self, hidden_tensor, input_tensor):
         output = hidden_tensor
         if self.use_dropout:
             output = self.dropout(output)
@@ -186,7 +188,7 @@ class LayerPostprocess(nn.Cell):
         return output
 
 
-class WhisperGraphAttention(nn.Cell):
+class WhisperGraphAttention(nn.Module):
     def __init__(self,
                  batch_size,
                  hidden_size,
@@ -215,18 +217,18 @@ class WhisperGraphAttention(nn.Cell):
         self.shape_from_2d = (-1, hidden_size)
         self.shape_to_2d = (-1, hidden_size)
         units = num_attention_heads * self.size_per_head
-        self.query_layer = nn.Dense(hidden_size,
+        self.query_layer = nn.Linear(hidden_size,
                                     units,
-                                    has_bias=True, dtype=compute_type).to_float(compute_type)
-        self.key_layer = nn.Dense(hidden_size,
+                                    bias=True, dtype=compute_type).to_float(compute_type)
+        self.key_layer = nn.Linear(hidden_size,
                                   units,
-                                  has_bias=False, dtype=compute_type).to_float(compute_type)
-        self.value_layer = nn.Dense(hidden_size,
+                                  bias=False, dtype=compute_type).to_float(compute_type)
+        self.value_layer = nn.Linear(hidden_size,
                                     units,
-                                    has_bias=True, dtype=compute_type).to_float(compute_type)
-        self.out_layer = nn.Dense(units,
+                                    bias=True, dtype=compute_type).to_float(compute_type)
+        self.out_layer = nn.Linear(units,
                                   hidden_size,
-                                  has_bias=True, dtype=compute_type).to_float(compute_type)
+                                  bias=True, dtype=compute_type).to_float(compute_type)
 
         self.matmul_trans_b = ops.BatchMatMul(transpose_b=True)
         self.multiply = ops.Mul()
@@ -257,7 +259,7 @@ class WhisperGraphAttention(nn.Cell):
         self.layernorm = nn.LayerNorm([hidden_size], dtype=compute_type)
         self.postprocess = LayerPostprocess(dropout_prob=hidden_dropout_prob)
 
-    def construct(self, input_tensor, to_tensor, attention_mask, seq_length, enc_seq_length):
+    def forward(self, input_tensor, to_tensor, attention_mask, seq_length, enc_seq_length):
         input_tensor = self.reshape(input_tensor, self.shape)
         to_tensor = self.reshape(to_tensor, self.shape)
         from_tensor = self.layernorm(input_tensor)
@@ -315,7 +317,7 @@ class WhisperGraphAttention(nn.Cell):
         return output
 
 
-class FeedForward(nn.Cell):
+class FeedForward(nn.Module):
 
     def __init__(self,
                  in_channels,
@@ -325,9 +327,9 @@ class FeedForward(nn.Cell):
                  compute_type=ms.float32):
         super(FeedForward, self).__init__()
 
-        self.conv1 = nn.Dense(in_channels,
+        self.conv1 = nn.Linear(in_channels,
                               hidden_size, dtype=compute_type).to_float(compute_type)
-        self.conv2 = nn.Dense(hidden_size,
+        self.conv2 = nn.Linear(hidden_size,
                               out_channels, dtype=compute_type).to_float(compute_type)
 
         self.layernorm = nn.LayerNorm([in_channels], dtype=compute_type)
@@ -338,7 +340,7 @@ class FeedForward(nn.Cell):
         self.dropout = nn.Dropout(p=hidden_dropout_prob)
         self.use_dropout = hidden_dropout_prob > 0
 
-    def construct(self, input_tensor):
+    def forward(self, input_tensor):
         input_tensor = self.reshape(input_tensor, self.shape)
         output = self.layernorm(input_tensor)
         output = ops.gelu(self.conv1(output))
@@ -349,7 +351,7 @@ class FeedForward(nn.Cell):
         return output
 
 
-class WhisperGraphEncoderLayer(nn.Cell):
+class WhisperGraphEncoderLayer(nn.Module):
     def __init__(self,
                  batch_size,
                  hidden_size=1024,
@@ -379,7 +381,7 @@ class WhisperGraphEncoderLayer(nn.Cell):
             hidden_dropout_prob=hidden_dropout_prob,
             compute_type=compute_type)
 
-    def construct(self, hidden_states, attention_mask, seq_length):
+    def forward(self, hidden_states, attention_mask, seq_length):
         # self-attention with ln, res
         attention_output = self.attention(hidden_states, hidden_states, attention_mask, seq_length, seq_length)
         # feed forward with ln, res
@@ -387,7 +389,7 @@ class WhisperGraphEncoderLayer(nn.Cell):
         return output
 
 
-class WhisperGraphEncoder(nn.Cell):
+class WhisperGraphEncoder(nn.Module):
     def __init__(self,
                  batch_size,
                  hidden_size,
@@ -416,13 +418,13 @@ class WhisperGraphEncoder(nn.Cell):
                                              hidden_dropout_prob=hidden_dropout_prob,
                                              compute_type=compute_type)
             layers.append(layer)
-        self.layers = nn.CellList(layers)
+        self.layers = nn.ModuleList(layers)
 
         self.layernorm = nn.LayerNorm([hidden_size], dtype=compute_type)
         self.reshape = ops.Reshape()
         self.shape = (-1, hidden_size)
 
-    def construct(self, input_tensor, attention_mask, seq_length):
+    def forward(self, input_tensor, attention_mask, seq_length):
         out_shape = (self.batch_size, -1, self.hidden_size)
         prev_output = self.reshape(input_tensor, self.shape)
 
@@ -435,7 +437,7 @@ class WhisperGraphEncoder(nn.Cell):
         return output
 
 
-class WhisperGraphDecoderLayer(nn.Cell):
+class WhisperGraphDecoderLayer(nn.Module):
 
     def __init__(self,
                  batch_size,
@@ -476,7 +478,7 @@ class WhisperGraphDecoderLayer(nn.Cell):
             hidden_dropout_prob=hidden_dropout_prob,
             compute_type=compute_type)
 
-    def construct(self, hidden_states, attention_mask, enc_states, enc_attention_mask, seq_length, enc_seq_length):
+    def forward(self, hidden_states, attention_mask, enc_states, enc_attention_mask, seq_length, enc_seq_length):
         # self-attention with ln, res
         attention_output = self.self_attention(hidden_states, hidden_states, attention_mask, seq_length, seq_length)
         # cross-attention with ln, res
@@ -487,7 +489,7 @@ class WhisperGraphDecoderLayer(nn.Cell):
         return output
 
 
-class WhisperGraphDecoder(nn.Cell):
+class WhisperGraphDecoder(nn.Module):
     def __init__(self,
                  batch_size,
                  hidden_size,
@@ -514,7 +516,7 @@ class WhisperGraphDecoder(nn.Cell):
                                              hidden_dropout_prob=hidden_dropout_prob,
                                              compute_type=compute_type)
             layers.append(layer)
-        self.layers = nn.CellList(layers)
+        self.layers = nn.ModuleList(layers)
 
         self.layernorm = nn.LayerNorm([hidden_size], dtype=compute_type)
 
@@ -523,7 +525,7 @@ class WhisperGraphDecoder(nn.Cell):
         self.hidden_size = hidden_size
         self.batch_size = batch_size
 
-    def construct(self, input_tensor, attention_mask, enc_states, enc_attention_mask, seq_length, enc_seq_length):
+    def forward(self, input_tensor, attention_mask, enc_states, enc_attention_mask, seq_length, enc_seq_length):
         out_shape = (self.batch_size, seq_length, self.hidden_size)
         prev_output = self.reshape(input_tensor, self.shape)
 
@@ -537,7 +539,7 @@ class WhisperGraphDecoder(nn.Cell):
         return output
 
 
-class CreateAttentionMaskFromInputMask(nn.Cell):
+class CreateAttentionMaskFromInputMask(nn.Module):
 
     def __init__(self):
         super(CreateAttentionMaskFromInputMask, self).__init__()
@@ -546,7 +548,7 @@ class CreateAttentionMaskFromInputMask(nn.Cell):
         self.shape = ops.Shape()
         self.batch_matmul = ops.BatchMatMul()
 
-    def construct(self, input_mask):
+    def forward(self, input_mask):
         input_shape = self.shape(input_mask)
         shape_right = (input_shape[0], 1, input_shape[1])
         shape_left = input_shape + (1,)
@@ -559,7 +561,7 @@ class CreateAttentionMaskFromInputMask(nn.Cell):
         return attention_mask
 
 
-class PredLogProbs(nn.Cell):
+class PredLogProbs(nn.Module):
 
     def __init__(self,
                  batch_size,
@@ -577,7 +579,7 @@ class PredLogProbs(nn.Cell):
         self.log_softmax = nn.LogSoftmax(axis=-1)
         self.cast = ops.Cast()
 
-    def construct(self,
+    def forward(self,
                   input_tensor,
                   output_weights,
                   seq_length):
@@ -594,7 +596,7 @@ class PredLogProbs(nn.Cell):
         return log_probs
 
 
-class TransformerDecoderStep(nn.Cell):
+class TransformerDecoderStep(nn.Module):
     def __init__(self,
                  batch_size,
                  hidden_size,
@@ -615,7 +617,7 @@ class TransformerDecoderStep(nn.Cell):
 
         self.tfm_embedding_lookup = embedding_lookup
         self.tfm_embedding_processor = embedding_processor
-        self.projection = nn.Dense(hidden_size, vocab_size, has_bias=False, dtype=compute_type).to_float(compute_type)
+        self.projection = nn.Linear(hidden_size, vocab_size, bias=False, dtype=compute_type).to_float(compute_type)
 
         self.tfm_decoder = WhisperGraphDecoder(
             batch_size=batch_size,
@@ -641,7 +643,7 @@ class TransformerDecoderStep(nn.Cell):
 
         self.cast_compute_type = CastWrapper(dst_type=compute_type)
 
-    def construct(self, input_ids, enc_states, enc_attention_mask, seq_length):
+    def forward(self, input_ids, enc_states, enc_attention_mask, seq_length):
         # process embedding
         input_embedding, embedding_tables = self.tfm_embedding_lookup(input_ids)
         input_embedding = self.tfm_embedding_processor(input_embedding)
@@ -676,7 +678,7 @@ def convert_np_to_tensor_encoder(seq_length):
     return Tensor(np.tril(ones), dtype=ms.float32)
 
 
-class WhisperGraphModel(nn.Cell):
+class WhisperGraphModel(nn.Module):
     def __init__(self,
                  config,
                  is_training,
@@ -770,13 +772,13 @@ class WhisperGraphModel(nn.Cell):
         self.expand = ops.ExpandDims()
         self.multiply = ops.Mul()
         self.conv1 = nn.Conv1d(config.seq_length, config.hidden_size, kernel_size=3, padding=1, pad_mode='pad',
-                               has_bias=True).to_float(config.compute_type)
+                               bias=True).to_float(config.compute_type)
         self.conv2 = nn.Conv1d(config.hidden_size, config.hidden_size, kernel_size=3, stride=2, padding=1,
                                pad_mode='pad',
-                               has_bias=True).to_float(config.compute_type)
+                               bias=True).to_float(config.compute_type)
         self._create_attention_mask_from_input_mask = CreateAttentionMaskFromInputMask()
 
-    def construct(self, source_ids, source_mask, target_ids=None, target_mask=None):
+    def forward(self, source_ids, source_mask, target_ids=None, target_mask=None):
         seq_length = source_ids.shape[1]
 
         inputs_embeds = ops.gelu(self.conv1(source_ids))
@@ -904,7 +906,7 @@ class WhisperGraphModel(nn.Cell):
         return mind_param_dict
 
 
-class LengthPenalty(nn.Cell):
+class LengthPenalty(nn.Module):
     def __init__(self,
                  weight=1.0,
                  compute_type=ms.float32):
@@ -917,7 +919,7 @@ class LengthPenalty(nn.Cell):
         self.five = Tensor(5.0, ms.float32)
         self.six = Tensor(6.0, ms.float32)
 
-    def construct(self, length_tensor):
+    def forward(self, length_tensor):
         length_tensor = self.cast(length_tensor, ms.float32)
         output = self.add(length_tensor, self.five)
         output = self.div(output, self.six)
@@ -925,7 +927,7 @@ class LengthPenalty(nn.Cell):
         return output
 
 
-class TileBeam(nn.Cell):
+class TileBeam(nn.Module):
     def __init__(self,
                  beam_width,
                  compute_type=ms.float32):
@@ -936,7 +938,7 @@ class TileBeam(nn.Cell):
         self.reshape = ops.Reshape()
         self.shape = ops.Shape()
 
-    def construct(self, input_tensor):
+    def forward(self, input_tensor):
         shape = self.shape(input_tensor)
         input_tensor = self.expand(input_tensor, 1)
         tile_shape = (1,) + (self.beam_width,)
@@ -948,7 +950,7 @@ class TileBeam(nn.Cell):
         return output
 
 
-class BeamSearchDecoder(nn.Cell):
+class BeamSearchDecoder(nn.Module):
 
     def __init__(self,
                  batch_size,
@@ -1084,7 +1086,7 @@ class BeamSearchDecoder(nn.Cell):
         cur_input_ids = self.reshape(state_seq, (self.batch_size * self.beam_width, -1))
         return cur_input_ids, state_log_probs, state_seq, state_finished, state_length
 
-    def construct(self, enc_states, enc_attention_mask):
+    def forward(self, enc_states, enc_attention_mask):
         cur_input_ids = self.start_ids
         state_log_probs = self.init_scores
         state_seq = self.init_seq

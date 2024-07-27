@@ -18,8 +18,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
@@ -79,7 +80,7 @@ def apply_rotary_pos_emb(tensor: mindspore.Tensor, sin: mindspore.Tensor, cos: m
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
-class GPTJAttention(nn.Cell):
+class GPTJAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -103,10 +104,10 @@ class GPTJAttention(nn.Cell):
             )
         self.scale_attn = ops.sqrt(mindspore.Tensor(self.head_dim, dtype=mindspore.float32))
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
@@ -185,7 +186,7 @@ class GPTJAttention(nn.Cell):
         embed_positions = self.embed_positions
         return embed_positions.repeat(position_ids.shape[0], 1, 1)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -272,18 +273,18 @@ GPTJ_ATTENTION_CLASSES = {
 }
 
 
-class GPTJMLP(nn.Cell):
+class GPTJMLP(nn.Module):
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         super().__init__()
         embed_dim = config.n_embd
 
-        self.fc_in = nn.Dense(embed_dim, intermediate_size)
-        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+        self.fc_in = nn.Linear(embed_dim, intermediate_size)
+        self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
         hidden_states = self.fc_in(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.fc_out(hidden_states)
@@ -291,15 +292,15 @@ class GPTJMLP(nn.Cell):
         return hidden_states
 
 
-class GPTJBlock(nn.Cell):
+class GPTJBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
-        self.ln_1 = nn.LayerNorm(config.n_embd, epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.attn = GPTJ_ATTENTION_CLASSES[config._attn_implementation](config)
         self.mlp = GPTJMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -353,10 +354,10 @@ class GPTJPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -369,7 +370,7 @@ class GPTJPreTrainedModel(PreTrainedModel):
 
 
 GPTJ_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -483,8 +484,8 @@ class GPTJModel(GPTJPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPTJBlock(config) for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([GPTJBlock(config) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Model parallel
         self.model_parallel = False
@@ -502,7 +503,7 @@ class GPTJModel(GPTJPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -658,7 +659,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = GPTJModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
 
         self.model_parallel = False
 
@@ -717,7 +718,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
 
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -805,7 +806,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTJModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Model parallel
         self.model_parallel = False
@@ -813,7 +814,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -914,7 +915,7 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTJModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Model parallel
         self.model_parallel = False
@@ -922,7 +923,7 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

@@ -23,7 +23,7 @@ class Seq2vecModel(BaseModel):
 
     Args:
         encoder (EncoderBase): The encoder.
-        head (nn.Cell): The module to process encoder output.
+        head (nn.Module): The module to process encoder output.
         dropout (float): The drop out rate, greater than 0 and less equal than 1.
             If None, not dropping out input units. Drfault: None.
     """
@@ -52,7 +52,7 @@ class Seq2vecModel(BaseModel):
         else:
             self.dropout = Dropout(p=dropout)
 
-    def construct(self, src_tokens, mask=None):
+    def forward(self, src_tokens, mask=None):
         """
         Construct method.
 

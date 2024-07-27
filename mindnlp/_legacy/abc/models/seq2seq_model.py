@@ -43,7 +43,7 @@ class Seq2seqModel(BaseModel):
         self.encoder = encoder
         self.decoder = decoder
 
-    def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
+    def forward(self, src_tokens, tgt_tokens, src_length, mask=None):
         """
         Construct method.
 

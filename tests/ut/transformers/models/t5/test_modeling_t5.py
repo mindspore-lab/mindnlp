@@ -37,7 +37,8 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_ten
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         AutoTokenizer,
@@ -298,7 +299,7 @@ class T5ModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -325,7 +326,7 @@ class T5ModelTester:
         model.set_train(False)
 
         # create attention mask
-        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
 
         half_seq_length = input_ids.shape[-1] // 2
         attn_mask[:, half_seq_length:] = 0
@@ -342,10 +343,10 @@ class T5ModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            dim=1,
         )
 
         # get two different outputs
@@ -382,8 +383,8 @@ class T5ModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -410,13 +411,13 @@ class T5ModelTester:
         lm_labels,
     ):
         model = T5ForConditionalGeneration(config=config).set_train(False)
-        mindspore.set_seed(0)
+        set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
-        mindspore.set_seed(0)
+        set_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=5, do_sample=True)
-        self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
+        self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache).item())
 
     def create_and_check_model_fp16_forward(
         self,
@@ -441,13 +442,13 @@ class T5ModelTester:
         lm_labels,
     ):
         for model_class in [T5Model, T5ForConditionalGeneration]:
-            mindspore.set_seed(0)
+            set_seed(0)
             model = model_class(config=config).set_train(False)
             # load state dict copies weights but does not tie them
             # model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
             mindspore.load_param_into_net(model.encoder, model.decoder.parameters_dict())
 
-            mindspore.set_seed(0)
+            set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
             tied_model = model_class(config=tied_config).set_train(False)
@@ -694,7 +695,7 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_generate_with_past_key_values(*config_and_inputs)
 
-    @unittest.skip('mindspore.nn.Cell dot not support load_states_dict')
+    @unittest.skip('mindspore.nn.Module dot not support load_states_dict')
     def test_encoder_decoder_shared_weights(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_encoder_decoder_shared_weights(*config_and_inputs)
@@ -722,9 +723,9 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
 
         head_masking = {
-            "head_mask": ops.zeros((config.num_layers, config.num_heads)),
-            "decoder_head_mask": ops.zeros((config.num_decoder_layers, config.num_heads)),
-            "cross_attn_head_mask": ops.zeros((config.num_decoder_layers, config.num_heads)),
+            "head_mask": ops.zeros(config.num_layers, config.num_heads),
+            "decoder_head_mask": ops.zeros(config.num_decoder_layers, config.num_heads),
+            "cross_attn_head_mask": ops.zeros(config.num_decoder_layers, config.num_heads),
         }
 
         for attn_name, (name, mask) in zip(attention_names, head_masking.items()):
@@ -732,7 +733,7 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             # Explicitly pass decoder_head_mask as it is required from T5 model when head_mask specified
             if name == "head_mask":
                 head_masks["decoder_head_mask"] = ops.ones(
-                    (config.num_decoder_layers, config.num_heads)
+                    config.num_decoder_layers, config.num_heads
                 )
 
             out = model.generate(

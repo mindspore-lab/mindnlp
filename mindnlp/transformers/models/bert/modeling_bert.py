@@ -22,11 +22,12 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List, Union
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
-from mindnlp.utils import ModelOutput
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging, ModelOutput
 from .configuration_bert import BertConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
@@ -42,15 +43,6 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-
-try:
-    from mindspore.hypercomplex.dual.dual_operators import Dense
-    from mindspore.hypercomplex.utils import to_2channel, get_x_and_y
-    from mindspore.hypercomplex.dual.dual_functions import matmul
-except:
-    from mindnlp._legacy.hypercomplex.dual import Dense
-    from mindnlp._legacy.hypercomplex.utils import to_2channel, get_x_and_y
-    from mindnlp._legacy.hypercomplex.dual.dual_functions import matmul
 
 logger = logging.get_logger(__name__)
 
@@ -99,7 +91,7 @@ class BertForPreTrainingOutput(ModelOutput):
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
-class BertEmbeddings(nn.Cell):
+class BertEmbeddings(nn.Module):
     """
     Embeddings for BERT, include word, position and token_type
     """
@@ -135,14 +127,14 @@ class BertEmbeddings(nn.Cell):
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).reshape((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.token_type_ids = ops.zeros(*self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -151,7 +143,7 @@ class BertEmbeddings(nn.Cell):
         past_key_values_length: int = 0,
     ):
         """
-        This method constructs the embeddings for input tokens in the BERT model.
+        This method forwards the embeddings for input tokens in the BERT model.
 
         Args:
             self (BertEmbeddings): The instance of the BertEmbeddings class.
@@ -167,7 +159,7 @@ class BertEmbeddings(nn.Cell):
         Raises:
             TypeError: If the input_ids, token_type_ids, position_ids, or inputs_embeds are not of type mindspore.Tensor.
             ValueError: If the input_shape is not valid or if there is an issue with the dimensions of the input tensors.
-            RuntimeError: If there is a runtime issue during the construction of embeddings.
+            RuntimeError: If there is a runtime issue during the forwardion of embeddings.
         """
         if input_ids is not None:
             input_shape = input_ids.shape
@@ -179,7 +171,7 @@ class BertEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -188,7 +180,7 @@ class BertEmbeddings(nn.Cell):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
@@ -202,7 +194,7 @@ class BertEmbeddings(nn.Cell):
         return embeddings
 
 
-class BertSelfAttention(nn.Cell):
+class BertSelfAttention(nn.Module):
     """
     Self attention layer for BERT.
     """
@@ -233,9 +225,9 @@ class BertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -255,7 +247,7 @@ class BertSelfAttention(nn.Cell):
         input_x = input_x.view(*new_x_shape)
         return input_x.transpose(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -315,8 +307,8 @@ class BertSelfAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -361,7 +353,7 @@ class BertSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -383,7 +375,7 @@ class BertSelfAttention(nn.Cell):
         return outputs
 
 
-class BertSelfOutput(nn.Cell):
+class BertSelfOutput(nn.Module):
     r"""
     Bert Self Output
     """
@@ -408,13 +400,13 @@ class BertSelfOutput(nn.Cell):
             ValueError: If the config parameter does not contain the required configuration settings.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm  = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm  = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method 'construct' is a part of the 'BertSelfOutput' class and is responsible
+        This method 'forward' is a part of the 'BertSelfOutput' class and is responsible
         for processing hidden states in a BERT model.
 
         Args:
@@ -451,7 +443,7 @@ class BertSelfOutput(nn.Cell):
         return hidden_states
 
 
-class BertAttention(nn.Cell):
+class BertAttention(nn.Module):
     r"""
     Bert Attention
     """
@@ -487,14 +479,14 @@ class BertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -505,7 +497,7 @@ class BertAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ):
         """
-        This method constructs the BertAttention layer.
+        This method forwards the BertAttention layer.
 
         Args:
             self (BertAttention): The instance of the BertAttention class.
@@ -553,7 +545,7 @@ class BertAttention(nn.Cell):
         return outputs
 
 
-class BertIntermediate(nn.Cell):
+class BertIntermediate(nn.Module):
     r"""
     Bert Intermediate
     """
@@ -572,13 +564,13 @@ class BertIntermediate(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the intermediate layer of the BERT model.
 
@@ -598,7 +590,7 @@ class BertIntermediate(nn.Cell):
         return hidden_states
 
 
-class BertOutput(nn.Cell):
+class BertOutput(nn.Module):
     r"""
     Bert Output
     """
@@ -623,13 +615,13 @@ class BertOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method constructs the output of a BERT model by applying transformations to the hidden states.
+        This method forwards the output of a BERT model by applying transformations to the hidden states.
 
         Args:
             self: The instance of the BertOutput class.
@@ -640,7 +632,7 @@ class BertOutput(nn.Cell):
 
         Returns:
             tensor: The transformed hidden_states after applying a series of operations including dense layer, dropout, and layer normalization.
-                The returned tensor represents the constructed output of the BERT model.
+                The returned tensor represents the forwarded output of the BERT model.
 
         Raises:
             ValueError: If the shapes of hidden_states and input_tensor are not compatible for the addition operation.
@@ -652,7 +644,7 @@ class BertOutput(nn.Cell):
         return hidden_states
 
 
-class BertLayer(nn.Cell):
+class BertLayer(nn.Module):
     r"""
     Bert Layer
     """
@@ -690,7 +682,7 @@ class BertLayer(nn.Cell):
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -701,7 +693,7 @@ class BertLayer(nn.Cell):
         output_attentions: Optional[bool] = False,
     ):
         """
-        This method constructs a BertLayer by processing the input hidden_states through self-attention
+        This method forwards a BertLayer by processing the input hidden_states through self-attention
         and potentially cross-attention mechanisms.
 
         Args:
@@ -792,7 +784,7 @@ class BertLayer(nn.Cell):
         return layer_output
 
 
-class BertEncoder(nn.Cell):
+class BertEncoder(nn.Module):
     r"""
     Bert Encoder
     """
@@ -819,9 +811,9 @@ class BertEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -835,7 +827,7 @@ class BertEncoder(nn.Cell):
         return_dict: Optional[bool] = True,
     ):
         """
-        This method 'construct' is a part of the class 'BertEncoder' and is responsible for processing
+        This method 'forward' is a part of the class 'BertEncoder' and is responsible for processing
         hidden states through the encoder layers.
 
         Args:
@@ -910,7 +902,7 @@ class BertEncoder(nn.Cell):
         )
 
 
-class BertPooler(nn.Cell):
+class BertPooler(nn.Module):
     r"""
     Bert Pooler
     """
@@ -934,10 +926,10 @@ class BertPooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the pooled output tensor from the given hidden states tensor.
 
@@ -961,7 +953,7 @@ class BertPooler(nn.Cell):
         return pooled_output
 
 
-class BertPredictionHeadTransform(nn.Cell):
+class BertPredictionHeadTransform(nn.Module):
     r"""
     Bert Prediction Head Transform
     """
@@ -980,11 +972,11 @@ class BertPredictionHeadTransform(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.transform_act_fn = ACT2FN[config.hidden_act]
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the transformed hidden states for the BertPredictionHeadTransform class.
 
@@ -1005,7 +997,7 @@ class BertPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class BertLMPredictionHead(nn.Cell):
+class BertLMPredictionHead(nn.Module):
     r"""
     Bert LM Prediction Head
     """
@@ -1030,18 +1022,15 @@ class BertLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
 
         self.decoder.bias = self.bias
-        # for mindspore.nn.Dense
-        self.decoder.has_bias = True
-        self.decoder.bias_add = ops.add
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is defined in the class 'BertLMPredictionHead' and is responsible for processing the hidden states.
+        This method 'forward' is defined in the class 'BertLMPredictionHead' and is responsible for processing the hidden states.
 
         Args:
             self: The instance of the class.
@@ -1076,7 +1065,7 @@ class BertLMPredictionHead(nn.Cell):
         self.bias = self.decoder.bias
 
 
-class BertOnlyMLMHead(nn.Cell):
+class BertOnlyMLMHead(nn.Module):
     """BertOnlyMLMHead"""
     def __init__(self, config):
         """
@@ -1097,7 +1086,7 @@ class BertOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = BertLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the masked language modeling (MLM) head for the BERT model.
 
@@ -1123,14 +1112,14 @@ class BertOnlyMLMHead(nn.Cell):
         Example:
             ```python
             >>> head = BertOnlyMLMHead()
-            >>> output = head.construct(sequence_output)
+            >>> output = head.forward(sequence_output)
             ```
         """
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
-class BertOnlyNSPHead(nn.Cell):
+class BertOnlyNSPHead(nn.Module):
     """BertOnlyNSPHead"""
     def __init__(self, config):
         """
@@ -1149,11 +1138,11 @@ class BertOnlyNSPHead(nn.Cell):
             AttributeError: If the config object does not have the 'hidden_size' attribute.
         """
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         """
-        This method constructs a sequence relationship score based on the pooled output.
+        This method forwards a sequence relationship score based on the pooled output.
 
         Args:
             self (object): The instance of the class.
@@ -1162,7 +1151,7 @@ class BertOnlyNSPHead(nn.Cell):
         Returns:
             None:
                 This method returns None,
-                as the constructed sequence relationship score is directly assigned to the seq_relationship_score variable.
+                as the forwarded sequence relationship score is directly assigned to the seq_relationship_score variable.
 
         Raises:
             None.
@@ -1171,7 +1160,7 @@ class BertOnlyNSPHead(nn.Cell):
         return seq_relationship_score
 
 
-class BertPreTrainingHeads(nn.Cell):
+class BertPreTrainingHeads(nn.Module):
     r"""
     Bert PreTraining Heads
     """
@@ -1192,9 +1181,9 @@ class BertPreTrainingHeads(nn.Cell):
         """
         super().__init__()
         self.predictions = BertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         """
         Construct the prediction scores and sequence relationship scores for pre-training heads in BERT.
 
@@ -1228,12 +1217,12 @@ class BertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1316,7 +1305,7 @@ class BertModel(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1333,7 +1322,7 @@ class BertModel(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         """
-        This method constructs a BERT model with the specified input parameters.
+        This method forwards a BERT model with the specified input parameters.
 
         Args:
             self: The instance of the class.
@@ -1387,7 +1376,7 @@ class BertModel(BertPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
@@ -1395,7 +1384,7 @@ class BertModel(BertPreTrainedModel):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
@@ -1406,7 +1395,7 @@ class BertModel(BertPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -1517,7 +1506,7 @@ class BertForPretraining(BertPreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1585,8 +1574,8 @@ class BertForPretraining(BertPreTrainedModel):
 
         total_loss = None
         if labels is not None and next_sentence_label is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            next_sentence_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
             total_loss = masked_lm_loss + next_sentence_loss
 
         if not return_dict:
@@ -1676,7 +1665,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1694,7 +1683,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         '''
-        This method constructs the BertLMHeadModel.
+        This method forwards the BertLMHeadModel.
 
         Args:
             self: The instance of the class.
@@ -1761,7 +1750,7 @@ class BertLMHeadModel(BertPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = F.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1875,7 +1864,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             None
 
         Description:
-        This method is the constructor for the BertForMaskedLM class. It initializes the instance by setting up
+        This method is the forwardor for the BertForMaskedLM class. It initializes the instance by setting up
         the model architecture and loading the configuration.
 
         The 'config' parameter is an instance of the BertConfig class, which contains various settings
@@ -1889,9 +1878,9 @@ class BertForMaskedLM(BertPreTrainedModel):
         The method initializes two attributes of the instance:
 
         - 'bert': An instance of the 'BertModel' class, which represents the BERT model without the MLM head.
-        The 'config' parameter is passed to the 'BertModel' constructor to configure the model architecture.
+        The 'config' parameter is passed to the 'BertModel' forwardor to configure the model architecture.
         - 'cls': An instance of the 'BertOnlyMLMHead' class, which represents the MLM head of the BERT model.
-        The 'config' parameter is passed to the 'BertOnlyMLMHead' constructor to configure the MLM head.
+        The 'config' parameter is passed to the 'BertOnlyMLMHead' forwardor to configure the MLM head.
 
         After the initialization, the 'post_init' method is called to execute any additional setup steps specific to the BertForMaskedLM class.
         """
@@ -1940,7 +1929,7 @@ class BertForMaskedLM(BertPreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1983,7 +1972,7 @@ class BertForMaskedLM(BertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -2022,10 +2011,10 @@ class BertForMaskedLM(BertPreTrainedModel):
         if self.config.pad_token_id is None:
             raise ValueError("The PAD token should be defined for generation")
 
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
+        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], dim=-1)
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64)
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 
@@ -2054,7 +2043,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2112,7 +2101,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            next_sentence_loss = ops.cross_entropy(seq_relationship_scores.view(-1, 2), labels.view(-1))
+            next_sentence_loss = F.cross_entropy(seq_relationship_scores.view(-1, 2), labels.view(-1))
 
         if not return_dict:
             output = (seq_relationship_scores,) + outputs[2:]
@@ -2153,12 +2142,12 @@ class BertForSequenceClassification(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2172,7 +2161,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         '''
-        This method constructs the Bert model for sequence classification.
+        This method forwards the Bert model for sequence classification.
 
         Args:
             self (BertForSequenceClassification): The instance of the BertForSequenceClassification class.
@@ -2235,7 +2224,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 else:
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
@@ -2275,12 +2264,12 @@ class BertForMultipleChoice(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2333,7 +2322,7 @@ class BertForMultipleChoice(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -2376,12 +2365,12 @@ class BertForTokenClassification(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2420,7 +2409,7 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -2459,12 +2448,12 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.bert = BertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2543,8 +2532,8 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -2624,7 +2613,7 @@ class BertForPreTraining(BertPreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2682,8 +2671,8 @@ class BertForPreTraining(BertPreTrainedModel):
 
         total_loss = None
         if labels is not None and next_sentence_label is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            next_sentence_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
             total_loss = masked_lm_loss + next_sentence_loss
 
         if not return_dict:
@@ -2698,12 +2687,12 @@ class BertForPreTraining(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-class BertDualSelfAttention(nn.Cell):
+class BertDualSelfAttention(nn.Module):
 
     """
     The BertDualSelfAttention class represents the dual self-attention mechanism used in the BERT model.
     This class implements the mechanism for both real and imaginary parts of the self-attention mechanism.
-    It inherits from the nn.Cell class and provides methods for attention score computation and context layer generation.
+    It inherits from the nn.Module class and provides methods for attention score computation and context layer generation.
 
     Attributes:
         config: A configuration object containing the model's hyperparameters.
@@ -2719,11 +2708,11 @@ class BertDualSelfAttention(nn.Cell):
 
     Methods:
         transpose_for_scores(input_x): Transposes the input tensor for computing attention scores.
-        construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
+        forward(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
             Constructs the dual self-attention mechanism using the provided input tensors.
 
     Note:
-        The construct method raises a NotImplementedError for cross-attention and past_key_value arguments,
+        The forward method raises a NotImplementedError for cross-attention and past_key_value arguments,
         as these functionalities are not implemented yet.
     """
     def __init__(self, config, position_embedding_type=None):
@@ -2771,7 +2760,7 @@ class BertDualSelfAttention(nn.Cell):
         input_x = input_x.view(*new_x_shape)
         return input_x.transpose(0, 1, 3, 2, 4)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2782,7 +2771,7 @@ class BertDualSelfAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ):
         """
-        This method 'construct' in the class 'BertDualSelfAttention' implements the dual self-attention mechanism
+        This method 'forward' in the class 'BertDualSelfAttention' implements the dual self-attention mechanism
         for the BERT model.
 
         Args:
@@ -2842,8 +2831,8 @@ class BertDualSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         attention_scores_r, attention_scores_i = get_x_and_y(attention_scores)
-        attention_scores_r = ops.softmax(attention_scores_r, axis=-1)
-        attention_scores_i = ops.softmax(attention_scores_i, axis=-1)
+        attention_scores_r = ops.softmax(attention_scores_r, dim=-1)
+        attention_scores_i = ops.softmax(attention_scores_i, dim=-1)
 
         p_attn = to_2channel(attention_scores_r, attention_scores_i)
 
@@ -2864,11 +2853,11 @@ class BertDualSelfAttention(nn.Cell):
 
         return outputs
 
-class BertDualSelfOutput(nn.Cell):
+class BertDualSelfOutput(nn.Module):
 
     """
     The 'BertDualSelfOutput' class represents a module that performs dual self-attention mechanism for BERT.
-    It inherits from nn.Cell and contains methods for initializing the module and constructing
+    It inherits from nn.Module and contains methods for initializing the module and forwarding
     the dual self-attention mechanism.
 
     Attributes:
@@ -2879,7 +2868,7 @@ class BertDualSelfOutput(nn.Cell):
 
     Methods:
         __init__(config): Initializes the 'BertDualSelfOutput' module with the provided configuration.
-        construct(hidden_states, input_tensor):
+        forward(hidden_states, input_tensor):
             Constructs the dual self-attention mechanism using the provided hidden states and input tensor.
     """
     def __init__(self, config):
@@ -2899,14 +2888,14 @@ class BertDualSelfOutput(nn.Cell):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.dense = Dense(config.hidden_size//2, config.hidden_size//2)
-        self.LayerNorm  = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm  = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        Method 'construct' in the class 'BertDualSelfOutput'.
+        Method 'forward' in the class 'BertDualSelfOutput'.
 
-        This method constructs the hidden states by processing the input hidden states and input tensor.
+        This method forwards the hidden states by processing the input hidden states and input tensor.
 
         Args:
             self: Instance of the class BertDualSelfOutput. It represents the current instance of the class.
@@ -2932,12 +2921,12 @@ class BertDualSelfOutput(nn.Cell):
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
-class BertDualAttention(nn.Cell):
+class BertDualAttention(nn.Module):
 
     """
-    This class represents a BertDualAttention module that inherits from nn.Cell.
+    This class represents a BertDualAttention module that inherits from nn.Module.
     It contains methods for initializing the module, pruning attention heads,
-    and constructing the attention mechanism for BERT models.
+    and forwarding the attention mechanism for BERT models.
 
     Attributes:
         config: Configuration for the BertDualAttention module.
@@ -2950,7 +2939,7 @@ class BertDualAttention(nn.Cell):
         prune_heads(self, heads):
             Prunes the specified attention heads from the self-attention mechanism.
 
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None,
+        forward(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None,
         encoder_attention_mask=None, past_key_value=None, output_attentions=False):
             Constructs the attention mechanism for BERT models using the provided inputs and past key values.
 
@@ -2992,14 +2981,14 @@ class BertDualAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3051,12 +3040,12 @@ class BertDualAttention(nn.Cell):
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
 
-class BertDualIntermediate(nn.Cell):
+class BertDualIntermediate(nn.Module):
 
     """
     This class represents a dual intermediate layer in a BERT model.
 
-    The BertDualIntermediate class is a subclass of nn.Cell and is used to construct the dual intermediate layer in a BERT model.
+    The BertDualIntermediate class is a subclass of nn.Module and is used to forward the dual intermediate layer in a BERT model.
     It takes in a configuration object as input, which specifies the hidden size and intermediate size.
     The class initializes the hidden size and intermediate size attributes based on the provided configuration.
 
@@ -3067,7 +3056,7 @@ class BertDualIntermediate(nn.Cell):
         intermediate_act_fn (function): The activation function to be applied to the intermediate states.
 
     Methods:
-        construct(hidden_states):
+        forward(hidden_states):
             Constructs the dual intermediate layer using the given hidden states as input.
             The method first splits the input hidden states into two channels: hidden_states_r and hidden_states_d.
             Then, it combines the two channels into a single input using the to_2channel function.
@@ -3092,9 +3081,9 @@ class BertDualIntermediate(nn.Cell):
         >>> # Create an instance of the BertDualIntermediate class
         >>> dual_intermediate = BertDualIntermediate(config)
         ...
-        >>> # Use the dual_intermediate instance to construct the dual intermediate layer
+        >>> # Use the dual_intermediate instance to forward the dual intermediate layer
         >>> hidden_states = ... # input hidden states
-        >>> output = dual_intermediate.construct(hidden_states)
+        >>> output = dual_intermediate.forward(hidden_states)
         ```
     """
     def __init__(self, config):
@@ -3125,9 +3114,9 @@ class BertDualIntermediate(nn.Cell):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        The construct method in the BertDualIntermediate class processes the hidden_states tensor to produce an intermediate representation.
+        The forward method in the BertDualIntermediate class processes the hidden_states tensor to produce an intermediate representation.
 
         Args:
             self (BertDualIntermediate): The instance of the BertDualIntermediate class.
@@ -3150,11 +3139,11 @@ class BertDualIntermediate(nn.Cell):
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
-class BertDualOutput(nn.Cell):
+class BertDualOutput(nn.Module):
 
     """
     The 'BertDualOutput' class represents a custom neural network layer for processing dual outputs in a BERT model.
-    This class inherits functionality from nn.Cell and implements methods for initialization and processing of hidden states.
+    This class inherits functionality from nn.Module and implements methods for initialization and processing of hidden states.
 
     Attributes:
         intermediate_size (int): The size of the intermediate layer in the network.
@@ -3164,11 +3153,11 @@ class BertDualOutput(nn.Cell):
 
     Methods:
         __init__(self, config): Initializes the BertDualOutput instance with the provided configuration.
-        construct(self, hidden_states, input_tensor): Processes the hidden states and input tensor to produce the final output.
+        forward(self, hidden_states, input_tensor): Processes the hidden states and input tensor to produce the final output.
 
     The '__init__' method initializes the instance by setting the intermediate_size, dense layer,
     LayerNorm module, and dropout layer based on the provided configuration.
-    The 'construct' method processes the hidden states by splitting them, applying transformations,
+    The 'forward' method processes the hidden states by splitting them, applying transformations,
     and combining the outputs to produce the final hidden states.
 
     This class is designed to be used as a component in BERT models for handling dual outputs efficiently.
@@ -3199,12 +3188,12 @@ class BertDualOutput(nn.Cell):
         super().__init__()
         self.intermediate_size = config.intermediate_size
         self.dense = Dense(config.intermediate_size//2, config.hidden_size//2)
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method 'construct' is a member of the class 'BertDualOutput' and is used to process hidden states
+        This method 'forward' is a member of the class 'BertDualOutput' and is used to process hidden states
         and input tensors in a specific manner.
 
         Args:
@@ -3231,13 +3220,13 @@ class BertDualOutput(nn.Cell):
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
-class BertDualLayer(nn.Cell):
+class BertDualLayer(nn.Module):
 
     """
     BertDualLayer
 
     This class represents a layer in a dual-attention BERT model.
-    It is a subclass of nn.Cell and is responsible for performing attention and feed-forward operations.
+    It is a subclass of nn.Module and is responsible for performing attention and feed-forward operations.
 
     Attributes:
         chunk_size_feed_forward (int): The size of chunks for feed-forward operation.
@@ -3250,7 +3239,7 @@ class BertDualLayer(nn.Cell):
         output (BertDualOutput): The output module used in the feed-forward operation.
 
     Methods:
-        construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
+        forward(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
             Constructs the layer by performing attention and feed-forward operations.
 
         feed_forward_chunk(attention_output):
@@ -3294,7 +3283,7 @@ class BertDualLayer(nn.Cell):
         self.intermediate = BertDualIntermediate(config)
         self.output = BertDualOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3305,7 +3294,7 @@ class BertDualLayer(nn.Cell):
         output_attentions: Optional[bool] = False,
     ):
         """
-        This method constructs a BertDualLayer by performing self-attention and potentially cross-attention operations.
+        This method forwards a BertDualLayer by performing self-attention and potentially cross-attention operations.
 
         Args:
             self: The instance of the BertDualLayer class.
@@ -3388,11 +3377,11 @@ class BertDualLayer(nn.Cell):
         return layer_output
 
 
-class BertDualEncoder(nn.Cell):
+class BertDualEncoder(nn.Module):
 
     """
     The BertDualEncoder class represents a dual encoder model based on the BERT architecture.
-    This class inherits from the nn.Cell class in MindSpore.
+    This class inherits from the nn.Module class in MindSpore.
 
     Attributes:
         config: The configuration parameters for the model.
@@ -3403,7 +3392,7 @@ class BertDualEncoder(nn.Cell):
         __init__(self, config):
             Initializes the BertDualEncoder instance with the provided configuration.
 
-        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict):
+        forward(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict):
             Constructs the dual encoder model with the given input tensors and parameters.
             Returns the final hidden states, past key values, hidden states at all layers,
             self-attentions at all layers, and cross-attentions at all layers.
@@ -3428,10 +3417,10 @@ class BertDualEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([BertDualLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([BertDualLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3445,7 +3434,7 @@ class BertDualEncoder(nn.Cell):
         return_dict: Optional[bool] = True,
     ):
         """
-        This method constructs the BertDualEncoder model.
+        This method forwards the BertDualEncoder model.
 
         Args:
             self: The object instance.
@@ -3606,7 +3595,7 @@ class BertDualModel(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3671,7 +3660,7 @@ class BertDualModel(BertPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
@@ -3679,7 +3668,7 @@ class BertDualModel(BertPreTrainedModel):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
@@ -3690,7 +3679,7 @@ class BertDualModel(BertPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -3749,7 +3738,7 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
     The __init__ method initializes the BertDualForSequenceClassification instance by setting the number of labels,
     BERT model configuration, dropout, and classifier layers.
 
-    The construct method processes input data for sequence classification using the BERT model.
+    The forward method processes input data for sequence classification using the BERT model.
     It accepts input tensors such as input_ids, attention_mask, token_type_ids, position_ids, head_mask,
     inputs_embeds, labels, and additional parameters for controlling the output format.
     The method returns the classification logits and can also calculate the loss based on the problem type
@@ -3790,12 +3779,12 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3809,7 +3798,7 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         """
-        This method constructs a dual BERT model for sequence classification.
+        This method forwards a dual BERT model for sequence classification.
         
         Args:
             self (BertDualForSequenceClassification): The instance of the BertDualForSequenceClassification class.
@@ -3868,7 +3857,7 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
                 else:
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:

@@ -21,7 +21,8 @@
 # pylint: disable=too-many-arguments
 "Adalora Model"
 import warnings
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindnlp.transformers.ms_utils import Conv1D
 
 from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
@@ -41,12 +42,12 @@ class AdaLoraModel(LoraModel):
     https://openreview.net/forum?id=lq62uWRJjiY
 
     Args:
-        model ([`mindspore.nn.Cell`]): The model to be adapted.
+        model ([`mindspore.nn.Module`]): The model to be adapted.
         config ([`AdaLoraConfig`]): The configuration of the AdaLora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        AdaLoraModel ([`mindspore.nn.Cell`]): The AdaLora model.
+        AdaLoraModel ([`mindspore.nn.Module`]): The AdaLora model.
 
     Example::
 
@@ -122,13 +123,13 @@ class AdaLoraModel(LoraModel):
                 "When using multiple adapters, set inference_mode to True for all adapters except the one "
                 "you want to train."
             )
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         """
         Marks only specific adapters in the model as trainable based on the specified bias configuration.
         
         Args:
             self: The instance of the AdaLoraModel class.
-            model (nn.Cell): The neural network model for which adapters should be marked as trainable.
+            model (nn.Module): The neural network model for which adapters should be marked as trainable.
         
         Returns:
             None. This method does not return any value.
@@ -273,7 +274,7 @@ class AdaLoraModel(LoraModel):
         #     new_cell = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
         # elif AutoGPTQQuantLinear is not None and isinstance(target, AutoGPTQQuantLinear):
         #     new_cell = SVDQuantLinear(target, adapter_name, **kwargs)
-        if isinstance(target_base_layer, nn.Dense):
+        if isinstance(target_base_layer, nn.Linear):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(
                     "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
@@ -363,8 +364,8 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
         except AttributeError:
             return getattr(self.model, name)
 
-    def construct(self, *args, **kwargs):
-        """The construct method of the model"""
+    def forward(self, *args, **kwargs):
+        """The forward method of the model"""
         outputs = self.model(*args, **kwargs)
 
         if (getattr(outputs, "loss", None) is not None) and isinstance(outputs.loss, Tensor):

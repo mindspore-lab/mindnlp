@@ -19,10 +19,11 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, TruncatedNormal
-from mindnlp._legacy import functional as F
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -46,7 +47,7 @@ _IMAGE_CLASS_CHECKPOINT = "google/vit-hybrid-base-bit-384"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 
-class ViTHybridEmbeddings(nn.Cell):
+class ViTHybridEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
     """
@@ -97,7 +98,7 @@ class ViTHybridEmbeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         bool_masked_pos: Optional[ms.Tensor] = None,
@@ -128,7 +129,7 @@ class ViTHybridEmbeddings(nn.Cell):
         return embeddings
 
 
-class ViTHybridPatchEmbeddings(nn.Cell):
+class ViTHybridPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -165,9 +166,9 @@ class ViTHybridPatchEmbeddings(nn.Cell):
         self.patch_size = patch_size
         self.num_channels = num_channels
 
-        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
-    def construct(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
         _, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -185,7 +186,7 @@ class ViTHybridPatchEmbeddings(nn.Cell):
         return embeddings
 
 
-class ViTHybridSelfAttention(nn.Cell):
+class ViTHybridSelfAttention(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -198,9 +199,9 @@ class ViTHybridSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
 
@@ -209,7 +210,7 @@ class ViTHybridSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -276,7 +277,7 @@ class ViTHybridSdpaSelfAttention(ViTHybridSelfAttention):
         return context_layer, None
 
 
-class ViTHybridSelfOutput(nn.Cell):
+class ViTHybridSelfOutput(nn.Module):
     """
     The residual connection is defined in ViTHybridLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -284,17 +285,17 @@ class ViTHybridSelfOutput(nn.Cell):
 
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
         return hidden_states
 
 
-class ViTHybridAttention(nn.Cell):
+class ViTHybridAttention(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
         self.attention = ViTHybridSelfAttention(config)
@@ -312,14 +313,14 @@ class ViTHybridAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -339,29 +340,29 @@ class ViTHybridSdpaAttention(ViTHybridAttention):
         self.attention = ViTHybridSdpaSelfAttention(config)
 
 
-class ViTHybridIntermediate(nn.Cell):
+class ViTHybridIntermediate(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
         return hidden_states
 
 
-class ViTHybridOutput(nn.Cell):
+class ViTHybridOutput(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -376,7 +377,7 @@ VIT_HYBRID_ATTENTION_CLASSES = {
 }
 
 
-class ViTHybridLayer(nn.Cell):
+class ViTHybridLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: ViTHybridConfig) -> None:
@@ -386,10 +387,10 @@ class ViTHybridLayer(nn.Cell):
         self.attention = VIT_HYBRID_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTHybridIntermediate(config)
         self.output = ViTHybridOutput(config)
-        self.layernorm_before = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -418,14 +419,14 @@ class ViTHybridLayer(nn.Cell):
         return outputs
 
 
-class ViTHybridEncoder(nn.Cell):
+class ViTHybridEncoder(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViTHybridLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ViTHybridLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -482,9 +483,9 @@ class ViTHybridPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["ViTHybridEmbeddings", "ViTHybridLayer"]
     _supports_sdpa = True
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
@@ -547,7 +548,7 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         self.embeddings = ViTHybridEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = ViTHybridEncoder(config)
 
-        self.layernorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
         self.pooler = ViTHybridPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
@@ -565,7 +566,7 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         bool_masked_pos: Optional[ms.Tensor] = None,
@@ -627,13 +628,13 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         )
 
 
-class ViTHybridPooler(nn.Cell):
+class ViTHybridPooler(nn.Module):
     def __init__(self, config: ViTHybridConfig):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -655,13 +656,13 @@ class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
         self.vit = ViTHybridModel(config, add_pooling_layer=False)
 
         # Classifier head
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         head_mask: Optional[ms.Tensor] = None,

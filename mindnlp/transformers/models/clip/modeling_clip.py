@@ -20,9 +20,11 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -59,7 +61,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
         None.
     
     """
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 def clip_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
@@ -189,11 +191,11 @@ class CLIPOutput(ModelOutput):
             for k in self.keys()         )
 
 
-class CLIPVisionEmbeddings(nn.Cell):
+class CLIPVisionEmbeddings(nn.Module):
 
     """
-    CLIPVisionEmbeddings is a class that represents the embeddings used in the CLIP (Contrastive Language-Image Pretraining) model for vision. This class inherits from nn.Cell and is responsible for
-    constructing the embeddings for input images.
+    CLIPVisionEmbeddings is a class that represents the embeddings used in the CLIP (Contrastive Language-Image Pretraining) model for vision. This class inherits from nn.Module and is responsible for
+    forwarding the embeddings for input images.
 
     Attributes:
         config (CLIPVisionConfig): The configuration object that holds the parameters for the CLIPVisionEmbeddings.
@@ -208,11 +210,11 @@ class CLIPVisionEmbeddings(nn.Cell):
         position_ids (Tensor): The tensor containing position IDs.
 
     Methods:
-        construct(pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+        forward(pixel_values: mindspore.Tensor) -> mindspore.Tensor:
             Constructs the embeddings for the input pixel values.
 
     Raises:
-        NotImplementedError: If the construct method is not implemented in the subclass.
+        NotImplementedError: If the forward method is not implemented in the subclass.
     """
     def __init__(self, config: CLIPVisionConfig):
         """
@@ -247,15 +249,15 @@ class CLIPVisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct embeddings for CLIP vision model.
 
@@ -265,7 +267,7 @@ class CLIPVisionEmbeddings(nn.Cell):
                 It should have a shape of (batch_size, channels, height, width).
 
         Returns:
-            mindspore.Tensor: A tensor containing the constructed embeddings for the input images.
+            mindspore.Tensor: A tensor containing the forwarded embeddings for the input images.
                 The shape of the returned tensor is (batch_size, num_patches + 1, embedding_dim),
                 where num_patches is the number of patches extracted from the image and
                 embedding_dim is the dimension of the embedding space.
@@ -280,17 +282,17 @@ class CLIPVisionEmbeddings(nn.Cell):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
 
-class CLIPTextEmbeddings(nn.Cell):
+class CLIPTextEmbeddings(nn.Module):
 
     """
     This class represents the CLIPTextEmbeddings, which is a module for creating text embeddings in the
-    CLIP (Contrastive Language-Image Pretraining) model. It inherits from the nn.Cell class.
+    CLIP (Contrastive Language-Image Pretraining) model. It inherits from the nn.Module class.
 
     Attributes:
         token_embedding (nn.Embedding): Embedding layer for token inputs.
@@ -299,7 +301,7 @@ class CLIPTextEmbeddings(nn.Cell):
 
     Methods:
         __init__: Initializes the CLIPTextEmbeddings module.
-        construct: Constructs the text embeddings.
+        forward: Constructs the text embeddings.
 
     """
     def __init__(self, config: CLIPTextConfig):
@@ -325,9 +327,9 @@ class CLIPTextEmbeddings(nn.Cell):
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -343,7 +345,7 @@ class CLIPTextEmbeddings(nn.Cell):
             inputs_embeds (Optional[mindspore.Tensor]): The precomputed embeddings for the input tokens. Default is None.
 
         Returns:
-            mindspore.Tensor: The constructed text embeddings combining input token embeddings and position embeddings.
+            mindspore.Tensor: The forwarded text embeddings combining input token embeddings and position embeddings.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are None.
@@ -363,7 +365,7 @@ class CLIPTextEmbeddings(nn.Cell):
         return embeddings
 
 
-class CLIPAttention(nn.Cell):
+class CLIPAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config):
         """
@@ -400,10 +402,10 @@ class CLIPAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -432,7 +434,7 @@ class CLIPAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -479,7 +481,7 @@ class CLIPAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -491,7 +493,7 @@ class CLIPAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -510,21 +512,21 @@ class CLIPAttention(nn.Cell):
         return attn_output, attn_weights_reshaped
 
 
-class CLIPMLP(nn.Cell):
+class CLIPMLP(nn.Module):
 
     """
     The CLIPMLP class represents a multi-layer perceptron (MLP) neural network for the CLIP (Contrastive Language-Image Pre-training) model.
-    This class inherits from nn.Cell and contains methods for initializing the network and performing forward propagation through the network.
+    This class inherits from nn.Module and contains methods for initializing the network and performing forward propagation through the network.
 
     Attributes:
         config (dict): A dictionary containing configuration parameters for the network.
         activation_fn (function): Activation function used in the hidden layers of the network.
-        fc1 (nn.Dense): Fully connected layer mapping input to intermediate size.
-        fc2 (nn.Dense): Fully connected layer mapping intermediate size to output size.
+        fc1 (nn.Linear): Fully connected layer mapping input to intermediate size.
+        fc2 (nn.Linear): Fully connected layer mapping intermediate size to output size.
 
     Methods:
         __init__: Initializes the CLIPMLP object with the provided configuration.
-        construct: Performs forward propagation through the network
+        forward: Performs forward propagation through the network
             given an input tensor of hidden states, returning the output tensor after passing through the MLP layers.
     """
     def __init__(self, config):
@@ -546,10 +548,10 @@ class CLIPMLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the forward pass of the CLIPMLP model.
 
@@ -582,7 +584,7 @@ class CLIPMLP(nn.Cell):
         return hidden_states
 
 
-class CLIPEncoderLayer(nn.Cell):
+class CLIPEncoderLayer(nn.Module):
 
     """
     This class represents a single layer of the CLIPEncoder, which is responsible for encoding input hidden states
@@ -596,7 +598,7 @@ class CLIPEncoderLayer(nn.Cell):
         layer_norm2 (nn.LayerNorm): The layer normalization operation applied after the MLP operation.
 
     Methods:
-        construct(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
+        forward(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
             Applies the CLIPEncoderLayer operations on the given input hidden states.
 
             Args:
@@ -634,11 +636,11 @@ class CLIPEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = CLIPMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -746,11 +748,11 @@ class CLIPPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-        if isinstance(cell, nn.Dense) and cell.bias is not None:
+        if isinstance(cell, nn.Linear) and cell.bias is not None:
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class CLIPEncoder(nn.Cell):
+class CLIPEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`CLIPEncoderLayer`].
@@ -779,10 +781,10 @@ class CLIPEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([CLIPEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([CLIPEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -855,20 +857,20 @@ class CLIPEncoder(nn.Cell):
         )
 
 
-class CLIPTextTransformer(nn.Cell):
+class CLIPTextTransformer(nn.Module):
 
     """
     The CLIPTextTransformer class represents a transformer model for processing text inputs in the Contextual
-    Language-Image Pretraining (CLIP) framework. It includes methods for initializing the model and constructing
+    Language-Image Pretraining (CLIP) framework. It includes methods for initializing the model and forwarding
     the forward pass for text inputs.
 
-    This class inherits from the nn.Cell module, and it contains an initialization method (__init__) for setting up
-    the model configuration and a construct method for processing input text data through the transformer layers.
+    This class inherits from the nn.Module module, and it contains an initialization method (__init__) for setting up
+    the model configuration and a forward method for processing input text data through the transformer layers.
 
     The __init__ method initializes the CLIPTextTransformer instance with a provided CLIPTextConfig object,
     setting up the model's configuration and embedding layers.
 
-    The construct method processes input text data through the transformer layers, including handling input_ids,
+    The forward method processes input text data through the transformer layers, including handling input_ids,
     attention_mask, position_ids, and other optional parameters. It applies the transformer encoder to the input
     embeddings and returns the encoded hidden states and pooled output.
 
@@ -898,12 +900,12 @@ class CLIPTextTransformer(nn.Cell):
         embed_dim = config.hidden_size
         self.embeddings = CLIPTextEmbeddings(config)
         self.encoder = CLIPEncoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -936,7 +938,7 @@ class CLIPTextTransformer(nn.Cell):
         causal_attention_mask = _create_4d_causal_attention_mask(
             input_shape, hidden_states.dtype
         )
-        # expand attention_mask
+        # broadcast_to attention_mask
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
             attention_mask = _prepare_4d_attention_mask(attention_mask, hidden_states.dtype)
@@ -990,15 +992,15 @@ class CLIPTextModel(CLIPPreTrainedModel):
     """
     The `CLIPTextModel` class represents a model for processing text inputs using the CLIP (Contrastive Language-Image Pretraining) framework.
     This class inherits from `CLIPPreTrainedModel` and provides methods for initializing the model, obtaining input embeddings,
-    and constructing the model for inference.
+    and forwarding the model for inference.
 
     The `CLIPTextModel` class includes methods for initializing the model with a configuration, obtaining input embeddings,
-    and constructing the model for inference. The `get_input_embeddings` method returns the token embeddings used as input
+    and forwarding the model for inference. The `get_input_embeddings` method returns the token embeddings used as input
     to the model, while the `set_input_embeddings` method allows for updating the token embeddings.
-    The `construct` method constructs the model for performing inference, with options for specifying input tensors,
+    The `forward` method forwards the model for performing inference, with options for specifying input tensors,
     attention masks, position ids, and return settings.
 
-    The `construct` method returns the model outputs based on the provided inputs and settings.
+    The `forward` method returns the model outputs based on the provided inputs and settings.
     Additionally, the docstring includes usage examples for initializing the `CLIPTextModel` and performing inference
     using the model.
 
@@ -1038,7 +1040,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         Method to retrieve the input embeddings from the CLIPTextModel.
 
@@ -1048,7 +1050,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
                 from which the input embeddings are being retrieved.
 
         Returns:
-            nn.Cell: An instance of the neural network Cell class representing the input embeddings.
+            nn.Module: An instance of the neural network Cell class representing the input embeddings.
                 The return value is the token embedding from the text model, which serves as the input embeddings
                 for further processing within the CLIPTextModel.
 
@@ -1073,7 +1075,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
         """
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1112,17 +1114,17 @@ class CLIPTextModel(CLIPPreTrainedModel):
         )
 
 
-class CLIPVisionTransformer(nn.Cell):
+class CLIPVisionTransformer(nn.Module):
 
     """
     This class represents a vision transformer model for the Contrastive Language-Image Pretraining (CLIP) framework.
-    It inherits from the nn.Cell class and incorporates CLIPVisionConfig and CLIPVisionEmbeddings for configuration
+    It inherits from the nn.Module class and incorporates CLIPVisionConfig and CLIPVisionEmbeddings for configuration
     and embedding functionalities, respectively.
-    The class includes methods for initialization and construction of the vision transformer.
+    The class includes methods for initialization and forwardion of the vision transformer.
 
     The __init__ method initializes the CLIPVisionTransformer class with the provided configuration. It sets up the required embeddings, layer normalization, and encoder components.
 
-    The construct method processes the input pixel values and generates the outputs using the configured vision transformer. It handles optional arguments for controlling the output format and returns the
+    The forward method processes the input pixel values and generates the outputs using the configured vision transformer. It handles optional arguments for controlling the output format and returns the
     resulting hidden states, pooled output, and other relevant information according to the specified return format.
 
     Note:
@@ -1148,11 +1150,11 @@ class CLIPVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = CLIPVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         self.encoder = CLIPEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1212,10 +1214,10 @@ class CLIPVisionModel(CLIPPreTrainedModel):
     Methods:
         __init__: Initializes a new instance of the `CLIPVisionModel` class.
         get_input_embeddings: Returns the input embeddings of the vision model.
-        construct: Constructs the vision model and performs image processing.
+        forward: Constructs the vision model and performs image processing.
 
     Returns:
-        The constructed `CLIPVisionModel` instance.
+        The forwarded `CLIPVisionModel` instance.
 
     Example:
         ```python
@@ -1261,7 +1263,7 @@ class CLIPVisionModel(CLIPPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         This method returns the input embeddings from the CLIPVisionModel.
 
@@ -1269,14 +1271,14 @@ class CLIPVisionModel(CLIPPreTrainedModel):
             self (CLIPVisionModel): The instance of the CLIPVisionModel class.
 
         Returns:
-            nn.Cell: The input embeddings from the vision model. This is of type nn.Cell.
+            nn.Module: The input embeddings from the vision model. This is of type nn.Module.
 
         Raises:
             None
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1322,7 +1324,7 @@ class CLIPModel(CLIPPreTrainedModel):
     """
     A Python class representing a CLIP (Contrastive Language-Image Pre-training) model that combines text and vision
     inputs for image-text similarity scoring. This class inherits from CLIPPreTrainedModel and provides methods for
-    extracting text and image features, as well as for constructing the final CLIP output.
+    extracting text and image features, as well as for forwarding the final CLIP output.
     The class handles the initialization of model configurations, text and vision embeddings, projectionlayers,
     and scaling of logits for calculating similarity scores.
     It also includes examples on how to use the model for text and image inputs.
@@ -1380,8 +1382,8 @@ class CLIPModel(CLIPPreTrainedModel):
         self.text_model = CLIPTextTransformer(text_config)
         self.vision_model = CLIPVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = mindspore.tensor([self.config.logit_scale_init_value])
 
         # Initialize weights and apply final processing
@@ -1482,7 +1484,7 @@ class CLIPModel(CLIPPreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -1585,9 +1587,9 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
     It incorporates a CLIPTextTransformer and a text projection layer to generate text embeddings.
 
     The class provides functionality for initializing the model with a CLIPTextConfig, accessing the input embeddings,
-    setting the input embeddings, and constructing the model's outputs based on input text ids, attention masks, and position ids.
+    setting the input embeddings, and forwarding the model's outputs based on input text ids, attention masks, and position ids.
 
-    The construct method takes optional input tensors representing text ids, attention masks, position ids,
+    The forward method takes optional input tensors representing text ids, attention masks, position ids,
     output attentions, output hidden states, and return dictionary flag.
     It returns a CLIPTextModelOutput object containing the text embeddings and other relevant information.
 
@@ -1628,12 +1630,12 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
 
         self.text_model = CLIPTextTransformer(config)
 
-        self.text_projection = nn.Dense(config.hidden_size, config.projection_dim, has_bias=False)
+        self.text_projection = nn.Linear(config.hidden_size, config.projection_dim, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         Method to get the input embeddings from the CLIPTextModelWithProjection instance.
 
@@ -1642,7 +1644,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
                 Represents the current instance of the class.
 
         Returns:
-            nn.Cell: Returns the input embeddings of type nn.Cell.
+            nn.Module: Returns the input embeddings of type nn.Module.
                 Represents the token embeddings used by the text model.
 
         Raises:
@@ -1667,7 +1669,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         """
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1727,11 +1729,11 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
     Represents a vision model with projection for CLIP (Contrastive Language-Image Pre-training) framework.
 
     This class inherits from CLIPPreTrainedModel and includes methods for initializing the model,
-    retrieving input embeddings, and constructing the model.
+    retrieving input embeddings, and forwarding the model.
 
     The 'CLIPVisionModelWithProjection' class initializes with a configuration object of type 'CLIPVisionConfig'
     and sets up the vision model and visual projection.
-    It provides a method to retrieve input embeddings and constructs the vision model with optional parameters for
+    It provides a method to retrieve input embeddings and forwards the vision model with optional parameters for
     pixel values, attentions, hidden states, and return dictionary.
     The method returns image embeddings and other model outputs based on the input parameters.
 
@@ -1775,12 +1777,12 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
 
         self.vision_model = CLIPVisionTransformer(config)
 
-        self.visual_projection = nn.Dense(config.hidden_size, config.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(config.hidden_size, config.projection_dim, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         Returns the input embeddings of the CLIPVisionModelWithProjection.
 
@@ -1788,7 +1790,7 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
             self (CLIPVisionModelWithProjection): An instance of CLIPVisionModelWithProjection class.
 
         Returns:
-            nn.Cell: A neural network cell representing the input embeddings of the vision model.
+            nn.Module: A neural network cell representing the input embeddings of the vision model.
 
         Raises:
             None.
@@ -1796,7 +1798,7 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1865,7 +1867,7 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
         __init__:
             Initializes the CLIPForImageClassification model with the provided configuration.
 
-        construct:
+        forward:
             Constructs the image classification model using the specified pixel values and labels.
                 It returns the logits, loss, hidden states, and attentions if specified.
 
@@ -1905,13 +1907,13 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
 
         # Classifier head
         self.classifier = (
-            nn.Dense(config.vision_config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.vision_config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
@@ -1942,7 +1944,7 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
         sequence_output = outputs[0]
 
         # average pool the patch tokens
-        sequence_output = ops.mean(sequence_output[:, 1:, :], axis=1)
+        sequence_output = ops.mean(sequence_output[:, 1:, :], dim=1)
         # apply classifier
         logits = self.classifier(sequence_output)
 
@@ -1959,13 +1961,13 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

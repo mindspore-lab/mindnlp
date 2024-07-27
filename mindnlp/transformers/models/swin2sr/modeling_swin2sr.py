@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
 from mindnlp.utils import (
@@ -110,21 +110,21 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 
 # Copied from transformers.models.swin.modeling_swin.SwinDropPath with Swin->Swin2SR
-class Swin2SRDropPath(nn.Cell):
+class Swin2SRDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class Swin2SREmbeddings(nn.Cell):
+class Swin2SREmbeddings(nn.Module):
     """
     Construct the patch and optional position embeddings.
     """
@@ -143,7 +143,7 @@ class Swin2SREmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.window_size = config.window_size
 
-    def construct(self, pixel_values: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor]:
+    def forward(self, pixel_values: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor]:
         embeddings, output_dimensions = self.patch_embeddings(pixel_values)
 
         if self.position_embeddings is not None:
@@ -154,7 +154,7 @@ class Swin2SREmbeddings(nn.Cell):
         return embeddings, output_dimensions
 
 
-class Swin2SRPatchEmbeddings(nn.Cell):
+class Swin2SRPatchEmbeddings(nn.Module):
     def __init__(self, config, normalize_patches=True):
         super().__init__()
         num_channels = config.embed_dim
@@ -166,10 +166,10 @@ class Swin2SRPatchEmbeddings(nn.Cell):
         self.patches_resolution = patches_resolution
         self.num_patches = patches_resolution[0] * patches_resolution[1]
 
-        self.projection = nn.Conv2d(num_channels, config.embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
-        self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=1e-5) if normalize_patches else None
+        self.projection = nn.Conv2d(num_channels, config.embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+        self.layernorm = nn.LayerNorm([config.embed_dim], eps=1e-5) if normalize_patches else None
 
-    def construct(self, embeddings: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
+    def forward(self, embeddings: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
         embeddings = self.projection(embeddings)
         _, _, height, width = embeddings.shape
         output_dimensions = (height, width)
@@ -181,7 +181,7 @@ class Swin2SRPatchEmbeddings(nn.Cell):
         return embeddings, output_dimensions
 
 
-class Swin2SRPatchUnEmbeddings(nn.Cell):
+class Swin2SRPatchUnEmbeddings(nn.Module):
     r"""Image to Patch Unembedding"""
 
     def __init__(self, config):
@@ -189,14 +189,14 @@ class Swin2SRPatchUnEmbeddings(nn.Cell):
 
         self.embed_dim = config.embed_dim
 
-    def construct(self, embeddings, x_size):
+    def forward(self, embeddings, x_size):
         batch_size, height_width, num_channels = embeddings.shape
         embeddings = embeddings.swapaxes(1, 2).view(batch_size, self.embed_dim, x_size[0], x_size[1])  # B Ph*Pw C
         return embeddings
 
 
 # Copied from transformers.models.swinv2.modeling_swinv2.Swinv2PatchMerging with Swinv2->Swin2SR
-class Swin2SRPatchMerging(nn.Cell):
+class Swin2SRPatchMerging(nn.Module):
     """
     Patch Merging Layer.
 
@@ -205,15 +205,15 @@ class Swin2SRPatchMerging(nn.Cell):
             Resolution of input feature.
         dim (`int`):
             Number of input channels.
-        norm_layer (`nn.Cell`, *optional*, defaults to `nn.LayerNorm`):
+        norm_layer (`nn.Module`, *optional*, defaults to `nn.LayerNorm`):
             Normalization layer class.
     """
 
-    def __init__(self, input_resolution: Tuple[int], dim: int, norm_layer: nn.Cell = nn.LayerNorm) -> None:
+    def __init__(self, input_resolution: Tuple[int], dim: int, norm_layer: nn.Module = nn.LayerNorm) -> None:
         super().__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.reduction = nn.Dense(4 * dim, 2 * dim, has_bias=False)
+        self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
         self.norm = norm_layer(2 * dim)
 
     def maybe_pad(self, input_feature, height, width):
@@ -224,7 +224,7 @@ class Swin2SRPatchMerging(nn.Cell):
 
         return input_feature
 
-    def construct(self, input_feature: mindspore.Tensor, input_dimensions: Tuple[int, int]) -> mindspore.Tensor:
+    def forward(self, input_feature: mindspore.Tensor, input_dimensions: Tuple[int, int]) -> mindspore.Tensor:
         height, width = input_dimensions
         # `dim` is height * width
         batch_size, dim, num_channels = input_feature.shape
@@ -251,7 +251,7 @@ class Swin2SRPatchMerging(nn.Cell):
 
 
 # Copied from transformers.models.swinv2.modeling_swinv2.Swinv2SelfAttention with Swinv2->Swin2SR
-class Swin2SRSelfAttention(nn.Cell):
+class Swin2SRSelfAttention(nn.Module):
     def __init__(self, config, dim, num_heads, window_size, pretrained_window_size=[0, 0]):
         super().__init__()
         if dim % num_heads != 0:
@@ -269,7 +269,7 @@ class Swin2SRSelfAttention(nn.Cell):
         self.logit_scale = mindspore.Parameter(ops.log(10 * ops.ones((num_heads, 1, 1))))
         # mlp to generate continuous relative position bias
         self.continuous_position_bias_mlp = nn.SequentialCell(
-            nn.Dense(2, 512, has_bias=True), nn.ReLU(), nn.Dense(512, num_heads, has_bias=False)
+            nn.Linear(2, 512, bias=True), nn.ReLU(), nn.Linear(512, num_heads, bias=False)
         )
 
         # get relative_coords_table
@@ -305,9 +305,9 @@ class Swin2SRSelfAttention(nn.Cell):
         relative_position_index = relative_coords.sum(-1)
         self.relative_position_index = relative_position_index
 
-        self.query = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(self.all_head_size, self.all_head_size, has_bias=False)
-        self.value = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
@@ -315,7 +315,7 @@ class Swin2SRSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -378,13 +378,13 @@ class Swin2SRSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.swin.modeling_swin.SwinSelfOutput with Swin->Swin2SR
-class Swin2SRSelfOutput(nn.Cell):
+class Swin2SRSelfOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
-        self.dense = nn.Dense(dim, dim)
+        self.dense = nn.Linear(dim, dim)
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -392,7 +392,7 @@ class Swin2SRSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.swinv2.modeling_swinv2.Swinv2Attention with Swinv2->Swin2SR
-class Swin2SRAttention(nn.Cell):
+class Swin2SRAttention(nn.Module):
     def __init__(self, config, dim, num_heads, window_size, pretrained_window_size=0):
         super().__init__()
         self.self = Swin2SRSelfAttention(
@@ -418,14 +418,14 @@ class Swin2SRAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -439,36 +439,36 @@ class Swin2SRAttention(nn.Cell):
 
 
 # Copied from transformers.models.swin.modeling_swin.SwinIntermediate with Swin->Swin2SR
-class Swin2SRIntermediate(nn.Cell):
+class Swin2SRIntermediate(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
-        self.dense = nn.Dense(dim, int(config.mlp_ratio * dim))
+        self.dense = nn.Linear(dim, int(config.mlp_ratio * dim))
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.swin.modeling_swin.SwinOutput with Swin->Swin2SR
-class Swin2SROutput(nn.Cell):
+class Swin2SROutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
-        self.dense = nn.Dense(int(config.mlp_ratio * dim), dim)
+        self.dense = nn.Linear(int(config.mlp_ratio * dim), dim)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.swinv2.modeling_swinv2.Swinv2Layer with Swinv2->Swin2SR
-class Swin2SRLayer(nn.Cell):
+class Swin2SRLayer(nn.Module):
     def __init__(self, config, dim, input_resolution, num_heads, shift_size=0, pretrained_window_size=0):
         super().__init__()
         self.input_resolution = input_resolution
@@ -486,11 +486,11 @@ class Swin2SRLayer(nn.Cell):
             if isinstance(pretrained_window_size, collections.abc.Iterable)
             else (pretrained_window_size, pretrained_window_size),
         )
-        self.layernorm_before = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([dim], eps=config.layer_norm_eps)
         self.drop_path = Swin2SRDropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
         self.intermediate = Swin2SRIntermediate(config, dim)
         self.output = Swin2SROutput(config, dim)
-        self.layernorm_after = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([dim], eps=config.layer_norm_eps)
 
     def _compute_window_shift(self, target_window_size, target_shift_size) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         window_size = [r if r <= w else w for r, w in zip(self.input_resolution, target_window_size)]
@@ -532,7 +532,7 @@ class Swin2SRLayer(nn.Cell):
         hidden_states = ops.pad(hidden_states, pad_values)
         return hidden_states, pad_values
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         input_dimensions: Tuple[int, int],
@@ -589,7 +589,7 @@ class Swin2SRLayer(nn.Cell):
         return layer_outputs
 
 
-class Swin2SRStage(nn.Cell):
+class Swin2SRStage(nn.Module):
     """
     This corresponds to the Residual Swin Transformer Block (RSTB) in the original implementation.
     """
@@ -598,7 +598,7 @@ class Swin2SRStage(nn.Cell):
         super().__init__()
         self.config = config
         self.dim = dim
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 Swin2SRLayer(
                     config=config,
@@ -613,22 +613,22 @@ class Swin2SRStage(nn.Cell):
         )
 
         if config.resi_connection == "1conv":
-            self.conv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.conv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, bias=True)
         elif config.resi_connection == "3conv":
             # to save parameters and memory
             self.conv = nn.SequentialCell(
-                nn.Conv2d(dim, dim // 4, 3, 1, pad_mode='pad', padding=1, has_bias=True),
+                nn.Conv2d(dim, dim // 4, 3, 1, pad_mode='pad', padding=1, bias=True),
                 nn.LeakyReLU(alpha=0.2),
-                nn.Conv2d(dim // 4, dim // 4, 1, 1, pad_mode='valid', has_bias=True),
+                nn.Conv2d(dim // 4, dim // 4, 1, 1, pad_mode='valid', bias=True),
                 nn.LeakyReLU(alpha=0.2),
-                nn.Conv2d(dim // 4, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True),
+                nn.Conv2d(dim // 4, dim, 3, 1, pad_mode='pad', padding=1, bias=True),
             )
 
         self.patch_embed = Swin2SRPatchEmbeddings(config, normalize_patches=False)
 
         self.patch_unembed = Swin2SRPatchUnEmbeddings(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         input_dimensions: Tuple[int, int],
@@ -660,13 +660,13 @@ class Swin2SRStage(nn.Cell):
         return stage_outputs
 
 
-class Swin2SREncoder(nn.Cell):
+class Swin2SREncoder(nn.Module):
     def __init__(self, config, grid_size):
         super().__init__()
         self.num_stages = len(config.depths)
         self.config = config
         dpr = [x.item() for x in ops.linspace(0, config.drop_path_rate, sum(config.depths))]
-        self.stages = nn.CellList(
+        self.stages = nn.ModuleList(
             [
                 Swin2SRStage(
                     config=config,
@@ -683,7 +683,7 @@ class Swin2SREncoder(nn.Cell):
 
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         input_dimensions: Tuple[int, int],
@@ -744,7 +744,7 @@ class Swin2SRPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             # torch.nn.init.trunc_normal_(module.weight.data, std=self.config.initializer_range)
             if cell.bias is not None:
@@ -769,13 +769,13 @@ class Swin2SRModel(Swin2SRPreTrainedModel):
             self.mean = ops.zeros((1, 1, 1, 1))
         self.img_range = config.img_range
 
-        self.first_convolution = nn.Conv2d(config.num_channels, config.embed_dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.first_convolution = nn.Conv2d(config.num_channels, config.embed_dim, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.embeddings = Swin2SREmbeddings(config)
         self.encoder = Swin2SREncoder(config, grid_size=self.embeddings.patch_embeddings.patches_resolution)
 
-        self.layernorm = nn.LayerNorm([config.embed_dim], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.embed_dim], eps=config.layer_norm_eps)
         self.patch_unembed = Swin2SRPatchUnEmbeddings(config)
-        self.conv_after_body = nn.Conv2d(config.embed_dim, config.embed_dim, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_after_body = nn.Conv2d(config.embed_dim, config.embed_dim, 3, 1, pad_mode='pad', padding=1, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -806,7 +806,7 @@ class Swin2SRModel(Swin2SRPreTrainedModel):
 
         return pixel_values
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -862,7 +862,7 @@ class Swin2SRModel(Swin2SRPreTrainedModel):
         )
 
 
-class Upsample(nn.Cell):
+class Upsample(nn.Module):
     """Upsample module.
 
     Args:
@@ -879,17 +879,17 @@ class Upsample(nn.Cell):
         if (scale & (scale - 1)) == 0:
             # scale = 2^n
             for i in range(int(math.log(scale, 2))):
-                self.insert_child_to_cell(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True))
+                self.insert_child_to_cell(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True))
                 self.insert_child_to_cell(f"pixelshuffle_{i}", nn.PixelShuffle(2))
-                # self.add_module(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True))
+                # self.add_module(f"convolution_{i}", nn.Conv2d(num_features, 4 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True))
                 # self.add_module(f"pixelshuffle_{i}", nn.PixelShuffle(2))
         elif scale == 3:
-            self.convolution = nn.Conv2d(num_features, 9 * num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.convolution = nn.Conv2d(num_features, 9 * num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
             self.pixelshuffle = nn.PixelShuffle(3)
         else:
             raise ValueError(f"Scale {scale} is not supported. Supported scales: 2^n and 3.")
 
-    def construct(self, hidden_state):
+    def forward(self, hidden_state):
         if (self.scale & (self.scale - 1)) == 0:
             for i in range(int(math.log(self.scale, 2))):
                 hidden_state = self.__getattr__(f"convolution_{i}")(hidden_state)
@@ -902,7 +902,7 @@ class Upsample(nn.Cell):
         return hidden_state
 
 
-class UpsampleOneStep(nn.Cell):
+class UpsampleOneStep(nn.Module):
     """UpsampleOneStep module (the difference with Upsample is that it always only has 1conv + 1pixelshuffle)
 
     Used in lightweight SR to save parameters.
@@ -919,25 +919,25 @@ class UpsampleOneStep(nn.Cell):
     def __init__(self, scale, in_channels, out_channels):
         super().__init__()
 
-        self.conv = nn.Conv2d(in_channels, (scale**2) * out_channels, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv = nn.Conv2d(in_channels, (scale**2) * out_channels, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.pixel_shuffle = nn.PixelShuffle(scale)
 
-    def construct(self, x):
+    def forward(self, x):
         x = self.conv(x)
         x = self.pixel_shuffle(x)
 
         return x
 
 
-class PixelShuffleUpsampler(nn.Cell):
+class PixelShuffleUpsampler(nn.Module):
     def __init__(self, config, num_features):
         super().__init__()
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
         self.upsample = Upsample(config.upscale, num_features)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         x = self.conv_before_upsample(sequence_output)
         x = self.activation(x)
         x = self.upsample(x)
@@ -946,21 +946,21 @@ class PixelShuffleUpsampler(nn.Cell):
         return x
 
 
-class NearestConvUpsampler(nn.Cell):
+class NearestConvUpsampler(nn.Module):
     def __init__(self, config, num_features):
         super().__init__()
         if config.upscale != 4:
             raise ValueError("The nearest+conv upsampler only supports an upscale factor of 4 at the moment.")
 
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
-        self.conv_up1 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_up2 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_hr = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_up1 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_up2 = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_hr = nn.Conv2d(num_features, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.lrelu = nn.LeakyReLU(alpha=0.2)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         sequence_output = self.conv_before_upsample(sequence_output)
         sequence_output = self.activation(sequence_output)
         sequence_output = self.lrelu(
@@ -971,24 +971,24 @@ class NearestConvUpsampler(nn.Cell):
             # TODO:self.conv_up2(ops.interpolate(sequence_output, scale_factor=2.0, mode="nearest", recompute_scale_factor=True))
             self.conv_up2(ops.interpolate(sequence_output, scale_factor=2, mode="nearest", recompute_scale_factor=True))
         )
-        reconstruction = self.final_convolution(self.lrelu(self.conv_hr(sequence_output)))
-        return reconstruction
+        reforwardion = self.final_convolution(self.lrelu(self.conv_hr(sequence_output)))
+        return reforwardion
 
 
-class PixelShuffleAuxUpsampler(nn.Cell):
+class PixelShuffleAuxUpsampler(nn.Module):
     def __init__(self, config, num_features):
         super().__init__()
 
         self.upscale = config.upscale
-        self.conv_bicubic = nn.Conv2d(config.num_channels, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.conv_bicubic = nn.Conv2d(config.num_channels, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_before_upsample = nn.Conv2d(config.embed_dim, num_features, 3, 1, pad_mode='pad', padding=1, bias=True)
         self.activation = nn.LeakyReLU(alpha=0.01)
-        self.conv_aux = nn.Conv2d(num_features, config.num_channels, 3, 1, pad_mode='pad', padding=1, has_bias=True)
-        self.conv_after_aux = nn.SequentialCell(nn.Conv2d(3, num_features, 3, 1, pad_mode='pad', padding=1, has_bias=True), nn.LeakyReLU(alpha=0.01))
+        self.conv_aux = nn.Conv2d(num_features, config.num_channels, 3, 1, pad_mode='pad', padding=1, bias=True)
+        self.conv_after_aux = nn.SequentialCell(nn.Conv2d(3, num_features, 3, 1, pad_mode='pad', padding=1, bias=True), nn.LeakyReLU(alpha=0.01))
         self.upsample = Upsample(config.upscale, num_features)
-        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+        self.final_convolution = nn.Conv2d(num_features, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
-    def construct(self, sequence_output, bicubic, height, width):
+    def forward(self, sequence_output, bicubic, height, width):
         bicubic = self.conv_bicubic(bicubic)
         sequence_output = self.conv_before_upsample(sequence_output)
         sequence_output = self.activation(sequence_output)
@@ -998,9 +998,9 @@ class PixelShuffleAuxUpsampler(nn.Cell):
             self.upsample(sequence_output)[:, :, : height * self.upscale, : width * self.upscale]
             + bicubic[:, :, : height * self.upscale, : width * self.upscale]
         )
-        reconstruction = self.final_convolution(sequence_output)
+        reforwardion = self.final_convolution(sequence_output)
 
-        return reconstruction, aux
+        return reforwardion, aux
 
 
 
@@ -1026,12 +1026,12 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
             self.upsample = NearestConvUpsampler(config, num_features)
         else:
             # for image denoising and JPEG compression artifact reduction
-            self.final_convolution = nn.Conv2d(config.embed_dim, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, has_bias=True)
+            self.final_convolution = nn.Conv2d(config.embed_dim, config.num_channels_out, 3, 1, pad_mode='pad', padding=1, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -1064,7 +1064,7 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
          >>> with torch.no_grad():
          ...     outputs = model(**inputs)
 
-         >>> output = outputs.reconstruction.data.squeeze().float().cpu().clamp_(0, 1).numpy()
+         >>> output = outputs.reforwardion.data.squeeze().float().cpu().clamp_(0, 1).numpy()
          >>> output = np.moveaxis(output, source=0, destination=-1)
          >>> output = (output * 255.0).round().astype(np.uint8)  # float32 to uint8
          >>> # you can visualize `output` with `Image.fromarray`
@@ -1094,27 +1094,27 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
         sequence_output = outputs[0]
 
         if self.upsampler in ["pixelshuffle", "pixelshuffledirect", "nearest+conv"]:
-            reconstruction = self.upsample(sequence_output)
+            reforwardion = self.upsample(sequence_output)
         elif self.upsampler == "pixelshuffle_aux":
-            reconstruction, aux = self.upsample(sequence_output, bicubic, height, width)
+            reforwardion, aux = self.upsample(sequence_output, bicubic, height, width)
             aux = aux / self.swin2sr.img_range + self.swin2sr.mean
         else:
-            reconstruction = pixel_values + self.final_convolution(sequence_output)
+            reforwardion = pixel_values + self.final_convolution(sequence_output)
 
-        reconstruction = reconstruction / self.swin2sr.img_range + self.swin2sr.mean
-        reconstruction = reconstruction[:, :, : height * self.upscale, : width * self.upscale]
+        reforwardion = reforwardion / self.swin2sr.img_range + self.swin2sr.mean
+        reforwardion = reforwardion[:, :, : height * self.upscale, : width * self.upscale]
 
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not supported at the moment")
 
         if not return_dict:
-            output = (reconstruction,) + outputs[1:]
+            output = (reforwardion,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return ImageSuperResolutionOutput(
             loss=loss,
-            reconstruction=reconstruction,
+            reforwardion=reforwardion,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )

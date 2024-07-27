@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Customized mindspore.nn.Cell Dict."""
+"""Customized mindspore.nn.Module Dict."""
 
 from __future__ import absolute_import
 from typing import Dict
@@ -78,7 +78,7 @@ def _get_prefix_and_index(cells):
 
 
 class CellDict(Cell):
-    """nn.Cell Dict"""
+    """nn.Module Dict"""
     _cells: Dict[str, Cell]
 
     def __init__(self, cells: Dict[str, Cell] = None):
@@ -267,7 +267,7 @@ class CellDict(Cell):
         return self._cells.items()
 
     def update(self, cells) -> None:
-        """Update the `nn.CellDict`"""
+        """Update the `nn.ModuleDict`"""
         if not isinstance(cells, container_abcs.Iterable):
             raise TypeError("CellDict.update should be called with an "
                             "iterable of key/value pairs, but got " +
@@ -312,9 +312,9 @@ class CellDict(Cell):
         for cell in self._cells.values():
             cell.set_grad(flag)
 
-    def construct(self, *inputs):
+    def forward(self, *inputs):
         r"""
-        Method to construct a CellDict object.
+        Method to forward a CellDict object.
         
         Args:
             self (CellDict): The instance of the CellDict class.

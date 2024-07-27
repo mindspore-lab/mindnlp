@@ -22,8 +22,9 @@ from typing import List, Optional, Tuple, Union
 from functools import partial
 import numpy as np
 import mindspore
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from .gpt_bigcode_config import GPTBigCodeConfig
@@ -66,7 +67,7 @@ def masked_softmax(input_x: mindspore.Tensor, mask: mindspore.Tensor, mask_value
     return input_x
 
 
-class GPTBigCodeAttention(nn.Cell):
+class GPTBigCodeAttention(nn.Module):
     """GPT BigCode Attention"""
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         """
@@ -118,13 +119,13 @@ class GPTBigCodeAttention(nn.Cell):
                 raise NotImplementedError(
                     "Multi-Query Attention not supported for cross_attention")
 
-            self.c_attn = nn.Dense(self.embed_dim, 2 * self.embed_dim)
-            self.q_attn = nn.Dense(self.embed_dim, self.embed_dim)
+            self.c_attn = nn.Linear(self.embed_dim, 2 * self.embed_dim)
+            self.q_attn = nn.Linear(self.embed_dim, self.embed_dim)
         else:
-            self.c_attn = nn.Dense(
+            self.c_attn = nn.Linear(
                 self.embed_dim, self.embed_dim + 2 * self.kv_dim)
 
-        self.c_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.c_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
@@ -259,7 +260,7 @@ class GPTBigCodeAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layer_past: Optional[mindspore.Tensor] = None,
@@ -348,7 +349,7 @@ class GPTBigCodeAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class GPTBigCodeMLP(nn.Cell):
+class GPTBigCodeMLP(nn.Module):
     """GPT BigCode MLP"""
     def __init__(self, intermediate_size, config):
         """
@@ -367,14 +368,14 @@ class GPTBigCodeMLP(nn.Cell):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Dense(embed_dim, intermediate_size)
-        self.c_proj = nn.Dense(intermediate_size, embed_dim)
+        self.c_fc = nn.Linear(embed_dim, intermediate_size)
+        self.c_proj = nn.Linear(intermediate_size, embed_dim)
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
-        This method constructs a multi-layer perceptron for the GPT (Generative Pretrained Transformer) model
+        This method forwards a multi-layer perceptron for the GPT (Generative Pretrained Transformer) model
         using the provided hidden states.
 
         Args:
@@ -398,7 +399,7 @@ class GPTBigCodeMLP(nn.Cell):
         return hidden_states
 
 
-class GPTBigCodeBlock(nn.Cell):
+class GPTBigCodeBlock(nn.Module):
     """GPT BigCode Block"""
     def __init__(self, config, layer_idx=None):
         """
@@ -421,10 +422,10 @@ class GPTBigCodeBlock(nn.Cell):
         self.inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
         self.ln_1 = nn.LayerNorm(
-            [hidden_size], epsilon=config.layer_norm_epsilon)
+            [hidden_size], eps=config.layer_norm_epsilon)
         self.attn = GPTBigCodeAttention(config, layer_idx=layer_idx)
         self.ln_2 = nn.LayerNorm(
-            [hidden_size], epsilon=config.layer_norm_epsilon)
+            [hidden_size], eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             if config.multi_query:
@@ -433,11 +434,11 @@ class GPTBigCodeBlock(nn.Cell):
             self.crossattention = GPTBigCodeAttention(
                 config, is_cross_attention=True, layer_idx=layer_idx)
             self.ln_cross_attn = nn.LayerNorm(
-                hidden_size, epsilon=config.layer_norm_epsilon)
+                hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = GPTBigCodeMLP(self.inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[mindspore.Tensor] = None,
@@ -452,7 +453,7 @@ class GPTBigCodeBlock(nn.Cell):
                                        mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]
     ]:
         """
-        This method constructs a GPT (Generative Pre-trained Transformer) big code block.
+        This method forwards a GPT (Generative Pre-trained Transformer) big code block.
 
         Args:
             self: The instance of the class.
@@ -543,10 +544,10 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
         if isinstance(cell, (GPTBigCodeMLP, GPTBigCodeAttention)):
             sigma = self.config.initializer_range / math.sqrt(2 * self.config.n_layer)
             cell.c_proj.weight.set_data(initializer(Normal(sigma=sigma),cell.c_proj.weight.shape, cell.c_proj.weight.dtype))
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
@@ -667,10 +668,10 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
+        self.h = nn.ModuleList([GPTBigCodeBlock(config, layer_idx=i)
                               for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm(
-            [self.embed_dim], epsilon=config.layer_norm_epsilon)
+            [self.embed_dim], eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
 
@@ -713,7 +714,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[List[mindspore.Tensor]] = None,
@@ -933,8 +934,8 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         """
         super().__init__(config)
         self.transformer = GPTBigCodeModel(config)
-        self.lm_head = nn.Dense(
-            config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(
+            config.n_embd, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1044,7 +1045,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         )
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1142,12 +1143,12 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTBigCodeModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1278,12 +1279,12 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,

@@ -22,8 +22,9 @@ import inspect
 import logging
 from typing import List, Iterable, Union, Optional, Callable, Tuple, Dict
 import mindspore
-from mindspore import ops
 import numpy as np
+from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
 
 
 class LogitsProcessor:
@@ -225,12 +226,12 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
             TypeError: If the input_ids or scores are not instances of mindspore.Tensor.
             RuntimeError: If there is an issue with the scatter operation during processing.
         """
-        score = ops.gather_elements(scores, 1, self.encoder_input_ids)
+        score = ops.gather(scores, 1, self.encoder_input_ids)
 
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores.scatter_(1, self.encoder_input_ids, score)
+        scores = ops.scatter(scores, 1, self.encoder_input_ids, score)
         return scores
 
 
@@ -282,12 +283,12 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
             The repetition penalty factor is controlled by the 'penalty' attribute of the RepetitionPenaltyLogitsProcessor instance.
         """
         input_ids = ops.where(input_ids >= scores.shape[1], input_ids - scores.shape[1], input_ids)
-        score = ops.gather_elements(scores, 1, input_ids)
+        score = ops.gather(scores, 1, input_ids)
 
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores = ops.tensor_scatter_elements(scores, input_ids, score, axis=1)
+        scores = ops.scatter(scores, 1, input_ids, score)
         return scores
 
 
@@ -1281,7 +1282,7 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
         Raises:
             None
         """
-        scores = ops.log_softmax(scores, axis=-1)
+        scores = F.log_softmax(scores, dim=-1)
         return scores
 
 
@@ -1395,7 +1396,7 @@ class TopPLogitsWarper(LogitsWarper):
             self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
         # scores = ops.select(ops.isneginf(scores), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min), scores)
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
-        cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
+        cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
         sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
@@ -1404,7 +1405,7 @@ class TopPLogitsWarper(LogitsWarper):
         sorted_indices_to_remove = sorted_indices_to_remove.astype(mindspore.int32)
 
         # scatter sorted tensors to original indexing
-        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+        indices_to_remove = ops.scatter(sorted_indices_to_remove, 1, sorted_indices, sorted_indices_to_remove)
         scores = scores.masked_fill(indices_to_remove.astype(mindspore.bool_), self.filter_value)
         return scores
 
@@ -1527,7 +1528,7 @@ class TypicalLogitsWarper(LogitsWarper):
             RuntimeError: If an error occurs during the warping process.
         """
         # calculate entropy
-        normalized = ops.log_softmax(scores, axis=-1)
+        normalized = F.log_softmax(scores, dim=-1)
         p = ops.exp(normalized)
         ent = -(normalized * p).nansum(-1, keepdim=True)
 
@@ -1535,14 +1536,14 @@ class TypicalLogitsWarper(LogitsWarper):
         shifted_scores = ops.abs((-normalized) - ent)
         sorted_scores, sorted_indices = ops.sort(shifted_scores, descending=False)
         sorted_logits = scores.gather(-1, sorted_indices)
-        cumulative_probs = sorted_logits.softmax(axis=-1).cumsum(axis=-1)
+        cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative mass above the threshold
         last_ind = (cumulative_probs < self.mass).axis(dim=1)
         last_ind.clamp_(max=sorted_scores.shape[-1] - 1)
         sorted_indices_to_remove = sorted_scores > sorted_scores.gather(1, last_ind.view(-1, 1))
         sorted_indices_to_remove[..., : self.min_tokens_to_keep] = 0
-        indices_to_remove = ops.tensor_scatter_elements(sorted_indices_to_remove, sorted_indices, sorted_indices_to_remove, axis=1)
+        indices_to_remove = ops.scatter(sorted_indices_to_remove, 1, sorted_indices, sorted_indices_to_remove)
 
         scores = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores
@@ -1633,7 +1634,7 @@ class EpsilonLogitsWarper(LogitsWarper):
             None.
         '''
         # Determine which indices to remove
-        probabilities = ops.softmax(scores, axis=-1)
+        probabilities = ops.softmax(scores, dim=-1)
         indices_to_remove = probabilities < self.epsilon
 
         # Keep the words with the 'min_tokens_to_keep'-highest probabilities
@@ -2060,10 +2061,10 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
                     self.unconditional_context["attention_mask"],
                     ops.ones_like(input_ids[:, -1:], dtype=mindspore.int64),
                 ],
-                axis=1,
+                dim=1,
             )
             if not self.unconditional_context["use_cache"]:
-                input_ids = ops.cat([self.unconditional_context["input_ids"], input_ids[:, -1:]], axis=1)
+                input_ids = ops.cat([self.unconditional_context["input_ids"], input_ids[:, -1:]], dim=1)
             else:
                 input_ids = input_ids[:, -1:]
             self.unconditional_context["input_ids"] = input_ids
@@ -2095,13 +2096,13 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         Raises:
             None.
         """
-        scores = ops.log_softmax(scores, axis=-1)
+        scores = F.log_softmax(scores, dim=-1)
         if self.guidance_scale == 1:
             return scores
 
         logits = self.get_unconditional_logits(input_ids)
 
-        unconditional_logits = ops.log_softmax(logits[:, -1], axis=-1)
+        unconditional_logits = F.log_softmax(logits[:, -1], dim=-1)
         out = self.guidance_scale * (scores - unconditional_logits) + unconditional_logits
         return out
 
@@ -2233,9 +2234,9 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                 scores[:, last_allowed + 1 :] = -float("inf")
 
         # if sum of probability over timestamps is above any other token, sample timestamp
-        logprobs = ops.log_softmax(scores.float(), axis=-1)
+        logprobs = F.log_softmax(scores.float(), dim=-1)
         for k in range(input_ids.shape[0]):
-            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(axis=-1)
+            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(dim=-1)
             max_text_token_logprob = logprobs[k, : self.timestamp_begin].max()
             if not ops.isnan(timestamp_logprob) and timestamp_logprob > max_text_token_logprob:
                 scores[k, : self.timestamp_begin] = -float("inf")
@@ -2300,13 +2301,13 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
             None
         """
         if self.min_eos_p:
-            probs = ops.softmax(scores.float(), axis=-1)
+            probs = ops.softmax(scores.float(), dim=-1)
             # create scores full of -inf except for the eos_token_id
             early_stop_scores = ops.ones_like(scores) * -float("inf")
             early_stop_scores[:, self.eos_token_id] = scores[:, self.eos_token_id]
 
             do_early_stop = probs[:, self.eos_token_id] > self.min_eos_p
-            do_early_stop = ops.any(do_early_stop, axis=1, keep_dims=True)
+            do_early_stop = ops.any(do_early_stop, dim=1, keepdim=True)
             scores = ops.where(do_early_stop, early_stop_scores, scores)
 
         return scores
@@ -2408,7 +2409,7 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
 
         Note:
-            This method assumes that the 'split' function splits the tensor into two parts along the first dimension (axis=0).
+            This method assumes that the 'split' function splits the tensor into two parts along the first dimension (dim=0).
         """
         # simple check to make sure we have compatible batch sizes between our
         # logits scores (cond + uncond) and input ids (cond only)
@@ -2419,6 +2420,6 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
                 f"batch size {scores.shape[0]} for the logits and {input_ids.shape[0]} for the input ids."
             )
         unguided_bsz = scores.shape[0] // 2
-        cond_logits, uncond_logits = scores.split(unguided_bsz, axis=0)
+        cond_logits, uncond_logits = scores.split(unguided_bsz, dim=0)
         scores_processed = uncond_logits + (cond_logits - uncond_logits) * self.guidance_scale
         return scores_processed

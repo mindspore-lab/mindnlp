@@ -18,11 +18,12 @@ from contextlib import nullcontext
 from typing import Optional, List
 
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp._legacy.nn import Matmul
-from mindnlp._legacy.abc import ParameterDict
+from mindnlp.core.nn import ParameterDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
     """Get the batch size based on either input_ids or input_embeds
@@ -39,20 +40,20 @@ def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
         batch_size = inputs_embeds.shape[0]
     return batch_size
 
-class ModulesToSaveWrapper(nn.Cell):
+class ModulesToSaveWrapper(nn.Module):
 
     r"""
     This class represents a wrapper for saving and managing modules in a neural network. It provides functionality to save and switch between different modules, known as adapters, while also maintaining the
-original module for reference. The class includes methods for enabling and disabling adapters, setting the active adapter, updating the saved modules, and constructing the model with the appropriate adapter.
+original module for reference. The class includes methods for enabling and disabling adapters, setting the active adapter, updating the saved modules, and forwarding the model with the appropriate adapter.
     
-    The class inherits from nn.Cell and includes the following methods:
+    The class inherits from nn.Module and includes the following methods:
     - __init__: Initializes the ModulesToSaveWrapper instance with the original cell to save and the initial adapter name.
     - check_cell: Performs sanity checks on the original cell to ensure compatibility with the saving mechanism.
     - disable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
     - active_adapter: Returns the name of the currently active adapter.
     - weight: Retrieves the weight of the original cell or the active adapter's cell if available.
     - update: Updates the saved cells with a new adapter, creating a deep copy of the original cell.
-    - construct: Constructs the model using the original cell or the active adapter's cell based on the adapter status.
+    - forward: Constructs the model using the original cell or the active adapter's cell based on the adapter status.
     - enable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
     - set_adapter: Sets the active adapter, making it trainable and updating the requires_grad flag for the cells.
     
@@ -75,7 +76,7 @@ original module for reference. The class includes methods for enabling and disab
         """
         super().__init__()
         self.original_cell = cell_to_save
-        self.cells_to_save = nn.CellDict({})
+        self.cells_to_save = nn.ModuleDict({})
         self._active_adapter = adapter_name
         self._disable_adapters = False
         self.update(adapter_name)
@@ -86,7 +87,7 @@ original module for reference. The class includes methods for enabling and disab
         # Try to anticipate some cells that users could try to target that would not work.
         # Note: It's not possible to check hasattr(cell, "forward"), since that returns True for ModuleDict and
         # ModuleList, even though their forward methods cannot be called
-        forbidden_classes = (nn.CellDict, nn.CellList, mindspore.ParameterTuple, ParameterDict)
+        forbidden_classes = (nn.ModuleDict, nn.ModuleList, mindspore.ParameterTuple, ParameterDict)
         if isinstance(self.original_cell, forbidden_classes):
             cls_name = self.original_cell.__class__.__name__
             raise TypeError(f"cells_to_save cannot be applied to cells of type {cls_name}")
@@ -166,7 +167,7 @@ original module for reference. The class includes methods for enabling and disab
             num_params = param.numel()
 
         with context_manager:
-            self.cells_to_save.update(nn.CellDict({adapter_name: copy.deepcopy(self.original_cell)}))
+            self.cells_to_save.update(nn.ModuleDict({adapter_name: copy.deepcopy(self.original_cell)}))
 
         if hasattr(self.cells_to_save[adapter_name], "_hf_hook"):
             old_hook = self.cells_to_save[adapter_name]._hf_hook
@@ -192,9 +193,9 @@ original module for reference. The class includes methods for enabling and disab
     #     new_hook = old_hook_cls(**filtered_old_hook_attr)
     #     return new_hook
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         r"""
-        This method constructs and returns the appropriate cell based on the active adapter within the ModulesToSaveWrapper class.
+        This method forwards and returns the appropriate cell based on the active adapter within the ModulesToSaveWrapper class.
         
         Args:
             self: An instance of the ModulesToSaveWrapper class.
@@ -253,7 +254,7 @@ original module for reference. The class includes methods for enabling and disab
         self._active_adapter = adapter_name
 
 
-def custom_get_subcell(model: nn.Cell, target: str) -> nn.Cell:
+def custom_get_subcell(model: nn.Module, target: str) -> nn.Module:
     """
     Returns the subcell given by ``target`` if it exists, otherwise throws an error.
     功能和 torch.nn.Module 相似
@@ -262,7 +263,7 @@ def custom_get_subcell(model: nn.Cell, target: str) -> nn.Cell:
         return model
 
     atoms: List[str] = target.split(".")
-    mod: nn.Cell = model
+    mod: nn.Module = model
 
     for item in atoms:
         if not hasattr(mod, item):
@@ -270,7 +271,7 @@ def custom_get_subcell(model: nn.Cell, target: str) -> nn.Cell:
 
         mod = getattr(mod, item)
 
-        if not isinstance(mod, nn.Cell):
+        if not isinstance(mod, nn.Module):
             raise AttributeError("`" + item + "` is not an nn.Module")
 
     return mod
@@ -426,7 +427,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
 
     return shifted_input_ids
 
-class Conv1D(nn.Cell):
+class Conv1D(nn.Module):
     """
     1D-convolutional layer Basically works like a linear layer but the weights are transposed.
 
@@ -453,9 +454,8 @@ class Conv1D(nn.Cell):
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
         self.bias = Parameter(ops.zeros(n_out, mindspore.float32))
-        self.matmul = Matmul()
 
-    def construct(self, x):
+    def forward(self, x):
         r"""
         Constructs the output of a 1D convolutional layer.
         

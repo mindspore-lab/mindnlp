@@ -235,6 +235,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "deepseek_v2",
+            (
+                "LlamaTokenizerFast",
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            )
+        ),
+        (
             "distilbert",
             (
                 "DistilBertTokenizer",
@@ -809,6 +816,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("tapas", ("TapasTokenizer", None)),
         ("tapex", ("TapexTokenizer", None)),
         ("transfo-xl", ("TransfoXLTokenizer", None)),
+        (
+                "udop",
+                (
+                    "UdopTokenizer" if is_sentencepiece_available() else None,
+                    "UdopTokenizerFast" if is_tokenizers_available() else None,
+                ),
+            ),
         (
             "umt5",
             (

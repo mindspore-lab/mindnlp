@@ -298,7 +298,7 @@ class XLNetTokenizer(PreTrainedTokenizer):
                 - AttributeError: If the 'sp_model_kwargs' attribute is not found within the XLNetTokenizer object.
                 - TypeError: If the provided 'd' parameter is not a dictionary.
                 - Other exceptions related to the SentencePieceProcessor object creation or loading process may be
-                raised from the spm.SentencePieceProcessor constructor or Load method.
+                raised from the spm.SentencePieceProcessor forwardor or Load method.
         """
         self.__dict__ = d
 

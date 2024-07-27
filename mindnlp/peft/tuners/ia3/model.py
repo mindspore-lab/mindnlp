@@ -52,7 +52,7 @@ class IA3Model(BaseTuner):
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        IA3Model ([`mindspore.nn.Cell`]): The IA3Lora model.
+        IA3Model ([`mindspore.nn.Module`]): The IA3Lora model.
 
     Example:
 
@@ -112,7 +112,7 @@ class IA3Model(BaseTuner):
         Raises:
             ValueError: If the target cell is not supported. Only `torch.nn.Linear`, `torch.nn.Conv2d`, and `Conv1D` are supported.
             TypeError: If the target is not an instance of `BaseTunerLayer` or `nn.Conv2d`.
-            TypeError: If the target base layer is not an instance of `nn.Dense` or `Conv1D`.
+            TypeError: If the target base layer is not an instance of `nn.Linear` or `Conv1D`.
           
         Note:
             - The `loaded_in_8bit`, `loaded_in_4bit`, and `is_feedforward` parameters are optional and can be provided as keyword arguments.
@@ -120,7 +120,7 @@ class IA3Model(BaseTuner):
             - Depending on the type of `target` and `target_base_layer`, the appropriate cell (Conv2d or Linear) is created.
             - If `target` is an instance of `BaseTunerLayer`, `target_base_layer` is obtained using `get_base_layer()` method.
             - If `target` is `nn.Conv2d`, a new instance of `Conv2d` is created with the provided arguments.
-            - If `target_base_layer` is `nn.Dense`, a new instance of `Linear` is created with the provided arguments.
+            - If `target_base_layer` is `nn.Linear`, a new instance of `Linear` is created with the provided arguments.
             - If `target_base_layer` is `Conv1D`, a new instance of `Linear` is created with additional arguments indicating that the target is a Conv1D layer.
             - The created cell is returned.
         
@@ -166,7 +166,7 @@ class IA3Model(BaseTuner):
         #     new_cell = Linear4bit(target, adapter_name, is_feedforward=is_feedforward, **fourbit_kwargs)
         if isinstance(target, nn.Conv2d):
             new_cell = Conv2d(target, adapter_name, is_feedforward=is_feedforward, **kwargs)
-        elif isinstance(target_base_layer, nn.Dense):
+        elif isinstance(target_base_layer, nn.Linear):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(
                     "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
@@ -211,13 +211,13 @@ class IA3Model(BaseTuner):
         """
         return check_target_cell_exists(ia3_config, key)
 
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         r"""
         Marks only the adapters in the given model as trainable.
         
         Args:
             self (IA3Model): The instance of the IA3Model class.
-            model (nn.Cell): The model for which the adapters need to be marked as trainable.
+            model (nn.Module): The model for which the adapters need to be marked as trainable.
         
         Returns:
             None. This method does not return any value.
@@ -509,7 +509,7 @@ class IA3Model(BaseTuner):
 
         return self.model
 
-    def merge_and_unload(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> nn.Cell:
+    def merge_and_unload(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> nn.Module:
         r"""
         This method merges the IA³ layers into the base model. This is needed if someone wants to use the base model as
         a standalone model.
@@ -536,7 +536,7 @@ class IA3Model(BaseTuner):
         """
         return self._unload_and_optionally_merge(safe_merge=safe_merge, adapter_names=adapter_names)
 
-    def unload(self) -> nn.Cell:
+    def unload(self) -> nn.Module:
         """
         Gets back the base model by removing all the IA³ cells without merging. This gives back the original base
         model.

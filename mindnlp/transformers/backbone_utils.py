@@ -224,7 +224,7 @@ class BackboneMixin:
 
     def _init_backbone(self, config) -> None:
         """
-        Method to initialize the backbone. This method is called by the constructor of the base class after the
+        Method to initialize the backbone. This method is called by the forwardor of the base class after the
         pretrained model weights have been loaded.
         """
         self.config = config

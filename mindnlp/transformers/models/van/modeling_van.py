@@ -19,7 +19,8 @@ from collections import OrderedDict
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -68,7 +69,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextDropPath with ConvNext->Van
-class VanDropPath(nn.Cell):
+class VanDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
@@ -88,7 +89,7 @@ class VanDropPath(nn.Cell):
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a new tensor by applying drop_path operation to the given hidden states.
         
@@ -111,7 +112,7 @@ class VanDropPath(nn.Cell):
             ```python
             >>> drop_path = VanDropPath()
             >>> hidden_states = mindspore.Tensor([[1, 2, 3], [4, 5, 6]], mindspore.float32)
-            >>> output = drop_path.construct(hidden_states)
+            >>> output = drop_path.forward(hidden_states)
             >>> print(output)
             [[1, 0, 3], [4, 0, 6]]
             ```
@@ -141,7 +142,7 @@ class VanDropPath(nn.Cell):
         return "p={}".format(self.drop_prob)
 
 
-class VanOverlappingPatchEmbedder(nn.Cell):
+class VanOverlappingPatchEmbedder(nn.Module):
     """
     Downsamples the input using a patchify operation with a `stride` of 4 by default making adjacent windows overlap by
     half of the area. From [PVTv2: Improved Baselines with Pyramid Vision
@@ -170,7 +171,7 @@ class VanOverlappingPatchEmbedder(nn.Cell):
         )
         self.normalization = nn.BatchNorm2d(hidden_size)
 
-    def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a hidden state tensor using the provided input tensor.
 
@@ -196,7 +197,7 @@ class VanOverlappingPatchEmbedder(nn.Cell):
         return hidden_state
 
 
-class VanMlpLayer(nn.Cell):
+class VanMlpLayer(nn.Module):
     """
     MLP with depth-wise convolution, from [PVTv2: Improved Baselines with Pyramid Vision
     Transformer](https://arxiv.org/abs/2106.13797).
@@ -240,9 +241,9 @@ class VanMlpLayer(nn.Cell):
         self.out_dense = nn.Conv2d(hidden_size, out_channels, kernel_size=1)
         self.dropout2 = nn.Dropout(dropout_rate)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a multi-layer perceptron (MLP) layer in the VanMlpLayer class.
+        This method forwards a multi-layer perceptron (MLP) layer in the VanMlpLayer class.
 
         Args:
             self (VanMlpLayer): The instance of the VanMlpLayer class.
@@ -263,7 +264,7 @@ class VanMlpLayer(nn.Cell):
         return hidden_state
 
 
-class VanLargeKernelAttention(nn.Cell):
+class VanLargeKernelAttention(nn.Module):
     """
     Basic Large Kernel Attention (LKA).
     """
@@ -289,7 +290,7 @@ class VanLargeKernelAttention(nn.Cell):
         )
         self.point_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=1)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the attention mechanism in the VanLargeKernelAttention class.
 
@@ -309,7 +310,7 @@ class VanLargeKernelAttention(nn.Cell):
         return hidden_state
 
 
-class VanLargeKernelAttentionLayer(nn.Cell):
+class VanLargeKernelAttentionLayer(nn.Module):
     """
     Computes attention using Large Kernel Attention (LKA) and attends the input.
     """
@@ -331,9 +332,9 @@ class VanLargeKernelAttentionLayer(nn.Cell):
         super().__init__()
         self.attention = VanLargeKernelAttention(hidden_size)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs an attention mechanism in the VanLargeKernelAttentionLayer class.
+        This method forwards an attention mechanism in the VanLargeKernelAttentionLayer class.
 
         Args:
             self: The instance of the VanLargeKernelAttentionLayer class.
@@ -350,7 +351,7 @@ class VanLargeKernelAttentionLayer(nn.Cell):
         return attended
 
 
-class VanSpatialAttentionLayer(nn.Cell):
+class VanSpatialAttentionLayer(nn.Module):
     """
     Van spatial attention layer composed by projection (via conv) -> act -> Large Kernel Attention (LKA) attention ->
     projection (via conv) + residual connection.
@@ -381,9 +382,9 @@ class VanSpatialAttentionLayer(nn.Cell):
         self.attention_layer = VanLargeKernelAttentionLayer(hidden_size)
         self.post_projection = nn.Conv2d(hidden_size, hidden_size, kernel_size=1)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a spatial attention layer in the VanSpatialAttentionLayer class.
+        This method forwards a spatial attention layer in the VanSpatialAttentionLayer class.
 
         Args:
             self: The instance of the VanSpatialAttentionLayer class.
@@ -407,7 +408,7 @@ class VanSpatialAttentionLayer(nn.Cell):
         return hidden_state
 
 
-class VanLayerScaling(nn.Cell):
+class VanLayerScaling(nn.Module):
     """
     Scales the inputs by a learnable parameter initialized by `initial_value`.
     """
@@ -429,7 +430,7 @@ class VanLayerScaling(nn.Cell):
         super().__init__()
         self.weight = Parameter(initial_value * ops.ones((hidden_size)), requires_grad=True)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method is part of the VanLayerScaling class and is used to perform scaling on the hidden_state tensor.
 
@@ -450,7 +451,7 @@ class VanLayerScaling(nn.Cell):
         return hidden_state
 
 
-class VanLayer(nn.Cell):
+class VanLayer(nn.Module):
     """
     Van layer composed by normalization layers, large kernel attention (LKA) and a multi layer perceptron (MLP).
     """
@@ -488,11 +489,11 @@ class VanLayer(nn.Cell):
         )
         self.mlp_scaling = VanLayerScaling(hidden_size, config.layer_scale_init_value)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct method in the VanLayer class.
 
-        This method constructs the output tensor by applying a series of operations to the input hidden state.
+        This method forwards the output tensor by applying a series of operations to the input hidden state.
 
         Args:
             self: Instance of the VanLayer class.
@@ -523,7 +524,7 @@ class VanLayer(nn.Cell):
         return hidden_state
 
 
-class VanStage(nn.Cell):
+class VanStage(nn.Module):
     """
     VanStage, consisting of multiple layers.
     """
@@ -574,9 +575,9 @@ class VanStage(nn.Cell):
                 for _ in range(depth)
             ]
         )
-        self.normalization = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_eps)
+        self.normalization = nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the hidden state tensor for the VanStage class.
 
@@ -586,7 +587,7 @@ class VanStage(nn.Cell):
                 It should have a shape of (batch_size, hidden_size, height, width).
 
         Returns:
-            mindspore.Tensor: A tensor representing the constructed hidden state.
+            mindspore.Tensor: A tensor representing the forwarded hidden state.
                 It has a shape of (batch_size, hidden_size, height, width).
 
         Raises:
@@ -603,7 +604,7 @@ class VanStage(nn.Cell):
         return hidden_state
 
 
-class VanEncoder(nn.Cell):
+class VanEncoder(nn.Module):
     """
     VanEncoder, consisting of multiple stages.
     """
@@ -632,7 +633,7 @@ class VanEncoder(nn.Cell):
             ValueError: If the drop_path_rate value is out of range or invalid.
         """
         super().__init__()
-        self.stages = nn.CellList([])
+        self.stages = nn.ModuleList([])
         patch_sizes = config.patch_sizes
         strides = config.strides
         hidden_sizes = config.hidden_sizes
@@ -660,7 +661,7 @@ class VanEncoder(nn.Cell):
                 )
             )
 
-    def construct(
+    def forward(
         self,
         hidden_state: mindspore.Tensor,
         output_hidden_states: Optional[bool] = False,
@@ -676,7 +677,7 @@ class VanEncoder(nn.Cell):
             return_dict (bool, optional): A flag indicating whether to return the output as a dictionary. Defaults to True.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithNoAttention]: The constructed output, which is either a tuple of hidden
+            Union[Tuple, BaseModelOutputWithNoAttention]: The forwarded output, which is either a tuple of hidden
                 state and all hidden states or an instance of BaseModelOutputWithNoAttention.
 
         Raises:
@@ -708,9 +709,9 @@ class VanPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             nn.init.trunc_normal_(module.weight, std=self.config.initializer_range)
-            if isinstance(module, nn.Dense) and module.bias is not None:
+            if isinstance(module, nn.Linear) and module.bias is not None:
                 nn.init.constant_(module.bias, 0)
         elif isinstance(module, nn.LayerNorm):
             nn.init.constant_(module.bias, 0)
@@ -728,8 +729,8 @@ class VanModel(VanPreTrainedModel):
     """
     The VanModel class represents a model for processing pixel values using the VanEncoder and providing various
     output representations. It inherits from the VanPreTrainedModel class and includes methods for initialization and
-    constructing the model's output. The constructor initializes the model with the provided configuration, while the
-    construct method processes the pixel values and returns the output representation. The class provides flexibility
+    forwarding the model's output. The forwardor initializes the model with the provided configuration, while the
+    forward method processes the pixel values and returns the output representation. The class provides flexibility
     for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention.
     """
     def __init__(self, config):
@@ -756,11 +757,11 @@ class VanModel(VanPreTrainedModel):
         self.config = config
         self.encoder = VanEncoder(config)
         # final layernorm layer
-        self.layernorm = nn.LayerNorm(config.hidden_sizes[-1], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_sizes[-1], eps=config.layer_norm_eps)
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor],
         output_hidden_states: Optional[bool] = None,
@@ -825,7 +826,7 @@ class VanForImageClassification(VanPreTrainedModel):
         __init__:
             Initializes the VanForImageClassification model with the given configuration.
 
-        construct:
+        forward:
             Constructs the model for image classification.
 
             Args:
@@ -843,11 +844,11 @@ class VanForImageClassification(VanPreTrainedModel):
     Example:
         ```python
         >>> model = VanForImageClassification(config)
-        >>> output = model.construct(pixel_values, labels, output_hidden_states, return_dict)
+        >>> output = model.forward(pixel_values, labels, output_hidden_states, return_dict)
         ```
 
     Note:
-        The construct method computes the loss based on the labels and the model's prediction, and returns the output
+        The forward method computes the loss based on the labels and the model's prediction, and returns the output
         based on the configured settings.
     """
     def __init__(self, config):
@@ -872,13 +873,13 @@ class VanForImageClassification(VanPreTrainedModel):
         self.van = VanModel(config)
         # Classifier head
         self.classifier = (
-            nn.Dense(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,

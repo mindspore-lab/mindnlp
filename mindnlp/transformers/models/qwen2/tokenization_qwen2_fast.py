@@ -127,7 +127,7 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
             for the tokenizer.
             - The unk_token, bos_token, eos_token, and pad_token parameters are used to set the respective tokens
             in the tokenizer.
-            - Additional keyword arguments can be provided and will be passed to the base class constructor.
+            - Additional keyword arguments can be provided and will be passed to the base class forwardor.
         """
         # We need to at least pass vocab_file and merges_file to base class
         # in case a slow tokenizer needs to be initialized; other can be

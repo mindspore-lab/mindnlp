@@ -20,13 +20,13 @@ import math
 import os
 from typing import Union
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from .tinybert_config import TinyBertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
 
-class TinyBertEmbeddings(nn.Cell):
+class TinyBertEmbeddings(nn.Module):
     """
     Construct the embeddings from word, position and token_type embeddings.
     """
@@ -42,10 +42,10 @@ class TinyBertEmbeddings(nn.Cell):
         self.token_type_embeddings = nn.Embedding(
             config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, input_ids, token_type_ids=None):
+    def forward(self, input_ids, token_type_ids=None):
         """
         Construct the embeddings from word, position and token_type embeddings.
         """
@@ -65,7 +65,7 @@ class TinyBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class TinyBertSelfAttention(nn.Cell):
+class TinyBertSelfAttention(nn.Module):
     r"""
     TinyBertSelfAttention
     """
@@ -95,9 +95,9 @@ class TinyBertSelfAttention(nn.Cell):
             config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -110,9 +110,9 @@ class TinyBertSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.transpose(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask):
+    def forward(self, hidden_states, attention_mask):
         """
-        This method constructs the self-attention mechanism for the TinyBERT model.
+        This method forwards the self-attention mechanism for the TinyBERT model.
         
         Args:
             self (object): The instance of the TinyBertSelfAttention class.
@@ -160,7 +160,7 @@ class TinyBertSelfAttention(nn.Cell):
         return context_layer, attention_scores
 
 
-class TinyBertAttention(nn.Cell):
+class TinyBertAttention(nn.Module):
     """
     TinyBertAttention
     """
@@ -184,7 +184,7 @@ class TinyBertAttention(nn.Cell):
         self.self_ = TinyBertSelfAttention(config)
         self.output = TinyBertSelfOutput(config)
 
-    def construct(self, input_tensor, attention_mask):
+    def forward(self, input_tensor, attention_mask):
         """
         Constructs the attention output and layer attention for the TinyBertAttention class.
         
@@ -204,7 +204,7 @@ class TinyBertAttention(nn.Cell):
         return attention_output, layer_att
 
 
-class TinyBertSelfOutput(nn.Cell):
+class TinyBertSelfOutput(nn.Module):
     """
     TinyBertSelfOutput
     """
@@ -228,11 +228,11 @@ class TinyBertSelfOutput(nn.Cell):
             TypeError: If the provided configuration is not of the expected type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
         Constructs the output of the TinyBertSelf layer.
 
@@ -258,7 +258,7 @@ class TinyBertSelfOutput(nn.Cell):
         return hidden_states
 
 
-class TinyBertIntermediate(nn.Cell):
+class TinyBertIntermediate(nn.Module):
     """
     TinyBertIntermediate
     """
@@ -291,18 +291,18 @@ class TinyBertIntermediate(nn.Cell):
         """
         super().__init__()
         if intermediate_size < 0:
-            self.dense = nn.Dense(
+            self.dense = nn.Linear(
                 config.hidden_size, config.intermediate_size)
         else:
-            self.dense = nn.Dense(config.hidden_size, intermediate_size)
+            self.dense = nn.Linear(config.hidden_size, intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the intermediate layer of a TinyBERT model.
+        This method forwards the intermediate layer of a TinyBERT model.
 
         Args:
             self (object): The instance of the TinyBertIntermediate class.
@@ -320,7 +320,7 @@ class TinyBertIntermediate(nn.Cell):
         return hidden_states
 
 
-class TinyBertOutput(nn.Cell):
+class TinyBertOutput(nn.Module):
     """
     TinyBertOutput
     """
@@ -341,16 +341,16 @@ class TinyBertOutput(nn.Cell):
         """
         super().__init__()
         if intermediate_size < 0:
-            self.dense = nn.Dense(
+            self.dense = nn.Linear(
                 config.intermediate_size, config.hidden_size)
         else:
-            self.dense = nn.Dense(intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+            self.dense = nn.Linear(intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        Method 'construct' in the class 'TinyBertOutput'.
+        Method 'forward' in the class 'TinyBertOutput'.
 
         Args:
             self (object): Instance of the 'TinyBertOutput' class.
@@ -380,7 +380,7 @@ class TinyBertOutput(nn.Cell):
         return hidden_states
 
 
-class TinyBertLayer(nn.Cell):
+class TinyBertLayer(nn.Module):
     """
     TinyBertLayer
     """
@@ -404,7 +404,7 @@ class TinyBertLayer(nn.Cell):
         self.intermediate = TinyBertIntermediate(config)
         self.output = TinyBertOutput(config)
 
-    def construct(self, hidden_states, attention_mask):
+    def forward(self, hidden_states, attention_mask):
         """
         Constructs a TinyBertLayer by applying attention mechanism and generating layer output.
 
@@ -435,7 +435,7 @@ class TinyBertLayer(nn.Cell):
         return layer_output, layer_att
 
 
-class TinyBertEncoder(nn.Cell):
+class TinyBertEncoder(nn.Module):
     """
     TinyBertEncoder
     """
@@ -449,7 +449,7 @@ class TinyBertEncoder(nn.Cell):
                 This object must have the following attributes:
 
                 - num_hidden_layers (int): The number of hidden layers for the encoder.
-                - Other attributes required by the TinyBertLayer constructor.
+                - Other attributes required by the TinyBertLayer forwardor.
 
         Returns:
             None.
@@ -458,12 +458,12 @@ class TinyBertEncoder(nn.Cell):
             None.
         """
         super().__init__()
-        self.layer = nn.CellList([TinyBertLayer(config)
+        self.layer = nn.ModuleList([TinyBertLayer(config)
                                   for _ in range(config.num_hidden_layers)])
 
-    def construct(self, hidden_states, attention_mask):
+    def forward(self, hidden_states, attention_mask):
         """
-        Method 'construct' in the class 'TinyBertEncoder'.
+        Method 'forward' in the class 'TinyBertEncoder'.
 
         Args:
             self (object): The instance of the 'TinyBertEncoder' class.
@@ -492,7 +492,7 @@ class TinyBertEncoder(nn.Cell):
         return all_encoder_layers, all_encoder_atts
 
 
-class TinyBertPooler(nn.Cell):
+class TinyBertPooler(nn.Module):
     """
     TinyBertPooler
     """
@@ -514,11 +514,11 @@ class TinyBertPooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
         self.config = config
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the TinyBertPooler by calculating the pooled output from the given hidden states.
 
@@ -545,7 +545,7 @@ class TinyBertPooler(nn.Cell):
         return pooled_output
 
 
-class TinyBertPredictionHeadTransform(nn.Cell):
+class TinyBertPredictionHeadTransform(nn.Module):
     """
     TinyBertPredictionHeadTransform
     """
@@ -573,14 +573,14 @@ class TinyBertPredictionHeadTransform(nn.Cell):
         """
         super().__init__()
         # Need to unty it when we separate the dimensions of hidden and emb
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the TinyBertPredictionHeadTransform.
 
@@ -603,7 +603,7 @@ class TinyBertPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class TinyBertLMPredictionHead(nn.Cell):
+class TinyBertLMPredictionHead(nn.Module):
     """
     TinyBertLMPredictionHead
     """
@@ -629,16 +629,16 @@ class TinyBertLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(bert_model_embedding_weights.shape[1],
+        self.decoder = nn.Linear(bert_model_embedding_weights.shape[1],
                                 bert_model_embedding_weights.shape[0],
-                                has_bias=False)
+                                bias=False)
         self.decoder.weight = bert_model_embedding_weights
         self.bias = mindspore.Parameter(ops.zeros(
             bert_model_embedding_weights.shape[0]))
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method to construct the prediction head for TinyBERT LM.
+        Method to forward the prediction head for TinyBERT LM.
 
         Args:
             self (object): Instance of the TinyBertLMPredictionHead class.
@@ -646,7 +646,7 @@ class TinyBertLMPredictionHead(nn.Cell):
                 The tensor should have the shape [batch_size, sequence_length, hidden_size].
 
         Returns:
-            None: This method modifies the hidden_states in place to construct the LM prediction head.
+            None: This method modifies the hidden_states in place to forward the LM prediction head.
 
         Raises:
             None.
@@ -656,7 +656,7 @@ class TinyBertLMPredictionHead(nn.Cell):
         return hidden_states
 
 
-class TinyBertOnlyMLMHead(nn.Cell):
+class TinyBertOnlyMLMHead(nn.Module):
     """
     TinyBertOnlyMLMHead
     """
@@ -681,9 +681,9 @@ class TinyBertOnlyMLMHead(nn.Cell):
         self.predictions = TinyBertLMPredictionHead(
             config, bert_model_embedding_weights)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         """
-        This method constructs the prediction scores based on the provided sequence output for the
+        This method forwards the prediction scores based on the provided sequence output for the
         TinyBertOnlyMLMHead class.
 
         Args:
@@ -702,7 +702,7 @@ class TinyBertOnlyMLMHead(nn.Cell):
         return prediction_scores
 
 
-class TinyBertOnlyNSPHead(nn.Cell):
+class TinyBertOnlyNSPHead(nn.Module):
     """
     TinyBertOnlyNSPHead
     """
@@ -722,11 +722,11 @@ class TinyBertOnlyNSPHead(nn.Cell):
             None.
         """
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         """
-        Method: construct
+        Method: forward
 
         Description:
             This method calculates the sequence relationship score using the provided pooled_output.
@@ -746,7 +746,7 @@ class TinyBertOnlyNSPHead(nn.Cell):
         return seq_relationship_score
 
 
-class TinyBertPreTrainingHeads(nn.Cell):
+class TinyBertPreTrainingHeads(nn.Module):
     """
     TinyBertPreTrainingHeads
     """
@@ -769,11 +769,11 @@ class TinyBertPreTrainingHeads(nn.Cell):
         super().__init__()
         self.predictions = TinyBertLMPredictionHead(
             config, bert_model_embedding_weights)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         """
-        This method constructs prediction scores and sequence relationship scores for pre-training heads in TinyBert.
+        This method forwards prediction scores and sequence relationship scores for pre-training heads in TinyBert.
 
         Args:
             self (object): The instance of the TinyBertPreTrainingHeads class.
@@ -848,26 +848,26 @@ class TinyBertPreTrainedModel(PreTrainedModel):
                 type=module.bias.dtype, shape=module.bias.shape, value=0)
             module.weight = ops.fill(
                 type=module.weight.dtype, shape=module.weight.shape, value=1.0)
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             module.weight = ops.normal(
                 shape=module.weight.shape, mean=0.0, stddev=self.config.initializer_range)
             if module.bias is not None:
                 module.bias = ops.fill(
                     type=module.bias.dtype, shape=module.bias.shape, value=0)
 
-    def get_input_embeddings(self) -> "nn.Cell":
+    def get_input_embeddings(self) -> "nn.Module":
         """
         Returns the model's input embeddings.
 
         Returns:
-            :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
+            :obj:`nn.Module`: A mindspore cell mapping vocabulary to hidden states.
         """
-    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Module"):
         """
         Set model's input embeddings.
 
         Args:
-            value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
+            value (:obj:`nn.Module`): A mindspore cell mapping vocabulary to hidden states.
         """
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
@@ -912,9 +912,9 @@ class TinyBertModel(TinyBertPreTrainedModel):
         self.pooler = TinyBertPooler(config)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None,
                   output_all_encoded_layers=True, output_att=True):
-        """construct."""
+        """forward."""
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
         if token_type_ids is None:
@@ -980,9 +980,9 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
             config, self.bert.embeddings.word_embeddings.weight)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None,
                   masked_lm_labels=None, next_sentence_label=None):
-        """construct."""
+        """forward."""
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                    output_all_encoded_layers=False, output_att=False)
         prediction_scores, seq_relationship_score = self.cls(
@@ -1028,11 +1028,11 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
         self.bert = TinyBertModel(config)
         self.cls = TinyBertPreTrainingHeads(
             config, self.bert.embeddings.word_embeddings.weight)
-        self.fit_dense = nn.Dense(config.hidden_size, fit_size)
+        self.fit_dense = nn.Linear(config.hidden_size, fit_size)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None):
-        """construct."""
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None):
+        """forward."""
         sequence_output, att_output, _ = self.bert(
             input_ids, token_type_ids, attention_mask)
         tmp = []
@@ -1068,9 +1068,9 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
             config, self.bert.embeddings.word_embeddings.weight)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
                   output_att=False):
-        """construct."""
+        """forward."""
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask,
                                        output_all_encoded_layers=True, output_att=output_att)
 
@@ -1121,8 +1121,8 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
         self.cls = TinyBertOnlyNSPHead(config)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None, next_sentence_label=None):
-        """construct."""
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, next_sentence_label=None):
+        """forward."""
         _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                      output_all_encoded_layers=False, output_att=False)
         seq_relationship_score = self.cls(pooled_output)
@@ -1162,12 +1162,12 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
         self.num_labels = num_labels
         self.bert = TinyBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size * 3, num_labels)
+        self.classifier = nn.Linear(config.hidden_size * 3, num_labels)
         self.apply(self.init_model_weights)
 
-    def construct(self, a_input_ids, b_input_ids, a_token_type_ids=None, b_token_type_ids=None,
+    def forward(self, a_input_ids, b_input_ids, a_token_type_ids=None, b_token_type_ids=None,
                   a_attention_mask=None, b_attention_mask=None, labels=None):
-        """construct."""
+        """forward."""
         _, a_pooled_output = self.bert(
             a_input_ids, a_token_type_ids, a_attention_mask, output_all_encoded_layers=False, output_att=False)
         # a_pooled_output = self.dropout(a_pooled_output)
@@ -1212,13 +1212,13 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
         self.num_labels = num_labels
         self.bert = TinyBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, num_labels)
-        self.fit_dense = nn.Dense(config.hidden_size, fit_size)
+        self.classifier = nn.Linear(config.hidden_size, num_labels)
+        self.fit_dense = nn.Linear(config.hidden_size, fit_size)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None,
                   is_student=False):
-        """construct"""
+        """forward"""
         sequence_output, att_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                                output_all_encoded_layers=True, output_att=True)
 

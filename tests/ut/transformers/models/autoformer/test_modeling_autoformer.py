@@ -29,8 +29,8 @@ TOLERANCE = 1e-4
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-    from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerConfig, AutoformerForPrediction, AutoformerModel
+    from mindnlp.core import ops
+    from mindnlp.transformers import AutoformerConfig, AutoformerForPrediction, AutoformerModel
 
     from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
 
@@ -163,7 +163,7 @@ class AutoformerModelTester:
         enc_input = ops.cat(
             (transformer_inputs[:, : config.context_length, ...],
              feature[:, : config.context_length, ...]),
-            axis=-1,
+            dim=-1,
         )
         encoder_last_hidden_state_2 = encoder(inputs_embeds=enc_input)[0]
         self.parent.assertTrue(
@@ -171,7 +171,7 @@ class AutoformerModelTester:
 
         mean = (
             ops.mean(
-                transformer_inputs[:, : config.context_length, ...], axis=1)
+                transformer_inputs[:, : config.context_length, ...], dim=1)
             .unsqueeze(1)
             .tile((1, config.prediction_length, 1))
         )
@@ -181,18 +181,18 @@ class AutoformerModelTester:
         dec_input = ops.cat(
             (
                 ops.cat(
-                    (seasonal_input[:, -config.label_length:, ...], zeros), axis=1),
+                    (seasonal_input[:, -config.label_length:, ...], zeros), dim=1),
                 feature[:, config.context_length - config.label_length:, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
         trend_init = ops.cat(
             (
                 ops.cat(
-                    (trend_input[:, -config.label_length:, ...], mean), axis=1),
+                    (trend_input[:, -config.label_length:, ...], mean), dim=1),
                 feature[:, config.context_length - config.label_length:, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
 
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -261,7 +261,7 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
     # # Input is 'static_categorical_features' not 'input_ids'
     def test_model_main_input_name(self):
         model_signature = inspect.signature(
-            getattr(AutoformerModel, "construct"))
+            getattr(AutoformerModel, "forward"))
         # The main input is the name of the argument after `self`
         observed_main_input_name = list(model_signature.parameters.keys())[1]
         self.assertEqual(AutoformerModel.main_input_name,
@@ -272,7 +272,7 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

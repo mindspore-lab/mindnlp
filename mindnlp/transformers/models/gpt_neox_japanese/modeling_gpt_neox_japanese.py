@@ -18,7 +18,7 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import get_default_dtype, logging
@@ -47,7 +47,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(
                 initializer(
                     Normal(self.config.initializer_range),
@@ -76,7 +76,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
             )
 
 
-class GPTNeoXJapaneseAttention(nn.Cell):
+class GPTNeoXJapaneseAttention(nn.Module):
     def __init__(self, config, use_bias=False):
         super().__init__()
         self.num_attention_heads = config.num_attention_heads
@@ -95,17 +95,17 @@ class GPTNeoXJapaneseAttention(nn.Cell):
             mindspore.tensor(self.head_size, dtype=mindspore.float32)
         )
 
-        self.query_key_value = nn.Dense(
-            config.hidden_size, 3 * config.hidden_size, has_bias=False
+        self.query_key_value = nn.Linear(
+            config.hidden_size, 3 * config.hidden_size, bias=False
         )
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         # Activate bias if the last layer
         self.use_bias = use_bias
         self.dense_bias = (
             mindspore.Parameter(ops.zeros(config.hidden_size)) if use_bias else None
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -260,7 +260,7 @@ class GPTNeoXJapaneseAttention(nn.Cell):
 
 
 # Copied from transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXRotaryEmbedding with GPTNeoXRotaryEmbedding->RotaryEmbedding
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     # Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding.__init__
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
@@ -292,7 +292,7 @@ class RotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -345,35 +345,35 @@ def bias_dropout_add(
     return out
 
 
-class GPTNeoXJapaneseMLP(nn.Cell):
+class GPTNeoXJapaneseMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         intermediate_size = int(config.hidden_size * config.intermediate_multiple_size)
-        self.dense_h_to_4h = nn.Dense(
-            config.hidden_size, intermediate_size, has_bias=False
+        self.dense_h_to_4h = nn.Linear(
+            config.hidden_size, intermediate_size, bias=False
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
-            intermediate_size, config.hidden_size, has_bias=False
+        self.dense_4h_to_h = nn.Linear(
+            intermediate_size, config.hidden_size, bias=False
         )
         self.act = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense_h_to_4h(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dense_4h_to_h(hidden_states)
         return hidden_states
 
 
-class GPTNeoXJapaneseLayer(nn.Cell):
+class GPTNeoXJapaneseLayer(nn.Module):
     def __init__(self, config, layer_number):
         super().__init__()
         self.layer_number = layer_number
         self.input_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.post_attention_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         # activate bias only last layer
         self.attention = GPTNeoXJapaneseAttention(
@@ -382,7 +382,7 @@ class GPTNeoXJapaneseLayer(nn.Cell):
         self.mlp = GPTNeoXJapaneseMLP(config)
         self.hidden_dropout = config.hidden_dropout
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -439,14 +439,14 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
         self.config = config
 
         self.embed_in = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 GPTNeoXJapaneseLayer(config=config, layer_number=i)
                 for i in range(config.num_hidden_layers)
             ]
         )
         self.final_layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
         # Initialize weights and apply final processing
@@ -458,7 +458,7 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_in = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -613,7 +613,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
         self.config = config
 
         self.gpt_neox_japanese = GPTNeoXJapaneseModel(config)
-        self.embed_out = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -624,7 +624,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.embed_out = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

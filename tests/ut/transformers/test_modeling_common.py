@@ -30,7 +30,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 from pytest import mark
 
-import mindspore
 
 from mindnlp.transformers import (
     AutoModel,
@@ -79,7 +78,8 @@ from mindnlp.configs import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import ops, nn, serialization
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import MODEL_MAPPING
 
@@ -179,12 +179,12 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES),
             ]:
                 inputs_dict["labels"] = ops.ones(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
+                    self.model_tester.batch_size, self.model_tester.seq_length, dtype=mindspore.int64
                 )
             elif model_class.__name__ in get_values(MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES):
                 num_patches = self.model_tester.image_size // self.model_tester.patch_size
                 inputs_dict["bool_masked_pos"] = ops.zeros(
-                    (self.model_tester.batch_size, num_patches ** 2), dtype=mindspore.int64
+                    self.model_tester.batch_size, num_patches ** 2, dtype=mindspore.int64
                 )
 
 
@@ -195,7 +195,7 @@ class ModelTesterMixin:
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -236,6 +236,7 @@ class ModelTesterMixin:
             self.assertLessEqual(max_diff, 1e-4)
 
         for model_class in self.all_model_classes:
+            print(model_class)
             model = model_class(config)
             model.set_train(False)
 
@@ -251,6 +252,9 @@ class ModelTesterMixin:
 
                 model2 = model_class.from_pretrained(tmpdirname)
                 second = model2(**self._prepare_for_class(inputs_dict, model_class))[0]
+
+            for param1, param2 in zip(list(model.parameters()), list(model2.parameters())):
+                assert np.allclose(param1.asnumpy(), param2.asnumpy())
 
             if isinstance(first, tuple) and isinstance(second, tuple):
                 for tensor1, tensor2 in zip(first, second):
@@ -397,7 +401,7 @@ class ModelTesterMixin:
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.config.save_pretrained(tmpdirname)
-                mindspore.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
+                serialization.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
 
                 model_fast_init = base_class_copy.from_pretrained(tmpdirname)
                 model_slow_init = base_class_copy.from_pretrained(tmpdirname, _fast_init=False)
@@ -406,11 +410,11 @@ class ModelTesterMixin:
                     if isinstance(model_slow_init.parameters_dict()[key], mindspore.Parameter): # bitwise_or do not support Parameter
                         max_diff = ops.max(
                             ops.abs(model_slow_init.parameters_dict()[key] - model_fast_init.parameters_dict()[key])
-                        )[0].asnumpy().item()
+                        ).asnumpy().item()
                     else:
                         max_diff = ops.max(
                             model_slow_init.parameters_dict()[key] ^ model_fast_init.parameters_dict()[key]
-                        )[0].asnumpy().item()
+                        ).asnumpy().item()
                     self.assertLessEqual(max_diff, 1e-3, msg=f"{key} not identical")
 
     def test_initialization(self):
@@ -612,15 +616,15 @@ class ModelTesterMixin:
             # Prepare head_mask
             # Set require_grad after having prepared the tensor to avoid error (leaf variable has been moved into the graph interior)
             head_mask = ops.ones(
-                (self.model_tester.num_hidden_layers,
-                self.model_tester.num_attention_heads,)
+                self.model_tester.num_hidden_layers,
+                self.model_tester.num_attention_heads,
             )
             head_mask[0, 0] = 0
             head_mask[-1, :-1] = 0
             inputs = self._prepare_for_class(inputs_dict, model_class).copy()
             inputs["head_mask"] = head_mask
             if model.config.is_encoder_decoder:
-                signature = inspect.signature(model.construct)
+                signature = inspect.signature(model.forward)
                 arg_names = [*signature.parameters.keys()]
                 if "decoder_head_mask" in arg_names:  # necessary diferentiation because of T5 model
                     inputs["decoder_head_mask"] = head_mask
@@ -672,7 +676,6 @@ class ModelTesterMixin:
             inputs_dict["output_attentions"] = True
             config.output_hidden_states = False
             model = model_class(config=config)
-            model
             model.set_train(False)
             heads_to_prune = {
                 0: list(range(1, self.model_tester.num_attention_heads)),
@@ -863,14 +866,14 @@ class ModelTesterMixin:
             inputs_dict,
         ) = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
-            mindspore.set_seed(1234)
+            set_seed(1234)
             config = copy.deepcopy(original_config)
             model = model_class(config)
             model.set_train(False)
 
             hidden_states_no_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
-            mindspore.set_seed(1234)
+            set_seed(1234)
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.set_train(False)
@@ -1093,11 +1096,11 @@ class ModelTesterMixin:
             self.assertIsInstance(model.get_input_embeddings(), nn.Embedding)
             model.set_input_embeddings(nn.Embedding(10, 10))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model_main_input_name(self):
         for model_class in self.all_model_classes:
-            model_signature = inspect.signature(getattr(model_class, "construct"))
+            model_signature = inspect.signature(getattr(model_class, "forward"))
             # The main input is the name of the argument after `self`
             observed_main_input_name = list(model_signature.parameters.keys())[1]
             self.assertEqual(model_class.main_input_name, observed_main_input_name)

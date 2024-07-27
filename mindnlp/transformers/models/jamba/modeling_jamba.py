@@ -25,7 +25,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
@@ -154,11 +155,11 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Jamba
-class JambaRMSNorm(nn.Cell):
+class JambaRMSNorm(nn.Module):
 
     """
     The 'JambaRMSNorm' class represents a layer normalization module equivalent to T5LayerNorm.
-    It inherits from nn.Cell and includes methods for initialization and construction.
+    It inherits from nn.Module and includes methods for initialization and forwardion.
     The class provides functionality for normalizing input hidden states using the RMS normalization technique,
     with the ability to specify the hidden size and epsilon value for variance stabilization.
 
@@ -168,7 +169,7 @@ class JambaRMSNorm(nn.Cell):
 
     Methods:
         __init__: Initializes the 'JambaRMSNorm' instance with the specified hidden size and epsilon value.
-        construct: Applies RMS normalization to the input hidden states and returns the normalized output.
+        forward: Applies RMS normalization to the input hidden states and returns the normalized output.
 
     Note:
         This class is designed for use in neural network models for natural language processing and other
@@ -182,7 +183,7 @@ class JambaRMSNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the JambaRMSNorm layer.
 
@@ -218,7 +219,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 
 # Adapted from transformers.models.mistral.modeling_mistral.MistralAttention with Mistral->Jamba
-class JambaAttention(nn.Cell):
+class JambaAttention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
@@ -263,10 +264,10 @@ class JambaAttention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=False)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=False)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -288,7 +289,7 @@ class JambaAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -299,7 +300,7 @@ class JambaAttention(nn.Cell):
             **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """
-        This method constructs the JambaAttention mechanism for processing hidden states.
+        This method forwards the JambaAttention mechanism for processing hidden states.
 
         Args:
             self: The instance of the JambaAttention class.
@@ -548,7 +549,7 @@ class MambaCacheParams:
 
 
 # Adapted from transformers.models.mamba.modeling_mamba.MambaMixer
-class JambaMambaMixer(nn.Cell):
+class JambaMambaMixer(nn.Module):
     """
     Compute ∆, A, B, C, and D the state space parameters and compute the `contextualized_states`.
     A, D are input independent (see Mamba paper [1] Section 3.5.2 "Interpretation of A" for why A isn't selective)
@@ -583,7 +584,7 @@ class JambaMambaMixer(nn.Cell):
         self.conv1d = nn.Conv1d(
             in_channels=self.intermediate_size,
             out_channels=self.intermediate_size,
-            has_bias=self.use_conv_bias,
+            bias=self.use_conv_bias,
             kernel_size=self.conv_kernel_size,
             group=self.intermediate_size,
             padding=self.conv_kernel_size - 1,
@@ -597,11 +598,11 @@ class JambaMambaMixer(nn.Cell):
         self.use_fast_kernels = config.use_mamba_kernels
 
         # projection of the input hidden states
-        self.in_proj = nn.Dense(self.hidden_size, self.intermediate_size * 2, has_bias=self.use_bias)
+        self.in_proj = nn.Linear(self.hidden_size, self.intermediate_size * 2, bias=self.use_bias)
         # selective projection used to make dt, B and C input dependant
-        self.x_proj = nn.Dense(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, has_bias=False)
+        self.x_proj = nn.Linear(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, bias=False)
         # time step projection (discretization)
-        self.dt_proj = nn.Dense(self.time_step_rank, self.intermediate_size, has_bias=True)
+        self.dt_proj = nn.Linear(self.time_step_rank, self.intermediate_size, bias=True)
 
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded
@@ -610,7 +611,7 @@ class JambaMambaMixer(nn.Cell):
 
         self.A_log = Parameter(ops.log(A))
         self.D = Parameter(ops.ones(self.intermediate_size))
-        self.out_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=self.use_bias)
+        self.out_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=self.use_bias)
 
         if self.apply_inner_layernorms:
             self.dt_layernorm = JambaRMSNorm(self.time_step_rank, eps=config.rms_norm_eps)
@@ -739,7 +740,7 @@ class JambaMambaMixer(nn.Cell):
         contextualized_states = self.out_proj(scan_output.swapaxes(1, 2))             # [batch, seq_len, hidden_size]
         return contextualized_states
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             past_key_value: Optional[HybridMambaAttentionDynamicCache] = None,
@@ -748,11 +749,11 @@ class JambaMambaMixer(nn.Cell):
 
         """Construct method in the JambaMambaMixer class.
 
-        This method constructs the model based on the hidden states and past key value.
+        This method forwards the model based on the hidden states and past key value.
 
         Args:
             self: Instance of the JambaMambaMixer class.
-            hidden_states (mindspore.Tensor): Hidden states used as input for the model construction.
+            hidden_states (mindspore.Tensor): Hidden states used as input for the model forwardion.
             past_key_value (Optional[HybridMambaAttentionDynamicCache]): Optional past key value used for caching.
                 Default is None. If provided, cache_params are initialized based on past_key_value, else set to None.
 
@@ -805,32 +806,32 @@ class JambaMambaMixer(nn.Cell):
         return res, past_key_value
 
 
-class JambaMLP(nn.Cell):
+class JambaMLP(nn.Module):
 
     """
-    JambaMLP represents a multi-layer perceptron (MLP) model used in the Jamba project. It inherits from nn.Cell.
+    JambaMLP represents a multi-layer perceptron (MLP) model used in the Jamba project. It inherits from nn.Module.
 
-    This class implements the construction and initialization of the JambaMLP model.
+    This class implements the forwardion and initialization of the JambaMLP model.
     The model consists of three linear layers: gate_proj, down_proj, and up_proj.
     The activation function used in the hidden layer is determined by the hidden_act parameter in the JambaConfig object.
 
     Attributes:
         ffn_dim (int): The size of the intermediate layer in the MLP.
         hidden_dim (int): The size of the hidden layer in the MLP.
-        gate_proj (nn.Dense): The linear layer for the gate projection.
-        down_proj (nn.Dense): The linear layer for the down projection.
-        up_proj (nn.Dense): The linear layer for the up projection.
+        gate_proj (nn.Linear): The linear layer for the gate projection.
+        down_proj (nn.Linear): The linear layer for the down projection.
+        up_proj (nn.Linear): The linear layer for the up projection.
         act_fn (function): The activation function used in the hidden layer.
 
     Methods:
         __init__: Initializes the JambaMLP object with the provided configuration.
-        construct: Constructs the MLP model using the provided input.
+        forward: Constructs the MLP model using the provided input.
 
     Example:
         ```python
         >>> config = JambaConfig(intermediate_size=512, hidden_size=256, hidden_act='relu')
         >>> model = JambaMLP(config)
-        >>> output = model.construct(input_data)
+        >>> output = model.forward(input_data)
         ```
     """
     def __init__(self, config: JambaConfig):
@@ -857,13 +858,13 @@ class JambaMLP(nn.Cell):
         self.ffn_dim = config.intermediate_size
         self.hidden_dim = config.hidden_size
 
-        self.gate_proj = nn.Dense(self.hidden_dim, self.ffn_dim, has_bias=False)
-        self.down_proj = nn.Dense(self.ffn_dim, self.hidden_dim, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_dim, self.ffn_dim, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_dim, self.ffn_dim, bias=False)
+        self.down_proj = nn.Linear(self.ffn_dim, self.hidden_dim, bias=False)
+        self.up_proj = nn.Linear(self.hidden_dim, self.ffn_dim, bias=False)
 
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
 
         """
         Constructs a new feature representation using the JambaMLP model.
@@ -872,7 +873,7 @@ class JambaMLP(nn.Cell):
             self (JambaMLP): An instance of the JambaMLP class.
                 This parameter represents the current instance of the JambaMLP model.
             x (Tensor): The input tensor to be processed.
-                This tensor serves as the input to the construction process.
+                This tensor serves as the input to the forwardion process.
 
         Returns:
             None: This method does not return any value explicitly but modifies the internal state of the model.
@@ -884,7 +885,7 @@ class JambaMLP(nn.Cell):
 
 
 # Adapted from transformers.models.mixtral.modeling_mixtral.MixtralSparseMoeBlock with Mistral->Jamba
-class JambaSparseMoeBlock(nn.Cell):
+class JambaSparseMoeBlock(nn.Module):
     """
     This implementation is
     strictly equivalent to standard MoE with full capacity (no
@@ -922,13 +923,13 @@ class JambaSparseMoeBlock(nn.Cell):
 
         if num_experts > 1:
             # expert routing
-            self.router = nn.Dense(self.hidden_dim, self.num_experts, has_bias=False)
+            self.router = nn.Linear(self.hidden_dim, self.num_experts, bias=False)
         else:
             self.router = None
 
-        self.experts = nn.CellList([JambaMLP(config) for _ in range(self.num_experts)])
+        self.experts = nn.ModuleList([JambaMLP(config) for _ in range(self.num_experts)])
 
-    def construct(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+    def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
 
         '''
         Constructs a JambaSparseMoeBlock.
@@ -996,7 +997,7 @@ class JambaSparseMoeBlock(nn.Cell):
         return final_hidden_states, router_logits
 
 
-class JambaAttentionDecoderLayer(nn.Cell):
+class JambaAttentionDecoderLayer(nn.Module):
 
     """
     This class represents an attention decoder layer in the Jamba model for natural language processing tasks.
@@ -1030,7 +1031,7 @@ class JambaAttentionDecoderLayer(nn.Cell):
         self.input_layernorm = JambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.pre_moe_layernorm = JambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1131,13 +1132,13 @@ class JambaAttentionDecoderLayer(nn.Cell):
         return outputs
 
 
-class JambaMambaDecoderLayer(nn.Cell):
+class JambaMambaDecoderLayer(nn.Module):
 
     """
     This class represents a decoder layer for Jamba Mamba model, implementing the logic for processing input sequences
     in a transformer architecture.
 
-    Inherits from the nn.Cell class, this decoder layer consists of components such as JambaMambaMixer,
+    Inherits from the nn.Module class, this decoder layer consists of components such as JambaMambaMixer,
     JambaSparseMoeBlock, JambaRMSNorm, and implements methods for processing hidden states, attention masks,
     and past key-value states.
 
@@ -1148,7 +1149,7 @@ class JambaMambaDecoderLayer(nn.Cell):
         pre_moe_layernorm (JambaRMSNorm): Layer normalization module before MoE processing.
 
     Methods:
-        construct:
+        forward:
             Processes the input hidden states through the decoder layer, applying layer normalization, mixer, MoE block,
             and returns the output along with optional tensors like attentions, router logits, and cache values.
 
@@ -1156,7 +1157,7 @@ class JambaMambaDecoderLayer(nn.Cell):
             Helper method to calculate the past sequence length based on past key-value states and current sequence length.
 
     Note:
-        The 'construct' method supports various optional arguments for controlling output behavior such as attentions,
+        The 'forward' method supports various optional arguments for controlling output behavior such as attentions,
         router logits, and cache usage.
         The 'padding_mask' argument is deprecated and will be removed in version 4.37.
 
@@ -1188,7 +1189,7 @@ class JambaMambaDecoderLayer(nn.Cell):
         self.input_layernorm = JambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.pre_moe_layernorm = JambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1350,25 +1351,25 @@ class JambaPreTrainedModel(PreTrainedModel):
         Args:
             self: The instance of the JambaPreTrainedModel class.
             cell: The cell for which weights are to be initialized.
-                It can be an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
+                It can be an instance of nn.Linear, nn.Conv1d, or nn.Embedding.
 
         Returns:
             None.
 
         Raises:
-            TypeError: If the cell parameter is not an instance of nn.Dense, nn.Conv1d, or nn.Embedding.
+            TypeError: If the cell parameter is not an instance of nn.Linear, nn.Conv1d, or nn.Embedding.
             ValueError: If the cell has an unsupported type or configuration.
             AttributeError: If the cell does not have required attributes for weight initialization.
             IndexError: If there is an index error during padding of weights for nn.Embedding.
             ValueError: If there is an error in setting the data for weights or bias.
         """
         std = self.config.initializer_factor
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -1486,7 +1487,7 @@ class JambaModel(JambaPreTrainedModel):
         ):
             raise ValueError("Mamba state size and convolution size must be different")
 
-        self.layers = nn.CellList(decoder_layers)
+        self.layers = nn.ModuleList(decoder_layers)
 
         self.final_layernorm = JambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -1532,7 +1533,7 @@ class JambaModel(JambaPreTrainedModel):
         self.embed_tokens = value
 
     # Ignore copy
-    def construct(
+    def forward(
             self,
             input_ids: mindspore.Tensor = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1547,7 +1548,7 @@ class JambaModel(JambaPreTrainedModel):
     ) -> Union[Tuple, MoeModelOutputWithPast]:
 
         """
-        This method 'construct' in the class 'JambaModel' constructs the model by processing input data through
+        This method 'forward' in the class 'JambaModel' forwards the model by processing input data through
         the layers of the model.
 
         Args:
@@ -1712,12 +1713,12 @@ class JambaForCausalLM(JambaPreTrainedModel):
 
     The JambaForCausalLM class encapsulates the architecture and functionality of the Jamba model for generating text.
     It includes methods for initializing the model, getting and setting input and output
-    embeddings, setting the decoder, and constructing the model.
+    embeddings, setting the decoder, and forwarding the model.
 
     Attributes:
         model (JambaModel): The Jamba model used for text generation.
         vocab_size (int): The size of the vocabulary.
-        lm_head (nn.Dense): The linear layer for generating the next token in the sequence.
+        lm_head (nn.Linear): The linear layer for generating the next token in the sequence.
         router_aux_loss_coef (float): The coefficient for the auxiliary loss used in load balancing.
         num_experts (int): The number of experts used in load balancing.
         num_experts_per_tok (int): The number of experts per token used in load balancing.
@@ -1730,7 +1731,7 @@ class JambaForCausalLM(JambaPreTrainedModel):
         set_output_embeddings: Sets the output embeddings of the model.
         set_decoder: Sets the decoder of the model.
         get_decoder: Returns the decoder of the model.
-        construct: Constructs the model for generating text and returns the outputs.
+        forward: Constructs the model for generating text and returns the outputs.
         prepare_inputs_for_generation: Prepares the inputs for text generation by reordering the cache and
             updating the position ids.
 
@@ -1756,7 +1757,7 @@ class JambaForCausalLM(JambaPreTrainedModel):
         super().__init__(config)
         self.model = JambaModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.router_aux_loss_coef = config.router_aux_loss_coef
         self.num_experts = config.num_experts
         self.num_experts_per_tok = config.num_experts_per_tok
@@ -1864,7 +1865,7 @@ class JambaForCausalLM(JambaPreTrainedModel):
         return self.model
 
     # Ignore copy
-    def construct(
+    def forward(
             self,
             input_ids: mindspore.Tensor = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -2091,9 +2092,9 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
     Jamba architecture.
 
     This class extends JambaPreTrainedModel and includes methods for initializing the model,
-    getting and setting input embeddings, and constructing the sequence classification output.
+    getting and setting input embeddings, and forwarding the sequence classification output.
 
-    The construct method takes input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels,
+    The forward method takes input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels,
     and various optional arguments to generate the sequence classifier output.
 
     It calculates the loss based on the labels provided and handles different types of classification problems
@@ -2120,7 +2121,7 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = JambaModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2159,7 +2160,7 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
             self,
             input_ids: mindspore.Tensor = None,
             attention_mask: Optional[mindspore.Tensor] = None,

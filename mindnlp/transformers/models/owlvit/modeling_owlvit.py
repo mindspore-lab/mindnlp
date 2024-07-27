@@ -19,7 +19,9 @@ from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Tensor, nn, ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import Normal
 
 from ...activations import ACT2FN
@@ -264,7 +266,7 @@ class OwlViTImageGuidedObjectDetectionOutput(ModelOutput):
         )
 
 
-class OwlViTVisionEmbeddings(nn.Cell):
+class OwlViTVisionEmbeddings(nn.Module):
     def __init__(self, config: OwlViTVisionConfig):
         super().__init__()
         self.config = config
@@ -276,7 +278,7 @@ class OwlViTVisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=config.patch_size,
             stride=config.patch_size,
-            has_bias=False,
+            bias=False,
             pad_mode='pad',
             padding=0
         )
@@ -288,7 +290,7 @@ class OwlViTVisionEmbeddings(nn.Cell):
         self.position_ids = ops.arange(
             self.num_positions).broadcast_to((1, -1))
 
-    def construct(self, pixel_values: ms.Tensor) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size = pixel_values.shape[0]
         # shape = [batch_size, num_channels, height, width]
         patch_embeds = self.patch_embedding(pixel_values)
@@ -301,7 +303,7 @@ class OwlViTVisionEmbeddings(nn.Cell):
         return embeddings
 
 
-class OwlViTTextEmbeddings(nn.Cell):
+class OwlViTTextEmbeddings(nn.Module):
     def __init__(self, config: OwlViTTextConfig):
         super().__init__()
         self.token_embedding = nn.Embedding(
@@ -312,7 +314,7 @@ class OwlViTTextEmbeddings(nn.Cell):
         self.position_ids = ops.arange(
             config.max_position_embeddings).broadcast_to((1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         position_ids: Optional[ms.Tensor] = None,
@@ -332,7 +334,7 @@ class OwlViTTextEmbeddings(nn.Cell):
         return embeddings
 
 
-class OwlViTAttention(nn.Cell):
+class OwlViTAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -349,15 +351,15 @@ class OwlViTAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -449,15 +451,15 @@ class OwlViTAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->OwlViT
-class OwlViTMLP(nn.Cell):
+class OwlViTMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -465,18 +467,18 @@ class OwlViTMLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->OwlViT
-class OwlViTEncoderLayer(nn.Cell):
+class OwlViTEncoderLayer(nn.Module):
     def __init__(self, config: OwlViTConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = OwlViTAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = OwlViTMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -576,7 +578,7 @@ class OwlViTPreTrainedModel(PreTrainedModel):
             cell.bias.initialize('zeros')
             cell.weight.data.fill(1.0)
 
-        if isinstance(cell, nn.Dense) and cell.bias is not None:
+        if isinstance(cell, nn.Linear) and cell.bias is not None:
             cell.bias.initialize('zeros')
 
 
@@ -586,7 +588,7 @@ OWLVIT_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -699,7 +701,7 @@ OWLVIT_IMAGE_GUIDED_OBJECT_DETECTION_INPUTS_DOCSTRING = r"""
 """
 
 
-class OwlViTEncoder(nn.Cell):
+class OwlViTEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`OwlViTEncoderLayer`].
@@ -710,11 +712,11 @@ class OwlViTEncoder(nn.Cell):
 
     def __init__(self, config: OwlViTConfig):
         super().__init__()
-        self.layers = nn.CellList([OwlViTEncoderLayer(config)
+        self.layers = nn.ModuleList([OwlViTEncoderLayer(config)
                                   for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[ms.Tensor] = None,
@@ -793,7 +795,7 @@ class OwlViTEncoder(nn.Cell):
         )
 
 
-class OwlViTTextTransformer(nn.Cell):
+class OwlViTTextTransformer(nn.Module):
     def __init__(self, config: OwlViTTextConfig):
         super().__init__()
         self.config = config
@@ -801,9 +803,9 @@ class OwlViTTextTransformer(nn.Cell):
         self.embeddings = OwlViTTextEmbeddings(config)
         self.encoder = OwlViTEncoder(config)
         self.final_layer_norm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -879,13 +881,13 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -922,19 +924,19 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
         )
 
 
-class OwlViTVisionTransformer(nn.Cell):
+class OwlViTVisionTransformer(nn.Module):
     def __init__(self, config: OwlViTVisionConfig):
         super().__init__()
         self.config = config
 
         self.embeddings = OwlViTVisionEmbeddings(config)
         self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.encoder = OwlViTEncoder(config)
         self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,
@@ -992,10 +994,10 @@ class OwlViTVisionModel(OwlViTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1060,10 +1062,10 @@ class OwlViTModel(OwlViTPreTrainedModel):
         self.text_model = OwlViTTextTransformer(text_config)
         self.vision_model = OwlViTVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(
-            self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(
-            self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = ms.Parameter(
             ms.Tensor(config.logit_scale_init_value))
 
@@ -1151,7 +1153,7 @@ class OwlViTModel(OwlViTPreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,
@@ -1245,17 +1247,17 @@ class OwlViTModel(OwlViTPreTrainedModel):
         )
 
 
-class OwlViTBoxPredictionHead(nn.Cell):
+class OwlViTBoxPredictionHead(nn.Module):
     def __init__(self, config: OwlViTConfig, out_dim: int = 4):
         super().__init__()
 
         width = config.vision_config.hidden_size
-        self.dense0 = nn.Dense(width, width)
-        self.dense1 = nn.Dense(width, width)
+        self.dense0 = nn.Linear(width, width)
+        self.dense1 = nn.Linear(width, width)
         self.gelu = nn.GELU()
-        self.dense2 = nn.Dense(width, out_dim)
+        self.dense2 = nn.Linear(width, out_dim)
 
-    def construct(self, image_features: ms.Tensor) -> ms.Tensor:
+    def forward(self, image_features: ms.Tensor) -> ms.Tensor:
         output = self.dense0(image_features)
         output = self.gelu(output)
         output = self.dense1(output)
@@ -1264,19 +1266,19 @@ class OwlViTBoxPredictionHead(nn.Cell):
         return output
 
 
-class OwlViTClassPredictionHead(nn.Cell):
+class OwlViTClassPredictionHead(nn.Module):
     def __init__(self, config: OwlViTConfig):
         super().__init__()
 
         out_dim = config.text_config.hidden_size
         self.query_dim = config.vision_config.hidden_size
 
-        self.dense0 = nn.Dense(self.query_dim, out_dim)
-        self.logit_shift = nn.Dense(self.query_dim, 1)
-        self.logit_scale = nn.Dense(self.query_dim, 1)
+        self.dense0 = nn.Linear(self.query_dim, out_dim)
+        self.logit_shift = nn.Linear(self.query_dim, 1)
+        self.logit_scale = nn.Linear(self.query_dim, 1)
         self.elu = nn.ELU()
 
-    def construct(
+    def forward(
         self,
         image_embeds: ms.Tensor,
         query_embeds: Optional[ms.Tensor],
@@ -1325,7 +1327,7 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         self.box_head = OwlViTBoxPredictionHead(config)
 
         self.layer_norm = nn.LayerNorm(
-            config.vision_config.hidden_size, epsilon=config.vision_config.layer_norm_eps)
+            config.vision_config.hidden_size, eps=config.vision_config.layer_norm_eps)
         self.sigmoid = nn.Sigmoid()
 
         self.sqrt_num_patches = config.vision_config.image_size // config.vision_config.patch_size
@@ -1634,7 +1636,7 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
             vision_model_output=vision_outputs,
         )
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         pixel_values: ms.Tensor,

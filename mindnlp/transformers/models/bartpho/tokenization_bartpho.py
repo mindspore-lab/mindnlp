@@ -220,7 +220,7 @@ class BartphoTokenizer(PreTrainedTokenizer):
         Args:
             self (BartphoTokenizer): The instance of the BartphoTokenizer class.
             d (dict): A dictionary representing the state to be restored. 
-                It contains the data necessary to reconstruct the object's state.
+                It contains the data necessary to reforward the object's state.
 
         Returns:
             None.

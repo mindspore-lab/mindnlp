@@ -29,14 +29,15 @@ from tqdm.autonotebook import tqdm
 import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
-from mindspore import nn, ops, Tensor, Parameter
+from mindspore import Tensor, Parameter
 from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
 from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
-from mindnlp._legacy.functional import arange
 from mindnlp.utils.serialization import load, safe_save_file
 
 from .generation import GenerationMixin
@@ -76,7 +77,7 @@ def no_init_weights(_skip_init, _enable=True):
             replace_references(mindspore.common.initializer.initializer, init_func, ignore_vars=['init_func'])
 
 
-def set_initialized_submodules(model: nn.Cell, state_dict_keys):
+def set_initialized_submodules(model: nn.Module, state_dict_keys):
     """
     Sets the `_is_hf_initialized` flag in all submodules of a given model when all its weights are in the loaded state
     dict.
@@ -107,7 +108,6 @@ def set_initialized_submodules(model: nn.Cell, state_dict_keys):
             module._is_initialized = True
         else:
             not_initialized_submodules[module_name] = module
-
     return not_initialized_submodules
 
 
@@ -126,7 +126,7 @@ class CellUtilMixin:
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
         """create_extended_attention_mask_for_decoder"""
         batch_size, seq_length = input_shape
-        seq_ids = arange(seq_length)
+        seq_ids = ops.arange(seq_length)
         causal_mask = ops.tile((seq_ids[None, None, :]).astype(mindspore.int32),\
          (batch_size, seq_length, 1)) <= seq_ids[None, :, None] # mindspore 2.0
         # causal_mask = Tensor(np.tile(seq_ids[None, None, :].asnumpy(), (batch_size, seq_length, 1))) \
@@ -138,10 +138,10 @@ class CellUtilMixin:
             prefix_seq_len = attention_mask.shape[1] - causal_mask.shape[1]
             causal_mask = ops.concat(
                 [
-                    ops.ones((batch_size, seq_length, prefix_seq_len), dtype=causal_mask.dtype),
+                    ops.ones(batch_size, seq_length, prefix_seq_len, dtype=causal_mask.dtype),
                     causal_mask,
                 ],
-                axis=-1,
+                dim=-1,
             )
 
         extended_attention_mask = causal_mask[:, None, :, :] * attention_mask[:, None, None, :]
@@ -264,7 +264,7 @@ class CellUtilMixin:
         return head_mask
 
 
-class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin):
+class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixin):
     """
     Abstract class for Pretrained models
     """
@@ -304,7 +304,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             TypeError: If the config parameter is not of the expected type.
             RuntimeError: If an error occurs during the initialization process.
         """
-        super().__init__(config)
+        super().__init__()
         self._check_and_unset_acl()
         # Save config in model
         self.config = config
@@ -412,24 +412,25 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         """
         return getattr(self, self.base_model_prefix, self)
 
-    def get_input_embeddings(self) -> "nn.Cell":
+    def get_input_embeddings(self) -> "nn.Module":
         """
         Returns the model's input embeddings.
 
         Returns:
-            :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
+            :obj:`nn.Module`: A mindspore cell mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
+        print(base_model)
         if base_model is not self:
             return base_model.get_input_embeddings()
         raise NotImplementedError
 
-    def set_input_embeddings(self, new_embeddings: nn.Cell):
+    def set_input_embeddings(self, new_embeddings: nn.Module):
         """
         Set model's input embeddings.
 
         Args:
-            value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
+            value (:obj:`nn.Module`): A mindspore cell mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
@@ -451,12 +452,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         """
         return None  # Overwrite for models with output embeddings
 
-    def set_output_embeddings(self, new_embeddings: nn.Cell):
+    def set_output_embeddings(self, new_embeddings: nn.Module):
         """
         Set model's output embeddings.
 
         Args:
-            value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
+            value (:obj:`nn.Module`): A mindspore cell mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
@@ -496,7 +497,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 cell._tie_weights()
 
     @staticmethod
-    def _tie_encoder_decoder_weights(encoder: nn.Cell, decoder: nn.Cell, base_model_prefix: str):
+    def _tie_encoder_decoder_weights(encoder: nn.Module, decoder: nn.Module, base_model_prefix: str):
         """tie encoder decoder weights"""
         uninitialized_encoder_weights: List[str] = []
         if decoder.__class__ != encoder.__class__:
@@ -506,14 +507,14 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             )
 
         def tie_encoder_to_decoder_recursively(
-            decoder_pointer: nn.Cell,
-            encoder_pointer: nn.Cell,
+            decoder_pointer: nn.Module,
+            encoder_pointer: nn.Module,
             module_name: str,
             uninitialized_encoder_weights: List[str],
             depth=0,
         ):
-            assert isinstance(decoder_pointer, nn.Cell) and isinstance(
-                encoder_pointer, nn.Cell
+            assert isinstance(decoder_pointer, nn.Module) and isinstance(
+                encoder_pointer, nn.Module
             ), f"{decoder_pointer} and {encoder_pointer} have to be of type nn.Module"
             if hasattr(decoder_pointer, "weight"):
                 assert hasattr(encoder_pointer, "weight")
@@ -551,7 +552,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                     elif depth > 500:
                         raise ValueError(
                             "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is"
-                            " a circular dependency between two or more `nn.Cell` of your model."
+                            " a circular dependency between two or more `nn.Module` of your model."
                         )
                     else:
                         decoder_name = encoder_name = name
@@ -578,7 +579,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         """
         if hasattr(output_embeddings, 'weight'):
             output_embeddings.weight = input_embeddings.weight
-            output_embeddings._params['weight'] = input_embeddings.weight
 
         if getattr(output_embeddings, "bias", None) is not None:
             if output_embeddings.weight.shape[0] == output_embeddings.bias.shape[0]:
@@ -586,7 +586,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             else:
                 # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
                 if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
-                    new_bias = ops.pad(
+                    new_bias = F.pad(
                         output_embeddings.bias.data,
                         (0, output_embeddings.weight.shape[0] -
                         output_embeddings.bias.shape[0]),
@@ -596,7 +596,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 else:
                     new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
                 new_bias = Parameter(new_bias, name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad)
-                replace_references(output_embeddings.bias, new_bias)
+                output_embeddings.bias = new_bias
 
         if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
             output_embeddings.out_channels = input_embeddings.vocab_size
@@ -649,7 +649,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
 
         self.set_input_embeddings(new_embeddings)
-        self.get_input_embeddings().weight.data_sync(True)
+        # self.get_input_embeddings().weight.data_sync(True)
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
             new_num_tokens = new_embeddings.weight.shape[0]
@@ -730,26 +730,26 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         return new_embeddings
 
     def _get_resized_lm_head(
-        self, old_lm_head: nn.Dense, new_num_tokens: Optional[int] = None, transposed: Optional[bool] = False
-    ) -> nn.Dense:
+        self, old_lm_head: nn.Linear, new_num_tokens: Optional[int] = None, transposed: Optional[bool] = False
+    ) -> nn.Linear:
         """
         Build a resized Linear Module from a provided old Linear Module. Increasing the size will add newly initialized
         vectors at the end. Reducing the size will remove vectors from the end
 
         Args:
-            old_lm_head (`nn.Dense`):
+            old_lm_head (`nn.Linear`):
                 Old lm head liner layer to be resized.
             new_num_tokens (`int`, *optional*):
                 New number of tokens in the linear matrix.
 
                 Increasing the size will add newly initialized vectors at the end. Reducing the size will remove
                 vectors from the end. If not provided or `None`, just returns a pointer to the input tokens
-                `nn.Dense` module of the model without doing anything. transposed (`bool`, *optional*, defaults
+                `nn.Linear` module of the model without doing anything. transposed (`bool`, *optional*, defaults
                 to `False`): Whether `old_lm_head` is transposed or not. If True `old_lm_head.size()` is `lm_head_dim,
                 vocab_size` else `vocab_size, lm_head_dim`.
 
         Returns:
-            `nn.Dense`: Pointer to the resized Linear Module or the old Linear Module if `new_num_tokens` is
+            `nn.Linear`: Pointer to the resized Linear Module or the old Linear Module if `new_num_tokens` is
                 `None`
         """
         if new_num_tokens is None:
@@ -762,11 +762,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         if old_num_tokens == new_num_tokens:
             return old_lm_head
 
-        if not isinstance(old_lm_head, nn.Dense):
+        if not isinstance(old_lm_head, nn.Linear):
             raise TypeError(
-                f"Old language model head is of type {type(old_lm_head)}, which is not an instance of {nn.Dense}. You"
+                f"Old language model head is of type {type(old_lm_head)}, which is not an instance of {nn.Linear}. You"
                 " should either use a different resize function or make sure that `old_lm_head` are an instance of"
-                f" {nn.Dense}."
+                f" {nn.Linear}."
             )
 
         # Build new lm head
@@ -777,9 +777,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         # because the shape of the new embedding layer is used across various modeling files
         # as well as to update config vocab size. Shape will be 0 when using DeepSpeed init leading
         # to errors when training.
-        new_lm_head = nn.Dense(
+        new_lm_head = nn.Linear(
             *new_lm_head_shape,
-            has_bias=has_new_lm_head_bias,
+            bias=has_new_lm_head_bias,
         )
 
         # initialize new lm head (in particular added tokens)
@@ -1107,7 +1107,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
         ptrs = collections.defaultdict(list)
         for name, tensor in model.parameters_dict().items():
-            id_tensor = id(tensor)
+            id_tensor = hash(tensor)
             ptrs[id_tensor].append(name)
 
         # These are all the pointers of shared tensors.
@@ -1138,7 +1138,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             return state_dict
 
         keys_missing = list(model.parameters_dict().keys())
-        param_id_set = set()
 
         use_keep_in_fp32_modules = False
         if model._keep_in_fp32_modules:
@@ -1155,7 +1154,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                     non_missing_keys.append(key)
             return non_missing_keys
 
-        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str, dtype_group: dict = None):
+        def load_param_into_net(model: nn.Module, param_dict: dict, prefix: str, dtype_group: dict = None):
             state_dict_keys = list(param_dict.keys())
             keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
@@ -1168,7 +1167,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             remove_prefix_from_model = not has_prefix_module and expects_prefix_module
             add_prefix_to_model = has_prefix_module and not expects_prefix_module
 
-            for pname_in_net, param in model.parameters_and_names():
+            for pname_in_net, param in model.state_dict().items():
                 if add_prefix_to_model:
                     param_name = prefix + '.' + pname_in_net
                 elif remove_prefix_from_model:
@@ -1176,14 +1175,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 else:
                     param_name = pname_in_net
 
-                if param.uuid in param_id_set:
-                    # for tied params
-                    if param_name in keys_unexpected:
-                        keys_unexpected.remove(param_name)
-                    continue
-
                 new_param = param_dict.pop(param_name, None)
-
                 module_dtype = None
                 for m_name, m_dtype in dtype_group.items():
                     if m_name in param_name:
@@ -1213,22 +1205,24 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                         use_replace = True
 
                     if use_replace:
-                        if isinstance(new_param, Parameter):
+                        if isinstance(new_param, Parameter) and isinstance(param, Parameter):
                             new_param.name = param.name
                             new_param.requires_grad = param.requires_grad
                             replace_references(param, new_param)
+                        elif isinstance(param, Tensor):
+                            param.assign_value(new_param)
                         else:
-                            replace_references(param, Parameter(new_param, requires_grad=param.requires_grad, name=param.name))
+                            replace_references(param, Parameter(new_param, requires_grad=param.requires_grad))
                     else:
-                        param.set_data(new_param)
+                        param.assign_value(new_param)
                     keys_unexpected.remove(param_name)
-                    keys_missing.remove(pname_in_net)
-                    param_id_set.add(param.uuid)
+                    if pname_in_net in keys_missing:
+                        keys_missing.remove(pname_in_net)
                 else:
                     # fix missing value parameter dtype cast.
-                    if ms_dtype and ms_dtype != param.dtype:
+                    if isinstance(param, Parameter) and ms_dtype and ms_dtype != param.dtype:
                         new_param = param.astype(ms_dtype)
-                        replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
+                        replace_references(param, Parameter(new_param, requires_grad=param.requires_grad))
 
             # NOTE: monkey patching weight_norm
             for key in fix_weight_norm_missing_keys(state_dict_keys, keys_missing):
@@ -1374,7 +1368,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             return
 
         # Check only the first and last input IDs to reduce overhead.
-        if self.config.pad_token_id in input_ids[:, [-1, 0]]:
+        # if self.config.pad_token_id in input_ids[:, [-1, 0]]:
+        if ops.contains(input_ids[:, [-1, 0]], self.config.pad_token_id):
             warn_string = (
                 "We strongly recommend passing in an `attention_mask` since your input_ids may be padded."
             )
@@ -1394,37 +1389,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
             logger.warning(warn_string)
 
-    def parameters_and_names(self, name_prefix='', expand=True):
-        """
-        fix ignore tied weights
-        """
-        cells = []
-        if expand:
-            cells = self.cells_and_names(name_prefix=name_prefix)
-        else:
-            cells.append((name_prefix, self))
-
-        for cell_name, cell in cells:
-            params = cell._params.items()
-            for par_name, par in params:
-                if par is not None and par.inited_param is not None:
-                    par = par.inited_param
-                if par is not None:
-                    par_new_name = par_name
-                    if cell_name:
-                        par_new_name = cell_name + '.' + par_new_name
-
-                    yield par_new_name, par
-
     def num_parameters(self, only_trainable=False):
         """return parameters count"""
         total = 0
-        param_set = set()
         for param in self.get_parameters():
-            param_id = param.uuid
-            if param_id not in param_set and (only_trainable or param.requires_grad):
+            if (only_trainable or param.requires_grad):
                 total += param.size
-            param_set.add(param_id)
         return total
 
     def trainable_params(self, recurse=True):
@@ -1602,7 +1572,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             None.
         """
 
-def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
+def get_parameter_dtype(parameter: Union[nn.Module, GenerationMixin, "ModuleUtilsMixin"]):
     """
     Returns the first found floating dtype in parameters if there is one, otherwise returns the last dtype it found.
     """
@@ -1678,7 +1648,7 @@ def shard_checkpoint(
         # check: https://github.com/huggingface/transformers/pull/24416 for more details
         if isinstance(weight, str):
             continue
-        storage_id = id(weight)
+        storage_id = hash(weight)
 
         # If a `weight` shares the same underlying storage as another tensor, we put `weight` in the same `block`
         if storage_id in storage_id_to_block:
@@ -1736,7 +1706,7 @@ def dtype_byte_size(dtype):
     return bit_size // 8
 
 
-class PoolerStartLogits(nn.Cell):
+class PoolerStartLogits(nn.Module):
     """
     Compute SQuAD start logits from sequence hidden states.
 
@@ -1761,9 +1731,9 @@ class PoolerStartLogits(nn.Cell):
             ValueError: If the config parameter is not provided or is of an incorrect type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, 1)
+        self.dense = nn.Linear(config.hidden_size, 1)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, p_mask: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         """
@@ -1788,7 +1758,7 @@ class PoolerStartLogits(nn.Cell):
         return x
 
 
-class PoolerEndLogits(nn.Cell):
+class PoolerEndLogits(nn.Module):
     """
     Compute SQuAD end logits from sequence hidden states.
 
@@ -1815,12 +1785,12 @@ class PoolerEndLogits(nn.Cell):
             RuntimeError: If there is an issue with initializing the dense layers or normalization.
         """
         super().__init__()
-        self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
+        self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dense_1 = nn.Dense(config.hidden_size, 1)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.dense_1 = nn.Linear(config.hidden_size, 1)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_states: Optional[mindspore.Tensor] = None,
@@ -1858,7 +1828,7 @@ class PoolerEndLogits(nn.Cell):
             start_states = hidden_states.gather_elements(-2, start_positions)  # shape (bsz, 1, hsz)
             start_states = start_states.broadcast_to((-1, slen, -1))  # shape (bsz, slen, hsz)
 
-        x = self.dense_0(ops.cat([hidden_states, start_states], axis=-1))
+        x = self.dense_0(ops.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
         x = self.LayerNorm(x)
         x = self.dense_1(x).squeeze(-1)
@@ -1872,7 +1842,7 @@ class PoolerEndLogits(nn.Cell):
         return x
 
 
-class PoolerAnswerClass(nn.Cell):
+class PoolerAnswerClass(nn.Module):
     """
     Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
 
@@ -1898,11 +1868,11 @@ class PoolerAnswerClass(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
+        self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
-        self.dense_1 = nn.Dense(config.hidden_size, 1, has_bias=False)
+        self.dense_1 = nn.Linear(config.hidden_size, 1, bias=False)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_states: Optional[mindspore.Tensor] = None,
@@ -1945,7 +1915,7 @@ class PoolerAnswerClass(nn.Cell):
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
-        x = self.dense_0(ops.cat([start_states, cls_token_state], axis=-1))
+        x = self.dense_0(ops.cat([start_states, cls_token_state], dim=-1))
         x = self.activation(x)
         x = self.dense_1(x).squeeze(-1)
 
@@ -1981,7 +1951,7 @@ class SquadHeadOutput(ModelOutput):
     cls_logits: Optional[mindspore.Tensor] = None
 
 
-class SQuADHead(nn.Cell):
+class SQuADHead(nn.Module):
     r"""
     A SQuAD head inspired by XLNet.
 
@@ -2012,7 +1982,7 @@ class SQuADHead(nn.Cell):
         self.end_logits = PoolerEndLogits(config)
         self.answer_class = PoolerAnswerClass(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         start_positions: Optional[mindspore.Tensor] = None,
@@ -2070,13 +2040,13 @@ class SQuADHead(nn.Cell):
 
         # during inference, compute the end logits based on beam search
         _, slen, hsz = hidden_states.shape
-        start_log_probs = ops.softmax(start_logits, axis=-1)  # shape (bsz, slen)
+        start_log_probs = ops.softmax(start_logits, dim=-1)  # shape (bsz, slen)
 
         start_top_log_probs, start_top_index = ops.topk(
             start_log_probs, self.start_n_top, dim=-1
         )  # shape (bsz, start_n_top)
         start_top_index_exp = start_top_index.unsqueeze(-1).broadcast_to((-1, -1, hsz))  # shape (bsz, start_n_top, hsz)
-        start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
+        start_states = ops.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
         start_states = start_states.unsqueeze(1).broadcast_to((-1, slen, -1, -1))  # shape (bsz, slen, start_n_top, hsz)
 
         hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
@@ -2084,7 +2054,7 @@ class SQuADHead(nn.Cell):
         )  # shape (bsz, slen, start_n_top, hsz)
         p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
         end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-        end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
+        end_log_probs = ops.softmax(end_logits, dim=1)  # shape (bsz, slen, start_n_top)
 
         end_top_log_probs, end_top_index = ops.topk(
             end_log_probs, self.end_n_top, dim=1
@@ -2106,7 +2076,7 @@ class SQuADHead(nn.Cell):
         )
 
 
-class SequenceSummary(nn.Cell):
+class SequenceSummary(nn.Module):
     """
     GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
@@ -2147,7 +2117,7 @@ class SequenceSummary(nn.Cell):
                 num_classes = config.num_labels
             else:
                 num_classes = config.hidden_size
-            self.summary = nn.Dense(config.hidden_size, num_classes)
+            self.summary = nn.Linear(config.hidden_size, num_classes)
 
         activation_string = getattr(config, "summary_activation", None)
         self.activation = get_activation(activation_string) if activation_string else nn.Identity()
@@ -2160,7 +2130,7 @@ class SequenceSummary(nn.Cell):
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
             self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
-    def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
+    def forward(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         """
         Constructs a summary of hidden states based on the specified summary type.
 
@@ -2177,7 +2147,7 @@ class SequenceSummary(nn.Cell):
             ValueError: If the summary type is not one of the available options.
             TypeError: If the input arguments are of incorrect types.
 
-        The method performs the following steps to construct the summary:
+        The method performs the following steps to forward the summary:
 
         1. If the summary type is 'last', it selects the last hidden state from each input sequence.
         2. If the summary type is 'first', it selects the first hidden state from each input sequence.
@@ -2199,7 +2169,7 @@ class SequenceSummary(nn.Cell):
             >>> summary = SequenceSummary()
             >>> hidden_states = torch.randn(2, 5, 10)
             >>> cls_index = torch.tensor([[0], [1]])
-            >>> output = summary.construct(hidden_states, cls_index)
+            >>> output = summary.forward(hidden_states, cls_index)
             ```
         """
         if self.summary_type == "last":
