@@ -26,7 +26,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
     from mindnlp.transformers import BlipTextModel
 
 
@@ -83,12 +83,11 @@ class BlipTextModelTester:
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
-                                      ops.full((int(start_index),), 1))
+                                      ops.stack([ops.full((int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(start_index))], dim=1),
+                                      ops.full((int(start_index),), 1, dtype=mindspore.int64))
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
-
+                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(input_mask.shape[1] - start_index))], dim=1),
+                                      ops.full((input_mask.shape[1] - int(start_index),), 0, dtype=mindspore.int64))
 
         config = self.get_config()
 

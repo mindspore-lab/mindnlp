@@ -26,7 +26,9 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
@@ -63,7 +65,7 @@ def rms_layernorm(hidden: mindspore.Tensor, weight: mindspore.Tensor, eps: float
     return hidden * weight
 
 
-class MiniCPMRMSNorm(nn.Cell):
+class MiniCPMRMSNorm(nn.Module):
 
     """
     MiniCPMRMSNorm is a custom layer normalization module designed to mimic the functionality of T5LayerNorm. 
@@ -74,7 +76,7 @@ class MiniCPMRMSNorm(nn.Cell):
         eps (float, optional): A small value added to the variance to prevent division by zero. Default is 1e-06.
 
     Inherits From:
-        nn.Cell
+        nn.Module
 
     Attributes:
         weight (Parameter): The weight parameter used for normalization.
@@ -82,7 +84,7 @@ class MiniCPMRMSNorm(nn.Cell):
 
     Methods:
         __init__: Initializes the MiniCPMRMSNorm instance with the given hidden size and epsilon.
-        construct: Applies RMS-based layer normalization on the input hidden states using the weight and epsilon.
+        forward: Applies RMS-based layer normalization on the input hidden states using the weight and epsilon.
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -92,7 +94,7 @@ class MiniCPMRMSNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs a MiniCPMRMSNorm object.
 
@@ -113,17 +115,17 @@ class MiniCPMRMSNorm(nn.Cell):
 ALL_LAYERNORM_LAYERS.append(MiniCPMRMSNorm)
 
 
-class MiniCPMRotaryEmbedding(nn.Cell):
+class MiniCPMRotaryEmbedding(nn.Module):
 
     """
     MiniCPMRotaryEmbedding is a class that represents a rotary positional embedding layer for neural networks.
-    It inherits from nn.Cell and provides methods for initializing the embedding layer, setting cosine and sine cache,
-    and constructing the embeddings based on input data.
+    It inherits from nn.Module and provides methods for initializing the embedding layer, setting cosine and sine cache,
+    and forwarding the embeddings based on input data.
     The class allows for dynamic caching of positional embeddings up to a specified maximum sequence length.
     The rotary embeddings are computed based on the provided dimensions, maximum position embeddings, and base values.
-    The constructor initializes the necessary attributes, while the _set_cos_sin_cache method precomputes and caches
+    The forwardor initializes the necessary attributes, while the _set_cos_sin_cache method precomputes and caches
     cosine and sine values for positional embeddings.
-    The construct method generates the positional embeddings based on the input data and the specified sequence length.
+    The forward method generates the positional embeddings based on the input data and the specified sequence length.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -179,13 +181,13 @@ class MiniCPMRotaryEmbedding(nn.Cell):
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Construct a rotary embedding for a MiniCPM model.
 
         Args:
             self (MiniCPMRotaryEmbedding): The instance of the MiniCPMRotaryEmbedding class.
-            x (Tensor): The input tensor for which the rotary embedding needs to be constructed.
+            x (Tensor): The input tensor for which the rotary embedding needs to be forwarded.
             seq_len (int, optional): The length of the sequence. If not provided, the default value is None.
                 Defaults to None.
 
@@ -355,12 +357,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     k_embed = (k_fp32 * cos) + (rotate_half(k_fp32) * sin)
     return q_embed.to(dtype=orig_dtype), k_embed.to(dtype=orig_dtype)
 
-class MiniCPMMLP(nn.Cell):
+class MiniCPMMLP(nn.Module):
 
     """
     MiniCPMMLP is a neural network model that implements a specific variant of a Multi-Layer Perceptron (MLP)
     architecture for deep learning tasks.
-    This class inherits from nn.Cell and includes methods for initializing the model's parameters and constructing
+    This class inherits from nn.Module and includes methods for initializing the model's parameters and forwarding
     the forward pass computation.
 
     Attributes:
@@ -375,7 +377,7 @@ class MiniCPMMLP(nn.Cell):
 
     Methods:
         __init__: Initializes the MiniCPMMLP instance with the provided configuration.
-        construct: Constructs the forward pass computation of the MiniCPMMLP model based on the input tensor x.
+        forward: Constructs the forward pass computation of the MiniCPMMLP model based on the input tensor x.
             If pretraining_tp > 1, it performs a segmented computation using the specified number of segments.
             Otherwise, it computes the forward pass in a single step.
 
@@ -400,21 +402,21 @@ class MiniCPMMLP(nn.Cell):
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the intermediate states of the MiniCPMMLP model based on the input tensor x.
 
         Args:
             self (MiniCPMMLP): An instance of the MiniCPMMLP class.
-            x (tensor): The input tensor for constructing the intermediate states.
+            x (tensor): The input tensor for forwarding the intermediate states.
 
         Returns:
-            None. The method constructs the intermediate states of the model.
+            None. The method forwards the intermediate states of the model.
 
         Raises:
             None.
@@ -453,7 +455,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class MiniCPMAttention(nn.Cell):
+class MiniCPMAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config: MiniCPMConfig, layer_idx: Optional[int] = None):
         """
@@ -524,10 +526,10 @@ class MiniCPMAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.attention_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.attention_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self._init_rope()
 
     def _init_rope(self):
@@ -590,7 +592,7 @@ class MiniCPMAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -601,7 +603,7 @@ class MiniCPMAttention(nn.Cell):
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method constructs the MiniCPMAttention layer.
+        This method forwards the MiniCPMAttention layer.
 
         Args:
             self: The object instance.
@@ -726,7 +728,7 @@ MINICPM_ATTENTION_CLASSES = {
 }
 
 
-class MiniCPMDecoderLayer(nn.Cell):
+class MiniCPMDecoderLayer(nn.Module):
 
     """
     MiniCPMDecoderLayer represents a single layer of the MiniCPM (Minimalist Conditional Pretrained Model) decoder.
@@ -743,7 +745,7 @@ class MiniCPMDecoderLayer(nn.Cell):
         num_hidden_layers (int): Number of hidden layers in the model.
 
     Methods:
-        construct:
+        forward:
             Processes the input hidden states through the layer.
 
             Args:
@@ -792,7 +794,7 @@ class MiniCPMDecoderLayer(nn.Cell):
         self.scale_depth = config.scale_depth
         self.num_hidden_layers = config.num_hidden_layers
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -894,9 +896,9 @@ class MiniCPMPreTrainedModel(PreTrainedModel):
             None.
         """
         std = self.config.initializer_range
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -941,7 +943,7 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [MiniCPMDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
 
@@ -991,7 +993,7 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         """
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1124,7 +1126,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
     Attributes:
         model (MiniCPMModel): The underlying MiniCPM model.
         vocab_size (int): The size of the vocabulary.
-        lm_head (nn.Dense): The linear layer for predicting the next token.
+        lm_head (nn.Linear): The linear layer for predicting the next token.
 
     Methods:
         __init__: Initializes the MiniCPMForCausalLM model.
@@ -1134,7 +1136,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         set_output_embeddings: Sets the output embeddings of the model.
         set_decoder: Sets the decoder of the model.
         get_decoder: Returns the decoder of the model.
-        construct: Constructs the MiniCPM model and computes the language modeling loss.
+        forward: Constructs the MiniCPM model and computes the language modeling loss.
         prepare_inputs_for_generation: Prepares the inputs for text generation.
         _reorder_cache: Reorders the cache for beam search.
         chat: Generates a response to a given query using the MiniCPM model.
@@ -1174,7 +1176,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         super().__init__(config)
         self.model = MiniCPMModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1295,7 +1297,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1545,18 +1547,18 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
     """
     MiniCPMForSequenceClassification is a Python class that represents a fine-tuning model for sequence classification
     tasks based on the MiniCPM architecture. It inherits from the MiniCPMPreTrainedModel class and provides methods for
-    initializing the model, getting and setting input embeddings, and constructing the sequence classification model.
+    initializing the model, getting and setting input embeddings, and forwarding the sequence classification model.
 
     Attributes:
         num_labels (int): The number of labels for sequence classification.
         model (MiniCPMModel): The MiniCPM model used for sequence classification.
-        score (nn.Dense): The layer for scoring sequence classification logits.
+        score (nn.Linear): The layer for scoring sequence classification logits.
 
     Methods:
         __init__: Initializes the MiniCPMForSequenceClassification instance with the provided configuration.
         get_input_embeddings: Returns the input embeddings from the MiniCPM model.
         set_input_embeddings: Sets new input embeddings for the MiniCPM model.
-        construct: Constructs the sequence classification model based on the provided input arguments.
+        forward: Constructs the sequence classification model based on the provided input arguments.
 
     Args:
         input_ids (mindspore.Tensor, optional): The input token IDs for the sequence.
@@ -1571,7 +1573,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
         return_dict (bool, optional): Whether to return the model outputs as a dictionary.
 
     Returns:
-        Union[Tuple, SequenceClassifierOutputWithPast]: The constructed model outputs, including the loss, logits,
+        Union[Tuple, SequenceClassifierOutputWithPast]: The forwarded model outputs, including the loss, logits,
             past key values, hidden states, and attentions.
 
     Raises:
@@ -1598,7 +1600,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = MiniCPMModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1636,7 +1638,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
         """
         self.model.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,

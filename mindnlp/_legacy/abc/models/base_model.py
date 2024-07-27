@@ -18,7 +18,7 @@ import mindspore
 from mindspore import nn
 
 
-class BaseModel(nn.Cell):
+class BaseModel(nn.Module):
     r"""Basic class for models"""
     @classmethod
     def add_attrs(cls, parser):

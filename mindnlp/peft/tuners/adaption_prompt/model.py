@@ -14,7 +14,7 @@
 """model for adaption prompt tuners."""
 from typing import Dict, List
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.peft.utils import _freeze_adapter, _get_subcells
 
@@ -23,7 +23,7 @@ from .layer import AdaptedAttention
 from .utils import is_adaption_prompt_trainable
 
 
-class AdaptionPromptModel(nn.Cell):
+class AdaptionPromptModel(nn.Module):
     """
     Implements adaption prompts as described in https://arxiv.org/pdf/2303.16199.pdf.
 
@@ -68,7 +68,7 @@ class AdaptionPromptModel(nn.Cell):
         self._cached_adapters = {}
         self._active_adapter = None
         self._enabled = True
-        self.forward = self.model.construct
+        self.forward = self.model.forward
         self.add_adapter(adapter_name, configs[adapter_name])
         self._mark_only_adaption_prompts_as_trainable(self.model)
 
@@ -127,7 +127,7 @@ class AdaptionPromptModel(nn.Cell):
         self._enabled = False
         self._remove_adapted_attentions(self._active_adapter)
 
-    def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Cell]) -> None:
+    def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Module]) -> None:
         """Wrap LlamaAttention cells with newly created AdaptedAttention cells."""
         for par in parents:
             attn = AdaptedAttention(
@@ -155,12 +155,12 @@ class AdaptionPromptModel(nn.Cell):
             setattr(par, config.target_cells, attn.model)
         self._cached_adapters[adapter_name] = adapted_attentions
 
-    def _mark_only_adaption_prompts_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adaption_prompts_as_trainable(self, model: nn.Module) -> None:
         r"""Marks only adaption prompts as trainable in the given model.
         
         Args:
             self (AdaptionPromptModel): The instance of AdaptionPromptModel class.
-            model (nn.Cell): The model for which adaption prompts need to be marked as trainable.
+            model (nn.Module): The model for which adaption prompts need to be marked as trainable.
         
         Returns:
             None. This method does not return any value.

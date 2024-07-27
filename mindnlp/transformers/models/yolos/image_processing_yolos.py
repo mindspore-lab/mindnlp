@@ -64,7 +64,7 @@ IMAGENET_DEFAULT_STD = [0.229, 0.224, 0.225]
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
 if is_vision_available():
     import PIL

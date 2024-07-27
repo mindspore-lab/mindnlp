@@ -61,7 +61,7 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   imag: Tensor,
@@ -145,7 +145,7 @@ class _KaratsubaConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   imag: Tensor,
@@ -256,7 +256,7 @@ class _ReImConvImpl(BaseConvImpl):
         if self.c_idx < 0:
             raise ValueError(f"Data format {data_format} is unsupported")
 
-    def construct(self,
+    def forward(self,
                   conv_fn: Callable,
                   real: Tensor,
                   imag: Tensor,

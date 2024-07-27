@@ -23,7 +23,8 @@ from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -106,14 +107,14 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     return mask, attn_mask
 
 
-class MultiHeadAttention(nn.Cell):
+class MultiHeadAttention(nn.Module):
 
     """
     A class representing a multi-head attention mechanism for neural networks.
     
     This class implements multi-head attention by dividing the input into multiple heads and processing them in parallel. 
     It includes methods for initializing the attention mechanism, pruning heads based on specific criteria, and 
-    constructing the attention output based on input, masks, and key-value pairs.
+    forwarding the attention output based on input, masks, and key-value pairs.
 
     Attributes:
         layer_id: An identifier for the attention layer.
@@ -129,10 +130,10 @@ class MultiHeadAttention(nn.Cell):
     Methods:
         __init__: Initializes the multi-head attention mechanism.
         prune_heads: Prunes specified attention heads based on given criteria.
-        construct: Constructs the attention output based on input, masks, and key-value pairs.
+        forward: Constructs the attention output based on input, masks, and key-value pairs.
 
     Note:
-        This class inherits from nn.Cell and is designed for neural network architectures that require multi-head 
+        This class inherits from nn.Module and is designed for neural network architectures that require multi-head 
         attention mechanisms.
     """
     NEW_ID = itertools.count()
@@ -160,10 +161,10 @@ class MultiHeadAttention(nn.Cell):
         self.dropout = config.attention_dropout
         assert self.dim % self.n_heads == 0
 
-        self.q_lin = nn.Dense(dim, dim)
-        self.k_lin = nn.Dense(dim, dim)
-        self.v_lin = nn.Dense(dim, dim)
-        self.out_lin = nn.Dense(dim, dim)
+        self.q_lin = nn.Linear(dim, dim)
+        self.k_lin = nn.Linear(dim, dim)
+        self.v_lin = nn.Linear(dim, dim)
+        self.out_lin = nn.Linear(dim, dim)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -204,13 +205,13 @@ class MultiHeadAttention(nn.Cell):
         self.q_lin = prune_linear_layer(self.q_lin, index)
         self.k_lin = prune_linear_layer(self.k_lin, index)
         self.v_lin = prune_linear_layer(self.v_lin, index)
-        self.out_lin = prune_linear_layer(self.out_lin, index, axis=1)
+        self.out_lin = prune_linear_layer(self.out_lin, index, dim=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.dim = attention_head_size * self.n_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False):
+    def forward(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False):
         """
         Self-attention (if kv is None) or attention over source sentence (provided by kv).
         """
@@ -274,11 +275,11 @@ class MultiHeadAttention(nn.Cell):
         return outputs
 
 
-class TransformerFFN(nn.Cell):
+class TransformerFFN(nn.Module):
 
     """
     TransformerFFN is a class that represents a feed-forward neural network component of a transformer model. 
-    It inherits from nn.Cell and includes methods for initializing the network and constructing the forward pass.
+    It inherits from nn.Module and includes methods for initializing the network and forwarding the forward pass.
 
     Attributes:
         in_dim (int): The input dimension of the network.
@@ -289,7 +290,7 @@ class TransformerFFN(nn.Cell):
     Methods:
         __init__: Initializes the TransformerFFN instance with the specified input, hidden, and output dimensions, 
             as well as the configuration object.
-        construct: Constructs the forward pass of the network using chunking for the specified input.
+        forward: Constructs the forward pass of the network using chunking for the specified input.
         ff_chunk: Implements the feed-forward chunk of the network, including linear transformations, 
             activation function, and dropout.
 
@@ -317,15 +318,15 @@ class TransformerFFN(nn.Cell):
         """
         super().__init__()
         self.dropout = config.dropout
-        self.lin1 = nn.Dense(in_dim, dim_hidden)
-        self.lin2 = nn.Dense(dim_hidden, out_dim)
+        self.lin1 = nn.Linear(in_dim, dim_hidden)
+        self.lin2 = nn.Linear(dim_hidden, out_dim)
         self.act = ops.gelu if config.gelu_activation else ops.relu
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
-    def construct(self, input):
+    def forward(self, input):
         """
-        Method 'construct' in the class 'TransformerFFN'.
+        Method 'forward' in the class 'TransformerFFN'.
 
         Args:
             self (object): The instance of the TransformerFFN class.
@@ -413,11 +414,11 @@ class XLMPreTrainedModel(PreTrainedModel):
                     weight[cell.padding_idx] = 0
 
                 cell.weight.set_data(Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             if self.config is not None and self.config.init_std is not None:
                 cell.weight.set_data(initializer(Normal(self.config.init_std),
                                                         cell.weight.shape, cell.weight.dtype))
-                if cell.has_bias:
+                if cell.bias:
                     cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, nn.LayerNorm):
@@ -480,7 +481,7 @@ class XLMModel(XLMPreTrainedModel):
     XLM architecture.
 
     This class inherits from XLMPreTrainedModel and implements various methods for initializing the model, handling
-    embeddings, pruning heads, and constructing the model for inference.
+    embeddings, pruning heads, and forwarding the model for inference.
 
     The __init__ method initializes the model with configuration parameters and sets up the model's architecture.
     It handles encoder-decoder setup, embeddings, attention mechanisms, layer normalization, and other model components.
@@ -491,7 +492,7 @@ class XLMModel(XLMPreTrainedModel):
     The _prune_heads method prunes specific attention heads in the model based on the provided dictionary of
     {layer_num: list of heads}.
 
-    The construct method constructs the model for inference, taking input tensors for input_ids, attention_mask, langs,
+    The forward method forwards the model for inference, taking input tensors for input_ids, attention_mask, langs,
     token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, output settings, and returns the model
     output or a BaseModelOutput object depending on the return_dict setting.
 
@@ -558,7 +559,7 @@ class XLMModel(XLMPreTrainedModel):
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
         self.embeddings = nn.Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
-        self.layer_norm_emb = nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps)
+        self.layer_norm_emb = nn.LayerNorm([self.dim], eps=config.layer_norm_eps)
 
         # transformer layers
         attentions = []
@@ -566,22 +567,22 @@ class XLMModel(XLMPreTrainedModel):
         ffns = []
         layer_norm2 = []
         # if self.is_decoder:
-        #     self.layer_norm15 = nn.CellList()
-        #     self.encoder_attn = nn.CellList()
+        #     self.layer_norm15 = nn.ModuleList()
+        #     self.encoder_attn = nn.ModuleList()
 
         for _ in range(self.n_layers):
             attentions.append(MultiHeadAttention(self.n_heads, self.dim, config=config))
-            layer_norm1.append(nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps))
+            layer_norm1.append(nn.LayerNorm([self.dim], eps=config.layer_norm_eps))
             # if self.is_decoder:
             #     self.layer_norm15.append(nn.LayerNorm(self.dim, eps=config.layer_norm_eps))
             #     self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
             ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, config=config))
-            layer_norm2.append(nn.LayerNorm([self.dim], epsilon=config.layer_norm_eps))
+            layer_norm2.append(nn.LayerNorm([self.dim], eps=config.layer_norm_eps))
 
-        self.attentions = nn.CellList(attentions)
-        self.layer_norm1 = nn.CellList(layer_norm1)
-        self.ffns = nn.CellList(ffns)
-        self.layer_norm2 = nn.CellList(layer_norm2)
+        self.attentions = nn.ModuleList(attentions)
+        self.layer_norm1 = nn.ModuleList(layer_norm1)
+        self.ffns = nn.ModuleList(ffns)
+        self.layer_norm2 = nn.ModuleList(layer_norm2)
 
         if hasattr(config, "pruned_heads"):
             pruned_heads = config.pruned_heads.copy().items()
@@ -635,7 +636,7 @@ class XLMModel(XLMPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.attentions[layer].prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -798,7 +799,7 @@ class XLMModel(XLMPreTrainedModel):
         return BaseModelOutput(last_hidden_state=tensor, hidden_states=hidden_states, attentions=attentions)
 
 
-class XLMPredLayer(nn.Cell):
+class XLMPredLayer(nn.Module):
     """
     Prediction layer (cross_entropy or adaptive_softmax).
     """
@@ -831,7 +832,7 @@ class XLMPredLayer(nn.Cell):
         dim = config.emb_dim
 
         if config.asm is False:
-            self.proj = nn.Dense(dim, config.n_words, has_bias=True)
+            self.proj = nn.Linear(dim, config.n_words, bias=True)
         else:
             self.proj = nn.AdaptiveLogSoftmaxWithLoss(
                 in_features=dim,
@@ -841,7 +842,7 @@ class XLMPredLayer(nn.Cell):
                 head_bias=True,  # default is False
             )
 
-    def construct(self, x, y=None):
+    def forward(self, x, y=None):
         """Compute the loss, and optionally the scores."""
         outputs = ()
         if self.asm is False:
@@ -867,7 +868,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
     (Cross-lingual Language Model) architecture.
 
     This class inherits from XLMPreTrainedModel and provides methods for initializing the model, getting and setting
-    output embeddings, preparing inputs for generation, and constructing the model for language modeling tasks.
+    output embeddings, preparing inputs for generation, and forwarding the model for language modeling tasks.
 
     Attributes:
         transformer (XLMModel): The XLMModel instance used for the transformer architecture.
@@ -878,10 +879,10 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         get_output_embeddings: Returns the output embeddings from the language modeling head.
         set_output_embeddings: Sets new output embeddings for the language modeling head.
         prepare_inputs_for_generation: Prepares input tensors for language generation tasks.
-        construct: Constructs the model for language modeling tasks and returns the masked language model output.
+        forward: Constructs the model for language modeling tasks and returns the masked language model output.
 
     Note:
-        The construct method includes detailed documentation for its parameters and return value, including optional
+        The forward method includes detailed documentation for its parameters and return value, including optional
         and shifted labels for language modeling.
     """
     _tied_weights_keys = ["pred_layer.proj.weight"]
@@ -975,7 +976,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
             langs = None
         return {"input_ids": input_ids, "langs": langs}
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1046,8 +1047,8 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
         config (XLMConfig): The configuration object for the XLMForSequenceClassification model.
 
     Methods:
-        construct:
-            This method constructs the sequence classification model and returns the sequence classifier output.
+        forward:
+            This method forwards the sequence classification model and returns the sequence classifier output.
 
     Raises:
         ValueError: If the number of labels is invalid or the problem type is not recognized.
@@ -1085,7 +1086,7 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1164,14 +1165,14 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
 
     """
     This class represents a simple XLM model for question answering. It inherits from XLMPreTrainedModel
-    and includes methods for constructing the model and handling question answering tasks.
+    and includes methods for forwarding the model and handling question answering tasks.
 
     Attributes:
         transformer (XLMModel): The XLMModel instance for the transformer component of the model.
-        qa_outputs (nn.Dense): The output layer for question answering predictions.
+        qa_outputs (nn.Linear): The output layer for question answering predictions.
 
     Methods:
-        construct: Construct the model for question answering tasks, with optional input parameters and return values.
+        forward: Construct the model for question answering tasks, with optional input parameters and return values.
             This method includes detailed descriptions of the input and output tensors, as well as
             the expected behavior of the model during inference.
 
@@ -1195,12 +1196,12 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
         super().__init__(config)
 
         self.transformer = XLMModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1335,7 +1336,7 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1453,11 +1454,11 @@ class XLMForTokenClassification(XLMPreTrainedModel):
         num_labels (int): The number of labels for token classification.
         transformer (XLMModel): The XLMModel instance used for the transformer architecture.
         dropout (nn.Dropout): Dropout layer for regularization.
-        classifier (nn.Dense): Linear layer for classification.
+        classifier (nn.Linear): Linear layer for classification.
 
     Methods:
         __init__: Initializes the XLMForTokenClassification instance.
-        construct: Constructs the XLMForTokenClassification model and performs token classification.
+        forward: Constructs the XLMForTokenClassification model and performs token classification.
 
     """
     def __init__(self, config):
@@ -1477,12 +1478,12 @@ class XLMForTokenClassification(XLMPreTrainedModel):
 
         self.transformer = XLMModel(config)
         self.dropout = nn.Dropout(p=config.dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1551,7 +1552,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
     Attributes:
         transformer: An instance of XLMModel for processing input data.
         sequence_summary: An instance of SequenceSummary for summarizing the transformer outputs.
-        logits_proj: An instance of nn.Dense for projecting the sequence summary outputs.
+        logits_proj: An instance of nn.Linear for projecting the sequence summary outputs.
 
     Args:
         config: The model configuration.
@@ -1559,7 +1560,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         **kwargs: Additional keyword arguments for the model.
 
     Methods:
-        construct: Constructs the model and processes the input data for multiple choice tasks.
+        forward: Constructs the model and processes the input data for multiple choice tasks.
 
     Returns:
         Union[Tuple, MultipleChoiceModelOutput]: A tuple containing the loss and model outputs or an instance of
@@ -1585,7 +1586,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         >>> model = XLMForMultipleChoice(config)
         ...
         >>> # Process input data and compute multiple choice classification loss
-        >>> outputs = model.construct(input_ids, attention_mask, labels=labels)
+        >>> outputs = model.forward(input_ids, attention_mask, labels=labels)
         ...
         >>> # Access model outputs
         >>> logits = outputs.logits
@@ -1613,12 +1614,12 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
 
         self.transformer = XLMModel(config)
         self.sequence_summary = SequenceSummary(config)
-        self.logits_proj = nn.Dense(config.num_labels, 1)
+        self.logits_proj = nn.Linear(config.num_labels, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

@@ -14,18 +14,18 @@
 # ============================================================================
 """MindNLP Activations"""
 import math
-from functools import partial
 from collections import OrderedDict
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
+from mindnlp.core import nn, ops
 
 
-class QuickGELUActivation(nn.Cell):
+class QuickGELUActivation(nn.Module):
     """
     Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Constructs the QuickGELU activation function.
+        forwards the QuickGELU activation function.
         
         Args:
             self (QuickGELUActivation): The instance of the QuickGELUActivation class.
@@ -40,7 +40,7 @@ class QuickGELUActivation(nn.Cell):
         return input * ops.sigmoid(1.702 * input)
 
 
-class ClippedGELUActivation(nn.Cell):
+class ClippedGELUActivation(nn.Module):
     """
     Clip the range of possible GeLU outputs between [min, max]. This is especially useful for quantization purpose, as
     it allows mapping negatives values in the GeLU spectrum. For more information on this trick, please refer to
@@ -76,9 +76,9 @@ class ClippedGELUActivation(nn.Cell):
         self.min = min
         self.max = max
 
-    def construct(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         r"""
-        Constructs a ClippedGELUActivation function with input clipping.
+        forwards a ClippedGELUActivation function with input clipping.
         
         Args:
             self: ClippedGELUActivation
@@ -98,7 +98,7 @@ class ClippedGELUActivation(nn.Cell):
         return ops.clip(gelu(x), self.min, self.max)
 
 
-class AccurateGELUActivation(nn.Cell):
+class AccurateGELUActivation(nn.Module):
     """
     Applies GELU approximation that is faster than default and more accurate than QuickGELU. See:
     https://github.com/hendrycks/GELUs
@@ -121,9 +121,9 @@ class AccurateGELUActivation(nn.Cell):
         super().__init__()
         self.precomputed_constant = math.sqrt(2 / math.pi)
 
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        This method 'construct' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU)
+        This method 'forward' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU)
         activation function to the input tensor.
         
         Args:
@@ -146,14 +146,14 @@ class AccurateGELUActivation(nn.Cell):
         return 0.5 * input * (1 + ops.tanh(self.precomputed_constant * (input + 0.044715 * ops.pow(input, 3))))
 
 
-class MishActivation(nn.Cell):
+class MishActivation(nn.Module):
     """
     See Mish: A Self-Regularized Non-Monotonic Activation Function (Misra., https://arxiv.org/abs/1908.08681). Also
     visit the official repository for the paper: https://github.com/digantamisra98/Mish
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Constructs a Mish activation function on the input tensor.
+        forwards a Mish activation function on the input tensor.
         
         Args:
             self (MishActivation): An instance of the MishActivation class.
@@ -175,13 +175,13 @@ class MishActivation(nn.Cell):
         return input * ops.tanh(ops.softplus(input))
 
 
-class LinearActivation(nn.Cell):
+class LinearActivation(nn.Module):
     """
     Applies the linear activation function, i.e. forwarding input directly to output.
     """
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         r"""
-        Construct method in the LinearActivation class.
+        forward method in the LinearActivation class.
         
         Args:
             self (object): The instance of the LinearActivation class.
@@ -196,16 +196,16 @@ class LinearActivation(nn.Cell):
         return input
 
 
-class LaplaceActivation(nn.Cell):
+class LaplaceActivation(nn.Module):
     """
     Applies elementwise activation based on Laplace function, introduced in MEGA as an attention activation. See
     https://arxiv.org/abs/2209.10655
 
     Inspired by squared relu, but with bounded range and gradient for better stability
     """
-    def construct(self, input, mu=0.707107, sigma=0.282095):
+    def forward(self, input, mu=0.707107, sigma=0.282095):
         r"""
-        This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation
+        This method 'forward' in the class 'LaplaceActivation' performs a Laplace activation function transformation
         on the input data.
         
         Args:
@@ -226,13 +226,13 @@ class LaplaceActivation(nn.Cell):
         return 0.5 * (1.0 + ops.erf(input))
 
 
-class ReLUSquaredActivation(nn.Cell):
+class ReLUSquaredActivation(nn.Module):
     """
     Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
     """
-    def construct(self, input):
+    def forward(self, input):
         r"""
-        Constructs the ReLU squared activation of the input.
+        forwards the ReLU squared activation of the input.
         
         Args:
             self (object): Instance of the ReLUSquaredActivation class.
@@ -277,17 +277,17 @@ ACT2CLS = {
     Excitation equation matrix
     """
     'relu': nn.ReLU,
-    'gelu': (nn.GELU, {"approximate": False}),
-    'gelu_new': nn.GELU,
+    'gelu': nn.GELU,
+    'gelu_new': (nn.GELU, {'approximate': 'tanh'}),
     'gelu_approximate': nn.GELU,
     'gelu_pytorch_tanh': nn.GELU,
-    "swish": nn.SiLU,  # MindSpore的SiLU激活函数是Swish函数
-    "gelu_10": nn.GELU,  # MindSpore的GELU激活函数不支持设置最大值和最小值
-    "gelu_fast": nn.FastGelu,
-    "gelu_python": nn.GELU,  # MindSpore的GELU激活函数不支持选择是否使用Python实现
-    "linear": nn.ReLU,  # MindSpore没有Linear激活函数，使用ReLU代替
+    "swish": nn.SiLU,
+    "gelu_10": nn.GELU,
+    "gelu_fast": (nn.GELU, {'approximate': 'tanh'}),
+    "gelu_python": nn.GELU,
+    "linear": nn.ReLU,
     "mish": nn.Mish,
-    "quick_gelu": nn.FastGelu,
+    "quick_gelu": QuickGELUActivation,
     "relu": nn.ReLU,
     "relu2": ReLUSquaredActivation,
     "relu6": nn.ReLU6,
@@ -308,6 +308,11 @@ def get_activation(activation_string):
         return ACT2FN[activation_string]
     raise KeyError(f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}")
 
-gelu_new = partial(ops.gelu, approximate='tanh')
-silu = ops.silu
-gelu = ops.gelu
+gelu_python = get_activation("gelu_python")
+gelu_new = get_activation("gelu_new")
+gelu = get_activation("gelu")
+gelu_fast = get_activation("gelu_fast")
+quick_gelu = get_activation("quick_gelu")
+silu = get_activation("silu")
+mish = get_activation("mish")
+linear_act = get_activation("linear")

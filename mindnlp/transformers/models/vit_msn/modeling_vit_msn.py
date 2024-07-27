@@ -19,11 +19,11 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy import functional as F
 
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -39,7 +39,7 @@ _CONFIG_FOR_DOC = "ViTMSNConfig"
 _CHECKPOINT_FOR_DOC = "facebook/vit-msn-small"
 
 
-class ViTMSNEmbeddings(nn.Cell):
+class ViTMSNEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
     """
@@ -91,7 +91,7 @@ class ViTMSNEmbeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         bool_masked_pos: Optional[ms.Tensor] = None,
@@ -123,7 +123,7 @@ class ViTMSNEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTPatchEmbeddings with ViT->ViTMSN
-class ViTMSNPatchEmbeddings(nn.Cell):
+class ViTMSNPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -143,9 +143,9 @@ class ViTMSNPatchEmbeddings(nn.Cell):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
-    def construct(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -163,7 +163,7 @@ class ViTMSNPatchEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfAttention with ViT->ViTMSN
-class ViTMSNSelfAttention(nn.Cell):
+class ViTMSNSelfAttention(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -176,9 +176,9 @@ class ViTMSNSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
 
@@ -187,7 +187,7 @@ class ViTMSNSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -229,7 +229,7 @@ class ViTMSNSdpaSelfAttention(ViTMSNSelfAttention):
         super().__init__(config)
         self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -256,7 +256,7 @@ class ViTMSNSdpaSelfAttention(ViTMSNSelfAttention):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->ViTMSN
-class ViTMSNSelfOutput(nn.Cell):
+class ViTMSNSelfOutput(nn.Module):
     """
     The residual connection is defined in ViTMSNLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -264,10 +264,10 @@ class ViTMSNSelfOutput(nn.Cell):
 
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -275,7 +275,7 @@ class ViTMSNSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->ViTMSN
-class ViTMSNAttention(nn.Cell):
+class ViTMSNAttention(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
         self.attention = ViTMSNSelfAttention(config)
@@ -293,14 +293,14 @@ class ViTMSNAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -322,16 +322,16 @@ class ViTMSNSdpaAttention(ViTMSNAttention):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->ViTMSN
-class ViTMSNIntermediate(nn.Cell):
+class ViTMSNIntermediate(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -339,13 +339,13 @@ class ViTMSNIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTOutput with ViT->ViTMSN
-class ViTMSNOutput(nn.Cell):
+class ViTMSNOutput(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -358,7 +358,7 @@ VITMSN_ATTENTION_CLASSES = {"eager": ViTMSNAttention, "sdpa": ViTMSNSdpaAttentio
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMSN, VIT->VITMSN
-class ViTMSNLayer(nn.Cell):
+class ViTMSNLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: ViTMSNConfig) -> None:
@@ -368,10 +368,10 @@ class ViTMSNLayer(nn.Cell):
         self.attention = VITMSN_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTMSNIntermediate(config)
         self.output = ViTMSNOutput(config)
-        self.layernorm_before = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -401,14 +401,14 @@ class ViTMSNLayer(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTEncoder with ViT->ViTMSN
-class ViTMSNEncoder(nn.Cell):
+class ViTMSNEncoder(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ViTMSNLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ViTMSNLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         head_mask: Optional[ms.Tensor] = None,
@@ -467,9 +467,9 @@ class ViTMSNPreTrainedModel(PreTrainedModel):
 
     # todo: Resort to https://github.com/facebookresearch/msn/blob/main/src/deit.py#L200-#L211
     # when creating pre-training scripts.
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
@@ -491,7 +491,7 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
         self.embeddings = ViTMSNEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = ViTMSNEncoder(config)
 
-        self.layernorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -508,7 +508,7 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         bool_masked_pos: Optional[ms.Tensor] = None,
@@ -593,12 +593,12 @@ class ViTMSNForImageClassification(ViTMSNPreTrainedModel):
         self.vit = ViTMSNModel(config)
 
         # Classifier head
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         head_mask: Optional[ms.Tensor] = None,

@@ -56,11 +56,11 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-    def construct(self,
+    def forward(self,
                   real: Tensor,
                   dual: Tensor) -> Tuple[Tensor, Tensor]:
         r"""
-        This method constructs the output tensors based on the given input tensors.
+        This method forwards the output tensors based on the given input tensors.
         
         Args:
             self (object): The instance of the _DenseImpl class.
@@ -68,7 +68,7 @@ class _DenseImpl(BaseDenseImpl):
             dual (Tensor): The input tensor representing the dual part.
         
         Returns:
-            Tuple[Tensor, Tensor]: A tuple of two tensors representing the constructed output for the real part and the dual part respectively.
+            Tuple[Tensor, Tensor]: A tuple of two tensors representing the forwarded output for the real part and the dual part respectively.
         
         Raises:
             None.

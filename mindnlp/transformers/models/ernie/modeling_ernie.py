@@ -24,7 +24,9 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -66,7 +68,7 @@ ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class ErnieEmbeddings(nn.Cell):
+class ErnieEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
@@ -104,14 +106,14 @@ class ErnieEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -148,7 +150,7 @@ class ErnieEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -181,13 +183,13 @@ class ErnieEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->Ernie
-class ErnieSelfAttention(nn.Cell):
+class ErnieSelfAttention(nn.Module):
 
     """
     This class represents a self-attention mechanism for the ERNIE (Enhanced Representation through kNowledge Integration) model.
     It is used to compute attention scores and produce context layers during the processing of input data.
-    The class inherits from nn.Cell and includes methods for initializing the self-attention mechanism,
-    transposing tensors for scoring calculations, and constructing the attention mechanism outputs.
+    The class inherits from nn.Module and includes methods for initializing the self-attention mechanism,
+    transposing tensors for scoring calculations, and forwarding the attention mechanism outputs.
     """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -228,9 +230,9 @@ class ErnieSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -262,7 +264,7 @@ class ErnieSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -395,21 +397,21 @@ class ErnieSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->Ernie
-class ErnieSelfOutput(nn.Cell):
+class ErnieSelfOutput(nn.Module):
 
     """
     The ErnieSelfOutput class represents a module for self-attention mechanism in ERNIE (Enhanced Representation
     through kNowledge Integration) model.
-    This class inherits from nn.Cell and contains methods to apply dense, layer normalization, and dropout operations
+    This class inherits from nn.Module and contains methods to apply dense, layer normalization, and dropout operations
     to the input tensor.
 
     Attributes:
-        dense (nn.Dense): A dense layer to transform the input tensor's hidden states.
+        dense (nn.Linear): A dense layer to transform the input tensor's hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module to normalize the hidden states.
         dropout (nn.Dropout): A dropout module to apply dropout to the hidden states.
 
     Methods:
-        construct:
+        forward:
             Applies dense, dropout, and layer normalization operations to the input tensor's hidden states
             and returns the output tensor.
     """
@@ -429,11 +431,11 @@ class ErnieSelfOutput(nn.Cell):
             TypeError: If the configuration object is not of the expected type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the output of the ERNIE self-attention layer.
 
@@ -458,14 +460,14 @@ class ErnieSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->Ernie
-class ErnieAttention(nn.Cell):
+class ErnieAttention(nn.Module):
 
     '''
     This class represents the ErnieAttention module, which is a part of the ERNIE
     (Enhanced Representation through kNowledge Integration) model.
     The ErnieAttention module is used for self-attention mechanism and output processing.
-    It includes methods for head pruning and attention construction.
-    This class inherits from nn.Cell and is designed to be used within the ERNIE model architecture for
+    It includes methods for head pruning and attention forwardion.
+    This class inherits from nn.Module and is designed to be used within the ERNIE model architecture for
     natural language processing tasks.
     '''
     def __init__(self, config, position_embedding_type=None):
@@ -517,14 +519,14 @@ class ErnieAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -535,7 +537,7 @@ class ErnieAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        This method constructs the attention mechanism for the Ernie model.
+        This method forwards the attention mechanism for the Ernie model.
 
         Args:
             self (ErnieAttention): The instance of the ErnieAttention class.
@@ -574,21 +576,21 @@ class ErnieAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->Ernie
-class ErnieIntermediate(nn.Cell):
+class ErnieIntermediate(nn.Module):
 
     '''
     Represents an intermediate layer for the ERNIE (Enhanced Representation through kNowledge Integration) model.
     This class provides methods to perform intermediate operations on input hidden states.
 
-    This class inherits from nn.Cell and contains methods for initialization and constructing the intermediate layer.
+    This class inherits from nn.Module and contains methods for initialization and forwarding the intermediate layer.
 
     Attributes:
-        dense (nn.Dense): A dense layer with the specified hidden size and intermediate size.
+        dense (nn.Linear): A dense layer with the specified hidden size and intermediate size.
         intermediate_act_fn (function): The activation function applied to the intermediate hidden states.
 
     Methods:
         __init__: Initializes the ERNIE intermediate layer with the provided configuration.
-        construct: Constructs the intermediate layer by applying dense and activation functions to the input hidden states.
+        forward: Constructs the intermediate layer by applying dense and activation functions to the input hidden states.
     '''
     def __init__(self, config):
         """
@@ -612,13 +614,13 @@ class ErnieIntermediate(nn.Cell):
             TypeError: If the provided hidden activation function is not a string or function.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the intermediate layer of the ERNIE model.
 
@@ -640,16 +642,16 @@ class ErnieIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->Ernie
-class ErnieOutput(nn.Cell):
+class ErnieOutput(nn.Module):
 
     """
     The ErnieOutput class represents a neural network cell for processing output in the ERNIE model.
-    This class inherits from the nn.Cell class and includes methods for initializing and constructing the output layer for the model.
+    This class inherits from the nn.Module class and includes methods for initializing and forwarding the output layer for the model.
 
     The __init__ method initializes the ErnieOutput instance with the specified configuration.
     It initializes the dense layer, LayerNorm, and dropout for processing the output.
 
-    The construct method processes the hidden states and input tensor to generate the final output tensor using the
+    The forward method processes the hidden states and input tensor to generate the final output tensor using the
     initialized dense layer, dropout, and LayerNorm.
 
     """
@@ -674,11 +676,11 @@ class ErnieOutput(nn.Cell):
             ValueError: If the config parameter does not contain required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the output tensor for the Ernie model.
 
@@ -690,7 +692,7 @@ class ErnieOutput(nn.Cell):
                 It serves as additional information for the final output.
 
         Returns:
-            mindspore.Tensor: The constructed output tensor that combines the processed hidden states
+            mindspore.Tensor: The forwarded output tensor that combines the processed hidden states
                 with the input tensor to produce the final output of the Ernie model.
 
         Raises:
@@ -703,10 +705,10 @@ class ErnieOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->Ernie
-class ErnieLayer(nn.Cell):
+class ErnieLayer(nn.Module):
 
     """ErnieLayer is a class representing a layer in the Ernie model.
-    This class inherits from nn.Cell and contains methods for initializing the layer and constructing
+    This class inherits from nn.Module and contains methods for initializing the layer and forwarding
     the layer's feed forward chunk.
 
     Attributes:
@@ -721,14 +723,14 @@ class ErnieLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the ErnieLayer with the provided configuration.
-        construct: Constructs the layer using the given input tensors and parameters.
+        forward: Constructs the layer using the given input tensors and parameters.
         feed_forward_chunk(attention_output): Executes the feed forward operation on the attention output.
 
     Raises:
         ValueError: If the layer is not instantiated with cross-attention layers when `encoder_hidden_states` are passed.
 
     Returns:
-        Tuple: Outputs of the layer's construct method, including the layer output and present key value if the layer is a decoder model.
+        Tuple: Outputs of the layer's forward method, including the layer output and present key value if the layer is a decoder model.
     """
     def __init__(self, config):
         """
@@ -768,7 +770,7 @@ class ErnieLayer(nn.Cell):
         self.intermediate = ErnieIntermediate(config)
         self.output = ErnieOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -877,11 +879,11 @@ class ErnieLayer(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->Ernie
-class ErnieEncoder(nn.Cell):
+class ErnieEncoder(nn.Module):
 
     """
     The ErnieEncoder class represents a multi-layer Ernie (Enhanced Representation through kNowledge Integration)
-    encoder module for processing sequential inputs. It inherits from the nn.Cell class.
+    encoder module for processing sequential inputs. It inherits from the nn.Module class.
 
     Attributes:
         config: The configuration settings for the ErnieEncoder.
@@ -890,12 +892,12 @@ class ErnieEncoder(nn.Cell):
 
     Methods:
         __init__: Initializes the ErnieEncoder with the provided configuration.
-        construct:
+        forward:
             Constructs the ErnieEncoder module with the given inputs and returns the output either as a tuple of tensors
             or as a BaseModelOutputWithPastAndCrossAttentions object.
 
     Notes:
-        - The construct method supports various optional input parameters and returns different types of outputs based
+        - The forward method supports various optional input parameters and returns different types of outputs based
         on the provided arguments.
         - The class supports gradient checkpointing when enabled during training.
     """
@@ -918,10 +920,10 @@ class ErnieEncoder(nn.Cell):
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ErnieLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([ErnieLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1031,21 +1033,21 @@ class ErnieEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->Ernie
-class ErniePooler(nn.Cell):
+class ErniePooler(nn.Module):
 
     """
     ErniePooler class represents a pooler layer for an ERNIE model.
 
-    This class inherits from nn.Cell and implements a pooler layer that takes hidden states as input,
+    This class inherits from nn.Module and implements a pooler layer that takes hidden states as input,
     processes the first token tensor through a dense layer and activation function, and returns the pooled output.
 
     Attributes:
-        dense (nn.Dense): A dense layer with the specified hidden size.
+        dense (nn.Linear): A dense layer with the specified hidden size.
         activation (nn.Tanh): A hyperbolic tangent activation function.
 
     Methods:
         __init__: Initializes the ErniePooler object with the provided configuration.
-        construct: Constructs the pooled output from the hidden states input.
+        forward: Constructs the pooled output from the hidden states input.
     """
     def __init__(self, config):
         """
@@ -1067,10 +1069,10 @@ class ErniePooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a pooled output tensor from the given hidden states.
 
@@ -1095,7 +1097,7 @@ class ErniePooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Ernie
-class ErniePredictionHeadTransform(nn.Cell):
+class ErniePredictionHeadTransform(nn.Module):
 
     """
     This class represents the transformation head for the ERNIE prediction model.
@@ -1103,16 +1105,16 @@ class ErniePredictionHeadTransform(nn.Cell):
     and layer normalization on the input hidden states.
 
     Inherits from:
-        nn.Cell
+        nn.Module
 
     Attributes:
-        dense (nn.Dense): A dense layer used for transforming the input hidden states.
+        dense (nn.Linear): A dense layer used for transforming the input hidden states.
         transform_act_fn (function): The activation function applied to the transformed hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module applied to the hidden states.
 
     Methods:
         __init__: Initializes the class instance with the provided configuration.
-        construct: Applies the transformation operations on the input hidden states and returns the transformed states.
+        forward: Applies the transformation operations on the input hidden states and returns the transformed states.
 
     """
     def __init__(self, config):
@@ -1129,14 +1131,14 @@ class ErniePredictionHeadTransform(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the ErniePredictionHeadTransform.
 
@@ -1158,23 +1160,23 @@ class ErniePredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Ernie
-class ErnieLMPredictionHead(nn.Cell):
+class ErnieLMPredictionHead(nn.Module):
 
     """
     Represents a prediction head for ERNIE Language Model that performs decoding and transformation operations
     on hidden states.
 
-    This class inherits from nn.Cell and provides methods for initializing the prediction head and constructing
+    This class inherits from nn.Module and provides methods for initializing the prediction head and forwarding
     predictions based on the input hidden states.
 
     Attributes:
         transform: ErniePredictionHeadTransform object for transforming hidden states.
-        decoder: nn.Dense object for decoding hidden states into output predictions.
+        decoder: nn.Linear object for decoding hidden states into output predictions.
         bias: Parameter object for bias initialization.
 
     Methods:
         __init__: Initializes the prediction head with the given configuration.
-        construct: Constructs predictions based on the input hidden states by applying
+        forward: Constructs predictions based on the input hidden states by applying
             transformation and decoding operations.
 
     Example:
@@ -1182,7 +1184,7 @@ class ErnieLMPredictionHead(nn.Cell):
         >>> config = get_config()
         >>> prediction_head = ErnieLMPredictionHead(config)
         >>> hidden_states = get_hidden_states()
-        >>> predictions = prediction_head.construct(hidden_states)
+        >>> predictions = prediction_head.forward(hidden_states)
         ```
     """
     def __init__(self, config):
@@ -1206,16 +1208,16 @@ class ErnieLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is part of the class 'ErnieLMPredictionHead' and is responsible for constructing
+        This method 'forward' is part of the class 'ErnieLMPredictionHead' and is responsible for forwarding
         the hidden states using transformation and decoding.
 
         Args:
@@ -1239,12 +1241,12 @@ class ErnieLMPredictionHead(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Ernie
-class ErnieOnlyMLMHead(nn.Cell):
+class ErnieOnlyMLMHead(nn.Module):
 
     """
     This class represents the implementation of the ErnieOnlyMLMHead, which is used for masked language model (MLM)
-    prediction in Ernie language model. It inherits from the nn.Cell class and contains methods for initializing the
-    class and constructing MLM predictions based on the input sequence output.
+    prediction in Ernie language model. It inherits from the nn.Module class and contains methods for initializing the
+    class and forwarding MLM predictions based on the input sequence output.
     """
     def __init__(self, config):
         """
@@ -1263,7 +1265,7 @@ class ErnieOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = ErnieLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the masked language model (MLM) head for the ERNIE model.
 
@@ -1288,18 +1290,18 @@ class ErnieOnlyMLMHead(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyNSPHead with Bert->Ernie
-class ErnieOnlyNSPHead(nn.Cell):
+class ErnieOnlyNSPHead(nn.Module):
 
     """
     Represents a head for Next Sentence Prediction (NSP) task in the ERNIE model.
 
-    This class inherits from the nn.Cell module and provides functionality to predict whether two input sequences
-    are consecutive in the ERNIE model. It contains methods to initialize the head and construct the NSP score based
+    This class inherits from the nn.Module module and provides functionality to predict whether two input sequences
+    are consecutive in the ERNIE model. It contains methods to initialize the head and forward the NSP score based
     on the pooled output of the model.
 
     Methods:
         __init__: Initializes the NSP head with a Dense layer for sequence relationship prediction.
-        construct: Constructs the NSP score by passing the pooled output through the Dense layer.
+        forward: Constructs the NSP score by passing the pooled output through the Dense layer.
 
     Attributes:
         seq_relationship: A Dense layer with hidden_size neurons for predicting the relationship between sequences.
@@ -1315,19 +1317,19 @@ class ErnieOnlyNSPHead(nn.Cell):
 
                 - Type: Any
                 - Purpose: Specifies the configuration settings for the head.
-                - Restrictions: Must be compatible with the nn.Dense module.
+                - Restrictions: Must be compatible with the nn.Linear module.
 
         Returns:
             None. This method does not return any value.
 
         Raises:
             TypeError: If the 'config' parameter is not provided.
-            ValueError: If the 'config.hidden_size' value is invalid or incompatible with nn.Dense.
+            ValueError: If the 'config.hidden_size' value is invalid or incompatible with nn.Linear.
         """
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output):
+    def forward(self, pooled_output):
         """
         Constructs the sequence relationship score based on the pooled output.
 
@@ -1355,16 +1357,16 @@ class ErnieOnlyNSPHead(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPreTrainingHeads with Bert->Ernie
-class ErniePreTrainingHeads(nn.Cell):
+class ErniePreTrainingHeads(nn.Module):
 
     """
     The ErniePreTrainingHeads class represents the pre-training heads for ERNIE model, used for predicting masked tokens
-    and sequence relationships. It inherits from nn.Cell and provides methods for initializing the prediction heads
+    and sequence relationships. It inherits from nn.Module and provides methods for initializing the prediction heads
     and making predictions.
 
     Methods:
         __init__: Initializes the ErniePreTrainingHeads instance with the given configuration.
-        construct: Constructs the pre-training heads using the sequence output and pooled output, and returns the
+        forward: Constructs the pre-training heads using the sequence output and pooled output, and returns the
             prediction scores and sequence relationship score.
 
     Attributes:
@@ -1388,9 +1390,9 @@ class ErniePreTrainingHeads(nn.Cell):
         """
         super().__init__()
         self.predictions = ErnieLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         """
         Constructs the prediction scores and sequence relationship scores for the ErniePreTrainingHeads model.
 
@@ -1433,12 +1435,12 @@ class ErniePreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1566,7 +1568,7 @@ class ErnieModel(ErniePreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1703,8 +1705,8 @@ class ErnieForPreTraining(ErniePreTrainedModel):
     """
     This class represents an Ernie model for pre-training tasks. It inherits from the ErniePreTrainedModel.
 
-    The class includes methods for initializing the model, getting and setting output embeddings, and constructing the
-    model for pre-training tasks. The `construct` method takes various input tensors and optional arguments, and returns
+    The class includes methods for initializing the model, getting and setting output embeddings, and forwarding the
+    model for pre-training tasks. The `forward` method takes various input tensors and optional arguments, and returns
     the output of the model for pre-training. It also includes detailed information about the expected input parameters,
     optional arguments, and return values.
 
@@ -1773,7 +1775,7 @@ class ErnieForPreTraining(ErniePreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1865,13 +1867,13 @@ class ErnieForCausalLM(ErniePreTrainedModel):
     (Enhanced Representation through kNowledge Integration) architecture.
     It is designed for generating text predictions based on input sequences, with a focus on predicting the next word
     in a sequence.
-    The model includes functionality for constructing the model, setting and getting output embeddings, preparing inputs
+    The model includes functionality for forwarding the model, setting and getting output embeddings, preparing inputs
     for text generation, and reordering cache during generation.
 
-    The class includes methods for initializing the model, constructing the model for inference or training, setting
+    The class includes methods for initializing the model, forwarding the model for inference or training, setting
     and getting output embeddings, preparing inputs for text generation, and reordering cache during generation.
 
-    The 'construct' method constructs the model for inference or training, taking various input tensors such as
+    The 'forward' method forwards the model for inference or training, taking various input tensors such as
     input ids, attention masks, token type ids, and more. It returns the model outputs including the language modeling
     loss and predictions.
 
@@ -1963,7 +1965,7 @@ class ErnieForCausalLM(ErniePreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2128,13 +2130,13 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
     It is designed for generating predictions for masked tokens within a sequence of text.
 
     The class inherits from ErniePreTrainedModel and implements methods for initializing the model, getting and setting
-    output embeddings, constructing the model for training or inference, and preparing inputs for text generation.
+    output embeddings, forwarding the model for training or inference, and preparing inputs for text generation.
 
     Methods:
         __init__: Initializes the ErnieForMaskedLM model with the given configuration.
         get_output_embeddings: Retrieves the output embeddings from the model.
         set_output_embeddings: Sets new output embeddings for the model.
-        construct: Constructs the model for training or inference, computing the masked language modeling loss
+        forward: Constructs the model for training or inference, computing the masked language modeling loss
             and prediction scores.
         prepare_inputs_for_generation: Prepares inputs for text generation, including handling padding and dummy tokens.
 
@@ -2223,7 +2225,7 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
         """
         self.cls.predictions.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2330,7 +2332,7 @@ class ErnieForNextSentencePrediction(ErniePreTrainedModel):
     It creates an ERNIE model and a next sentence prediction head.
     The post_init() method is called to perform additional setup after the initialization.
 
-    The construct() method constructs the model using the provided input tensors and other optional arguments.
+    The forward() method forwards the model using the provided input tensors and other optional arguments.
     It returns the predicted next sentence relationship scores. The method also supports computing the next sequence
     prediction loss if labels are provided.
 
@@ -2382,7 +2384,7 @@ class ErnieForNextSentencePrediction(ErniePreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2475,20 +2477,20 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
     This class represents an ERNIE model for sequence classification tasks.
     It is a subclass of the `ErniePreTrainedModel` class.
 
-    The `ErnieForSequenceClassification` class has an initialization method and a `construct` method.
+    The `ErnieForSequenceClassification` class has an initialization method and a `forward` method.
     The initialization method initializes the ERNIE model and sets up the classifier layers.
-    The `construct` method performs the forward pass of the model and returns the output.
+    The `forward` method performs the forward pass of the model and returns the output.
 
     Attributes:
         num_labels (int): The number of labels for the sequence classification task.
         config (ErnieConfig): The configuration object for the ERNIE model.
         ernie (ErnieModel): The ERNIE model instance.
         dropout (nn.Dropout): Dropout layer for regularization.
-        classifier (nn.Dense): Dense layer for classification.
+        classifier (nn.Linear): Dense layer for classification.
 
     Methods:
         __init__: Initializes the `ErnieForSequenceClassification` instance.
-        construct: Performs the forward
+        forward: Performs the forward
             pass of the ERNIE model and returns the output.
 
     Example:
@@ -2497,7 +2499,7 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
         >>> model = ErnieForSequenceClassification(config)
         ...
         >>> # Perform forward pass
-        >>> output = model.construct(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
+        >>> output = model.forward(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
         ```
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->Ernie,bert->ernie
@@ -2524,12 +2526,12 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2607,13 +2609,13 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
     This class represents an Ernie model for multiple choice tasks. It inherits from the ErniePreTrainedModel class.
 
     The ErnieForMultipleChoice class initializes an Ernie model with the given configuration.
-    It constructs the model by passing input tensors through the Ernie model layers and applies dropout and
+    It forwards the model by passing input tensors through the Ernie model layers and applies dropout and
     classification layers to generate the logits for multiple choice classification.
 
     Example:
         ```python
         >>> model = ErnieForMultipleChoice(config)
-        >>> outputs = model.construct(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
+        >>> outputs = model.forward(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
         ```
     Args:
         config (ErnieConfig): The configuration for the Ernie model.
@@ -2622,7 +2624,7 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
         __init__:
             Initializes the ErnieForMultipleChoice class with the given configuration.
 
-        construct:
+        forward:
             Constructs the Ernie model for multiple choice tasks and returns the model outputs.
 
     Returns:
@@ -2658,12 +2660,12 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2741,11 +2743,11 @@ class ErnieForTokenClassification(ErniePreTrainedModel):
     hidden representations.
     It includes methods for model initialization and forward propagation to compute token classification logits and loss.
 
-    The class's constructor initializes the model with the provided configuration, sets the number of classification
+    The class's forwardor initializes the model with the provided configuration, sets the number of classification
     labels, and configures the ErnieModel with the specified parameters.
     Additionally, it sets up the dropout and classifier layers.
 
-    The construct method takes input tensors and optional arguments for token classification, and returns the
+    The forward method takes input tensors and optional arguments for token classification, and returns the
     token classification output. It also computes the token classification loss if labels are provided.
     The method supports various optional parameters for controlling the model's behavior during inference.
 
@@ -2783,12 +2785,12 @@ class ErnieForTokenClassification(ErniePreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2848,14 +2850,14 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
     """
     ErnieForQuestionAnswering is a class that represents a model for question answering tasks using the
     ERNIE (Enhanced Representation through kNowledge Integration) architecture.
-    This class inherits from ErniePreTrainedModel and provides methods for constructing the model and
+    This class inherits from ErniePreTrainedModel and provides methods for forwarding the model and
     performing question answering inference.
 
-    The class constructor initializes the model with the provided configuration.
+    The class forwardor initializes the model with the provided configuration.
     The model architecture includes an ERNIE model with the option to add a pooling layer.
     Additionally, it includes a dense layer for question answering outputs.
 
-    The construct method takes various input tensors and performs the question answering computation.
+    The forward method takes various input tensors and performs the question answering computation.
     It supports optional inputs for start and end positions, attention masks, token type IDs, task type IDs,
     position IDs, head masks, and input embeddings.
     The method returns the question-answering model output, which includes the start and end logits for the predicted
@@ -2865,7 +2867,7 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
     If the return_dict parameter is not provided, the method uses the default value from the model's configuration.
 
     Overall, the ErnieForQuestionAnswering class encapsulates the functionality for performing question answering tasks
-    using the ERNIE model and provides a high-level interface for constructing the model and
+    using the ERNIE model and provides a high-level interface for forwarding the model and
     performing inference.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->Ernie,bert->ernie
@@ -2894,12 +2896,12 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
         self.num_labels = config.num_labels
 
         self.ernie = ErnieModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3012,7 +3014,7 @@ class UIE(ErniePreTrainedModel):
     designed for Universal Information Extraction.
     Args:
         config (:class:`ErnieConfig`):
-            An instance of ErnieConfig used to construct UIE
+            An instance of ErnieConfig used to forward UIE
     """
     def __init__(self, config: ErnieConfig):
         """
@@ -3030,13 +3032,13 @@ class UIE(ErniePreTrainedModel):
         """
         super().__init__(config)
         self.ernie = ErnieModel(config)
-        self.linear_start = nn.Dense(config.hidden_size, 1)
-        self.linear_end = nn.Dense(config.hidden_size, 1)
+        self.linear_start = nn.Linear(config.hidden_size, 1)
+        self.linear_end = nn.Linear(config.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,

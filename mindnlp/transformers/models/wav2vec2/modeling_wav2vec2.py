@@ -21,12 +21,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform
-
-from mindnlp.modules.functional.weight_norm import weight_norm
-from mindnlp.modules.functional import finfo
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -274,11 +271,11 @@ def _sample_negative_indices(
     return sampled_negative_indices
 
 
-class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
+class Wav2Vec2NoLayerNormConvLayer(nn.Module):
 
     """
     Wav2Vec2NoLayerNormConvLayer is a Python class representing a convolutional layer without layer normalization for
-    the Wav2Vec2 model. This class inherits from nn.Cell and is used for processing audio features.
+    the Wav2Vec2 model. This class inherits from nn.Module and is used for processing audio features.
 
     Attributes:
         config (Wav2Vec2Config): The configuration object for the Wav2Vec2 model.
@@ -290,7 +287,7 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the Wav2Vec2NoLayerNormConvLayer with the provided configuration and layer index.
-        construct: Applies the convolutional and activation operations to the input hidden_states.
+        forward: Applies the convolutional and activation operations to the input hidden_states.
 
     Note:
         This class is part of the Wav2Vec2 model and is specifically designed for processing audio features without
@@ -326,12 +323,12 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states using convolutional layer and activation function.
 
@@ -340,7 +337,7 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
             hidden_states (torch.Tensor): The input hidden states tensor.
 
         Returns:
-            torch.Tensor: The constructed hidden states after applying convolution and activation.
+            torch.Tensor: The forwarded hidden states after applying convolution and activation.
 
         Raises:
             TypeError: If the input hidden_states is not a torch.Tensor.
@@ -350,11 +347,11 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2LayerNormConvLayer(nn.Cell):
+class Wav2Vec2LayerNormConvLayer(nn.Module):
 
     """
     This class represents a convolutional layer with layer normalization in the Wav2Vec2 model.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
         config (Wav2Vec2Config): The configuration object for the Wav2Vec2 model.
@@ -364,7 +361,7 @@ class Wav2Vec2LayerNormConvLayer(nn.Cell):
         __init__:
             Initializes the Wav2Vec2LayerNormConvLayer with the given configuration and layer ID.
 
-        construct:
+        forward:
             Applies the convolutional layer with layer normalization to the input hidden states.
 
     """
@@ -391,13 +388,13 @@ class Wav2Vec2LayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Construct the hidden states using the Wav2Vec2LayerNormConvLayer method.
 
@@ -420,7 +417,7 @@ class Wav2Vec2LayerNormConvLayer(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2GroupNormConvLayer(nn.Cell):
+class Wav2Vec2GroupNormConvLayer(nn.Module):
 
     """
     This class represents a group normalization convolutional layer used in the Wav2Vec2 model.
@@ -439,7 +436,7 @@ class Wav2Vec2GroupNormConvLayer(nn.Cell):
         layer_norm (nn.GroupNorm): The group normalization layer applied to the hidden states.
 
     Methods:
-        construct: Applies the convolutional layer, normalization, activation, and returns the processed hidden states.
+        forward: Applies the convolutional layer, normalization, activation, and returns the processed hidden states.
 
     """
     def __init__(self, config: Wav2Vec2Config, layer_id=0):
@@ -468,15 +465,15 @@ class Wav2Vec2GroupNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
+            bias=config.conv_bias,
             pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs a group normalization convolutional layer for the Wav2Vec2 model.
+        This method forwards a group normalization convolutional layer for the Wav2Vec2 model.
 
         Args:
             self (Wav2Vec2GroupNormConvLayer): The instance of the Wav2Vec2GroupNormConvLayer class.
@@ -494,11 +491,11 @@ class Wav2Vec2GroupNormConvLayer(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2PositionalConvEmbedding(nn.Cell):
+class Wav2Vec2PositionalConvEmbedding(nn.Module):
 
     """
     This class represents a positional convolutional embedding layer in the Wav2Vec2 model architecture.
-    It inherits from nn.Cell and is designed to process hidden states through convolutional and activation operations.
+    It inherits from nn.Module and is designed to process hidden states through convolutional and activation operations.
 
     Attributes:
         config: Wav2Vec2Config
@@ -508,12 +505,12 @@ class Wav2Vec2PositionalConvEmbedding(nn.Cell):
         __init__:
             Initializes the Wav2Vec2PositionalConvEmbedding with the provided configuration.
 
-        construct:
+        forward:
             Applies positional convolutional embedding operations on the input hidden_states and returns the
             transformed output.
 
     Usage:
-        Instantiate this class by providing a Wav2Vec2Config object as configuration, then call the construct method
+        Instantiate this class by providing a Wav2Vec2Config object as configuration, then call the forward method
         with hidden states to process them.
 
     Note:
@@ -542,16 +539,16 @@ class Wav2Vec2PositionalConvEmbedding(nn.Cell):
             padding=config.num_conv_pos_embeddings // 2,
             pad_mode='pad',
             group=config.num_conv_pos_embedding_groups,
-            has_bias=True,
+            bias=True,
         )
 
         self.conv = weight_norm(self.conv, name='weight', axis=2)
         self.padding = Wav2Vec2SamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the positional convolutional embedding for the Wav2Vec2 model.
+        This method forwards the positional convolutional embedding for the Wav2Vec2 model.
 
         Args:
             self (Wav2Vec2PositionalConvEmbedding): The instance of the Wav2Vec2PositionalConvEmbedding class.
@@ -573,12 +570,12 @@ class Wav2Vec2PositionalConvEmbedding(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2SamePadLayer(nn.Cell):
+class Wav2Vec2SamePadLayer(nn.Module):
 
     """
     This class represents a layer in the Wav2Vec2 model that performs padding removal.
 
-    Wav2Vec2SamePadLayer is a subclass of nn.Cell and is designed to remove padding from hidden states in the
+    Wav2Vec2SamePadLayer is a subclass of nn.Module and is designed to remove padding from hidden states in the
     Wav2Vec2 model. It is primarily used in the Wav2Vec2 model for speech recognition tasks.
 
     Attributes:
@@ -586,7 +583,7 @@ class Wav2Vec2SamePadLayer(nn.Cell):
 
     Methods:
         __init__: Initializes a new instance of the Wav2Vec2SamePadLayer class.
-        construct: Removes padding elements from the hidden states.
+        forward: Removes padding elements from the hidden states.
 
     """
     def __init__(self, num_conv_pos_embeddings):
@@ -608,7 +605,7 @@ class Wav2Vec2SamePadLayer(nn.Cell):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states of the Wav2Vec2SamePadLayer.
 
@@ -629,7 +626,7 @@ class Wav2Vec2SamePadLayer(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2FeatureEncoder(nn.Cell):
+class Wav2Vec2FeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
     def __init__(self, config: Wav2Vec2Config):
         """
@@ -668,7 +665,7 @@ class Wav2Vec2FeatureEncoder(nn.Cell):
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
-        self.conv_layers = nn.CellList(conv_layers)
+        self.conv_layers = nn.ModuleList(conv_layers)
         self._requires_grad = True
 
     def _freeze_parameters(self):
@@ -688,17 +685,17 @@ class Wav2Vec2FeatureEncoder(nn.Cell):
             param.requires_grad = False
         self._requires_grad = False
 
-    def construct(self, input_values):
+    def forward(self, input_values):
         """
-        Method 'construct' in the class 'Wav2Vec2FeatureEncoder' constructs the hidden states from the input values
+        Method 'forward' in the class 'Wav2Vec2FeatureEncoder' forwards the hidden states from the input values
         using convolutional layers.
 
         Args:
             self (object): The instance of the class.
-            input_values (tensor): The input values for constructing hidden states. It is expected to be a 2D tensor.
+            input_values (tensor): The input values for forwarding hidden states. It is expected to be a 2D tensor.
 
         Returns:
-            tensor: The constructed hidden states after passing through the convolutional layers.
+            tensor: The forwarded hidden states after passing through the convolutional layers.
 
         Raises:
             None
@@ -746,17 +743,17 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
         )
 
 
-class Wav2Vec2FeatureProjection(nn.Cell):
+class Wav2Vec2FeatureProjection(nn.Module):
 
     """
     Wav2Vec2FeatureProjection is a Python class that represents a feature projection module for Wav2Vec2.
-    This class inherits from nn.Cell and contains methods for initializing the feature projection and constructing the
+    This class inherits from nn.Module and contains methods for initializing the feature projection and forwarding the
     hidden states.
 
     The __init__ method initializes the feature projection module by setting up layer normalization, dense projection,
     and dropout.
 
-    The construct method applies layer normalization to the hidden states, projects the normalized states using dense
+    The forward method applies layer normalization to the hidden states, projects the normalized states using dense
     projection, and applies dropout to the projected states before returning the hidden states and the normalized
     hidden states.
     """
@@ -780,13 +777,13 @@ class Wav2Vec2FeatureProjection(nn.Cell):
                 or dropout layers.
         """
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
-        self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
+        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p=config.feat_proj_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the hidden states by applying layer normalization, projection, and dropout.
+        This method forwards the hidden states by applying layer normalization, projection, and dropout.
 
         Args:
             self (Wav2Vec2FeatureProjection): The instance of the Wav2Vec2FeatureProjection class.
@@ -812,7 +809,7 @@ class Wav2Vec2FeatureProjection(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Wav2Vec2
-class Wav2Vec2Attention(nn.Cell):
+class Wav2Vec2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -858,10 +855,10 @@ class Wav2Vec2Attention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
         """
@@ -881,7 +878,7 @@ class Wav2Vec2Attention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         key_value_states: Optional[Tensor] = None,
@@ -1001,18 +998,18 @@ class Wav2Vec2Attention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class Wav2Vec2FeedForward(nn.Cell):
+class Wav2Vec2FeedForward(nn.Module):
 
     """
     Wav2Vec2FeedForward is a class representing the feedforward network for the Wav2Vec2 model.
-    This class inherits from nn.Cell and contains methods for initializing the network and constructing the
+    This class inherits from nn.Module and contains methods for initializing the network and forwarding the
     feedforward layers.
 
     The __init__ method initializes the feedforward network with the provided configuration.
     It sets up the intermediate dropout, intermediate dense, intermediate activation function, output dense, and output
     dropout layers based on the configuration parameters.
 
-    The construct method takes hidden states as input and processes them through the intermediate dense layer,
+    The forward method takes hidden states as input and processes them through the intermediate dense layer,
     intermediate activation function, intermediate dropout layer, output dense layer, and output dropout layer.
     It then returns the processed hidden states.
 
@@ -1045,16 +1042,16 @@ class Wav2Vec2FeedForward(nn.Cell):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(p=config.activation_dropout)
 
-        self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.intermediate_dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-        self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.output_dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the feed-forward network for the Wav2Vec2 model.
 
@@ -1070,7 +1067,7 @@ class Wav2Vec2FeedForward(nn.Cell):
             ValueError: If the input hidden_states does not have a rank of 2.
 
         This method takes the input hidden states and passes them through a feed-forward network consisting of several
-        layers. The feed-forward network is constructed using intermediate dense layers, activation functions,
+        layers. The feed-forward network is forwarded using intermediate dense layers, activation functions,
         and dropout layers. The hidden_states are first passed through the intermediate dense layer, followed by the
         intermediate activation function and dropout layer. The resulting hidden_states are then passed through the
         output dense layer and another dropout layer. The final output hidden_states are returned.
@@ -1085,11 +1082,11 @@ class Wav2Vec2FeedForward(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2EncoderLayer(nn.Cell):
+class Wav2Vec2EncoderLayer(nn.Module):
 
     """A class representing an encoder layer of the Wav2Vec2 model.
 
-    The Wav2Vec2EncoderLayer class inherits from the nn.Cell class and implements the functionality of a single encoder
+    The Wav2Vec2EncoderLayer class inherits from the nn.Module class and implements the functionality of a single encoder
     layer in the Wav2Vec2 model architecture. It consists of multiple sub-modules, including an attention mechanism,
     dropout layers, layer normalization, and a feed-forward neural network.
 
@@ -1101,7 +1098,7 @@ class Wav2Vec2EncoderLayer(nn.Cell):
         final_layer_norm (nn.LayerNorm): The final layer normalization applied to the hidden states.
 
     Methods:
-        construct(hidden_states, attention_mask=None, output_attentions=False):
+        forward(hidden_states, attention_mask=None, output_attentions=False):
             Applies the forward pass of the encoder layer.
 
             Args:
@@ -1148,11 +1145,11 @@ class Wav2Vec2EncoderLayer(nn.Cell):
             is_decoder=False,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = Wav2Vec2FeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         """
         Constructs the Wav2Vec2EncoderLayer.
 
@@ -1193,11 +1190,11 @@ class Wav2Vec2EncoderLayer(nn.Cell):
         return outputs
 
 
-class Wav2Vec2EncoderLayerStableLayerNorm(nn.Cell):
+class Wav2Vec2EncoderLayerStableLayerNorm(nn.Module):
 
     """
     This class represents an encoder layer in the Wav2Vec2 model with stable layer normalization.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
         attention (Wav2Vec2Attention): An instance of the Wav2Vec2Attention class for attention mechanism.
@@ -1210,7 +1207,7 @@ class Wav2Vec2EncoderLayerStableLayerNorm(nn.Cell):
             layer, if provided. None otherwise.
 
     Methods:
-        construct:
+        forward:
             Applies the encoder layer operations on the input hidden states.
 
             Args:
@@ -1247,16 +1244,16 @@ class Wav2Vec2EncoderLayerStableLayerNorm(nn.Cell):
             is_decoder=False,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = Wav2Vec2FeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if getattr(config, "adapter_attn_dim", None) is not None:
             self.adapter_layer = Wav2Vec2AttnAdapterLayer(config)
         else:
             self.adapter_layer = None
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -1299,7 +1296,7 @@ class Wav2Vec2EncoderLayerStableLayerNorm(nn.Cell):
         return outputs
 
 
-class Wav2Vec2Encoder(nn.Cell):
+class Wav2Vec2Encoder(nn.Module):
 
     """
     A class representing the Wav2Vec2Encoder in the Wav2Vec2 model architecture.
@@ -1312,10 +1309,10 @@ class Wav2Vec2Encoder(nn.Cell):
         pos_conv_embed (Wav2Vec2PositionalConvEmbedding): The positional convolutional embedding layer.
         layer_norm (nn.LayerNorm): The layer normalization layer.
         dropout (nn.Dropout): The dropout layer.
-        layers (nn.CellList): The list of Wav2Vec2EncoderLayer instances.
+        layers (nn.ModuleList): The list of Wav2Vec2EncoderLayer instances.
 
     Methods:
-        construct(hidden_states, attention_mask=None, output_attentions=False, output_hidden_states=False, return_dict=True):
+        forward(hidden_states, attention_mask=None, output_attentions=False, output_hidden_states=False, return_dict=True):
             Applies the Wav2Vec2Encoder layer-wise to the hidden states.
 
             Args:
@@ -1346,16 +1343,16 @@ class Wav2Vec2Encoder(nn.Cell):
 
         Raises:
             None: This method does not raise any exceptions explicitly. However, exceptions may be raised during the
-                initialization of the Wav2Vec2PositionalConvEmbedding, nn.LayerNorm, nn.Dropout, and nn.CellList objects.
+                initialization of the Wav2Vec2PositionalConvEmbedding, nn.LayerNorm, nn.Dropout, and nn.ModuleList objects.
         """
         super().__init__()
         self.config = config
         self.pos_conv_embed = Wav2Vec2PositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList([Wav2Vec2EncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([Wav2Vec2EncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -1435,17 +1432,17 @@ class Wav2Vec2Encoder(nn.Cell):
         )
 
 
-class Wav2Vec2EncoderStableLayerNorm(nn.Cell):
+class Wav2Vec2EncoderStableLayerNorm(nn.Module):
 
     """
     Wav2Vec2EncoderStableLayerNorm is a Python class that represents an encoder with stable layer normalization for
-    the Wav2Vec2 model. This class inherits from the nn.Cell module.
+    the Wav2Vec2 model. This class inherits from the nn.Module module.
 
-    This class initializes with a Wav2Vec2Config object and constructs a series of encoder layers with stable
+    This class initializes with a Wav2Vec2Config object and forwards a series of encoder layers with stable
     layer normalization. The encoder layers operate on the input hidden states and optionally apply
     attention masks, producing hidden states with added positional embeddings and layer normalization.
 
-    The construct method applies the encoder layers to the input hidden states, handling attention masks,
+    The forward method applies the encoder layers to the input hidden states, handling attention masks,
     outputting hidden states, and attentions based on the specified configurations.
 
     This class provides functionalities for building and using a stable layer normalization encoder for the Wav2Vec2
@@ -1471,13 +1468,13 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Cell):
         super().__init__()
         self.config = config
         self.pos_conv_embed = Wav2Vec2PositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Wav2Vec2EncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1556,7 +1553,7 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Cell):
         )
 
 
-class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
+class Wav2Vec2GumbelVectorQuantizer(nn.Module):
     """
     Vector quantization using gumbel softmax. See `[CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -1594,7 +1591,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
         self.codevectors = Parameter(
             ops.zeros((1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups))
         )
-        self.weight_proj = nn.Dense(config.conv_dim[-1], self.num_groups * self.num_vars)
+        self.weight_proj = nn.Linear(config.conv_dim[-1], self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
@@ -1627,7 +1624,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
         perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
-    def construct(self, hidden_states, mask_time_indices=None):
+    def forward(self, hidden_states, mask_time_indices=None):
         '''
         Constructs codevectors and computes perplexity for Wav2Vec2GumbelVectorQuantizer.
 
@@ -1641,7 +1638,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
             tuple:
                 A tuple containing:
 
-                - codevectors (tensor): The constructed codevectors with shape (batch_size, sequence_length, -1).
+                - codevectors (tensor): The forwarded codevectors with shape (batch_size, sequence_length, -1).
                 - perplexity (tensor): The computed perplexity.
 
         Raises:
@@ -1687,22 +1684,22 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
         return codevectors, perplexity
 
 
-class Wav2Vec2Adapter(nn.Cell):
+class Wav2Vec2Adapter(nn.Module):
 
     """
     Wav2Vec2Adapter is a class that represents an adapter layer for adapting the hidden states of a Wav2Vec2 model.
-    This class inherits from nn.Cell and implements methods for initializing and constructing the adapter layer.
+    This class inherits from nn.Module and implements methods for initializing and forwarding the adapter layer.
 
     Attributes:
-        proj (nn.Dense or None): A dense layer used for projecting hidden states if output_hidden_size is
+        proj (nn.Linear or None): A dense layer used for projecting hidden states if output_hidden_size is
             different from hidden_size.
         proj_layer_norm (nn.LayerNorm or None): A layer normalization module applied after projection if needed.
-        layers (nn.CellList): A list of Wav2Vec2AdapterLayer instances representing adapter layers.
+        layers (nn.ModuleList): A list of Wav2Vec2AdapterLayer instances representing adapter layers.
         layerdrop (float): The probability of dropping a layer during training.
 
     Methods:
         __init__: Initializes the Wav2Vec2Adapter object with the provided configuration.
-        construct: Applies the adapter layer transformations to the input hidden states.
+        forward: Applies the adapter layer transformations to the input hidden states.
 
     """
     def __init__(self, config: Wav2Vec2Config):
@@ -1725,17 +1722,17 @@ class Wav2Vec2Adapter(nn.Cell):
 
         # feature dim might need to be down-projected
         if config.output_hidden_size != config.hidden_size:
-            self.proj = nn.Dense(config.hidden_size, config.output_hidden_size)
+            self.proj = nn.Linear(config.hidden_size, config.output_hidden_size)
             self.proj_layer_norm = nn.LayerNorm(config.output_hidden_size)
         else:
             self.proj = self.proj_layer_norm = None
 
-        self.layers = nn.CellList([Wav2Vec2AdapterLayer(config) for _ in range(config.num_adapter_layers)])
+        self.layers = nn.ModuleList([Wav2Vec2AdapterLayer(config) for _ in range(config.num_adapter_layers)])
         self.layerdrop = config.layerdrop
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs the hidden states by applying transformations and layers.
+        This method forwards the hidden states by applying transformations and layers.
 
         Args:
             self (object): The instance of the Wav2Vec2Adapter class.
@@ -1764,18 +1761,18 @@ class Wav2Vec2Adapter(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2AdapterLayer(nn.Cell):
+class Wav2Vec2AdapterLayer(nn.Module):
 
     '''
     Wav2Vec2AdapterLayer is a Python class that represents an adapter layer for the Wav2Vec2 model.
-    This class inherits from nn.Cell.
+    This class inherits from nn.Module.
 
-    The adapter layer contains methods for initialization and construction.
+    The adapter layer contains methods for initialization and forwardion.
 
     The __init__ method initializes the adapter layer with the provided configuration. It sets up a 1D convolutional
     layer with specified parameters such as kernel size, stride, padding, and bias.
 
-    The construct method takes hidden_states as input and applies the convolutional layer followed by the
+    The forward method takes hidden_states as input and applies the convolutional layer followed by the
     gated linear unit (GLU) activation function. It then returns the processed hidden states.
 
     This class provides functionality for creating and processing adapter layers within the Wav2Vec2 model.
@@ -1805,12 +1802,12 @@ class Wav2Vec2AdapterLayer(nn.Cell):
             stride=config.adapter_stride,
             padding=1,
             pad_mode='pad',
-            has_bias=True,
+            bias=True,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method to construct the Wav2Vec2AdapterLayer.
+        Method to forward the Wav2Vec2AdapterLayer.
 
         Args:
             self (Wav2Vec2AdapterLayer): The instance of the Wav2Vec2AdapterLayer class.
@@ -1827,7 +1824,7 @@ class Wav2Vec2AdapterLayer(nn.Cell):
         return hidden_states
 
 
-class Wav2Vec2AttnAdapterLayer(nn.Cell):
+class Wav2Vec2AttnAdapterLayer(nn.Module):
 
     """
     This class represents a single layer of an attention adapter module in the Wav2Vec2 model. The adapter module is
@@ -1838,12 +1835,12 @@ class Wav2Vec2AttnAdapterLayer(nn.Cell):
         input_dim (int): The dimension of the input tensor to the adapter module.
         hidden_dim (int): The hidden dimension of the adapter module.
         norm (nn.LayerNorm): A layer normalization module to normalize the hidden states.
-        linear_1 (nn.Dense): A linear transformation module that maps the hidden states to the input dimension.
+        linear_1 (nn.Linear): A linear transformation module that maps the hidden states to the input dimension.
         act_fn (nn.ReLU): An activation function module that applies the ReLU activation to the hidden states.
-        linear_2 (nn.Dense): A linear transformation module that maps the hidden states back to the hidden dimension.
+        linear_2 (nn.Linear): A linear transformation module that maps the hidden states back to the hidden dimension.
 
     Methods:
-        construct:
+        forward:
             Applies the attention adapter layer operations to the input hidden states tensor.
 
             Args:
@@ -1863,13 +1860,13 @@ class Wav2Vec2AttnAdapterLayer(nn.Cell):
         self.hidden_dim = config.hidden_size
 
         self.norm = nn.LayerNorm(self.hidden_dim)
-        self.linear_1 = nn.Dense(self.hidden_dim, self.input_dim)
+        self.linear_1 = nn.Linear(self.hidden_dim, self.input_dim)
         self.act_fn = nn.ReLU()
-        self.linear_2 = nn.Dense(self.input_dim, self.hidden_dim)
+        self.linear_2 = nn.Linear(self.input_dim, self.hidden_dim)
 
-    def construct(self, hidden_states: Tensor):
+    def forward(self, hidden_states: Tensor):
         """
-        Method: construct
+        Method: forward
 
         Description:
         Constructs the adaptation layer for the Wav2Vec2AttnAdapterModel.
@@ -1923,7 +1920,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                 initializer(Uniform(k), cell.projection.weight.shape, cell.projection.weight.dtype))
             cell.projection.bias.set_data(
                 initializer(Uniform(k), cell.projection.bias.shape, cell.projection.bias.dtype))
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -2211,7 +2208,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         # make sure now vocab size is correct
         target_vocab_size = state_dict["lm_head.weight"].shape[0]
         if target_vocab_size != self.config.vocab_size:
-            self.lm_head = nn.Dense(
+            self.lm_head = nn.Linear(
                 self.config.output_hidden_size, target_vocab_size, dtype=self.dtype
             )
             self.config.vocab_size = target_vocab_size
@@ -2250,7 +2247,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
     from being updated during training.
     - `_mask_hidden_states`: Masks extracted features along
     the time axis and/or the feature axis according to SpecAugment.
-    - `construct`: Constructs the model by processing the input values and returns the model outputs.
+    - `forward`: Constructs the model by processing the input values and returns the model outputs.
 
     Please note that the `freeze_feature_extractor()` method is deprecated and will be removed in Transformers v5.
     The equivalent `freeze_feature_encoder()` method should be used instead.
@@ -2360,7 +2357,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
 
         return hidden_states
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,
@@ -2383,7 +2380,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary of output. Defaults to None.
 
         Returns:
-            Union[Tuple, Wav2Vec2BaseModelOutput]: The constructed model output, which can be a tuple or a
+            Union[Tuple, Wav2Vec2BaseModelOutput]: The forwarded model output, which can be a tuple or a
                 Wav2Vec2BaseModelOutput object.
 
         Raises:
@@ -2441,7 +2438,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
 
     This class represents a pre-training model for Wav2Vec2, which is used for pre-training the Wav2Vec2 model.
     It includes methods for setting Gumbel softmax temperature, freezing the feature encoder, computing contrastive
-    logits, and constructing the model for pre-training.
+    logits, and forwarding the model for pre-training.
 
     Methods:
         set_gumbel_temperature: Set the Gumbel softmax temperature to a given value. Only necessary for training.
@@ -2451,7 +2448,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             during training.
         compute_contrastive_logits: Compute logits for contrastive loss based on cosine similarity between features
             and apply temperature.
-        construct: Construct the model for pre-training, including masking features for contrastive loss.
+        forward: Construct the model for pre-training, including masking features for contrastive loss.
 
     Attributes:
         wav2vec2: Wav2Vec2Model instance for the Wav2Vec2 model.
@@ -2480,8 +2477,8 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
 
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
 
-        self.project_hid = nn.Dense(config.hidden_size, config.proj_codevector_dim)
-        self.project_q = nn.Dense(config.codevector_dim, config.proj_codevector_dim)
+        self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
+        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2528,7 +2525,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         logits = logits / temperature
         return logits
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,
@@ -2704,7 +2701,7 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
 
     Methods:
         `__init__`: Initializes a new instance of the `Wav2Vec2ForMaskedLM` class.
-        `construct`: Constructs the model for masked language modeling.
+        `forward`: Constructs the model for masked language modeling.
 
     Note:
         This class is deprecated and should be replaced with `Wav2Vec2ForCTC`.
@@ -2739,7 +2736,7 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
             3. Initializes the 'wav2vec2' attribute as an instance of 'Wav2Vec2Model' using the provided 'config'.
             4. Initializes the 'dropout' attribute as an instance of 'nn.Dropout' with the dropout probability specified
             in 'config'.
-            5. Initializes the 'lm_head' attribute as an instance of 'nn.Dense' with the hidden size and vocabulary
+            5. Initializes the 'lm_head' attribute as an instance of 'nn.Linear' with the hidden size and vocabulary
             size specified in 'config'.
             6. Calls the 'post_init' method to perform any additional post-initialization steps.
 
@@ -2755,12 +2752,12 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
 
         self.wav2vec2 = Wav2Vec2Model(config)
         self.dropout = nn.Dropout(p=config.final_dropout)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_values: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -2822,14 +2819,14 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
     """
     This class represents a Wav2Vec2 model fine-tuned for Connectionist Temporal Classification (CTC) tasks.
     It inherits from the Wav2Vec2PreTrainedModel, providing methods for initializing the model, tying weights,
-    freezing the feature extractor, feature encoder, and base model, as well as constructing the model
+    freezing the feature extractor, feature encoder, and base model, as well as forwarding the model
     for inference and training.
 
     The Wav2Vec2ForCTC class encapsulates the Wav2Vec2 model with additional methods for CTC-specific functionality,
     such as handling labels for CTC, computing CTC loss, and processing input values for CTC tasks.
 
     The class provides methods for fine-tuning the Wav2Vec2 model for CTC tasks, including freezing specific components
-    of the model, as well as constructing the model for CTC inference and training.
+    of the model, as well as forwarding the model for CTC inference and training.
 
     Additionally, the class provides methods for tying weights and freezing specific components of the model to ensure
     compatibility with adapter weights and to control parameter updates during training.
@@ -2875,7 +2872,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         output_hidden_size = (
             config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
-        self.lm_head = nn.Dense(output_hidden_size, config.vocab_size)
+        self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2927,7 +2924,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         for _, param in self.wav2vec2.parameters_and_names():
             param.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,
@@ -3005,12 +3002,12 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
     The `Wav2Vec2ForSequenceClassification` class represents a Wav2Vec2 model for sequence classification tasks.
     It inherits from the `Wav2Vec2PreTrainedModel` class. This class provides methods for initializing the model,
     freezing specific components, and computing the sequence classification output. It also  includes methods for
-    handling the feature extractor, feature encoder, and base model. The class supports the construction of the sequence
+    handling the feature extractor, feature encoder, and base model. The class supports the forwardion of the sequence
     classification output and provides options for setting various parameters such as attention masks, output attentions,
     output hidden states, and labels.
 
     Deprecated methods such as `freeze_feature_extractor` and `freeze_base_model` are included along with their
-    corresponding replacements. The `construct` method computes the sequence classification/regression loss and handles
+    corresponding replacements. The `forward` method computes the sequence classification/regression loss and handles
     the classification output based on the input values, attention masks, and labels. The class allows for fine-tuning
     the model for sequence classification tasks while providing flexibility in handling different components and
     parameters.
@@ -3043,8 +3040,8 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
-        self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
-        self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
+        self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
+        self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -3076,7 +3073,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         for _, param in self.wav2vec2.parameters_and_names():
             param.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,
@@ -3143,11 +3140,11 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
     """
     This class represents a Wav2Vec2 model for audio frame classification. It inherits from the Wav2Vec2PreTrainedModel
     and includes methods for initializing the model, freezing the feature encoder and base model, as well as
-    constructing the model for inference and training.
+    forwarding the model for inference and training.
 
     Attributes:
         wav2vec2 (Wav2Vec2Model): The Wav2Vec2Model used for audio frame classification.
-        classifier (nn.Dense): The classification head for the model.
+        classifier (nn.Linear): The classification head for the model.
         num_labels (int): The number of labels for classification.
         layer_weights (Parameter, optional): The weights for weighted layer sum if configured.
 
@@ -3163,7 +3160,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
             Disables the gradient computation for the base model, preventing its parameters from being updated during
             training while allowing the classification head to be updated.
 
-        construct:
+        forward:
             Constructs the model for inference and training, handling input values, attention masks, labels, and other
             optional parameters. Returns TokenClassifierOutput containing loss, logits, hidden states, and attentions.
     """
@@ -3194,7 +3191,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.num_labels = config.num_labels
 
         self.init_weights()
@@ -3214,7 +3211,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         for _, param in self.wav2vec2.parameters_and_names():
             param.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,
@@ -3268,11 +3265,11 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         )
 
 
-class AMSoftmaxLoss(nn.Cell):
+class AMSoftmaxLoss(nn.Module):
 
     """
     The AMSoftmaxLoss class represents a neural network cell for computing the AM-Softmax loss. This class inherits
-    from nn.Cell and provides methods for initializing the loss function and constructing the computation graph.
+    from nn.Module and provides methods for initializing the loss function and forwarding the computation graph.
 
     Attributes:
         scale (float): The scale parameter for the AM-Softmax loss function.
@@ -3283,7 +3280,7 @@ class AMSoftmaxLoss(nn.Cell):
     Methods:
         __init__: Initializes the AMSoftmaxLoss instance with input dimension, number of labels, scale, and margin.
 
-        construct: Constructs the computation graph for the AM-Softmax loss function using the given
+        forward: Constructs the computation graph for the AM-Softmax loss function using the given
             hidden states and labels.
 
     Note:
@@ -3315,9 +3312,9 @@ class AMSoftmaxLoss(nn.Cell):
         self.num_labels = num_labels
         self.weight = Parameter(ops.randn(input_dim, num_labels), requires_grad=True)
 
-    def construct(self, hidden_states, labels):
+    def forward(self, hidden_states, labels):
         """
-        This method constructs an AMSoftmax loss function.
+        This method forwards an AMSoftmax loss function.
 
         Args:
             self (object): The instance of the AMSoftmaxLoss class.
@@ -3347,17 +3344,17 @@ class AMSoftmaxLoss(nn.Cell):
         return loss
 
 
-class TDNNLayer(nn.Cell):
+class TDNNLayer(nn.Module):
 
     """TDNNLayer represents a time-delay neural network (TDNN) layer for processing sequential data.
-    It inherits from nn.Cell and is initialized with a Wav2Vec2Config and an optional layer_id.
+    It inherits from nn.Module and is initialized with a Wav2Vec2Config and an optional layer_id.
 
     Attributes:
         config (Wav2Vec2Config): The configuration for the Wav2Vec2 model.
         layer_id (int): The index of the TDNN layer.
 
     Methods:
-        construct(hidden_states): Applies the TDNN layer operations to the input hidden_states.
+        forward(hidden_states): Applies the TDNN layer operations to the input hidden_states.
 
     The TDNNLayer class applies a convolutional layer with specified kernel size and dilation to the input data.
     It then applies a ReLU activation function to the output.
@@ -3389,10 +3386,10 @@ class TDNNLayer(nn.Cell):
         self.kernel_size = config.tdnn_kernel[layer_id]
         self.dilation = config.tdnn_dilation[layer_id]
 
-        self.kernel = nn.Dense(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
+        self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
         self.activation = nn.ReLU()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         '''
         Constructs the TDNN layer with the input hidden_states.
 
@@ -3433,9 +3430,9 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
 
     The class contains methods for freezing the feature extractor, freezing the feature encoder, and freezing the base
     model to disable gradient computation for specific model components. Additionally, it includes methods for computing
-    the output length of the TDNN layers and for constructing x-vector embeddings from input audio data.
+    the output length of the TDNN layers and for forwarding x-vector embeddings from input audio data.
 
-    The construct method takes input audio data and optional parameters such as attention mask and labels, and returns
+    The forward method takes input audio data and optional parameters such as attention mask and labels, and returns
     x-vector embeddings along with optional loss and hidden states. The method also supports outputting hidden states
     and attentions based on the configuration settings.
 
@@ -3462,13 +3459,13 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
-        self.projector = nn.Dense(config.hidden_size, config.tdnn_dim[0])
+        self.projector = nn.Linear(config.hidden_size, config.tdnn_dim[0])
 
         tdnn_layers = [TDNNLayer(config, i) for i in range(len(config.tdnn_dim))]
-        self.tdnn = nn.CellList(tdnn_layers)
+        self.tdnn = nn.ModuleList(tdnn_layers)
 
-        self.feature_extractor = nn.Dense(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
-        self.classifier = nn.Dense(config.xvector_output_dim, config.xvector_output_dim)
+        self.feature_extractor = nn.Linear(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
+        self.classifier = nn.Linear(config.xvector_output_dim, config.xvector_output_dim)
 
         self.objective = AMSoftmaxLoss(config.xvector_output_dim, config.num_labels)
 
@@ -3515,7 +3512,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
 
         return input_lengths
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[Tensor],
         attention_mask: Optional[Tensor] = None,

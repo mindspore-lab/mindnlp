@@ -743,7 +743,7 @@ of the original matrix as its columns and the columns of the original matrix as 
         
         Args:
             self (Matrix): The instance of the Matrix class.
-            items (Any): The input items used to determine the shape and data type of the new Matrix object. It can be any valid input that can be used to construct a Matrix object.
+            items (Any): The input items used to determine the shape and data type of the new Matrix object. It can be any valid input that can be used to forward a Matrix object.
         
         Returns:
             Matrix: A new Matrix object that has the same shape and data type as the input 'items'.

@@ -20,7 +20,9 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 import mindspore as ms
 import numpy as np
-from mindspore import ops, nn
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.nn import CrossEntropyLoss, SmoothL1Loss
 from mindspore.common.initializer import initializer, Normal
 
@@ -40,11 +42,11 @@ _CHECKPOINT_FOR_DOC = "unc-nlp/lxmert-base-uncased"
 _CONFIG_FOR_DOC = "LxmertConfig"
 
 
-class GeLU(nn.Cell):
+class GeLU(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def construct(self, x):
+    def forward(self, x):
         return gelu(x)
 
 
@@ -182,7 +184,7 @@ class LxmertForPreTrainingOutput(ModelOutput):
     cross_encoder_attentions: Optional[Tuple[ms.Tensor]] = None
 
 
-class LxmertEmbeddings(nn.Cell):
+class LxmertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -199,10 +201,10 @@ class LxmertEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, input_ids, token_type_ids=None, inputs_embeds=None):
+    def forward(self, input_ids, token_type_ids=None, inputs_embeds=None):
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -226,7 +228,7 @@ class LxmertEmbeddings(nn.Cell):
         return embeddings
 
 
-class LxmertAttention(nn.Cell):
+class LxmertAttention(nn.Module):
     def __init__(self, config, ctx_dim=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
@@ -241,9 +243,9 @@ class LxmertAttention(nn.Cell):
         # visual_dim = 2048
         if ctx_dim is None:
             ctx_dim = config.hidden_size
-        self.query = nn.Dense(config.hidden_size, self.head_size)
-        self.key = nn.Dense(ctx_dim, self.head_size)
-        self.value = nn.Dense(ctx_dim, self.head_size)
+        self.query = nn.Linear(config.hidden_size, self.head_size)
+        self.key = nn.Linear(ctx_dim, self.head_size)
+        self.value = nn.Linear(ctx_dim, self.head_size)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
@@ -255,7 +257,7 @@ class LxmertAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, context, attention_mask=None, output_attentions=False
     ):
         mixed_query_layer = self.query(hidden_states)
@@ -269,7 +271,7 @@ class LxmertAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in BertModel construct() function)
+        # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         if attention_mask is not None:
             attention_scores = attention_scores + attention_mask
 
@@ -291,27 +293,27 @@ class LxmertAttention(nn.Cell):
         return outputs
 
 
-class LxmertAttentionOutput(nn.Cell):
+class LxmertAttentionOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class LxmertCrossAttentionLayer(nn.Cell):
+class LxmertCrossAttentionLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.att = LxmertAttention(config)
         self.output = LxmertAttentionOutput(config)
 
-    def construct(
+    def forward(
         self, input_tensor, ctx_tensor, ctx_att_mask=None, output_attentions=False
     ):
         output = self.att(
@@ -328,13 +330,13 @@ class LxmertCrossAttentionLayer(nn.Cell):
         return outputs
 
 
-class LxmertSelfAttentionLayer(nn.Cell):
+class LxmertSelfAttentionLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = LxmertAttention(config)
         self.output = LxmertAttentionOutput(config)
 
-    def construct(self, input_tensor, attention_mask, output_attentions=False):
+    def forward(self, input_tensor, attention_mask, output_attentions=False):
         # Self attention attends to itself, thus keys and queries are the same (input_tensor).
         output = self.self(
             input_tensor,
@@ -353,40 +355,40 @@ class LxmertSelfAttentionLayer(nn.Cell):
         return outputs
 
 
-class LxmertIntermediate(nn.Cell):
+class LxmertIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class LxmertOutput(nn.Cell):
+class LxmertOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class LxmertLayer(nn.Cell):
+class LxmertLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.attention = LxmertSelfAttentionLayer(config)
         self.intermediate = LxmertIntermediate(config)
         self.output = LxmertOutput(config)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         outputs = self.attention(
             hidden_states, attention_mask, output_attentions=output_attentions
         )
@@ -397,7 +399,7 @@ class LxmertLayer(nn.Cell):
         return outputs
 
 
-class LxmertXLayer(nn.Cell):
+class LxmertXLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         # The cross-attention Layer
@@ -459,7 +461,7 @@ class LxmertXLayer(nn.Cell):
 
         return lang_output, visual_output
 
-    def construct(
+    def forward(
         self,
         lang_feats,
         lang_attention_mask,
@@ -494,23 +496,23 @@ class LxmertXLayer(nn.Cell):
         )
 
 
-class LxmertVisualFeatureEncoder(nn.Cell):
+class LxmertVisualFeatureEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         feat_dim = config.visual_feat_dim
         pos_dim = config.visual_pos_dim
 
         # Object feature encoding
-        self.visn_fc = nn.Dense(feat_dim, config.hidden_size)
-        self.visn_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.visn_fc = nn.Linear(feat_dim, config.hidden_size)
+        self.visn_layer_norm = nn.LayerNorm([config.hidden_size], eps=1e-12)
 
         # Box position encoding
-        self.box_fc = nn.Dense(pos_dim, config.hidden_size)
-        self.box_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.box_fc = nn.Linear(pos_dim, config.hidden_size)
+        self.box_layer_norm = nn.LayerNorm([config.hidden_size], eps=1e-12)
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, visual_feats, visual_pos):
+    def forward(self, visual_feats, visual_pos):
         x = self.visn_fc(visual_feats)
         x = self.visn_layer_norm(x)
         y = self.box_fc(visual_pos)
@@ -521,7 +523,7 @@ class LxmertVisualFeatureEncoder(nn.Cell):
         return output
 
 
-class LxmertEncoder(nn.Cell):
+class LxmertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -536,17 +538,17 @@ class LxmertEncoder(nn.Cell):
 
         # Layers
         # Using self.layer instead of self.l_layer to support loading BERT weights.
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [LxmertLayer(config) for _ in range(self.num_l_layers)]
         )
-        self.x_layers = nn.CellList(
+        self.x_layers = nn.ModuleList(
             [LxmertXLayer(config) for _ in range(self.num_x_layers)]
         )
-        self.r_layers = nn.CellList(
+        self.r_layers = nn.ModuleList(
             [LxmertLayer(config) for _ in range(self.num_r_layers)]
         )
 
-    def construct(
+    def forward(
         self,
         lang_feats,
         lang_attention_mask,
@@ -618,13 +620,13 @@ class LxmertEncoder(nn.Cell):
         )
 
 
-class LxmertPooler(nn.Cell):
+class LxmertPooler(nn.Module):
     def __init__(self, config):
         super(LxmertPooler, self).__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -633,57 +635,57 @@ class LxmertPooler(nn.Cell):
         return pooled_output
 
 
-class LxmertPredictionHeadTransform(nn.Cell):
+class LxmertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super(LxmertPredictionHeadTransform, self).__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.transform_act_fn = ACT2FN[config.hidden_act]
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=1e-12)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class LxmertLMPredictionHead(nn.Cell):
+class LxmertLMPredictionHead(nn.Module):
     def __init__(self, config, lxmert_model_embedding_weights):
         super(LxmertLMPredictionHead, self).__init__()
         self.transform = LxmertPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(
+        self.decoder = nn.Linear(
             lxmert_model_embedding_weights.shape[1],
             lxmert_model_embedding_weights.shape[0],
-            has_bias=False,
+            bias=False,
         )
         self.decoder.weight = lxmert_model_embedding_weights
         self.bias = ms.Parameter(ops.zeros(lxmert_model_embedding_weights.shape[0]))
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states) + self.bias
         return hidden_states
 
 
-class LxmertVisualAnswerHead(nn.Cell):
+class LxmertVisualAnswerHead(nn.Module):
     def __init__(self, config, num_labels):
         super().__init__()
         hid_dim = config.hidden_size
         self.logit_fc = nn.SequentialCell(
-            nn.Dense(hid_dim, hid_dim * 2),
+            nn.Linear(hid_dim, hid_dim * 2),
             GeLU(),
-            nn.LayerNorm([hid_dim * 2], epsilon=1e-12),
-            nn.Dense(hid_dim * 2, num_labels),
+            nn.LayerNorm([hid_dim * 2], eps=1e-12),
+            nn.Linear(hid_dim * 2, num_labels),
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         return self.logit_fc(hidden_states)
 
 
-class LxmertVisualObjHead(nn.Cell):
+class LxmertVisualObjHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = LxmertPredictionHeadTransform(config)
@@ -702,14 +704,14 @@ class LxmertVisualObjHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder_dict = nn.CellDict(
+        self.decoder_dict = nn.ModuleDict(
             {
-                key: nn.Dense(config.hidden_size, self.visual_losses[key]["num"])
+                key: nn.Linear(config.hidden_size, self.visual_losses[key]["num"])
                 for key in self.visual_losses
             }
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         output = {}
         for key in self.visual_losses:
@@ -717,15 +719,15 @@ class LxmertVisualObjHead(nn.Cell):
         return output
 
 
-class LxmertPreTrainingHeads(nn.Cell):
+class LxmertPreTrainingHeads(nn.Module):
     def __init__(self, config, lxmert_model_embedding_weights):
         super(LxmertPreTrainingHeads, self).__init__()
         self.predictions = LxmertLMPredictionHead(
             config, lxmert_model_embedding_weights
         )
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output):
+    def forward(self, sequence_output, pooled_output):
         prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -742,7 +744,7 @@ class LxmertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.set_data(
@@ -787,7 +789,7 @@ LXMERT_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -870,7 +872,7 @@ class LxmertModel(LxmertPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         visual_feats: Optional[ms.Tensor] = None,
@@ -1100,12 +1102,12 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
         self._set_qa_logit_layer(new_qa_logit_layer)
         return self.get_qa_logit_layer()
 
-    def get_qa_logit_layer(self) -> nn.Cell:
+    def get_qa_logit_layer(self) -> nn.Module:
         """
         Returns the linear layer that produces question answering logits.
 
         Returns:
-            `nn.Cell`: A torch module mapping the question answering prediction hidden states or `None` if LXMERT
+            `nn.Module`: A torch module mapping the question answering prediction hidden states or `None` if LXMERT
             does not have a visual answering head.
         """
         if hasattr(self, "answer_head"):
@@ -1124,9 +1126,9 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
 
         # Build new linear output
         if getattr(cur_qa_logit_layer, "bias", None) is not None:
-            new_qa_logit_layer = nn.Dense(hidden_dim, num_labels)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels)
         else:
-            new_qa_logit_layer = nn.Dense(hidden_dim, num_labels, has_bias=False)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, bias=False)
 
         # new_qa_logit_layer.to(cur_qa_logit_layer.weight.device)
 
@@ -1145,7 +1147,7 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
 
         return new_qa_logit_layer
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         visual_feats: Optional[ms.Tensor] = None,
@@ -1349,12 +1351,12 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
         self._set_qa_logit_layer(new_qa_logit_layer)
         return self.get_qa_logit_layer()
 
-    def get_qa_logit_layer(self) -> nn.Cell:
+    def get_qa_logit_layer(self) -> nn.Module:
         """
         Returns the linear layer that produces question answering logits
 
         Returns:
-            `nn.Cell`: A torch module mapping the question answering prediction hidden states. `None`: A NoneType
+            `nn.Module`: A torch module mapping the question answering prediction hidden states. `None`: A NoneType
             object if Lxmert does not have the visual answering head.
         """
 
@@ -1374,9 +1376,9 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
 
         # Build new linear output
         if getattr(cur_qa_logit_layer, "bias", None) is not None:
-            new_qa_logit_layer = nn.Dense(hidden_dim, num_labels)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels)
         else:
-            new_qa_logit_layer = nn.Dense(hidden_dim, num_labels, has_bias=False)
+            new_qa_logit_layer = nn.Linear(hidden_dim, num_labels, bias=False)
 
         # new_qa_logit_layer.to(cur_qa_logit_layer.weight.device)
 
@@ -1395,7 +1397,7 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
 
         return new_qa_logit_layer
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         visual_feats: Optional[ms.Tensor] = None,

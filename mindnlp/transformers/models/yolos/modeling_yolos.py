@@ -21,7 +21,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -101,7 +103,7 @@ class YolosObjectDetectionOutput(ModelOutput):
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-class YolosEmbeddings(nn.Cell):
+class YolosEmbeddings(nn.Module):
     """
     Construct the CLS token, detection tokens, position and patch embeddings.
 
@@ -122,7 +124,7 @@ class YolosEmbeddings(nn.Cell):
         self.interpolation = InterpolateInitialPositionEmbeddings(config)
         self.config = config
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         embeddings = self.patch_embeddings(pixel_values)
         batch_size, seq_len, _ = embeddings.shape
@@ -141,12 +143,12 @@ class YolosEmbeddings(nn.Cell):
         return embeddings
 
 
-class InterpolateInitialPositionEmbeddings(nn.Cell):
+class InterpolateInitialPositionEmbeddings(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
 
-    def construct(self, pos_embed, img_size=(800, 1344)) -> mindspore.Tensor:
+    def forward(self, pos_embed, img_size=(800, 1344)) -> mindspore.Tensor:
         cls_pos_embed = pos_embed[:, 0, :]
         cls_pos_embed = cls_pos_embed[:, None]
         det_pos_embed = pos_embed[:, -self.config.num_detection_tokens :, :]
@@ -169,12 +171,12 @@ class InterpolateInitialPositionEmbeddings(nn.Cell):
         return scale_pos_embed
 
 
-class InterpolateMidPositionEmbeddings(nn.Cell):
+class InterpolateMidPositionEmbeddings(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config
 
-    def construct(self, pos_embed, img_size=(800, 1344)) -> mindspore.Tensor:
+    def forward(self, pos_embed, img_size=(800, 1344)) -> mindspore.Tensor:
         cls_pos_embed = pos_embed[:, :, 0, :]
         cls_pos_embed = cls_pos_embed[:, None]
         det_pos_embed = pos_embed[:, :, -self.config.num_detection_tokens :, :]
@@ -201,7 +203,7 @@ class InterpolateMidPositionEmbeddings(nn.Cell):
         return scale_pos_embed
 
 
-class YolosPatchEmbeddings(nn.Cell):
+class YolosPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -221,10 +223,10 @@ class YolosPatchEmbeddings(nn.Cell):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
 
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -237,7 +239,7 @@ class YolosPatchEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfAttention with ViT->Yolos
-class YolosSelfAttention(nn.Cell):
+class YolosSelfAttention(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -250,9 +252,9 @@ class YolosSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -261,7 +263,7 @@ class YolosSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
@@ -298,7 +300,7 @@ class YolosSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->Yolos
-class YolosSelfOutput(nn.Cell):
+class YolosSelfOutput(nn.Module):
     """
     The residual connection is defined in YolosLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
@@ -306,10 +308,10 @@ class YolosSelfOutput(nn.Cell):
 
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -317,7 +319,7 @@ class YolosSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTAttention with ViT->Yolos
-class YolosAttention(nn.Cell):
+class YolosAttention(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
         self.attention = YolosSelfAttention(config)
@@ -335,14 +337,14 @@ class YolosAttention(nn.Cell):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -357,16 +359,16 @@ class YolosAttention(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->Yolos
-class YolosIntermediate(nn.Cell):
+class YolosIntermediate(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -374,13 +376,13 @@ class YolosIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTOutput with ViT->Yolos
-class YolosOutput(nn.Cell):
+class YolosOutput(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -390,7 +392,7 @@ class YolosOutput(nn.Cell):
 
 
 # Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->Yolos
-class YolosLayer(nn.Cell):
+class YolosLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: YolosConfig) -> None:
@@ -400,10 +402,10 @@ class YolosLayer(nn.Cell):
         self.attention = YolosAttention(config)
         self.intermediate = YolosIntermediate(config)
         self.output = YolosOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -432,11 +434,11 @@ class YolosLayer(nn.Cell):
         return outputs
 
 
-class YolosEncoder(nn.Cell):
+class YolosEncoder(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([YolosLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([YolosLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
         seq_length = (
@@ -458,7 +460,7 @@ class YolosEncoder(nn.Cell):
 
         self.interpolation = InterpolateMidPositionEmbeddings(config) if config.use_mid_position_embeddings else None
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         height,
@@ -522,9 +524,9 @@ class YolosPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
@@ -545,7 +547,7 @@ class YolosModel(YolosPreTrainedModel):
         self.embeddings = YolosEmbeddings(config)
         self.encoder = YolosEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pooler = YolosPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
@@ -566,7 +568,7 @@ class YolosModel(YolosPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -615,13 +617,13 @@ class YolosModel(YolosPreTrainedModel):
         )
 
 
-class YolosPooler(nn.Cell):
+class YolosPooler(nn.Module):
     def __init__(self, config: YolosConfig):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -657,7 +659,7 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         # as a dict having both a Tensor and a list.
         return [{"logits": a, "pred_boxes": b} for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         labels: Optional[List[Dict]] = None,
@@ -837,7 +839,7 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
 
 
 # Copied from transformers.models.detr.modeling_detr.DetrLoss with Detr->Yolos
-class YolosLoss(nn.Cell):
+class YolosLoss(nn.Module):
     """
     This class computes the losses for YolosForObjectDetection/YolosForSegmentation. The process happens in two steps: 1)
     we compute hungarian assignment between ground truth boxes and the outputs of the model 2) we supervise each pair
@@ -989,7 +991,7 @@ class YolosLoss(nn.Cell):
             raise ValueError(f"Loss {loss} not supported")
         return loss_map[loss](outputs, targets, indices, num_boxes)
 
-    def construct(self, outputs, targets):
+    def forward(self, outputs, targets):
         """
         This performs the loss computation.
 
@@ -1033,7 +1035,7 @@ class YolosLoss(nn.Cell):
 
 
 # Copied from transformers.models.detr.modeling_detr.DetrMLPPredictionHead with Detr->Yolos
-class YolosMLPPredictionHead(nn.Cell):
+class YolosMLPPredictionHead(nn.Module):
     """
     Very simple multi-layer perceptron (MLP, also called FFN), used to predict the normalized center coordinates,
     height and width of a bounding box w.r.t. an image.
@@ -1046,16 +1048,16 @@ class YolosMLPPredictionHead(nn.Cell):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.CellList([nn.Dense(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
+        self.layers = nn.ModuleList([nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
 
-    def construct(self, x):
+    def forward(self, x):
         for i, layer in enumerate(self.layers):
             x = ops.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 
 # Copied from transformers.models.detr.modeling_detr.DetrHungarianMatcher with Detr->Yolos
-class YolosHungarianMatcher(nn.Cell):
+class YolosHungarianMatcher(nn.Module):
     """
     This class computes an assignment between the targets and the predictions of the network.
 
@@ -1082,7 +1084,7 @@ class YolosHungarianMatcher(nn.Cell):
         if class_cost == 0 and bbox_cost == 0 and giou_cost == 0:
             raise ValueError("All costs of the Matcher can't be 0")
 
-    def construct(self, outputs, targets):
+    def forward(self, outputs, targets):
         """
         Args:
             outputs (`dict`):

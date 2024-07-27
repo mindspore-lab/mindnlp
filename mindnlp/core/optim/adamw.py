@@ -185,7 +185,7 @@ class AdamW(Optimizer):
                        self.exp_avg_sq[start_id: end_id], self.max_exp_avg_sq[start_id: end_id])
         return True
 
-    def construct(self, gradients):
+    def forward(self, gradients):
         self.assignadd(self.state_step, self.increase_tensor)
         for group_id, group in enumerate(self.param_groups):
             beta1, beta2 = group['betas']

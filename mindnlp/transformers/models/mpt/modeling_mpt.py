@@ -21,10 +21,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...modeling_utils import PreTrainedModel
 from .configuration_mpt import MptConfig, MPT_PRETRAINED_MODEL_ARCHIVE_LIST
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -66,7 +65,7 @@ def build_mpt_alibi_tensor(num_heads, sequence_length, alibi_bias_max=8):
     return alibi.squeeze(0)
 
 
-class MptAttention(nn.Cell):
+class MptAttention(nn.Module):
     """Multi-head self attention.
     Using torch or triton attention implemetation enables user to also use additive bias.
     """
@@ -126,10 +125,10 @@ class MptAttention(nn.Cell):
             self.softmax_scale = 1 / math.sqrt(self.hidden_size / self.n_heads)
 
         self.attn_dropout_p = config.attn_config.attn_pdrop
-        self.Wqkv = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=False)
-        self.out_proj = nn.Dense(self.hidden_size, self.hidden_size, has_bias=False)
+        self.Wqkv = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=False)
+        self.out_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         position_bias: mindspore.Tensor,
@@ -204,16 +203,16 @@ class MptAttention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class MptMLP(nn.Cell):
+class MptMLP(nn.Module):
 
     """
     Class representing a Multi-Layer Perceptron (MLP) for Mpt models.
 
     This class defines the architecture of a Multi-Layer Perceptron for Mpt models.
     It consists of an up projection layer, activation function (GELU), down projection layer, hidden dropout layer,
-    and a construct method to process hidden states and residuals.
+    and a forward method to process hidden states and residuals.
 
-    Inherits from nn.Cell.
+    Inherits from nn.Module.
     """
     def __init__(self, config: MptConfig):
         """
@@ -239,12 +238,12 @@ class MptMLP(nn.Cell):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.up_proj = nn.Dense(hidden_size, 4 * hidden_size, has_bias=False)
+        self.up_proj = nn.Linear(hidden_size, 4 * hidden_size, bias=False)
         self.act = nn.GELU(approximate=False)
-        self.down_proj = nn.Dense(4 * hidden_size, hidden_size, has_bias=False)
+        self.down_proj = nn.Linear(4 * hidden_size, hidden_size, bias=False)
         self.hidden_dropout = config.attn_config.attn_pdrop
 
-    def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a multi-layer perception (MLP) module.
 
@@ -270,24 +269,24 @@ class MptMLP(nn.Cell):
         return output
 
 
-class MptBlock(nn.Cell):
+class MptBlock(nn.Module):
 
     """
     MptBlock represents a block within a Multi-Head Transformer model. This block consists of layers for
-    self-attention and feed-forward networks. Inherits from nn.Cell.
+    self-attention and feed-forward networks. Inherits from nn.Module.
 
     Attributes:
         config: MptConfig object containing configuration parameters for the block.
 
     Methods:
         __init__: Initializes the MptBlock with the provided configuration.
-        construct: Constructs the block by applying self-attention and feed-forward operations on the input hidden states.
+        forward: Constructs the block by applying self-attention and feed-forward operations on the input hidden states.
 
     Example:
         ```python
         >>> config = MptConfig(...)
         >>> block = MptBlock(config)
-        >>> outputs = block.construct(hidden_states, position_bias, attention_mask)
+        >>> outputs = block.forward(hidden_states, position_bias, attention_mask)
         ```
     """
     def __init__(self, config: MptConfig):
@@ -307,14 +306,14 @@ class MptBlock(nn.Cell):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.norm_1 = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_1.bias = None
 
         self.num_heads = config.n_heads
         self.attn = MptAttention(config)
 
-        self.norm_2 = nn.LayerNorm(hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_2.bias = None
 
@@ -323,7 +322,7 @@ class MptBlock(nn.Cell):
         self.dropout_rate = config.attn_config.attn_pdrop
         self.resid_attn_dropout = nn.Dropout(p=self.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         position_bias: mindspore.Tensor,
@@ -333,7 +332,7 @@ class MptBlock(nn.Cell):
         output_attentions: bool = False,
     ):
         """
-        This method constructs a multi-head self-attention block within the MptBlock class.
+        This method forwards a multi-head self-attention block within the MptBlock class.
 
         Args:
             self: The instance of the class.
@@ -400,7 +399,7 @@ class MptPreTrainedModel(PreTrainedModel):
     of different cell types, and a static method _convert_to_mpt_cache for converting the cache format to be compatible
     with Mpt.
 
-    The _init_weights method initializes weights based on the type of neural network cell, such as nn.Dense,
+    The _init_weights method initializes weights based on the type of neural network cell, such as nn.Linear,
     nn.Embedding, and nn.LayerNorm.
     The method sets the weights and biases of the cells according to specific initializations.
 
@@ -438,11 +437,11 @@ class MptPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -480,7 +479,7 @@ class MptModel(MptPreTrainedModel):
     """
     This class represents a modified pre-trained transformer model (MptModel) for natural language processing tasks.
     It inherits from MptPreTrainedModel and includes methods for initializing the model, handling input embeddings,
-    constructing the model with various optional parameters, and building the multi-head positional tensor alibi.
+    forwarding the model with various optional parameters, and building the multi-head positional tensor alibi.
     The model consists of multiple MptBlocks organized in a sequence. It provides functionality for processing input
     data, managing past key values, applying attention masks, and computing hidden states. Additionally, the model supports
     gradient checkpointing for efficient training. The MptModel class encapsulates the core functionality required for
@@ -514,10 +513,10 @@ class MptModel(MptPreTrainedModel):
         self.wte = nn.Embedding(config.vocab_size, self.hidden_size)
 
         # Transformer blocks
-        self.blocks = nn.CellList([MptBlock(config) for _ in range(config.n_layers)])
+        self.blocks = nn.ModuleList([MptBlock(config) for _ in range(config.n_layers)])
 
         # Final Layer Norm
-        self.norm_f = nn.LayerNorm(self.hidden_size, epsilon=config.layer_norm_epsilon, elementwise_affine=False)
+        self.norm_f = nn.LayerNorm(self.hidden_size, eps=config.layer_norm_epsilon, elementwise_affine=False)
         # backward compatibility with weights on the Hub
         self.norm_f.bias = None
 
@@ -576,7 +575,7 @@ class MptModel(MptPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -728,7 +727,7 @@ class MptForCausalLM(MptPreTrainedModel):
     It provides methods for preparing inputs, generating outputs, and reordering cache for beam search.
 
     The class includes methods such as initializing the model, getting and setting output embeddings, preparing inputs
-    for generation, constructing the model, and reordering cache for beam search.
+    for generation, forwarding the model, and reordering cache for beam search.
 
     The 'MptForCausalLM' class inherits from 'MptPreTrainedModel' and utilizes a transformer model along with
     specific configurations for language modeling tasks.
@@ -739,7 +738,7 @@ class MptForCausalLM(MptPreTrainedModel):
     - get_output_embeddings: Get the output embeddings of the model.
     - set_output_embeddings: Set new output embeddings for the model.
     - prepare_inputs_for_generation: Prepare inputs for text generation.
-    - construct: Construct the model for language modeling.
+    - forward: Construct the model for language modeling.
     - _reorder_cache: Reorder the cache for beam search operations.
 
     The 'MptForCausalLM' class is designed to facilitate language modeling tasks with a focus on generating coherent
@@ -765,7 +764,7 @@ class MptForCausalLM(MptPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = MptModel(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -878,7 +877,7 @@ class MptForCausalLM(MptPreTrainedModel):
         )
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -964,21 +963,21 @@ class MptForSequenceClassification(MptPreTrainedModel):
     This class represents a sequence classification model based on the MptPreTrainedModel architecture.
 
     The MptForSequenceClassification class is a subclass of MptPreTrainedModel and is designed for sequence 
-    classification tasks. It includes methods for initializing the model, constructing the model, and
+    classification tasks. It includes methods for initializing the model, forwarding the model, and
     generating sequence classification outputs.
 
     Attributes:
         num_labels (int): The number of labels for the sequence classification task.
         transformer (MptModel): The transformer model used for sequence encoding.
-        score (nn.Dense): The linear layer for generating logits from the hidden states.
+        score (nn.Linear): The linear layer for generating logits from the hidden states.
 
     Methods:
         __init__: Initializes the MptForSequenceClassification instance with a configuration object.
-        construct: Constructs the sequence classification model and returns the classification outputs.
+        forward: Constructs the sequence classification model and returns the classification outputs.
 
     The MptForSequenceClassification class inherits from the MptPreTrainedModel class and extends its functionality 
     specifically for sequence classification tasks. It utilizes a transformer model for encoding the input sequences 
-    and a linear layer for generating logits from the hidden states. The class provides a method for constructing the 
+    and a linear layer for generating logits from the hidden states. The class provides a method for forwarding the 
     model and returning the classification outputs.
 
     Note:
@@ -1006,12 +1005,12 @@ class MptForSequenceClassification(MptPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = MptModel(config)
-        self.score = nn.Dense(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -1105,12 +1104,12 @@ class MptForTokenClassification(MptPreTrainedModel):
 
     """
     MptForTokenClassification represents a model for token classification tasks, inheriting from MptPreTrainedModel.
-    It includes methods for initializing the model and constructing the forward pass for token classification.
+    It includes methods for initializing the model and forwarding the forward pass for token classification.
 
     The __init__ method initializes the model parameters and components such as the transformer and classifier layers,
     with optional dropout specified in the config.
 
-    The construct method processes the input data through the transformer, applies dropout, computes logits using the
+    The forward method processes the input data through the transformer, applies dropout, computes logits using the
     classifier, calculates loss if labels are provided, and returns the output in the specified format.
 
     Parameters:
@@ -1169,12 +1168,12 @@ class MptForTokenClassification(MptPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -1234,14 +1233,14 @@ class MptForQuestionAnswering(MptPreTrainedModel):
 
     """
     MptForQuestionAnswering is a class representing a model for question answering. It inherits from MptPreTrainedModel
-    and provides methods for constructing a question answering model.
+    and provides methods for forwarding a question answering model.
 
     The class includes an initializer method that takes a 'config' parameter and initializes the transformer and
-    qa_outputs attributes. It also provides a 'construct' method for constructing the question answering model,
+    qa_outputs attributes. It also provides a 'forward' method for forwarding the question answering model,
     which takes input_ids, attention_mask, inputs_embeds, start_positions, end_positions, output_attentions,
     output_hidden_states, and return_dict as optional parameters and returns a QuestionAnsweringModelOutput.
 
-    The 'construct' method computes the start and end positions for the labelled span, computes the token classification
+    The 'forward' method computes the start and end positions for the labelled span, computes the token classification
     loss, and returns the total loss along with start_logits, end_logits, hidden_states, and attentions if return_dict
     is False. If return_dict is True, it returns a QuestionAnsweringModelOutput containing the loss, start_logits,
     end_logits, hidden_states, and attentions.
@@ -1263,12 +1262,12 @@ class MptForQuestionAnswering(MptPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = MptModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

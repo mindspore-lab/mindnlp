@@ -17,7 +17,7 @@
 from typing import Optional, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Initializer, Zero
 from .mappings import _get_rank, _get_group_size
@@ -32,7 +32,7 @@ from .mappings import (
 from .utils import VocabUtility, divide_and_check_no_remainder
 
 
-class VocabParallelEmbedding(nn.Cell):
+class VocabParallelEmbedding(nn.Module):
     """Embedding parallelized in the vocabulary dimension.
 
     This is mainly adapted from mindspore.nn.Embedding and all the default
@@ -87,13 +87,13 @@ class VocabParallelEmbedding(nn.Cell):
                                        dtype=dtype, init=init_method),
                                 "weight")
 
-    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+    def forward(self, input_: Tensor) -> Tensor:  # type: ignore
         r"""
         Constructs a parallel embedding for the given input tensor.
         
         Args:
             self (VocabParallelEmbedding): An instance of the VocabParallelEmbedding class.
-            input_ (Tensor): The input tensor to construct the parallel embedding for.
+            input_ (Tensor): The input tensor to forward the parallel embedding for.
         
         Returns:
             Tensor: A tensor representing the parallel embedding of the input tensor.
@@ -101,7 +101,7 @@ class VocabParallelEmbedding(nn.Cell):
         Raises:
             None
         
-        This method constructs a parallel embedding for the input tensor by performing the following steps:
+        This method forwards a parallel embedding for the input tensor by performing the following steps:
         
         1. Create an input mask by checking if each element in the input tensor is less than the vocab start index or greater than or equal to the vocab end index.
         2. Subtract the vocab start index from the input tensor to obtain a masked input tensor.
@@ -136,7 +136,7 @@ class VocabParallelEmbedding(nn.Cell):
         return output
 
 
-class ParallelEmbedding(nn.Cell):
+class ParallelEmbedding(nn.Module):
     """Embedding parallelized in the embedding dimension.
 
     This is mainly adapted from mindspore.nn.Embedding and all the default
@@ -187,20 +187,20 @@ class ParallelEmbedding(nn.Cell):
                                        dtype=dtype, init=init_method),
                                 "weight")
 
-    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+    def forward(self, input_: Tensor) -> Tensor:  # type: ignore
         r"""
         Constructs the parallel embedding for the given input tensor.
         
         Args:
             self (ParallelEmbedding): The instance of the ParallelEmbedding class.
-            input_ (Tensor): The input tensor for which the parallel embedding is to be constructed. It should be a tensor compatible with the model parallel region.
+            input_ (Tensor): The input tensor for which the parallel embedding is to be forwarded. It should be a tensor compatible with the model parallel region.
         
         Returns:
-            Tensor: The constructed parallel embedding tensor of type Tensor. The shape and size of the tensor are determined by the input tensor and the embedding size per partition.
+            Tensor: The forwarded parallel embedding tensor of type Tensor. The shape and size of the tensor are determined by the input tensor and the embedding size per partition.
         
         Raises:
             ModelParallelRegionError: If the input tensor is not compatible with the model parallel region.
-            TensorShapeError: If the shape of the input tensor does not match the expected shape for constructing the parallel embedding.
+            TensorShapeError: If the shape of the input tensor does not match the expected shape for forwarding the parallel embedding.
             UnsupportedOperationError: If the operation is not supported for the given input tensor or embedding size per partition.
         """
         input_parallel = copy_to_model_parallel_region(input_)
@@ -212,7 +212,7 @@ class ParallelEmbedding(nn.Cell):
         return output
 
 
-class ColumnParallelLinear(nn.Cell):
+class ColumnParallelLinear(nn.Module):
     """Linear layer with column parallelism.
 
     The linear layer is defined as Y = XA + b. A is parallelized along
@@ -295,7 +295,7 @@ class ColumnParallelLinear(nn.Cell):
         """get master weight of ColumnParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
-    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+    def forward(self, input_: Tensor) -> Tensor:  # type: ignore
         r"""
         Constructs the ColumnParallelLinear layer.
         
@@ -323,7 +323,7 @@ class ColumnParallelLinear(nn.Cell):
         return output
 
 
-class RowParallelLinear(nn.Cell):
+class RowParallelLinear(nn.Module):
     """Linear layer with row parallelism.
 
     The linear layer is defined as Y = XA + b. A is parallelized along
@@ -413,9 +413,9 @@ class RowParallelLinear(nn.Cell):
         """get master weight of RowParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
-    def construct(self, input_: Tensor) -> Tensor:  # type:ignore
+    def forward(self, input_: Tensor) -> Tensor:  # type:ignore
         r"""
-        This method constructs a linear layer operation in a row-parallel fashion.
+        This method forwards a linear layer operation in a row-parallel fashion.
         
         Args:
             self (RowParallelLinear): The instance of the RowParallelLinear class.

@@ -211,8 +211,8 @@ class Evaluator:
         return True
 
     def _data_process(self, data, tgt_columns):
-        """Process data match the network construct"""
-        sig = signature(self.network.construct)
+        """Process data match the network forward"""
+        sig = signature(self.network.forward)
         net_args = sig.parameters
 
         inputs = {}

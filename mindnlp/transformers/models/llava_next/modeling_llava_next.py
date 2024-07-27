@@ -21,7 +21,9 @@ from functools import reduce
 import numpy as np
 
 import mindspore
-from mindspore import nn, Tensor, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import Normal
 
 from ...modeling_utils import PreTrainedModel
@@ -146,24 +148,24 @@ class LlavaNextCausalLMOutputWithPast(ModelOutput):
 
 
 # Copied from transformers.models.llava.modeling_llava.LlavaMultiModalProjector with Llava->LlavaNext
-class LlavaNextMultiModalProjector(nn.Cell):
+class LlavaNextMultiModalProjector(nn.Module):
 
     """
     This class represents a multi-modal projector for the LlavaNext model.
     It is used to project image features and text embeddings into a shared hidden space.
     
     Inherits from:
-        nn.Cell
+        nn.Module
     
     Attributes:
-        linear_1 (nn.Dense): A fully connected layer that maps image features to the hidden size specified
+        linear_1 (nn.Linear): A fully connected layer that maps image features to the hidden size specified
             in the configuration.
         act (function): An activation function chosen based on the configuration's specified projector hidden activation.
-        linear_2 (nn.Dense): A fully connected layer that maps the hidden states from linear_1 to the hidden size
+        linear_2 (nn.Linear): A fully connected layer that maps the hidden states from linear_1 to the hidden size
             specified in the configuration.
     
     Methods:
-        construct(image_features):
+        forward(image_features):
             Projects the given image features into the shared hidden space by applying the linear transformations
             and activation function.
     
@@ -185,13 +187,13 @@ class LlavaNextMultiModalProjector(nn.Cell):
         """
         super().__init__()
 
-        self.linear_1 = nn.Dense(
-            config.vision_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_1 = nn.Linear(
+            config.vision_config.hidden_size, config.text_config.hidden_size, bias=True)
         self.act = ACT2FN[config.projector_hidden_act]
-        self.linear_2 = nn.Dense(
-            config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_2 = nn.Linear(
+            config.text_config.hidden_size, config.text_config.hidden_size, bias=True)
 
-    def construct(self, image_features):
+    def forward(self, image_features):
         """
         Constructs the hidden states for the LlavaNextMultiModalProjector.
         
@@ -236,7 +238,7 @@ class LlavaNextPreTrainedModel(PreTrainedModel):
         Args:
             self (LlavaNextPreTrainedModel): The instance of the LlavaNextPreTrainedModel class.
             cell: The cell for which the weights need to be initialized.
-                It can be of type nn.Embedding, nn.Dense, or nn.Conv2d.
+                It can be of type nn.Embedding, nn.Linear, or nn.Conv2d.
 
         Returns:
             None.
@@ -257,7 +259,7 @@ class LlavaNextPreTrainedModel(PreTrainedModel):
         if hasattr(cell, "class_embedding"):
             cell.class_embedding.initialize(Normal(std))
 
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.data.initialize(Normal(std))
             if cell.bias is not None:
                 cell.bias.initialize('zeros')
@@ -277,7 +279,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
     The class provides methods for setting and getting input embeddings, output embeddings, decoder, and for tying weights.
     It also includes functionality for resizing token embeddings and merging input IDs with image features.
-    Additionally, the class offers a 'construct' method for generating text based on input IDs, pixel values,
+    Additionally, the class offers a 'forward' method for generating text based on input IDs, pixel values,
     attention masks, and other optional parameters. The 'prepare_inputs_for_generation' method prepares input data
     for text generation by handling past key values, inputs embeddings, pixel values, and attention masks.
 
@@ -550,7 +552,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
         return final_embedding, final_attention_mask, final_labels, position_ids
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         pixel_values: mindspore.Tensor = None,

@@ -19,7 +19,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
@@ -61,14 +62,14 @@ FUNNEL_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 INF = 1e6
 
-class FunnelEmbeddings(nn.Cell):
+class FunnelEmbeddings(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.d_model], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(
+    def forward(
         self, input_ids: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         if inputs_embeds is None:
@@ -78,7 +79,7 @@ class FunnelEmbeddings(nn.Cell):
         return embeddings
 
 
-class FunnelAttentionStructure(nn.Cell):
+class FunnelAttentionStructure(nn.Module):
     """
     Contains helpers for `FunnelRelMultiheadAttention `.
     """
@@ -183,7 +184,7 @@ class FunnelAttentionStructure(nn.Cell):
                 else:
                     pooled_pos = self.stride_pool_pos(pos, block_index)
 
-                    # construct rel_pos_id
+                    # forward rel_pos_id
                     stride = 2 ** (block_index - 1)
                     rel_pos = self.relative_pos(pos, stride, pooled_pos, shift=2)
                     rel_pos = rel_pos[:, None] + zero_offset
@@ -357,7 +358,7 @@ def _relative_shift_gather(positional_attn: mindspore.Tensor, context_len: int, 
     return positional_attn
 
 
-class FunnelRelMultiheadAttention(nn.Cell):
+class FunnelRelMultiheadAttention(nn.Module):
     def __init__(self, config: FunnelConfig, block_index: int) -> None:
         super().__init__()
         self.config = config
@@ -367,9 +368,9 @@ class FunnelRelMultiheadAttention(nn.Cell):
         self.hidden_dropout = nn.Dropout(p=config.hidden_dropout)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
-        self.q_head = nn.Dense(d_model, n_head * d_head, has_bias=False)
-        self.k_head = nn.Dense(d_model, n_head * d_head)
-        self.v_head = nn.Dense(d_model, n_head * d_head)
+        self.q_head = nn.Linear(d_model, n_head * d_head, bias=False)
+        self.k_head = nn.Linear(d_model, n_head * d_head)
+        self.v_head = nn.Linear(d_model, n_head * d_head)
 
         self.r_w_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
         self.r_r_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
@@ -377,8 +378,8 @@ class FunnelRelMultiheadAttention(nn.Cell):
         self.r_s_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
         self.seg_embed = mindspore.Parameter(ops.zeros([2, n_head, d_head]))
 
-        self.post_proj = nn.Dense(n_head * d_head, d_model)
-        self.layer_norm = nn.LayerNorm([d_model], epsilon=config.layer_norm_eps)
+        self.post_proj = nn.Linear(n_head * d_head, d_model)
+        self.layer_norm = nn.LayerNorm([d_model], eps=config.layer_norm_eps)
         self.scale = 1.0 / (d_head**0.5)
 
     def relative_positional_attention(self, position_embeds, q_head, context_len, cls_mask=None):
@@ -449,7 +450,7 @@ class FunnelRelMultiheadAttention(nn.Cell):
             token_type_attn *= cls_mask
         return token_type_attn
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -503,17 +504,17 @@ class FunnelRelMultiheadAttention(nn.Cell):
         return (output, attn_prob) if output_attentions else (output,)
 
 
-class FunnelPositionwiseFFN(nn.Cell):
+class FunnelPositionwiseFFN(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
-        self.linear_1 = nn.Dense(config.d_model, config.d_inner)
+        self.linear_1 = nn.Linear(config.d_model, config.d_inner)
         self.activation_function = ACT2FN[config.hidden_act]
         self.activation_dropout = nn.Dropout(p=config.activation_dropout)
-        self.linear_2 = nn.Dense(config.d_inner, config.d_model)
+        self.linear_2 = nn.Linear(config.d_inner, config.d_model)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.d_model], eps=config.layer_norm_eps)
 
-    def construct(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
         h = self.linear_1(hidden)
         h = self.activation_function(h)
         h = self.activation_dropout(h)
@@ -522,13 +523,13 @@ class FunnelPositionwiseFFN(nn.Cell):
         return self.layer_norm(hidden + h)
 
 
-class FunnelLayer(nn.Cell):
+class FunnelLayer(nn.Module):
     def __init__(self, config: FunnelConfig, block_index: int) -> None:
         super().__init__()
         self.attention = FunnelRelMultiheadAttention(config, block_index)
         self.ffn = FunnelPositionwiseFFN(config)
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -541,19 +542,19 @@ class FunnelLayer(nn.Cell):
         return (output, attn[1]) if output_attentions else (output,)
 
 
-class FunnelEncoder(nn.Cell):
+class FunnelEncoder(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
         self.attention_structure = FunnelAttentionStructure(config)
-        self.blocks = nn.CellList(
+        self.blocks = nn.ModuleList(
             [
-                nn.CellList([FunnelLayer(config, block_index) for _ in range(block_size)])
+                nn.ModuleList([FunnelLayer(config, block_index) for _ in range(block_size)])
                 for block_index, block_size in enumerate(config.block_sizes)
             ]
         )
 
-    def construct(
+    def forward(
         self,
         inputs_embeds: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -625,14 +626,14 @@ def upsample(
     return output
 
 
-class FunnelDecoder(nn.Cell):
+class FunnelDecoder(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
         self.attention_structure = FunnelAttentionStructure(config)
-        self.layers = nn.CellList([FunnelLayer(config, 0) for _ in range(config.num_decoder_layers)])
+        self.layers = nn.ModuleList([FunnelLayer(config, 0) for _ in range(config.num_decoder_layers)])
 
-    def construct(
+    def forward(
         self,
         final_hidden: mindspore.Tensor,
         first_block_hidden: mindspore.Tensor,
@@ -674,16 +675,16 @@ class FunnelDecoder(nn.Cell):
         return BaseModelOutput(last_hidden_state=hidden, hidden_states=all_hidden_states, attentions=all_attentions)
 
 
-class FunnelDiscriminatorPredictions(nn.Cell):
+class FunnelDiscriminatorPredictions(nn.Module):
     """Prediction module for the discriminator, made up of two dense layers."""
 
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
-        self.dense = nn.Dense(config.d_model, config.d_model)
-        self.dense_prediction = nn.Dense(config.d_model, 1)
+        self.dense = nn.Linear(config.d_model, config.d_model)
+        self.dense_prediction = nn.Linear(config.d_model, 1)
 
-    def construct(self, discriminator_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, discriminator_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(discriminator_hidden_states)
         hidden_states = ACT2FN[self.config.hidden_act](hidden_states)
         logits = self.dense_prediction(hidden_states).squeeze(-1)
@@ -729,14 +730,14 @@ class FunnelPreTrainedModel(PreTrainedModel):
                 cell.word_embeddings.weight.data[cell.padding_idx].zero_()
 
 
-class FunnelClassificationHead(nn.Cell):
+class FunnelClassificationHead(nn.Module):
     def __init__(self, config: FunnelConfig, n_labels: int) -> None:
         super().__init__()
-        self.linear_hidden = nn.Dense(config.d_model, config.d_model)
+        self.linear_hidden = nn.Linear(config.d_model, config.d_model)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.linear_out = nn.Dense(config.d_model, n_labels)
+        self.linear_out = nn.Linear(config.d_model, n_labels)
 
-    def construct(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
         hidden = self.linear_hidden(hidden)
         hidden = ops.tanh(hidden)
         hidden = self.dropout(hidden)
@@ -767,7 +768,7 @@ class FunnelBaseModel(FunnelPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -834,7 +835,7 @@ class FunnelModel(FunnelPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -921,7 +922,7 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1001,18 +1002,18 @@ class FunnelForMaskedLM(FunnelPreTrainedModel):
         super().__init__(config)
 
         self.funnel = FunnelModel(config)
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_output_embeddings(self) -> nn.Dense:
+    def get_output_embeddings(self) -> nn.Linear:
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1074,7 +1075,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1153,7 +1154,7 @@ class FunnelForMultipleChoice(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1223,12 +1224,12 @@ class FunnelForTokenClassification(FunnelPreTrainedModel):
 
         self.funnel = FunnelModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1284,12 +1285,12 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.funnel = FunnelModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

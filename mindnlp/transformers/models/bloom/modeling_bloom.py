@@ -21,11 +21,11 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -87,7 +87,7 @@ def build_alibi_tensor(attention_mask: mindspore.Tensor, num_heads: int, dtype) 
         )
         num_remaining_heads = min(closest_power_of_2, num_heads - closest_power_of_2)
         extra_powers = ops.arange(1, 1 + 2 * num_remaining_heads, 2, dtype=mindspore.int32)
-        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], axis=0)
+        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], dim=0)
 
     # Note: alibi will added to the attention bias that will be applied to the query, key product of attention
     # => therefore alibi will have to be of shape (batch_size, num_heads, query_length, key_length)
@@ -95,7 +95,7 @@ def build_alibi_tensor(attention_mask: mindspore.Tensor, num_heads: int, dtype) 
     # => the query_length dimension will then be broadcasted correctly
     # This is more or less identical to T5's relative position bias:
     # https://github.com/huggingface/transformers/blob/f681437203baa7671de3174b0fa583c349d9d5e1/src/transformers/models/t5/modeling_t5.py#L527
-    arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
+    arange_tensor = ((ops.cumsum(attention_mask, dim=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None] * arange_tensor
     return alibi.reshape(batch_size * num_heads, 1, seq_length).to(dtype)
 
@@ -114,17 +114,17 @@ def dropout_add(x: mindspore.Tensor, residual: mindspore.Tensor, prob: float, tr
         training (`bool`, *required*):
             training mode
     """
-    out = ops.dropout(x, p=prob, training=training)
+    out = F.dropout(x, p=prob, training=training)
     out = residual + out
     return out
 
 
-class BloomAttention(nn.Cell):
+class BloomAttention(nn.Module):
 
     """
     BloomAttention class represents an attention mechanism used in neural network models for processing sequential data.
-    This class inherits from nn.Cell and includes methods for initializing the attention mechanism, splitting and merging heads,
-    and constructing the attention mechanism for a specific layer. The attention mechanism involves performing operations on
+    This class inherits from nn.Module and includes methods for initializing the attention mechanism, splitting and merging heads,
+    and forwarding the attention mechanism for a specific layer. The attention mechanism involves performing operations on
     query, key, and value tensors to compute attention scores and produce context layers. Additionally, it supports features
     such as caching past layers, applying attention masks, and handling head masks. The class also provides options for
     fine-tuning the attention mechanism based on pretraining steps and optimization preferences.
@@ -172,8 +172,8 @@ class BloomAttention(nn.Cell):
         self.inv_norm_factor = 1.0 / math.sqrt(self.head_dim)
         self.beta = 1.0
 
-        self.query_key_value = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=True)
-        self.dense = nn.Dense(self.hidden_size, self.hidden_size)
+        self.query_key_value = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=True)
+        self.dense = nn.Linear(self.hidden_size, self.hidden_size)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
     def _split_heads(self, fused_qkv: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
@@ -217,7 +217,7 @@ class BloomAttention(nn.Cell):
         # batch_size, seq_length, num_heads, head_dim -> batch_size, seq_length, num_heads * head_dim
         return x.reshape(batch_size, seq_length, self.num_heads * self.head_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         residual: mindspore.Tensor,
@@ -229,7 +229,7 @@ class BloomAttention(nn.Cell):
         output_attentions: bool = False,
     ):
         """
-        Method 'construct' in the class 'BloomAttention'.
+        Method 'forward' in the class 'BloomAttention'.
 
         Args:
             self (BloomAttention): The instance of the BloomAttention class.
@@ -263,8 +263,8 @@ class BloomAttention(nn.Cell):
             # concatenate along seq_length dimension:
             #  - key: [batch_size * self.num_heads, head_dim, kv_length]
             #  - value: [batch_size * self.num_heads, kv_length, head_dim]
-            key_layer = ops.cat((past_key, key_layer), axis=2)
-            value_layer = ops.cat((past_value, value_layer), axis=1)
+            key_layer = ops.cat((past_key, key_layer), dim=2)
+            value_layer = ops.cat((past_value, value_layer), dim=1)
 
         _, _, kv_length = key_layer.shape
 
@@ -290,8 +290,8 @@ class BloomAttention(nn.Cell):
         # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
         if input_dtype == mindspore.float16:
             attention_scores = attention_scores.to(mindspore.float32)
-        attn_weights = ops.masked_fill(attention_scores, attention_mask, finfo(attention_scores.dtype, 'min'))
-        attention_probs = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(input_dtype)
+        attn_weights = ops.masked_fill(attention_scores, attention_mask, float(ops.finfo(attention_scores.dtype).min))
+        attention_probs = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(input_dtype)
 
         # [batch_size, num_heads, q_length, kv_length]
         attention_probs = self.attention_dropout(attention_probs)
@@ -313,7 +313,7 @@ class BloomAttention(nn.Cell):
             slices = self.hidden_size / self.pretraining_tp
             output_tensor = ops.zeros_like(context_layer)
             for i in range(self.pretraining_tp):
-                output_tensor = output_tensor + ops.dense(
+                output_tensor = output_tensor + F.linear(
                     context_layer[:, :, int(i * slices) : int((i + 1) * slices)],
                     self.dense.weight[:, int(i * slices) : int((i + 1) * slices)],
                 )
@@ -329,11 +329,11 @@ class BloomAttention(nn.Cell):
         return outputs
 
 
-class BloomMLP(nn.Cell):
+class BloomMLP(nn.Module):
 
     """
     BloomMLP is a multi-layer perceptron (MLP) that is used for pre-training in natural language processing (NLP) tasks. 
-    This class inherits from nn.Cell and implements the forward propagation logic for the MLP.
+    This class inherits from nn.Module and implements the forward propagation logic for the MLP.
 
     Attributes:
         pretraining_tp (int): The number of times the MLP will be pre-trained.
@@ -342,7 +342,7 @@ class BloomMLP(nn.Cell):
 
     Methods:
         __init__: Initializes the BloomMLP object with the provided configuration.
-        construct: Implements the forward propagation logic for the MLP.
+        forward: Implements the forward propagation logic for the MLP.
 
     Example usage:
         ```python
@@ -350,7 +350,7 @@ class BloomMLP(nn.Cell):
         >>> mlp = BloomMLP(config)
         >>> hidden_states = mindspore.Tensor(shape=(1, 768, 10), dtype=mindspore.float32)
         >>> residual = mindspore.Tensor(shape=(1, 768, 10), dtype=mindspore.float32)
-        >>> output = mlp.construct(hidden_states, residual)
+        >>> output = mlp.forward(hidden_states, residual)
         ```
 
     Note:
@@ -381,12 +381,12 @@ class BloomMLP(nn.Cell):
 
         self.pretraining_tp = config.pretraining_tp
         self.slow_but_exact = config.slow_but_exact
-        self.dense_h_to_4h = nn.Dense(hidden_size, 4 * hidden_size)
+        self.dense_h_to_4h = nn.Linear(hidden_size, 4 * hidden_size)
         self.gelu_impl = nn.GELU()
-        self.dense_4h_to_h = nn.Dense(4 * hidden_size, hidden_size)
+        self.dense_4h_to_h = nn.Linear(4 * hidden_size, hidden_size)
         self.hidden_dropout = config.hidden_dropout
 
-    def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the output tensor for the BloomMLP model.
 
@@ -409,7 +409,7 @@ class BloomMLP(nn.Cell):
             intermediate_output = ops.zeros_like(residual)
             slices = self.dense_4h_to_h.weight.shape[-1] / self.pretraining_tp
             for i in range(self.pretraining_tp):
-                intermediate_output = intermediate_output + ops.dense(
+                intermediate_output = intermediate_output + F.linear(
                     hidden_states[:, :, int(i * slices) : int((i + 1) * slices)],
                     self.dense_4h_to_h.weight[:, int(i * slices) : int((i + 1) * slices)],
                 )
@@ -421,7 +421,7 @@ class BloomMLP(nn.Cell):
         return output
 
 
-class BloomBlock(nn.Cell):
+class BloomBlock(nn.Module):
 
     """
     This class represents a block of the Bloom transformer model.
@@ -462,17 +462,17 @@ class BloomBlock(nn.Cell):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         self.num_heads = config.n_head
         self.self_attention = BloomAttention(config)
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         self.mlp = BloomMLP(config)
 
         self.apply_residual_connection_post_layernorm = config.apply_residual_connection_post_layernorm
         self.hidden_dropout = config.hidden_dropout
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         alibi: mindspore.Tensor,
@@ -571,7 +571,7 @@ class BloomPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -634,14 +634,14 @@ class BloomModel(BloomPreTrainedModel):
     """
     This class represents a custom implementation of a transformer model called BloomModel.
     It inherits from the BloomPreTrainedModel class and includes functionalities for building the model architecture,
-    setting and getting input embeddings, and constructing the model for inference or training.
+    setting and getting input embeddings, and forwarding the model for inference or training.
 
     Attributes:
         embed_dim (int): The dimension of the word embeddings.
         num_heads (int): The number of attention heads in the model.
         word_embeddings (nn.Embedding): The word embeddings layer.
         word_embeddings_layernorm (nn.LayerNorm): Layer normalization for word embeddings.
-        h (nn.CellList): List of BloomBlocks representing the hidden layers of the model.
+        h (nn.ModuleList): List of BloomBlocks representing the hidden layers of the model.
         ln_f (nn.LayerNorm): Layer normalization for the final hidden states.
         gradient_checkpointing (bool): Flag indicating whether gradient checkpointing is enabled.
 
@@ -649,7 +649,7 @@ class BloomModel(BloomPreTrainedModel):
         build_alibi_tensor: Builds an alibi tensor for the model.
         get_input_embeddings: Retrieves the current input embeddings.
         set_input_embeddings: Updates the input embeddings with new values.
-        construct: Constructs the model for inference or training, handling various input parameters and configurations.
+        forward: Constructs the model for inference or training, handling various input parameters and configurations.
 
     Note:
         This class is designed for custom transformer-based models and may require specific configurations and input formats.
@@ -683,13 +683,13 @@ class BloomModel(BloomPreTrainedModel):
 
         # Embedding + LN Embedding
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
-        self.word_embeddings_layernorm = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.word_embeddings_layernorm = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Transformer blocks
-        self.h = nn.CellList([BloomBlock(config) for _ in range(config.num_hidden_layers)])
+        self.h = nn.ModuleList([BloomBlock(config) for _ in range(config.num_hidden_layers)])
 
         # Final Layer Norm
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
 
@@ -750,7 +750,7 @@ class BloomModel(BloomPreTrainedModel):
         """
         self.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -866,7 +866,7 @@ class BloomModel(BloomPreTrainedModel):
             past_key_values_length = past_key_values[0][0].shape[2]
             seq_length_with_past = seq_length_with_past + past_key_values_length
         if attention_mask is None:
-            attention_mask = ops.ones((batch_size, seq_length_with_past))
+            attention_mask = ops.ones(batch_size, seq_length_with_past)
 
         alibi = self.build_alibi_tensor(attention_mask, self.num_heads, dtype=hidden_states.dtype)
 
@@ -932,14 +932,14 @@ class BloomForCausalLM(BloomPreTrainedModel):
     - `set_output_embeddings`: Sets the language modeling head to the provided embeddings.
     - `prepare_inputs_for_generation`: Prepares the inputs for generation by removing the prefix length from the
     input sequence and converting the past key values to BLOOM cache format.
-    - `construct`: Constructs the BLOOM model by passing the inputs through the transformer and language modeling head.
+    - `forward`: Constructs the BLOOM model by passing the inputs through the transformer and language modeling head.
     Optionally computes the loss if labels are provided.
     - `_reorder_cache`: Reorders the past key values cache to match the beam indices during beam search or beam sampling.
 
     Additionally, the class inherits all the properties and methods from the `BloomPreTrainedModel` class.
 
     Note:
-        The `labels` parameter in the `construct` method is for language modeling labels, and the `position_ids`
+        The `labels` parameter in the `forward` method is for language modeling labels, and the `position_ids`
         parameter is deprecated and will be removed in the future.
 
     """
@@ -961,7 +961,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = BloomModel(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1059,7 +1059,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
         )
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -1114,7 +1114,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length)
             )
 
@@ -1161,7 +1161,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
     loss and handling batch processing. The class also supports different problem types such as
     regression, single-label classification, and multi-label classification.
 
-    The class includes the 'construct' method for generating model outputs and computing loss based on the input data.
+    The class includes the 'forward' method for generating model outputs and computing loss based on the input data.
     It also handles deprecated arguments and provides warnings for functionality that will be
     removed in future versions. Additionally, the method supports the use of padding tokens and provides appropriate
     error handling for different scenarios.
@@ -1191,12 +1191,12 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = BloomModel(config)
-        self.score = nn.Dense(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -1265,10 +1265,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        if isinstance(sequence_lengths, int):
-            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
-        else:
-            pooled_logits = ops.gather(logits, sequence_lengths, 1, 1)
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
@@ -1286,7 +1283,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
                 else:
                     loss = ops.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits, labels)
+                loss = F.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
@@ -1318,7 +1315,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
     Methods:
        `__init__`: Initializes a new instance of the `BloomForTokenClassification` class.
             It takes a `BloomConfig` object as input and sets the necessary attributes.
-       `construct`: Constructs the BLOOM model for token classification.
+       `forward`: Constructs the BLOOM model for token classification.
             It takes various input tensors and arguments and returns the model output.
 
             Parameters:
@@ -1368,12 +1365,12 @@ class BloomForTokenClassification(BloomPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
@@ -1425,7 +1422,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
         loss = None
         if labels is not None:
             batch_size, seq_length = labels.shape
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(batch_size * seq_length, self.num_labels), labels.view(batch_size * seq_length)
             )
 
@@ -1445,7 +1442,7 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
 
     """
     This class represents a Bloom model for question answering tasks. It is a subclass of BloomPreTrainedModel, which provides the basic structure and functionality for pre-trained models. The
-    BloomForQuestionAnswering class includes methods for model construction and inference.
+    BloomForQuestionAnswering class includes methods for model forwardion and inference.
 
     Attributes:
         transformer: An instance of the BloomModel class, which is responsible for the main transformer
@@ -1455,7 +1452,7 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
 
     Methods:
         __init__(self, config): Initializes the BloomForQuestionAnswering instance with a given configuration.
-        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, start_positions,
+        forward(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, start_positions,
             end_positions, output_attentions, output_hidden_states, return_dict):
             Constructs the model for question answering based on the given inputs and returns the predicted start
             and end logits of the answer span, as well as other optional outputs.
@@ -1476,12 +1473,12 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = BloomModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1537,8 +1534,8 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

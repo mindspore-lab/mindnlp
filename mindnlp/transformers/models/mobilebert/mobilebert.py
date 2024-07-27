@@ -26,8 +26,9 @@ from dataclasses import dataclass
 import mindspore
 from mindspore import Parameter, Tensor
 import mindspore.numpy as mnp
-from mindspore import nn
-from mindspore import ops
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
 from mindnlp.utils import ModelOutput
@@ -49,7 +50,7 @@ from ...activations import ACT2FN
 MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST = ["google/mobilebert-uncased"]
 
 
-class NoNorm(nn.Cell):
+class NoNorm(nn.Module):
     """NoNorm"""
     def __init__(self, feat_size):
         """
@@ -69,7 +70,7 @@ class NoNorm(nn.Cell):
         self.bias = Parameter(ops.zeros(feat_size))
         self.weight = Parameter(ops.ones(feat_size))
 
-    def construct(self, input_tensor: Tensor) -> Tensor:
+    def forward(self, input_tensor: Tensor) -> Tensor:
         """
         Constructs a normalized tensor by applying weight and bias to the input tensor.
         
@@ -90,7 +91,7 @@ class NoNorm(nn.Cell):
 NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
 
 
-class MobileBertEmbeddings(nn.Cell):
+class MobileBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
@@ -118,13 +119,13 @@ class MobileBertEmbeddings(nn.Cell):
 
         embed_dim_multiplier = 3 if self.trigram_input else 1
         embedded_input_size = self.embedding_size * embed_dim_multiplier
-        self.embedding_transformation = nn.Dense(embedded_input_size, config.hidden_size)
+        self.embedding_transformation = nn.Linear(embedded_input_size, config.hidden_size)
 
         self.LayerNorm = NORM2FN[config.normalization_type](config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.position_ids=ops.BroadcastTo(shape=(1, -1))(ops.arange(config.max_position_embeddings))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         token_type_ids: Optional[Tensor] = None,
@@ -142,7 +143,7 @@ class MobileBertEmbeddings(nn.Cell):
             inputs_embeds (Optional[Tensor]): The input tensor containing pre-computed embeddings. Default is None.
         
         Returns:
-            Tensor: The constructed embeddings tensor for the MobileBERT model.
+            Tensor: The forwarded embeddings tensor for the MobileBERT model.
         
         Raises:
             ValueError: If the input_ids shape is invalid or if there are shape mismatches during concatenation.
@@ -192,7 +193,7 @@ class MobileBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class MobileBertSelfAttention(nn.Cell):
+class MobileBertSelfAttention(nn.Module):
     """MobileBertSelfAttention"""
     def __init__(self, config):
         """
@@ -213,9 +214,9 @@ class MobileBertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.true_hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.true_hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.true_hidden_size, self.all_head_size)
-        self.value = nn.Dense(
+        self.query = nn.Linear(config.true_hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.true_hidden_size, self.all_head_size)
+        self.value = nn.Linear(
             config.true_hidden_size if config.use_bottleneck_attention else config.hidden_size, self.all_head_size
         )
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
@@ -226,7 +227,7 @@ class MobileBertSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.transpose(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         query_tensor: Tensor,
         key_tensor: Tensor,
@@ -285,7 +286,7 @@ class MobileBertSelfAttention(nn.Cell):
         return outputs
 
 
-class MobileBertSelfOutput(nn.Cell):
+class MobileBertSelfOutput(nn.Module):
     """MobileBertSelfOutput"""
     def __init__(self, config):
         """
@@ -310,12 +311,12 @@ class MobileBertSelfOutput(nn.Cell):
         """
         super().__init__()
         self.use_bottleneck = config.use_bottleneck
-        self.dense = nn.Dense(config.true_hidden_size, config.true_hidden_size)
+        self.dense = nn.Linear(config.true_hidden_size, config.true_hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
         if not self.use_bottleneck:
             self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
         """
         Constructs the output of the MobileBERT self-attention layer.
 
@@ -329,7 +330,7 @@ class MobileBertSelfOutput(nn.Cell):
 
         Returns:
             Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
-                This tensor represents the constructed output of the MobileBERT self-attention layer.
+                This tensor represents the forwarded output of the MobileBERT self-attention layer.
 
         Raises:
             None.
@@ -341,7 +342,7 @@ class MobileBertSelfOutput(nn.Cell):
         return layer_outputs
 
 
-class MobileBertAttention(nn.Cell):
+class MobileBertAttention(nn.Module):
     """MobileBertAttention"""
     def __init__(self, config):
         """
@@ -376,14 +377,14 @@ class MobileBertAttention(nn.Cell):
         self.self.query = prune_conv1d_layer(self.self.query, index)
         self.self.key = prune_conv1d_layer(self.self.key, index)
         self.self.value = prune_conv1d_layer(self.self.value, index)
-        self.output.dense = prune_conv1d_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_conv1d_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         query_tensor: Tensor,
         key_tensor: Tensor,
@@ -416,7 +417,7 @@ class MobileBertAttention(nn.Cell):
         Raises:
             None
 
-        This method constructs the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor,
+        This method forwards the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor,
         and value_tensor as inputs and performs self-attention calculation. The attention_output is then computed using
         the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and
         any additional outputs obtained from the attention mechanism. The attention_mask and head_mask can be optionally
@@ -438,7 +439,7 @@ class MobileBertAttention(nn.Cell):
         return outputs
 
 
-class MobileBertIntermediate(nn.Cell):
+class MobileBertIntermediate(nn.Module):
     """MobileBertIntermediate"""
     def __init__(self, config):
         """
@@ -461,17 +462,17 @@ class MobileBertIntermediate(nn.Cell):
             TypeError: If the 'hidden_act' parameter is not a string or callable function.
         """
         super().__init__()
-        self.dense = nn.Dense(config.true_hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.true_hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
-        Method 'construct' in the class 'MobileBertIntermediate'.
+        Method 'forward' in the class 'MobileBertIntermediate'.
 
-        This method constructs the intermediate hidden states using the provided input tensor.
+        This method forwards the intermediate hidden states using the provided input tensor.
 
         Args:
             hidden_states (Tensor): The input tensor containing hidden states.
@@ -489,7 +490,7 @@ class MobileBertIntermediate(nn.Cell):
         return hidden_states
 
 
-class OutputBottleneck(nn.Cell):
+class OutputBottleneck(nn.Module):
     """OutputBottleneck"""
     def __init__(self, config):
         """
@@ -513,11 +514,11 @@ class OutputBottleneck(nn.Cell):
             ValueError: If there are issues with the configuration parameters provided.
         """
         super().__init__()
-        self.dense = nn.Dense(config.true_hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.true_hidden_size, config.hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
         """
         Constructs the output of the OutputBottleneck layer.
 
@@ -545,7 +546,7 @@ class OutputBottleneck(nn.Cell):
         return layer_outputs
 
 
-class MobileBertOutput(nn.Cell):
+class MobileBertOutput(nn.Module):
     """MobileBertOutput"""
     def __init__(self, config):
         """
@@ -572,14 +573,14 @@ class MobileBertOutput(nn.Cell):
         """
         super().__init__()
         self.use_bottleneck = config.use_bottleneck
-        self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.true_hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
         if not self.use_bottleneck:
             self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         else:
             self.bottleneck = OutputBottleneck(config)
 
-    def construct(
+    def forward(
         self, intermediate_states: Tensor, residual_tensor_1: Tensor, residual_tensor_2: Tensor
     ) -> Tensor:
         '''
@@ -592,7 +593,7 @@ class MobileBertOutput(nn.Cell):
             residual_tensor_2 (Tensor): The tensor representing the second residual connection.
 
         Returns:
-            Tensor: The output tensor representing the constructed layer.
+            Tensor: The output tensor representing the forwarded layer.
 
         Raises:
             None
@@ -607,7 +608,7 @@ class MobileBertOutput(nn.Cell):
         return layer_output
 
 
-class BottleneckLayer(nn.Cell):
+class BottleneckLayer(nn.Module):
     """BottleneckLayer"""
     def __init__(self, config):
         """
@@ -630,10 +631,10 @@ class BottleneckLayer(nn.Cell):
             ValueError: If the config object is missing any of the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intra_bottleneck_size)
+        self.dense = nn.Linear(config.hidden_size, config.intra_bottleneck_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.intra_bottleneck_size)
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
         Constructs a bottleneck layer.
 
@@ -658,7 +659,7 @@ class BottleneckLayer(nn.Cell):
         return layer_input
 
 
-class Bottleneck(nn.Cell):
+class Bottleneck(nn.Module):
     """Bottleneck"""
     def __init__(self, config):
         """
@@ -687,16 +688,16 @@ class Bottleneck(nn.Cell):
         if self.key_query_shared_bottleneck:
             self.attention = BottleneckLayer(config)
 
-    def construct(self, hidden_states: Tensor) -> Tuple[Tensor]:
+    def forward(self, hidden_states: Tensor) -> Tuple[Tensor]:
         """
-        This method constructs the bottlenecked hidden states based on the input hidden states.
+        This method forwards the bottlenecked hidden states based on the input hidden states.
 
         Args:
             self (Bottleneck): The instance of the Bottleneck class.
             hidden_states (Tensor): The input hidden states tensor.
 
         Returns:
-            Tuple[Tensor]: A tuple containing the constructed bottlenecked hidden states tensor(s).
+            Tuple[Tensor]: A tuple containing the forwarded bottlenecked hidden states tensor(s).
 
         Raises:
             None.
@@ -726,7 +727,7 @@ class Bottleneck(nn.Cell):
         return hidden_states, hidden_states, hidden_states, bottlenecked_hidden_states
 
 
-class FFNOutput(nn.Cell):
+class FFNOutput(nn.Module):
     """FFNOutput"""
     def __init__(self, config):
         """
@@ -743,12 +744,12 @@ class FFNOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.true_hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
 
-    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
         """
-        Method 'construct' in class 'FFNOutput'.
+        Method 'forward' in class 'FFNOutput'.
 
         Args:
             self: The instance of the class.
@@ -777,7 +778,7 @@ class FFNOutput(nn.Cell):
         return layer_outputs
 
 
-class FFNLayer(nn.Cell):
+class FFNLayer(nn.Module):
     """FFNLayer"""
     def __init__(self, config):
         """
@@ -800,9 +801,9 @@ class FFNLayer(nn.Cell):
         self.intermediate = MobileBertIntermediate(config)
         self.output = FFNOutput(config)
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
-        This method constructs the output of the feedforward neural network layer.
+        This method forwards the output of the feedforward neural network layer.
 
         Args:
             self (FFNLayer): The instance of the FFNLayer class.
@@ -819,7 +820,7 @@ class FFNLayer(nn.Cell):
         return layer_outputs
 
 
-class MobileBertLayer(nn.Cell):
+class MobileBertLayer(nn.Module):
     """MobileBertLayer"""
     def __init__(self, config):
         """
@@ -849,9 +850,9 @@ class MobileBertLayer(nn.Cell):
         if self.use_bottleneck:
             self.bottleneck = Bottleneck(config)
         if config.num_feedforward_networks > 1:
-            self.ffn = nn.CellList([FFNLayer(config) for _ in range(config.num_feedforward_networks - 1)])
+            self.ffn = nn.ModuleList([FFNLayer(config) for _ in range(config.num_feedforward_networks - 1)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -859,7 +860,7 @@ class MobileBertLayer(nn.Cell):
         output_attentions: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         """
-        The 'construct' method constructs the MobileBERT layer using the provided input parameters.
+        The 'forward' method forwards the MobileBERT layer using the provided input parameters.
 
         Args:
             self: The object instance of the MobileBertLayer class.
@@ -870,7 +871,7 @@ class MobileBertLayer(nn.Cell):
                 Defaults to None.
 
         Returns:
-            Tuple[Tensor]: A tuple containing the constructed MobileBERT layer output tensor.
+            Tuple[Tensor]: A tuple containing the forwarded MobileBERT layer output tensor.
 
         Raises:
             None
@@ -917,7 +918,7 @@ class MobileBertLayer(nn.Cell):
         return outputs
 
 
-class MobileBertEncoder(nn.Cell):
+class MobileBertEncoder(nn.Module):
     """MobileBertEncoder"""
     def __init__(self, config):
         """
@@ -937,9 +938,9 @@ class MobileBertEncoder(nn.Cell):
             None.
         """
         super().__init__()
-        self.layer = nn.CellList([MobileBertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([MobileBertLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
@@ -1004,7 +1005,7 @@ class MobileBertEncoder(nn.Cell):
             last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
         )
 
-class MobileBertPooler(nn.Cell):
+class MobileBertPooler(nn.Module):
     """MobileBertPooler"""
     def __init__(self, config):
         """
@@ -1028,9 +1029,9 @@ class MobileBertPooler(nn.Cell):
         super().__init__()
         self.do_activate = config.classifier_activation
         if self.do_activate:
-            self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+            self.dense = nn.Linear(config.hidden_size, config.hidden_size)
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
         Constructs a pooled output tensor from the given hidden states using the MobileBERT pooling algorithm.
 
@@ -1063,7 +1064,7 @@ class MobileBertPooler(nn.Cell):
         return pooled_output
 
 
-class MobileBertPredictionHeadTransform(nn.Cell):
+class MobileBertPredictionHeadTransform(nn.Module):
     """MobileBertPredictionHeadTransform"""
     def __init__(self, config):
         """
@@ -1085,14 +1086,14 @@ class MobileBertPredictionHeadTransform(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = NORM2FN["layer_norm"]([config.hidden_size])
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
         Constructs a MobileBert prediction head transformation.
 
@@ -1114,7 +1115,7 @@ class MobileBertPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class MobileBertLMPredictionHead(nn.Cell):
+class MobileBertLMPredictionHead(nn.Module):
     """MobileBertLMPredictionHead"""
     def __init__(self, config):
         """
@@ -1136,13 +1137,13 @@ class MobileBertLMPredictionHead(nn.Cell):
         self.transform = MobileBertPredictionHeadTransform(config)
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.dense = nn.Dense(config.vocab_size, config.hidden_size - config.embedding_size, has_bias=False)
-        self.decoder = nn.Dense(config.embedding_size, config.vocab_size, has_bias=False)
+        self.dense = nn.Linear(config.vocab_size, config.hidden_size - config.embedding_size, bias=False)
+        self.decoder = nn.Linear(config.embedding_size, config.vocab_size, bias=False)
         self.bias = Parameter(ops.zeros(config.vocab_size))
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def forward(self, hidden_states: Tensor) -> Tensor:
         """
         Constructs the mobileBERT language model prediction head.
 
@@ -1164,7 +1165,7 @@ class MobileBertLMPredictionHead(nn.Cell):
         return hidden_states
 
 
-class MobileBertOnlyMLMHead(nn.Cell):
+class MobileBertOnlyMLMHead(nn.Module):
     """MobileBertOnlyMLMHead"""
     def __init__(self, config):
         """
@@ -1183,7 +1184,7 @@ class MobileBertOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = MobileBertLMPredictionHead(config)
 
-    def construct(self, sequence_output: Tensor) -> Tensor:
+    def forward(self, sequence_output: Tensor) -> Tensor:
         """
         Constructs the masked language model head for MobileBERT.
 
@@ -1205,7 +1206,7 @@ class MobileBertOnlyMLMHead(nn.Cell):
         return prediction_scores
 
 
-class MobileBertPreTrainingHeads(nn.Cell):
+class MobileBertPreTrainingHeads(nn.Module):
     """MobileBertPreTrainingHeads"""
     def __init__(self, config):
         """
@@ -1223,11 +1224,11 @@ class MobileBertPreTrainingHeads(nn.Cell):
         """
         super().__init__()
         self.predictions = MobileBertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output: Tensor, pooled_output: Tensor) -> Tuple[Tensor]:
+    def forward(self, sequence_output: Tensor, pooled_output: Tensor) -> Tuple[Tensor]:
         """
-        This method constructs the pre-training heads for MobileBERT model.
+        This method forwards the pre-training heads for MobileBERT model.
 
         Args:
             self (MobileBertPreTrainingHeads): Instance of the MobileBertPreTrainingHeads class.
@@ -1257,7 +1258,7 @@ class MobileBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -1416,7 +1417,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -1429,7 +1430,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Tuple:
         """
-        This method 'construct' in the class 'MobileBertModel' takes 10 parameters:
+        This method 'forward' in the class 'MobileBertModel' takes 10 parameters:
 
         Args:
             self: The instance of the class.
@@ -1594,7 +1595,7 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
 
         return super().resize_token_embeddings(new_num_tokens=new_num_tokens)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -1717,7 +1718,7 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
         )
         return super().resize_token_embeddings(new_num_tokens=new_num_tokens)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -1770,7 +1771,7 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-class MobileBertOnlyNSPHead(nn.Cell):
+class MobileBertOnlyNSPHead(nn.Module):
     """MobileBertOnlyNSPHead"""
     def __init__(self, config):
         """
@@ -1787,11 +1788,11 @@ class MobileBertOnlyNSPHead(nn.Cell):
             None.
         """
         super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, pooled_output: Tensor) -> Tensor:
+    def forward(self, pooled_output: Tensor) -> Tensor:
         """
-        This method constructs the next sentence prediction (NSP) head for MobileBERT models.
+        This method forwards the next sentence prediction (NSP) head for MobileBERT models.
 
         Args:
             self (MobileBertOnlyNSPHead): The instance of the MobileBertOnlyNSPHead class.
@@ -1830,7 +1831,7 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
         self.mobilebert = MobileBertModel(config)
         self.cls = MobileBertOnlyNSPHead(config)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -1938,9 +1939,9 @@ class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -2034,9 +2035,9 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -2135,9 +2136,9 @@ class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
@@ -2234,9 +2235,9 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,

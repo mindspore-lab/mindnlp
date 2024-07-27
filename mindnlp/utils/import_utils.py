@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
@@ -139,6 +140,9 @@ def get_sudachi_version():
     return _sudachipy_version
 
 
+def is_bs4_available():
+    return _bs4_available
+
 def is_sudachi_projection_available():
     """
     Checks if Sudachi projection is available.
@@ -154,7 +158,7 @@ def is_sudachi_projection_available():
     if not is_sudachi_available():
         return False
 
-    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the constructor of BertJapaneseTokenizer.
+    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the forwardor of BertJapaneseTokenizer.
     # - `projection` option is not supported in sudachipy<0.6.8, see https://github.com/WorksApplications/sudachi.rs/issues/230
     return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 

@@ -22,7 +22,7 @@ from mindspore import nn
 from mindnlp.transformers import AutoModel, AutoTokenizer
 
 
-class Transformer(nn.Cell):
+class Transformer(nn.Module):
     def __init__(
         self,
         model_name_or_path: str,
@@ -73,7 +73,7 @@ class Transformer(nn.Cell):
             self.get_config_dict(), self.auto_model.__class__.__name__
         )
 
-    def construct(self, features):
+    def forward(self, features):
         """Returns token_embeddings, cls_token"""
         trans_features = {"input_ids": features["input_ids"], "attention_mask": features["attention_mask"]}
         if "token_type_ids" in features:

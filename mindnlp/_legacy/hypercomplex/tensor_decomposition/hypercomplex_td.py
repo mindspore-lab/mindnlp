@@ -10,17 +10,17 @@ try:
 except:
     from mindnlp._legacy.hypercomplex.dual import Dense
 
-class LinearTDLayer(nn.Cell):
+class LinearTDLayer(nn.Module):
 
     r"""
     LinearTDLayer is a neural network cell representing a linear transformation layer with TensorDot operation.
     
-    This class inherits from nn.Cell and contains methods for initializing and constructing the linear transformation layer. 
+    This class inherits from nn.Module and contains methods for initializing and forwarding the linear transformation layer. 
     The linear transformation is performed using two Dense layers, linear0 and linear1, with specified input and output channels, bias, and rank.
     
     The __init__ method initializes the LinearTDLayer with the specified input channel, output channel, bias, and rank, and creates the linear0 and linear1 Dense layers.
     
-    The construct method applies the linear transformation to the input tensors u and v using the linear0 and linear1 Dense layers, and returns the transformed output tensor.
+    The forward method applies the linear transformation to the input tensors u and v using the linear0 and linear1 Dense layers, and returns the transformed output tensor.
     
     Note: This docstring does not include signatures or any other code.
     """
@@ -43,10 +43,10 @@ class LinearTDLayer(nn.Cell):
             TypeError: If bias is not a boolean value.
         """
         super().__init__()
-        self.linear0 = Dense(in_ch, rank, has_bias=False)
-        self.linear1 = Dense(rank, out_ch, has_bias=bias)
+        self.linear0 = Dense(in_ch, rank, bias=False)
+        self.linear1 = Dense(rank, out_ch, bias=bias)
     
-    def construct(self, u: mindspore.Tensor, v: mindspore.Tensor):
+    def forward(self, u: mindspore.Tensor, v: mindspore.Tensor):
         r"""
         Constructs a linear TD layer by applying linear transformations to input tensors 'u' and 'v'.
         

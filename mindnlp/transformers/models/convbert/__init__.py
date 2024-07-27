@@ -16,21 +16,18 @@
 ConvBert Model.
 """
 from . import (
-    convbert,
-    convbert_config,
-    convbert_tokenizer,
-    convbert_tokenizer_fast,
-    graph_convbert,
+    configuration_convbert,
+    modeling_convbert,
+    tokenization_convbert,
+    tokenization_convbert_fast,
 )
-from .convbert import *
-from .convbert_config import *
-from .convbert_tokenizer import *
-from .convbert_tokenizer_fast import *
-from .graph_convbert import *
+from .modeling_convbert import *
+from .configuration_convbert import *
+from .tokenization_convbert import *
+from .tokenization_convbert_fast import *
 
 __all__ = []
-__all__.extend(convbert.__all__)
-__all__.extend(convbert_config.__all__)
-__all__.extend(convbert_tokenizer.__all__)
-__all__.extend(convbert_tokenizer_fast.__all__)
-__all__.extend(graph_convbert.__all__)
+__all__.extend(modeling_convbert.__all__)
+__all__.extend(configuration_convbert.__all__)
+__all__.extend(tokenization_convbert.__all__)
+__all__.extend(tokenization_convbert_fast.__all__)

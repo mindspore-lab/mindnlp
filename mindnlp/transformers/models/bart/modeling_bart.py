@@ -21,11 +21,12 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import (
     _prepare_4d_attention_mask,
@@ -75,7 +76,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -87,7 +88,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(*input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
@@ -123,17 +124,17 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         ).expand(bsz, -1)
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
-class BartAttention(nn.Cell):
+class BartAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -179,10 +180,10 @@ class BartAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -202,7 +203,7 @@ class BartAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -240,8 +241,8 @@ class BartAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -279,7 +280,7 @@ class BartAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -300,7 +301,7 @@ class BartAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -327,7 +328,7 @@ BART_ATTENTION_CLASSES = {
 }
 
 
-class BartEncoderLayer(nn.Cell):
+class BartEncoderLayer(nn.Module):
     '''
     BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder.
     This layer consists of multi-head self-attention mechanism followed by feed-forward neural
@@ -348,12 +349,12 @@ class BartEncoderLayer(nn.Cell):
         dropout (float): The dropout probability.
         activation_fn (function): The activation function used in the feed-forward neural network.
         activation_dropout (float): The dropout probability applied to the output of the activation function.
-        fc1 (nn.Dense): The first fully connected layer in the feed-forward neural network.
-        fc2 (nn.Dense): The second fully connected layer in the feed-forward neural network.
+        fc1 (nn.Linear): The first fully connected layer in the feed-forward neural network.
+        fc2 (nn.Linear): The second fully connected layer in the feed-forward neural network.
         final_layer_norm (nn.LayerNorm): The final layer normalization applied to the output of the feed-forward neural network.
 
     Methods:
-        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False):
+        forward(hidden_states, attention_mask, layer_head_mask, output_attentions=False):
             Applies the BART encoder layer to the input hidden_states.
 
             Args:
@@ -398,11 +399,11 @@ class BartEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -427,22 +428,22 @@ class BartEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -453,7 +454,7 @@ class BartEncoderLayer(nn.Cell):
         return outputs
 
 
-class BartDecoderLayer(nn.Cell):
+class BartDecoderLayer(nn.Module):
 
     """
     This class represents a BART decoder layer used in natural language processing tasks.
@@ -469,14 +470,14 @@ class BartDecoderLayer(nn.Cell):
         self_attn_layer_norm (nn.LayerNorm): Layer normalization for the self-attention output.
         encoder_attn (BART_ATTENTION_CLASSES): Cross-attention mechanism with the encoder.
         encoder_attn_layer_norm (nn.LayerNorm): Layer normalization for the encoder attention output.
-        fc1 (nn.Dense): Fully connected layer 1 in the decoder.
-        fc2 (nn.Dense): Fully connected layer 2 in the decoder.
+        fc1 (nn.Linear): Fully connected layer 1 in the decoder.
+        fc2 (nn.Linear): Fully connected layer 2 in the decoder.
         final_layer_norm (nn.LayerNorm): Final layer normalization for the decoder output.
 
     Methods:
-        construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
+        forward(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
                     cross_attn_layer_head_mask, past_key_value, output_attentions, use_cache):
-            Constructs the forward pass of the BART decoder layer.
+            forwards the forward pass of the BART decoder layer.
 
     Args:
         hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
@@ -540,11 +541,11 @@ class BartDecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -587,7 +588,7 @@ class BartDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -607,7 +608,7 @@ class BartDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -617,9 +618,9 @@ class BartDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -634,7 +635,7 @@ class BartDecoderLayer(nn.Cell):
         return outputs
 
 
-class BartClassificationHead(nn.Cell):
+class BartClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(
         self,
@@ -660,13 +661,13 @@ class BartClassificationHead(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(input_dim, inner_dim)
+        self.dense = nn.Linear(input_dim, inner_dim)
         self.dropout = nn.Dropout(p=pooler_dropout)
-        self.out_proj = nn.Dense(inner_dim, num_classes)
+        self.out_proj = nn.Linear(inner_dim, num_classes)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the BartClassificationHead by processing the hidden states input.
+        This method forwards the BartClassificationHead by processing the hidden states input.
 
         Args:
             self (BartClassificationHead): The instance of the BartClassificationHead class.
@@ -726,11 +727,11 @@ class BartPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -812,7 +813,7 @@ class BartEncoder(BartPreTrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList([BartEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([BartEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([embed_dim])
 
         self.gradient_checkpointing = False
@@ -857,7 +858,7 @@ class BartEncoder(BartPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -927,7 +928,7 @@ class BartEncoder(BartPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -1028,7 +1029,7 @@ class BartDecoder(BartPreTrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList([BartDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([BartDecoderLayer(config) for _ in range(config.decoder_layers)])
 
         self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
@@ -1068,7 +1069,7 @@ class BartDecoder(BartPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1192,7 +1193,7 @@ class BartDecoder(BartPreTrainedModel):
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1284,7 +1285,7 @@ class BartModel(BartPreTrainedModel):
         set_input_embeddings: Sets the shared input embeddings to the provided value.
         get_encoder: Retrieves the encoder component of the model.
         get_decoder: Retrieves the decoder component of the model.
-        construct: Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
+        forward: forwards the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1425,7 +1426,7 @@ class BartModel(BartPreTrainedModel):
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1444,7 +1445,7 @@ class BartModel(BartPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqModelOutput]:
         """
-        Constructs the BartModel.
+        forwards the BartModel.
 
         Args:
             self (BartModel): An instance of the BartModel class.
@@ -1547,10 +1548,10 @@ class BartForConditionalGeneration(BartPreTrainedModel):
     """
     This class represents a BART model for conditional text generation.
     It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval,
-    resizing token embeddings, output embeddings, model construction, preparing inputs for generation,
+    resizing token embeddings, output embeddings, model forwardion, preparing inputs for generation,
     preparing decoder input ids from labels, and reordering cache.
     The class includes methods for initializing the model, retrieving encoder and decoder, resizing token embeddings,
-    constructing the model, preparing inputs for text generation, and reordering cache for efficient generation.
+    forwarding the model, preparing inputs for text generation, and reordering cache for efficient generation.
     Additionally, it provides methods for setting and getting output embeddings and resizing final logits bias.
     The class also includes a method for preparing decoder input ids from labels for masked language modeling.
     """
@@ -1573,8 +1574,8 @@ class BartForConditionalGeneration(BartPreTrainedModel):
         """
         super().__init__(config)
         self.model = BartModel(config)
-        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.final_logits_bias = ops.zeros(1, self.model.shared.num_embeddings)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1652,8 +1653,8 @@ class BartForConditionalGeneration(BartPreTrainedModel):
         if new_num_tokens <= old_num_tokens:
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
-            extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            extra_bias = ops.zeros(1, new_num_tokens - old_num_tokens)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -1695,7 +1696,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
         """
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1758,7 +1759,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1901,9 +1902,9 @@ class BartForSequenceClassification(BartPreTrainedModel):
     The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks.
     It inherits from the `BartPreTrainedModel` class and includes methods for model initialization and sequence classification.
 
-    This class includes an `__init__` method for initializing the BART model and a `construct` method for
-    constructing the sequence classification outputs.
-    The `construct` method accepts various input and output parameters, including input and output tensors,
+    This class includes an `__init__` method for initializing the BART model and a `forward` method for
+    forwarding the sequence classification outputs.
+    The `forward` method accepts various input and output parameters, including input and output tensors,
     attention masks, labels, and cache usage.
     It processes the input data through the BART model, computes the classification logits, and calculates the loss
     based on the specified problem type.
@@ -1941,7 +1942,7 @@ class BartForSequenceClassification(BartPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2014,13 +2015,13 @@ class BartForSequenceClassification(BartPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -2049,12 +2050,12 @@ class BartForQuestionAnswering(BartPreTrainedModel):
     The BARTForQuestionAnswering class contains the following methods:
 
     - __init__(self, config): Initializes the BARTForQuestionAnswering model with the provided configuration.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask,
+    - forward(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask,
     cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
     decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
-    Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
+    forwards the BART model for question answering and returns the predicted start and end positions of the answer span.
 
-    The construct method takes the following parameters:
+    The forward method takes the following parameters:
 
     - input_ids (mindspore.Tensor): The input token IDs.
     - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor.
@@ -2073,7 +2074,7 @@ class BartForQuestionAnswering(BartPreTrainedModel):
     - output_hidden_states (Optional[bool]): Whether to output hidden states.
     - return_dict (Optional[bool]): Whether to return a Seq2SeqQuestionAnsweringModelOutput object.
 
-    The construct method returns a Seq2SeqQuestionAnsweringModelOutput object that contains the following attributes:
+    The forward method returns a Seq2SeqQuestionAnsweringModelOutput object that contains the following attributes:
 
     - loss (Optional[mindspore.Tensor]): The total loss.
     - start_logits (mindspore.Tensor): The predicted start logits.
@@ -2108,12 +2109,12 @@ class BartForQuestionAnswering(BartPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.model = BartModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2183,8 +2184,8 @@ class BartForQuestionAnswering(BartPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -2232,9 +2233,9 @@ class BartDecoderWrapper(BartPreTrainedModel):
         super().__init__(config)
         self.decoder = BartDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         """
-        Constructs a decoder wrapper instance.
+        forwards a decoder wrapper instance.
 
         Args:
             *args: Variable length argument list.
@@ -2264,7 +2265,7 @@ class BartForCausalLM(BartPreTrainedModel):
 
     The class provides methods for getting and setting the input and output embeddings,
     as well as getting and setting the decoder component.
-    The construct method is the main method for generating text. It akes input_ids, attention_mask, and other optional
+    The forward method is the main method for generating text. It akes input_ids, attention_mask, and other optional
     arguments, and returns the predicted logits, along with other optional outputs such as loss,
     past_key_values, hidden_states, attentions, and cross_attentions.
 
@@ -2309,7 +2310,7 @@ class BartForCausalLM(BartPreTrainedModel):
         super().__init__(config)
         self.model = BartDecoderWrapper(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2436,7 +2437,7 @@ class BartForCausalLM(BartPreTrainedModel):
         """
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2563,7 +2564,7 @@ class BartForCausalLM(BartPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -2609,7 +2610,7 @@ class BartForCausalLM(BartPreTrainedModel):
         """
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
-            attention_mask = input_ids.new_ones(input_ids.shape)
+            attention_mask = ops.ones(*input_ids.shape, input_ids)
 
         if past_key_values:
             past_length = past_key_values[0][0].shape[2]

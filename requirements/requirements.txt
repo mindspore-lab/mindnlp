@@ -27,3 +27,4 @@ evaluate
 g2p-en
 pycocotools
 Levenshtein
+bs4

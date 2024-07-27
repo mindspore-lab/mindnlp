@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform, HeUniform
 
 from mindnlp.utils import (
@@ -41,7 +42,7 @@ _CONFIG_FOR_DOC = "MambaConfig"
 MAMBA_PRETRAINED_MODEL_ARCHIVE_LIST = []  # See all Mamba models at https://hf-mirror.com/models?filter=mamba
 
 
-class MambaMixer(nn.Cell):
+class MambaMixer(nn.Module):
     """
     Compute ∆, A, B, C, and D the state space parameters and compute the `contextualized_states`.
     A, D are input independent (see Mamba paper [1] Section 3.5.2 "Interpretation of A" for why A isn't selective)
@@ -84,7 +85,7 @@ class MambaMixer(nn.Cell):
         self.conv1d = nn.Conv1d(
             in_channels=self.intermediate_size,
             out_channels=self.intermediate_size,
-            has_bias=config.use_conv_bias,
+            bias=config.use_conv_bias,
             kernel_size=config.conv_kernel,
             group=self.intermediate_size,
             padding=config.conv_kernel - 1,
@@ -95,11 +96,11 @@ class MambaMixer(nn.Cell):
         self.act = ACT2FN[config.hidden_act]
 
         # projection of the input hidden states
-        self.in_proj = nn.Dense(self.hidden_size, self.intermediate_size * 2, has_bias=config.use_bias)
+        self.in_proj = nn.Linear(self.hidden_size, self.intermediate_size * 2, bias=config.use_bias)
         # selective projection used to make dt, B and C input dependant
-        self.x_proj = nn.Dense(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, has_bias=False)
+        self.x_proj = nn.Linear(self.intermediate_size, self.time_step_rank + self.ssm_state_size * 2, bias=False)
         # time step projection (discretization)
-        self.dt_proj = nn.Dense(self.time_step_rank, self.intermediate_size, has_bias=True)
+        self.dt_proj = nn.Linear(self.time_step_rank, self.intermediate_size, bias=True)
 
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded
@@ -108,11 +109,11 @@ class MambaMixer(nn.Cell):
 
         self.A_log = Parameter(ops.log(A))
         self.D = Parameter(ops.ones(self.intermediate_size))
-        self.out_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=config.use_bias)
+        self.out_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.use_bias)
         self.use_bias = config.use_bias
 
     # fmt: off
-    def construct(self, input_states, cache_params=None):
+    def forward(self, input_states, cache_params=None):
 
         """
         Constructs contextualized states based on input states and cache parameters.
@@ -251,17 +252,17 @@ class MambaCache:
         }
 
 
-class MambaRMSNorm(nn.Cell):
+class MambaRMSNorm(nn.Module):
 
     """
     MambaRMSNorm is a neural network cell that represents a modified version of the RMS normalization layer.
-    It inherits from the nn.Cell class and provides functionality for normalizing hidden states in a neural network.
+    It inherits from the nn.Module class and provides functionality for normalizing hidden states in a neural network.
 
     This class initializes the MambaRMSNorm layer with the specified hidden size and epsilon value for variance.
     The hidden_size parameter determines the size of the input hidden states, while the eps parameter sets the variance
     epsilon value for numerical stability.
 
-    The construct method of MambaRMSNorm takes hidden_states as input and performs RMS normalization on the input
+    The forward method of MambaRMSNorm takes hidden_states as input and performs RMS normalization on the input
     hidden states. It first converts the input hidden states to float32 data type, calculates the variance of the
     hidden states, and then applies the RMS normalization using the variance and epsilon values.
     The normalized hidden states are then multiplied by the weight parameter and converted back to the original input
@@ -279,10 +280,10 @@ class MambaRMSNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
 
         """
-        This method constructs the MambaRMSNorm operation by normalizing the hidden states.
+        This method forwards the MambaRMSNorm operation by normalizing the hidden states.
 
         Args:
             self (MambaRMSNorm): The instance of the MambaRMSNorm class.
@@ -303,11 +304,11 @@ class MambaRMSNorm(nn.Cell):
         return self.weight * hidden_states.to(input_dtype)
 
 
-class MambaBlock(nn.Cell):
+class MambaBlock(nn.Module):
 
     """
     The MambaBlock class represents a block used in the Mamba neural network model for processing hidden states.
-    This class inherits from nn.Cell and contains methods for initializing the block and constructing the
+    This class inherits from nn.Module and contains methods for initializing the block and forwarding the
     block's operations.
 
     Attributes:
@@ -319,7 +320,7 @@ class MambaBlock(nn.Cell):
 
     Methods:
         __init__: Initializes the MambaBlock instance with the provided configuration and layer index.
-        construct: Constructs the block by processing hidden states through normalization, mixing,
+        forward: Constructs the block by processing hidden states through normalization, mixing,
             and addition of residuals.
 
     Example:
@@ -327,7 +328,7 @@ class MambaBlock(nn.Cell):
         >>> # Example of initializing and using the MambaBlock class
         >>> config = {'hidden_size': 512, 'layer_norm_epsilon': 1e-5, 'residual_in_fp32': True}
         >>> block = MambaBlock(config, layer_idx=1)
-        >>> output = block.construct(hidden_states)
+        >>> output = block.forward(hidden_states)
         ```
     """
     def __init__(self, config, layer_idx):
@@ -353,14 +354,14 @@ class MambaBlock(nn.Cell):
         self.norm = MambaRMSNorm(config.hidden_size, eps=config.layer_norm_epsilon)
         self.mixer = MambaMixer(config, layer_idx=layer_idx)
 
-    def construct(self, hidden_states, cache_params=None):
+    def forward(self, hidden_states, cache_params=None):
 
         """
-        This method constructs a MambaBlock by performing a series of operations on the input hidden_states.
+        This method forwards a MambaBlock by performing a series of operations on the input hidden_states.
 
         Args:
             self: The instance of the MambaBlock class.
-            hidden_states: A tensor representing the input hidden states. It is the main input to the construct method.
+            hidden_states: A tensor representing the input hidden states. It is the main input to the forward method.
             cache_params: Optional parameter. A dictionary containing cache parameters. Default is None.
 
         Returns:
@@ -413,7 +414,7 @@ class MambaPreTrainedModel(PreTrainedModel):
             cell.dt_proj.bias[:] = inv_dt
             cell.dt_proj.bias._no_reinit = True
 
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             if cell.bias is not None:
                 if not getattr(cell.bias, "_no_reinit", False):
                     cell.bias[:] = 0
@@ -497,7 +498,7 @@ class MambaModel(MambaPreTrainedModel):
 
     Attributes:
         embeddings (nn.Embedding): An instance of the nn.Embedding class representing the input embeddings.
-        layers (nn.CellList): A list of MambaBlock instances representing the layers of the model.
+        layers (nn.ModuleList): A list of MambaBlock instances representing the layers of the model.
         gradient_checkpointing (bool): A flag indicating whether gradient checkpointing is used during training.
         norm_f (MambaRMSNorm): An instance of the MambaRMSNorm class representing the normalization function.
 
@@ -505,7 +506,7 @@ class MambaModel(MambaPreTrainedModel):
         __init__: Initializes the MambaModel instance.
         get_input_embeddings: Returns the input embeddings.
         set_input_embeddings: Sets the input embeddings to the specified value.
-        construct: Constructs the MambaModel.
+        forward: Constructs the MambaModel.
     """
     def __init__(self, config):
 
@@ -531,7 +532,7 @@ class MambaModel(MambaPreTrainedModel):
         super().__init__(config)
 
         self.embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.layers = nn.CellList([MambaBlock(config, layer_idx=idx) for idx in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([MambaBlock(config, layer_idx=idx) for idx in range(config.num_hidden_layers)])
 
         self.gradient_checkpointing = False
         self.norm_f = MambaRMSNorm(config.hidden_size, eps=config.layer_norm_epsilon)
@@ -572,7 +573,7 @@ class MambaModel(MambaPreTrainedModel):
         """
         self.embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
@@ -584,7 +585,7 @@ class MambaModel(MambaPreTrainedModel):
     ) -> Union[Tuple, MambaOutput]:
 
         """
-        This method constructs the MambaModel by processing input data through multiple mixer blocks.
+        This method forwards the MambaModel by processing input data through multiple mixer blocks.
 
         Args:
             self: The instance of the MambaModel class.
@@ -660,9 +661,9 @@ class MambaForCausalLM(MambaPreTrainedModel):
 
     The class includes methods for initializing the model, getting and setting the output embeddings, getting and
     setting the input embeddings, updating model keyword arguments for generation, preparing inputs for generation,
-    and constructing the model for LM tasks.
+    and forwarding the model for LM tasks.
 
-    The 'construct' method takes input_ids, inputs_embeds, cache_params, labels, output_hidden_states, and return_dict
+    The 'forward' method takes input_ids, inputs_embeds, cache_params, labels, output_hidden_states, and return_dict
     as input parameters, and returns the model output for Causal LM tasks. It calculates the loss if labels are provided
     and returns the loss along with the logits and other relevant outputs.
 
@@ -688,7 +689,7 @@ class MambaForCausalLM(MambaPreTrainedModel):
         """
         super().__init__(config)
         self.backbone = MambaModel(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -820,7 +821,7 @@ class MambaForCausalLM(MambaPreTrainedModel):
         model_inputs["cache_params"] = cache_params
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,

@@ -20,11 +20,13 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindnlp.core import nn, ops
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
-import mindnlp.modules.functional as F
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
@@ -42,7 +44,7 @@ CPMANT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class CpmAntLayerNorm(nn.Cell):
+class CpmAntLayerNorm(nn.Module):
     """
     We use Root Mean Square (RMS) Layer Normalization, please see https://arxiv.org/abs/1910.07467 for details."
     """
@@ -71,7 +73,7 @@ class CpmAntLayerNorm(nn.Cell):
         self.dim_norm = config.hidden_size
         self.weight = Parameter(ops.zeros(config.hidden_size))
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Args:
             hidden_states (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`)
@@ -84,27 +86,27 @@ class CpmAntLayerNorm(nn.Cell):
         return hidden_states
 
 
-class CpmAntAttention(nn.Cell):
+class CpmAntAttention(nn.Module):
 
     """
     This class represents the CpmAntAttention module, which is a component of the CpmAnt model.
     It performs the self-attention mechanism in the transformer block.
     
-    The CpmAntAttention module inherits from the nn.Cell class and initializes with a config object of type CpmAntConfig.
+    The CpmAntAttention module inherits from the nn.Module class and initializes with a config object of type CpmAntConfig.
     
     Attributes:
         dim_model (int): The hidden size of the model.
         num_heads (int): The number of attention heads.
         dim_head (int): The dimension of each attention head.
-        project_q (nn.Dense): The linear transformation layer for query projection.
-        project_k (nn.Dense): The linear transformation layer for key projection.
-        project_v (nn.Dense): The linear transformation layer for value projection.
-        attention_out (nn.Dense): The linear transformation layer for output projection.
+        project_q (nn.Linear): The linear transformation layer for query projection.
+        project_k (nn.Linear): The linear transformation layer for key projection.
+        project_v (nn.Linear): The linear transformation layer for value projection.
+        attention_out (nn.Linear): The linear transformation layer for output projection.
         softmax (nn.Softmax): The softmax activation function for attention scores.
         dropout (nn.Dropout): The dropout layer, if configured.
 
     Methods:
-        construct(hidden_q, hidden_kv, attention_mask, position_bias, output_attentions, past_key_values, use_cache):
+        forward(hidden_q, hidden_kv, attention_mask, position_bias, output_attentions, past_key_values, use_cache):
             Constructs the self-attention block of the transformer.
 
             Args:
@@ -148,20 +150,20 @@ class CpmAntAttention(nn.Cell):
         self.num_heads = config.num_attention_heads
         self.dim_head = config.dim_head
 
-        self.project_q = nn.Dense(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
-        self.project_k = nn.Dense(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
-        self.project_v = nn.Dense(self.dim_model, self.num_heads * self.dim_head, has_bias=False)
+        self.project_q = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
+        self.project_k = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
+        self.project_v = nn.Linear(self.dim_model, self.num_heads * self.dim_head, bias=False)
 
-        self.attention_out = nn.Dense(self.num_heads * self.dim_head, self.dim_model, has_bias=False)
+        self.attention_out = nn.Linear(self.num_heads * self.dim_head, self.dim_model, bias=False)
 
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         if config.dropout_p is not None:
             self.dropout = nn.Dropout(p=config.dropout_p)
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_q: mindspore.Tensor,
         hidden_kv: mindspore.Tensor,
@@ -202,8 +204,8 @@ class CpmAntAttention(nn.Cell):
         value = value.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)
 
         if past_key_values is not None:
-            key = ops.cat([past_key_values[0], key], axis=-2)
-            value = ops.cat([past_key_values[1], value], axis=-2)
+            key = ops.cat([past_key_values[0], key], dim=-2)
+            value = ops.cat([past_key_values[1], value], dim=-2)
             len_k = key.shape[-2]
 
         # (batch_size, num_heads, len_q, dim_head) @ (batch_size, num_heads, dim_head, len_k) -> (batch_size, num_heads, len_q, len_k)
@@ -213,14 +215,14 @@ class CpmAntAttention(nn.Cell):
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.Tensor(False),
-            ops.scalar_to_tensor(float("-inf"), dtype=score.dtype),
+            float("-inf"),
         )
         score = self.softmax(score)
 
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.Tensor(False),
-            ops.scalar_to_tensor(0, dtype=score.dtype),
+            0.,
         )
         if output_attentions:
             attn_weights = score
@@ -245,10 +247,10 @@ class CpmAntAttention(nn.Cell):
         return score, attn_weights, past_key_values
 
 
-class CpmAntSelfAttentionBlock(nn.Cell):
+class CpmAntSelfAttentionBlock(nn.Module):
 
     """
-    This class represents a self-attention block used in the CpmAnt model. It is a subclass of the nn.Cell class.
+    This class represents a self-attention block used in the CpmAnt model. It is a subclass of the nn.Module class.
 
     Attributes:
         layernorm_before_attention (CpmAntLayerNorm):
@@ -264,7 +266,7 @@ class CpmAntSelfAttentionBlock(nn.Cell):
 
             - config (CpmAntConfig): The configuration object for the CpmAnt model.
 
-        construct: Applies the self-attention block to the given hidden states.
+        forward: Applies the self-attention block to the given hidden states.
 
             Args:
 
@@ -301,7 +303,7 @@ class CpmAntSelfAttentionBlock(nn.Cell):
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -340,22 +342,22 @@ class CpmAntSelfAttentionBlock(nn.Cell):
         return hidden_states, attn_weights, current_key_value
 
 
-class CpmAntDenseGatedACT(nn.Cell):
+class CpmAntDenseGatedACT(nn.Module):
 
     """
     A class representing a dense gated activation layer for neural networks in the CPM-ANT model.
 
-    This class inherits from nn.Cell and provides functionality to transform an input tensor from one feature space to another via a nonlinear operation. The transformation is performed using two dense layers
+    This class inherits from nn.Module and provides functionality to transform an input tensor from one feature space to another via a nonlinear operation. The transformation is performed using two dense layers
     with gated activation.
 
     Attributes:
-        w_0 (nn.Dense): The first dense layer for the transformation.
-        w_1 (nn.Dense): The second dense layer for the transformation.
+        w_0 (nn.Linear): The first dense layer for the transformation.
+        w_1 (nn.Linear): The second dense layer for the transformation.
         act (nn.GELU): The activation function to apply.
 
     Methods:
         __init__: Initializes the CpmAntDenseGatedACT instance.
-        construct: Transforms an input tensor using the dense gated activation.
+        forward: Transforms an input tensor using the dense gated activation.
 
     """
     def __init__(self, config: CpmAntConfig):
@@ -377,11 +379,11 @@ class CpmAntDenseGatedACT(nn.Cell):
             None.
         """
         super().__init__()
-        self.w_0 = nn.Dense(config.hidden_size, config.dim_ff, has_bias=False)
-        self.w_1 = nn.Dense(config.hidden_size, config.dim_ff, has_bias=False)
+        self.w_0 = nn.Linear(config.hidden_size, config.dim_ff, bias=False)
+        self.w_1 = nn.Linear(config.hidden_size, config.dim_ff, bias=False)
         self.act = nn.GELU()
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """Transform an input tensor from one feature space to another via a nonlinear operation
 
         Args:
@@ -394,20 +396,20 @@ class CpmAntDenseGatedACT(nn.Cell):
         return hidden_states
 
 
-class CpmAntFeedForward(nn.Cell):
+class CpmAntFeedForward(nn.Module):
 
     """
     CpmAntFeedForward represents a feedforward neural network component designed for the CpmAnt model architecture.
-    This class inherits from nn.Cell and is used for processing hidden states through a series of transformations.
+    This class inherits from nn.Module and is used for processing hidden states through a series of transformations.
 
     Attributes:
         w_in (CpmAntDenseGatedACT): The first layer of the feedforward network for processing input hidden states.
         dropout (nn.Dropout or None): Dropout layer for regularization, initialized based on the configuration parameter.
-        w_out (nn.Dense): The output layer of the feedforward network for producing final hidden states.
+        w_out (nn.Linear): The output layer of the feedforward network for producing final hidden states.
 
     Methods:
         __init__: Constructor method for initializing the CpmAntFeedForward instance with the given configuration.
-        construct: Method for processing the input hidden states through the network layers.
+        forward: Method for processing the input hidden states through the network layers.
 
     Args:
         config (CpmAntConfig): Configuration object containing settings for the feedforward network.
@@ -417,7 +419,7 @@ class CpmAntFeedForward(nn.Cell):
         mindspore.Tensor: Output tensor containing the processed hidden states after passing through the feedforward network.
 
     Usage:
-        Instantiate an object of CpmAntFeedForward with a CpmAntConfig object and then call the construct method with input hidden_states
+        Instantiate an object of CpmAntFeedForward with a CpmAntConfig object and then call the forward method with input hidden_states
         to obtain the processed output hidden states.
 
     Note:
@@ -446,9 +448,9 @@ class CpmAntFeedForward(nn.Cell):
         else:
             self.dropout = None
 
-        self.w_out = nn.Dense(config.dim_ff, config.hidden_size, has_bias=False)
+        self.w_out = nn.Linear(config.dim_ff, config.hidden_size, bias=False)
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Args:
             hidden_states (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`)
@@ -463,13 +465,13 @@ class CpmAntFeedForward(nn.Cell):
         return hidden_states
 
 
-class CpmAntFFNBlock(nn.Cell):
+class CpmAntFFNBlock(nn.Module):
 
     """
     This class represents a feed-forward neural network block used in the CpmAnt model.
     It is a sub-module of the CpmAnt model and is responsible for applying feed-forward operations to the input hidden states.
 
-    The CpmAntFFNBlock class inherits from the nn.Cell class, which is a base class for neural network cells in the MindSpore framework.
+    The CpmAntFFNBlock class inherits from the nn.Module class, which is a base class for neural network cells in the MindSpore framework.
 
     Attributes:
         layernorm_before_ffn (CpmAntLayerNorm):
@@ -481,7 +483,7 @@ class CpmAntFFNBlock(nn.Cell):
             If dropout probability is not specified, it is set to None.
 
     Methods:
-        construct:
+        forward:
             Applies the feed-forward operations to the input hidden states and returns the updated hidden states.
 
             Args:
@@ -502,7 +504,7 @@ class CpmAntFFNBlock(nn.Cell):
         >>> config = CpmAntConfig()
         >>> ffn_block = CpmAntFFNBlock(config)
         >>> hidden_states = mindspore.Tensor(np.random.randn(batch, len_seq, dim_model), dtype=mindspore.float32)
-        >>> updated_hidden_states = ffn_block.construct(hidden_states)
+        >>> updated_hidden_states = ffn_block.forward(hidden_states)
         ```
     """
     def __init__(self, config: CpmAntConfig):
@@ -528,7 +530,7 @@ class CpmAntFFNBlock(nn.Cell):
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
     ):
@@ -545,11 +547,11 @@ class CpmAntFFNBlock(nn.Cell):
         return hidden_states
 
 
-class CpmAntTransformerBlock(nn.Cell):
+class CpmAntTransformerBlock(nn.Module):
 
     """
     This class represents a block of the CpmAntTransformer model, which is a type of transformer used for
-    natural language processing tasks. It inherits from the nn.Cell class.
+    natural language processing tasks. It inherits from the nn.Module class.
 
     Attributes:
         self_att (CpmAntSelfAttentionBlock): The self-attention block of the transformer.
@@ -557,7 +559,7 @@ class CpmAntTransformerBlock(nn.Cell):
 
     Methods:
         __init__: Initializes a new instance of the CpmAntTransformerBlock class.
-        construct: Constructs the transformer block.
+        forward: Constructs the transformer block.
 
     """
     def __init__(self, config: CpmAntConfig):
@@ -578,7 +580,7 @@ class CpmAntTransformerBlock(nn.Cell):
         self.self_att = CpmAntSelfAttentionBlock(config)
         self.ffn = CpmAntFFNBlock(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -619,16 +621,16 @@ class CpmAntTransformerBlock(nn.Cell):
         return hidden_states, attn_weights, current_key_value
 
 
-class CpmAntEncoder(nn.Cell):
+class CpmAntEncoder(nn.Module):
 
     """
     The CpmAntEncoder class represents a transformer encoder for the CpmAntConfig model.
-    It inherits from nn.Cell and contains methods for initializing the encoder and constructing the encoder layers.
+    It inherits from nn.Module and contains methods for initializing the encoder and forwarding the encoder layers.
 
     The __init__ method initializes the CpmAntEncoder with the provided CpmAntConfig,
     setting the number of layers and creating a list of transformer blocks for the encoder.
 
-    The construct method takes input hidden_states, attention_mask, position_bias, and optional parameters
+    The forward method takes input hidden_states, attention_mask, position_bias, and optional parameters
     to perform the encoding process. It iterates through the encoder layers, applying the attention
     mechanism and caching key and value projection states if specified.
     The method returns the final hidden_states, current_key_values, hidden_states of all layers, and attention weights
@@ -679,11 +681,11 @@ class CpmAntEncoder(nn.Cell):
         """
         super().__init__()
         self.num_layers = config.num_hidden_layers
-        self.layers = nn.CellList([CpmAntTransformerBlock(config) for ith in range(self.num_layers)])
+        self.layers = nn.ModuleList([CpmAntTransformerBlock(config) for ith in range(self.num_layers)])
 
         self.output_layernorm = CpmAntLayerNorm(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -741,20 +743,20 @@ class CpmAntEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->CPMAnt
-class CpmAntIntermediate(nn.Cell):
+class CpmAntIntermediate(nn.Module):
 
     """
     The CpmAntIntermediate class represents an intermediate layer for the CpmAnt model.
-    This class inherits from nn.Cell and is used to perform operations on hidden states,
+    This class inherits from nn.Module and is used to perform operations on hidden states,
     including dense transformations and activation functions.
 
     Attributes:
-        dense (nn.Dense): A dense layer used for transforming hidden states.
+        dense (nn.Linear): A dense layer used for transforming hidden states.
         intermediate_act_fn (function): The activation function applied to the hidden states.
 
     Methods:
         __init__: Initializes the CpmAntIntermediate instance with the provided configuration.
-        construct: Applies dense transformation and activation function to the input hidden states.
+        forward: Applies dense transformation and activation function to the input hidden states.
     """
     def __init__(self, config):
         """
@@ -776,15 +778,15 @@ class CpmAntIntermediate(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Docstring for method 'construct' in class 'CpmAntIntermediate':
+        Docstring for method 'forward' in class 'CpmAntIntermediate':
 
         Args:
             self (CpmAntIntermediate): The instance of the class CpmAntIntermediate.
@@ -803,13 +805,13 @@ class CpmAntIntermediate(nn.Cell):
         return hidden_states
 
 
-class CpmAntSegmentPositionEmbedding(nn.Cell):
+class CpmAntSegmentPositionEmbedding(nn.Module):
 
     """
     This class represents a segment position embedding module for the CPM-ANT model.
     It is used to generate embeddings that encode the relative positions of segments in the input tensors.
 
-    The class inherits from the nn.Cell class.
+    The class inherits from the nn.Module class.
 
     Attributes:
         num_heads (int): The number of attention heads in the model.
@@ -820,7 +822,7 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
 
     Methods:
         __init__: Initializes the CpmAntSegmentPositionEmbedding instance with the provided configuration.
-        construct: Constructs the segment position embeddings based on the input key and query positions and segments.
+        forward: Constructs the segment position embeddings based on the input key and query positions and segments.
         _segment_relative_position_bucket: Computes the segment relative position bucket.
         _position_bucket: Computes the position bucket.
 
@@ -832,7 +834,7 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
         This configuration object contains various parameters such as the number of attention heads, the number of buckets for
         segment relative positions, the maximum distance allowed for segment relative positions, and the number of segment types in the model.
 
-        The construct method is the main function of this class.
+        The forward method is the main function of this class.
         It takes four input tensors: key_pos, query_pos, key_segment, and query_segment.
         These tensors represent the positions and segments of the key and query elements.
         The method checks the shapes of the input tensors and raises an AssertionError if they are not compatible.
@@ -854,7 +856,7 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
         >>> query_pos = mindspore.Tensor(...)
         >>> key_segment = mindspore.Tensor(...)
         >>> query_segment = mindspore.Tensor(...)
-        >>> embeddings = segment_embedding.construct(key_pos, query_pos, key_segment, query_segment)
+        >>> embeddings = segment_embedding.forward(key_pos, query_pos, key_segment, query_segment)
         ```
     """
     def __init__(self, config: CpmAntConfig):
@@ -891,7 +893,7 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
             )
         )
 
-    def construct(
+    def forward(
         self,
         key_pos: mindspore.Tensor,
         query_pos: mindspore.Tensor,
@@ -1016,27 +1018,27 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->CPMAnt
-class CpmAntOutput(nn.Cell):
+class CpmAntOutput(nn.Module):
 
     """
     CpmAntOutput represents a custom module for processing hidden states and input tensors in a CpmAnt model.
 
-    This class inherits from nn.Cell and includes methods for initializing the module and constructing the output tensor.
+    This class inherits from nn.Module and includes methods for initializing the module and forwarding the output tensor.
 
     Attributes:
-        dense (nn.Dense): A dense layer for processing hidden states.
+        dense (nn.Linear): A dense layer for processing hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module for normalizing hidden states.
         dropout (nn.Dropout): A dropout module for applying dropout to hidden states.
 
     Methods:
         __init__(config): Initializes the CpmAntOutput module with the provided configuration.
-        construct(hidden_states, input_tensor): Constructs the output tensor based on the given hidden states and input tensor.
+        forward(hidden_states, input_tensor): Constructs the output tensor based on the given hidden states and input tensor.
 
     Example:
         ```python
         >>> config = Config(intermediate_size=256, hidden_size=512, layer_norm_eps=1e-6)
         >>> model = CpmAntOutput(config)
-        >>> output = model.construct(hidden_states, input_tensor)
+        >>> output = model.forward(hidden_states, input_tensor)
         ```
     """
     def __init__(self, config):
@@ -1054,11 +1056,11 @@ class CpmAntOutput(nn.Cell):
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the CpmAntOutput by processing the given hidden states and input tensor.
 
@@ -1097,7 +1099,7 @@ class CpmAntPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -1122,7 +1124,7 @@ class CpmAntModel(CpmAntPreTrainedModel):
     """
     CpmAntModel is a class that represents a model for CPM-ANT (Antecedent-Conditioned Prompting) tasks.
     It inherits from CpmAntPreTrainedModel and includes methods for initializing the model, preparing
-    attention masks, and constructing the model output based on input tensors.
+    attention masks, and forwarding the model output based on input tensors.
 
     Attributes:
         encoder: CpmAntEncoder object for encoding input data
@@ -1137,7 +1139,7 @@ class CpmAntModel(CpmAntPreTrainedModel):
         get_input_embeddings: Returns the input embeddings
         set_input_embeddings: Sets the input embeddings to the given value
         _prepare_attention_mask: Prepares the attention mask for the input data
-        construct: Constructs the model output based on input tensors and optional configurations
+        forward: Constructs the model output based on input tensors and optional configurations
 
     This class provides functionality for processing input data, calculating attention masks,
     and generating model outputs for CPM-ANT tasks.
@@ -1231,19 +1233,19 @@ class CpmAntModel(CpmAntPreTrainedModel):
         seqlen = input_ids.shape[1]
         directional_mask_2d = ops.arange(seqlen) <= ops.arange(seqlen).view(-1, 1)
         attention_mask = context[:, None, :] | (
-            context[:, :, None].logical_not() & directional_mask_2d.view(1, seqlen, seqlen)
+            context[:, :, None].logical_not().to(mindspore.int32) & directional_mask_2d.view(1, seqlen, seqlen).to(mindspore.int32)
         )
-        attention_mask = attention_mask & (span[:, None, :] == span[:, :, None])
+        attention_mask = attention_mask.to(mindspore.int32) & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
         # mask for left padding
         mask_1d = (
-            mindspore.Tensor(list(range(seqlen - self.prompt_length))[::-1])[None, :].repeat(batch, 1)
+            ops.tile(mindspore.tensor(list(range(seqlen - self.prompt_length))[::-1])[None, :], (batch, 1))
             < length[:, None]
-        )
-        mask_1d = ops.cat((ops.ones(batch, self.prompt_length).bool(), mask_1d), axis=1)
+        ).to(mindspore.int32)
+        mask_1d = ops.cat((ops.ones(batch, self.prompt_length, dtype=mindspore.int32), mask_1d), dim=1)
         attention_mask = mask_1d.view(batch, seqlen, 1) & mask_1d.view(batch, 1, seqlen) & attention_mask
-        return attention_mask
+        return attention_mask.to(mindspore.bool_)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1256,7 +1258,7 @@ class CpmAntModel(CpmAntPreTrainedModel):
         """
         Constructs the CpmAntModel.
 
-        This method initializes and constructs the CpmAntModel. It takes the following parameters:
+        This method initializes and forwards the CpmAntModel. It takes the following parameters:
 
         Args:
             self: The instance of the class.
@@ -1308,12 +1310,12 @@ class CpmAntModel(CpmAntPreTrainedModel):
                 ).tile((input_ids.shape[0], 1)),
                 input_ids,
             ),
-            axis=1,
+            dim=1,
         )
         batch, seq_length = input_ids.shape
-        segment = ops.cat((ops.zeros(batch, self.prompt_length, dtype=dtype), segment), axis=1)
+        segment = ops.cat((ops.zeros(batch, self.prompt_length, dtype=dtype), segment), dim=1)
         context = ops.full((batch, seq_length), 1, dtype=dtype)
-        position = ops.arange(seq_length, dtype=dtype).repeat(batch, 1)
+        position = ops.tile(ops.arange(seq_length, dtype=dtype), (batch, 1))
         span = ops.full((batch, seq_length), 0, dtype=dtype)
 
         if past_key_values is None:
@@ -1399,7 +1401,7 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
 
     Methods:
         __init__: Initializes the CpmAntForCausalLM model with the provided configuration.
-        construct: Constructs the model for text generation based on the input arguments and returns output in the specified format.
+        forward: Constructs the model for text generation based on the input arguments and returns output in the specified format.
         get_input_embeddings: Retrieves the input embeddings of the model.
         set_input_embeddings: Sets new input embeddings for the model.
         get_output_embeddings: Retrieves the output embeddings of the model.
@@ -1444,12 +1446,12 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         self.cpmant = CpmAntModel(config)
 
         # lm_head.weight is tied to cpmant.input_embedding.weight
-        self.lm_head = nn.Dense(
-            config.hidden_size, config.vocab_size + config.prompt_types * config.prompt_length, has_bias=False
+        self.lm_head = nn.Linear(
+            config.hidden_size, config.vocab_size + config.prompt_types * config.prompt_length, bias=False
         )
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[List[Tuple[mindspore.Tensor, mindspore.Tensor]]] = None,
@@ -1514,7 +1516,7 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]
