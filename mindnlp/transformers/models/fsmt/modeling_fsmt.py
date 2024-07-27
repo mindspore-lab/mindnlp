@@ -30,13 +30,12 @@
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import mindspore
+from mindspore.common.initializer import initializer, Normal
+
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-
-import numpy as np
-
-from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -336,15 +335,15 @@ class EncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.self_attn_layer_norm(x)
 
         residual = x
         x = self.activation_fn(self.fc1(x))
-        x = mindspore.ops.dropout(x, p=self.activation_dropout, training=self.training)
+        x = F.dropout(x, p=self.activation_dropout, training=self.training)
         x = self.fc2(x)
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.final_layer_norm(x)
         return x, attn_weights
@@ -427,7 +426,7 @@ class FSMTEncoder(nn.Module):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         x = inputs_embeds + embed_pos
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
 
         # B x T x C -> T x B x C
         x = x.swapaxes(0, 1)
@@ -523,7 +522,7 @@ class DecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.self_attn_layer_norm(x)
 
@@ -538,16 +537,16 @@ class DecoderLayer(nn.Module):
             layer_head_mask=cross_attn_layer_head_mask,
             output_attentions=output_attentions,
         )
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.encoder_attn_layer_norm(x)
 
         # Fully Connected
         residual = x
         x = self.activation_fn(self.fc1(x))
-        x = mindspore.ops.dropout(x, p=self.activation_dropout, training=self.training)
+        x = F.dropout(x, p=self.activation_dropout, training=self.training)
         x = self.fc2(x)
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         x = self.final_layer_norm(x)
         return (
@@ -667,7 +666,7 @@ class FSMTDecoder(nn.Module):
             raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
 
         x += positions
-        x = mindspore.ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
 
         # Convert to FSMT output format: (BS, seq_len, model_dim) -> (seq_len, BS, model_dim)
         x = x.swapaxes(0, 1)
@@ -872,7 +871,7 @@ class Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = mindspore.ops.dropout(
+        attn_probs = F.dropout(
             attn_weights,
             p=self.dropout,
             training=self.training,
