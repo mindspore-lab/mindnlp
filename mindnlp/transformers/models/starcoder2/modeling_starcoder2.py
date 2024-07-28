@@ -276,7 +276,7 @@ class Starcoder2MLP(nn.Module):
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.c_proj(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.residual_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.residual_dropout, training=self.training)
         return hidden_states
 
 
@@ -442,7 +442,7 @@ class Starcoder2Attention(nn.Module):
 
         # upcast attention to fp32
         attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -455,7 +455,7 @@ class Starcoder2Attention(nn.Module):
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
-        attn_output = ops.dropout(attn_output, p=self.residual_dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.residual_dropout, training=self.training)
 
         if not output_attentions:
             attn_weights = None
@@ -619,7 +619,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -807,7 +807,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         )
 
         hidden_states = inputs_embeds
-        hidden_states = ops.dropout(hidden_states, p=self.embedding_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.embedding_dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1085,7 +1085,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Ensure tensors are on the same device
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1353,13 +1353,13 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

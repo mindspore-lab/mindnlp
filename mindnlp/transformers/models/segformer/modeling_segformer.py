@@ -1244,13 +1244,13 @@ class SegformerForImageClassification(SegformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1591,10 +1591,10 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
             if self.config.num_labels > 1:
-                loss = ops.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+                loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
             elif self.config.num_labels == 1:
                 valid_mask = ((labels >= 0) & (labels != self.config.semantic_loss_ignore_index)).float()
-                loss = ops.binary_cross_entropy_with_logits(upsampled_logits.squeeze(1), labels.float(), reduction="none")
+                loss = F.binary_cross_entropy_with_logits(upsampled_logits.squeeze(1), labels.float(), reduction="none")
                 loss = (loss * valid_mask).mean()
             else:
                 raise ValueError(f"Number of labels should be >=0: {self.config.num_labels}")

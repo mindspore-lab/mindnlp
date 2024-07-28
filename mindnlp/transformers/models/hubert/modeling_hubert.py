@@ -851,7 +851,7 @@ class HubertAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
         attn_output = ops.bmm(attn_probs, value_states)
 
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
@@ -2070,7 +2070,7 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
         loss = None
         if labels is not None:
             labels = labels.astype(mindspore.int32)
-            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]

@@ -42,7 +42,7 @@ class Dropout(Module):
         if p < 0 or p > 1:
             raise ValueError("dropout probability has to be between 0 and 1, "
                              "but got {}".format(p))
-        self.p = p
+        self.p = float(p)
         self.inplace = inplace
 
     def forward(self, input):

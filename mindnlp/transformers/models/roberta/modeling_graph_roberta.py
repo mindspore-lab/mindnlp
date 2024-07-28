@@ -383,7 +383,7 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         outputs = (prediction_scores,) + outputs[2:]  # Add hidden states and attention if they are here
 
         if masked_lm_labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.vocab_size),
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.vocab_size),
                                                masked_lm_labels.view(-1), ignore_index=-1)
             outputs = (masked_lm_loss,) + outputs
 
@@ -460,9 +460,9 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
         if labels is not None:
             if self.num_labels == 1:
                 #  We are doing regression
-                loss = ops.mse_loss(logits.view(-1), labels.view(-1))
+                loss = F.mse_loss(logits.view(-1), labels.view(-1))
             else:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -544,7 +544,7 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         outputs = (reshaped_logits,) + outputs[2:]  # add hidden states and attention if they are here
 
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
             outputs = (loss,) + outputs
 
         return outputs  # (loss), reshaped_logits, (hidden_states), (attentions)

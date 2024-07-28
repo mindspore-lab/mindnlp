@@ -46,7 +46,7 @@ _CHECKPOINT_FOR_DOC = "google/owlvit-base-patch32"
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss with clip->owlvit
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->owlvit
@@ -426,7 +426,7 @@ class OwlViTAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(
+        attn_probs = F.dropout(
             attn_weights, p=self.dropout, training=self.training)
 
         # For int8 compatibility, sometimes the `attn_probs` are in `fp32`

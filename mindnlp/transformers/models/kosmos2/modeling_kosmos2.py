@@ -344,7 +344,7 @@ class Kosmos2VisionAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -777,7 +777,7 @@ class KosmosTextAttention(nn.Module):
         if layer_head_mask is not None:
             attn_weights = attn_weights * layer_head_mask
 
-        attn_weights = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         #  attn_output = torch.bmm(attn_probs, value_states) ?
         context_states = ops.matmul(attn_weights, value_states)
@@ -807,10 +807,10 @@ class Kosmos2TextFFN(nn.Module):
 
     def forward(self, hidden_states):
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.ffn_layernorm(hidden_states)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         return hidden_states
 
@@ -873,7 +873,7 @@ class Kosmos2TextBlock(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Cross-Attention Block
@@ -900,7 +900,7 @@ class Kosmos2TextBlock(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
@@ -1004,7 +1004,7 @@ class Kosmos2TextTransformer(nn.Module):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         return hidden_states
 
@@ -1069,7 +1069,7 @@ class Kosmos2TextTransformer(nn.Module):
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
             encoder_attention_mask = _expand_mask(encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1443,7 +1443,7 @@ class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel):
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length))
+            loss = F.cross_entropy(shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]

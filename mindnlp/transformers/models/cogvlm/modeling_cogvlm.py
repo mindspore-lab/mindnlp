@@ -355,7 +355,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     attn_weight = query @ key.swapaxes(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = ops.softmax(attn_weight, axis=-1)
-    attn_weight = ops.dropout(attn_weight, dropout_p)
+    attn_weight = F.dropout(attn_weight, dropout_p)
     return attn_weight @ value
 
 
@@ -919,7 +919,7 @@ class CogVLMPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0,sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1612,7 +1612,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
-            loss_fct = ops.cross_entropy#CrossEntropyLoss()
+            loss_fct = F.cross_entropy#CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism

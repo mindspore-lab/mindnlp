@@ -620,7 +620,7 @@ class Pop2PianoAttention(nn.Module):
         attn_weights = ops.softmax(scores.float(), axis=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -1825,7 +1825,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
 
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs

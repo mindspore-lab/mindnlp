@@ -1809,7 +1809,7 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(-1, self.config.num_labels), labels.view(-1)
             )
 

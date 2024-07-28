@@ -51,7 +51,7 @@ _CHECKPOINT_FOR_DOC = "google/owlv2-base-patch16-ensemble"
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss with clip->owlv2
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(
+    return F.cross_entropy(
         logits,
         ops.arange(len(logits)),
     )
@@ -453,7 +453,7 @@ class Owlv2Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         # For int8 compatibility, sometimes the `attn_probs` are in `fp32`
         attn_probs = attn_probs.astype(value_states.dtype)

@@ -44,7 +44,7 @@ _CHECKPOINT_FOR_DOC = "CIDAS/clipseg-rd64-refined"
 
 # contrastive loss function, adapted from
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->clipseg

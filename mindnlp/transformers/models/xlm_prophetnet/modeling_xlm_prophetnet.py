@@ -404,7 +404,7 @@ class XLMProphetNetAttention(nn.Module):
             # apply head_mask also on attn_weights_reshaped which is used for n-gram attention inside the model
             attn_weights_reshaped = layer_head_mask.view(1, -1, 1, 1) * attn_weights_reshaped
 
-        attn_probs = ops.dropout(
+        attn_probs = F.dropout(
             attn_weights,
             p=self.attention_dropout,
             training=self.training,
@@ -417,7 +417,7 @@ class XLMProphetNetAttention(nn.Module):
         attn_output = attn_output.swapaxes(1, 2).reshape(batch_size, tgt_len, hidden_size)
         attn_output = self.out_proj(attn_output)
 
-        attn_output = ops.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
         return attn_output, attn_weights_reshaped, past_key_value
 
 
@@ -439,9 +439,9 @@ class XLMProphetNetFeedForward(nn.Module):
         hidden_states = self.intermediate(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.output(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
@@ -573,7 +573,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
                 batch_size, self.num_attn_heads, -1, sequence_length
             )
 
-        main_attn_probs = ops.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
+        main_attn_probs = F.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
         # project to attn_output
         # [batch_size, number_heads, sequence_length, sequence_length]
         # x [batch_size, number_heads, sequence_length, head_dimesion]
@@ -633,7 +633,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
             )
             predict_attn_probs = layer_head_mask.view(1, 1, -1, 1, 1) * predict_attn_probs
 
-        predict_attn_probs = ops.dropout(
+        predict_attn_probs = F.dropout(
             predict_attn_probs, p=self.attention_dropout, training=self.training
         )
         # project to attention output
@@ -656,7 +656,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
         # reshape into better form for `config.output_attentions`
         main_attn_probs = main_attn_probs.view(batch_size, self.num_attn_heads, sequence_length, -1)
 
-        attn_output = ops.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
 
         return attn_output, main_attn_probs, predict_attn_probs, past_key_value
 
@@ -953,7 +953,7 @@ class XLMProphetNetEncoder(XLMProphetNetPreTrainedModel):
 
         hidden_states = inputs_embeds + position_embeddings
         hidden_states = self.embeddings_layer_norm(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.config.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.config.dropout, training=self.training)
 
         encoder_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1111,7 +1111,7 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
 
         if self.embeddings_layer_norm:
             hidden_states = self.embeddings_layer_norm(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         # init attentions, hidden_states and cache with empty tuples
         all_main_stream_hidden_states = () if output_hidden_states else None
         all_ngram_stream_hidden_states = () if output_hidden_states and self.config.ngram > 0 else None
