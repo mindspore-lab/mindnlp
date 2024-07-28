@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch DETA model."""
+"""MindSpore DETA model."""
 
 import copy
 import math
@@ -20,9 +20,8 @@ import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
-import mindspore as ms
-from mindspore import dtype as mstype
-from mindspore import ops, Tensor
+import mindspore
+from mindspore import Tensor
 from mindspore.common.initializer import (
     initializer,
     Uniform,
@@ -30,7 +29,8 @@ from mindspore.common.initializer import (
     Normal,
     Constant,
 )
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from .image_processing_deta import batched_nms
 
@@ -131,32 +131,32 @@ class DetaDecoderOutput(ModelOutput):
     - a stacked tensor of intermediate decoder hidden states (i.e. the output of each decoder layer)
     - a stacked tensor of intermediate reference points.
     Args:
-        last_hidden_state (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        intermediate_hidden_states (`ms.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
+        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
             Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`ms.Tensor` of shape `(batch_size, config.decoder_layers, sequence_length, hidden_size)`):
+        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, sequence_length, hidden_size)`):
             Stacked intermediate reference points (reference points of each layer of the decoder).
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` and `config.add_cross_attention=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` and `config.add_cross_attention=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
     """
 
-    last_hidden_state: ms.Tensor = None
-    intermediate_hidden_states: ms.Tensor = None
-    intermediate_reference_points: ms.Tensor = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
-    attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_attentions: Optional[Tuple[ms.Tensor]] = None
+    last_hidden_state: mindspore.Tensor = None
+    intermediate_hidden_states: mindspore.Tensor = None
+    intermediate_reference_points: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -164,59 +164,59 @@ class DetaModelOutput(ModelOutput):
     """
     Base class for outputs of the Deformable DETR encoder-decoder model.
     Args:
-        init_reference_points (`ms.Tensor` of shape  `(batch_size, num_queries, 4)`):
+        init_reference_points (`mindspore.Tensor` of shape  `(batch_size, num_queries, 4)`):
             Initial reference points sent through the Transformer decoder.
-        last_hidden_state (`ms.Tensor` of shape `(batch_size, num_queries, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the decoder of the model.
-        intermediate_hidden_states (`ms.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
+        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
             Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`ms.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
+        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
             Stacked intermediate reference points (reference points of each layer of the decoder).
-        decoder_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, num_queries, hidden_size)`. Hidden-states of the decoder at the output of each layer
             plus the initial embedding outputs.
-        decoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
             num_queries)`. Attentions weights of the decoder, after the attention softmax, used to compute the weighted
             average in the self-attention heads.
-        cross_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
             Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
             weighted average in the cross-attention heads.
-        encoder_last_hidden_state (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the encoder at the output of each
             layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        enc_outputs_class (`ms.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
+        enc_outputs_class (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
             Predicted bounding boxes scores where the top `config.two_stage_num_proposals` scoring bounding boxes are
             picked as region proposals in the first stage. Output of bounding box binary classification (i.e.
             foreground and background).
-        enc_outputs_coord_logits (`ms.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
+        enc_outputs_coord_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
             Logits of predicted bounding boxes coordinates in the first stage.
-        output_proposals (`ms.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.two_stage=True`):
+        output_proposals (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.two_stage=True`):
             Logits of proposal bounding boxes coordinates in the gen_encoder_output_proposals.
     """
 
-    init_reference_points: ms.Tensor = None
-    last_hidden_state: ms.Tensor = None
-    intermediate_hidden_states: ms.Tensor = None
-    intermediate_reference_points: ms.Tensor = None
-    decoder_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    decoder_attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_attentions: Optional[Tuple[ms.Tensor]] = None
-    encoder_last_hidden_state: Optional[ms.Tensor] = None
-    encoder_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    encoder_attentions: Optional[Tuple[ms.Tensor]] = None
-    enc_outputs_class: Optional[ms.Tensor] = None
-    enc_outputs_coord_logits: Optional[ms.Tensor] = None
-    output_proposals: Optional[ms.Tensor] = None
+    init_reference_points: mindspore.Tensor = None
+    last_hidden_state: mindspore.Tensor = None
+    intermediate_hidden_states: mindspore.Tensor = None
+    intermediate_reference_points: mindspore.Tensor = None
+    decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.Tensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    enc_outputs_class: Optional[mindspore.Tensor] = None
+    enc_outputs_coord_logits: Optional[mindspore.Tensor] = None
+    output_proposals: Optional[mindspore.Tensor] = None
 
 
 @dataclass
@@ -224,15 +224,15 @@ class DetaObjectDetectionOutput(ModelOutput):
     """
     Output type of [`DetaForObjectDetection`].
     Args:
-        loss (`ms.Tensor` of shape `(1,)`, *optional*, returned when `labels` are provided)):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` are provided)):
             Total loss as a linear combination of a negative log-likehood (cross-entropy) for class prediction and a
             bounding box loss. The latter is defined as a linear combination of the L1 loss and the generalized
             scale-invariant IoU loss.
         loss_dict (`Dict`, *optional*):
             A dictionary containing the individual losses. Useful for logging.
-        logits (`ms.Tensor` of shape `(batch_size, num_queries, num_classes + 1)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, num_queries, num_classes + 1)`):
             Classification logits (including no-object) for all queries.
-        pred_boxes (`ms.Tensor` of shape `(batch_size, num_queries, 4)`):
+        pred_boxes (`mindspore.Tensor` of shape `(batch_size, num_queries, 4)`):
             Normalized boxes coordinates for all queries, represented as (center_x, center_y, width, height). These
             values are normalized in [0, 1], relative to the size of each individual image in the batch (disregarding
             possible padding). You can use [`~DetaProcessor.post_process_object_detection`] to retrieve the
@@ -241,64 +241,64 @@ class DetaObjectDetectionOutput(ModelOutput):
             Optional, only returned when auxilary losses are activated (i.e. `config.auxiliary_loss` is set to `True`)
             and labels are provided. It is a list of dictionaries containing the two above keys (`logits` and
             `pred_boxes`) for each decoder layer.
-        last_hidden_state (`ms.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the decoder of the model.
-        decoder_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, num_queries, hidden_size)`. Hidden-states of the decoder at the output of each layer
             plus the initial embedding outputs.
-        decoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
             num_queries)`. Attentions weights of the decoder, after the attention softmax, used to compute the weighted
             average in the self-attention heads.
-        cross_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
             Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
             weighted average in the cross-attention heads.
-        encoder_last_hidden_state (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the encoder at the output of each
             layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, sequence_length, num_heads, 4,
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, sequence_length, num_heads, 4,
             4)`. Attentions weights of the encoder, after the attention softmax, used to compute the weighted average
             in the self-attention heads.
-        intermediate_hidden_states (`ms.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
+        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
             Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`ms.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
+        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
             Stacked intermediate reference points (reference points of each layer of the decoder).
-        init_reference_points (`ms.Tensor` of shape  `(batch_size, num_queries, 4)`):
+        init_reference_points (`mindspore.Tensor` of shape  `(batch_size, num_queries, 4)`):
             Initial reference points sent through the Transformer decoder.
-        enc_outputs_class (`ms.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
+        enc_outputs_class (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
             Predicted bounding boxes scores where the top `config.two_stage_num_proposals` scoring bounding boxes are
             picked as region proposals in the first stage. Output of bounding box binary classification (i.e.
             foreground and background).
-        enc_outputs_coord_logits (`ms.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
+        enc_outputs_coord_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
             Logits of predicted bounding boxes coordinates in the first stage.
-        output_proposals (`ms.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.two_stage=True`):
+        output_proposals (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.two_stage=True`):
             Logits of proposal bounding boxes coordinates in the gen_encoder_output_proposals.
     """
 
-    loss: Optional[ms.Tensor] = None
+    loss: Optional[mindspore.Tensor] = None
     loss_dict: Optional[Dict] = None
-    logits: ms.Tensor = None
-    pred_boxes: ms.Tensor = None
+    logits: mindspore.Tensor = None
+    pred_boxes: mindspore.Tensor = None
     auxiliary_outputs: Optional[List[Dict]] = None
-    init_reference_points: Optional[ms.Tensor] = None
-    last_hidden_state: Optional[ms.Tensor] = None
-    intermediate_hidden_states: Optional[ms.Tensor] = None
-    intermediate_reference_points: Optional[ms.Tensor] = None
-    decoder_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    decoder_attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_attentions: Optional[Tuple[ms.Tensor]] = None
-    encoder_last_hidden_state: Optional[ms.Tensor] = None
-    encoder_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    encoder_attentions: Optional[Tuple[ms.Tensor]] = None
+    init_reference_points: Optional[mindspore.Tensor] = None
+    last_hidden_state: Optional[mindspore.Tensor] = None
+    intermediate_hidden_states: Optional[mindspore.Tensor] = None
+    intermediate_reference_points: Optional[mindspore.Tensor] = None
+    decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.Tensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
     enc_outputs_class: Optional[any] = None
     enc_outputs_coord_logits: Optional[any] = None
-    output_proposals: Optional[ms.Tensor] = None
+    output_proposals: Optional[mindspore.Tensor] = None
 
 
 def _get_clones(module, N):
@@ -412,7 +412,7 @@ class DetaBackboneWithPositionalEncodings(nn.Module):
 
         self.position_embedding = build_position_encoding(config)
 
-    def forward(self, pixel_values: ms.Tensor, pixel_mask: ms.Tensor):
+    def forward(self, pixel_values: mindspore.Tensor, pixel_mask: mindspore.Tensor):
         """
         Outputs feature maps of latter stages C_3 through C_5 in ResNet if `config.num_feature_levels > 1`, otherwise
         outputs feature maps of C_5.
@@ -425,9 +425,9 @@ class DetaBackboneWithPositionalEncodings(nn.Module):
         pos = []
         for feature_map in features:
             # downsample pixel_mask to match shape of corresponding feature_map
-            mask = ops.interpolate(
+            mask = F.interpolate(
                 pixel_mask[None].float(), size=feature_map.shape[-2:]
-            ).to(ms.bool_)[0]
+            ).to(mindspore.bool_)[0]
             position_embeddings = self.position_embedding(feature_map, mask).to(
                 feature_map.dtype
             )
@@ -460,14 +460,14 @@ class DetaSinePositionEmbedding(nn.Module):
     def forward(self, pixel_values, pixel_mask):
         if pixel_mask is None:
             raise ValueError("No pixel mask provided")
-        y_embed = pixel_mask.cumsum(1, dtype=ms.float32)
-        x_embed = pixel_mask.cumsum(2, dtype=ms.float32)
+        y_embed = pixel_mask.cumsum(1, dtype=mindspore.float32)
+        x_embed = pixel_mask.cumsum(2, dtype=mindspore.float32)
         if self.normalize:
             eps = 1e-6
             y_embed = (y_embed - 0.5) / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * self.scale
 
-        dim_t = ops.arange(self.embedding_dim, dtype=ms.int64).float()
+        dim_t = ops.arange(self.embedding_dim, dtype=mindspore.int64).float()
         dim_t = self.temperature ** (
             2 * ops.div(dim_t, 2, rounding_mode="floor") / self.embedding_dim
         )
@@ -475,12 +475,12 @@ class DetaSinePositionEmbedding(nn.Module):
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
         pos_x = ops.stack(
-            (pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4
+            (pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4
         ).flatten(start_dim=3)
         pos_y = ops.stack(
-            (pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4
+            (pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4
         ).flatten(start_dim=3)
-        pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
+        pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
 
@@ -503,14 +503,14 @@ class DetaLearnedPositionEmbedding(nn.Module):
         y_emb = self.row_embeddings(height_values)
         pos = ops.cat(
             [
-                x_emb.unsqueeze(0).repeat(height, 1, 1),
-                y_emb.unsqueeze(1).repeat(1, width, 1),
+                ops.tile(x_emb.unsqueeze(0), (height, 1, 1)),
+                ops.tile(y_emb.unsqueeze(1), (1, width, 1)),
             ],
-            axis=-1,
+            dim=-1,
         )
         pos = pos.permute(2, 0, 1)
         pos = pos.unsqueeze(0)
-        pos = pos.repeat(pixel_values.shape[0], 1, 1, 1)
+        pos = ops.tile(pos, (pixel_values.shape[0], 1, 1, 1))
         return pos
 
 
@@ -560,7 +560,7 @@ def multi_scale_deformable_attention(
         B, H, *others = tmp.shape
         sampling_grid_l_ = tmp.reshape([B * H, *others])
         # batch_size*num_heads, hidden_dim, num_queries, num_points
-        sampling_value_l_ = ops.grid_sample(
+        sampling_value_l_ = F.grid_sample(
             value_l_,
             sampling_grid_l_,
             mode="bilinear",
@@ -576,7 +576,7 @@ def multi_scale_deformable_attention(
     )
     output = (
         (
-            ops.stack(sampling_value_list, axis=-2).flatten(start_dim=-2)
+            ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2)
             * attention_weights
         )
         .sum(-1)
@@ -631,7 +631,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
 
     def _reset_parameters(self):
         self.sampling_offsets.weight.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     "zeros",
                     self.sampling_offsets.weight.shape,
@@ -642,23 +642,22 @@ class DetaMultiscaleDeformableAttention(nn.Module):
 
         default_dtype = get_default_dtype()
 
-        # thetas = ops.arange(self.n_heads, dtype=ms.int64).to(default_dtype) * (
+        # thetas = ops.arange(self.n_heads, dtype=mindspore.int64).to(default_dtype) * (
         #     2.0 * math.pi / self.n_heads
         # )
-        thetas = ops.arange(self.n_heads, dtype=ms.int64).astype(ms.float32) * (
+        thetas = ops.arange(self.n_heads, dtype=mindspore.int64).astype(mindspore.float32) * (
             2.0 * math.pi / self.n_heads
         )
         grid_init = ops.stack([thetas.cos(), thetas.sin()], -1)
-        grid_init = (
+        grid_init = ops.tile(
             (grid_init / grid_init.abs().max(-1, keepdims=True)[0])
-            .view(self.n_heads, 1, 1, 2)
-            .repeat(1, self.n_levels, self.n_points, 1)
+            .view(self.n_heads, 1, 1, 2), (1, self.n_levels, self.n_points, 1)
         )
         for i in range(self.n_points):
             grid_init[:, :, i, :] *= i + 1
-        self.sampling_offsets.bias = ms.Parameter(grid_init.view(-1))
+        self.sampling_offsets.bias = mindspore.Parameter(grid_init.view(-1))
         self.attention_weights.weight.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(0.0),
                     self.attention_weights.weight.shape,
@@ -667,7 +666,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
         self.attention_weights.bias.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(0.0),
                     self.attention_weights.bias.shape,
@@ -676,7 +675,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
         self.value_proj.weight.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     XavierUniform(),
                     self.value_proj.weight.shape,
@@ -685,7 +684,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
         self.value_proj.bias.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(0.0),
                     self.value_proj.bias.shape,
@@ -694,7 +693,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
         self.output_proj.weight.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     XavierUniform(),
                     self.output_proj.weight.shape,
@@ -703,7 +702,7 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
         self.output_proj.bias.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(0.0),
                     self.output_proj.bias.shape,
@@ -712,16 +711,16 @@ class DetaMultiscaleDeformableAttention(nn.Module):
             )
         )
 
-    def with_pos_embed(self, tensor: ms.Tensor, position_embeddings: Optional[Tensor]):
+    def with_pos_embed(self, tensor: mindspore.Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
-        position_embeddings: Optional[ms.Tensor] = None,
+        position_embeddings: Optional[mindspore.Tensor] = None,
         reference_points=None,
         spatial_shapes=None,
         level_start_index=None,
@@ -834,21 +833,21 @@ class DetaMultiheadAttention(nn.Module):
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
-    def _shape(self, tensor: ms.Tensor, seq_len: int, batch_size: int):
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(
             1, 2
         )
 
-    def with_pos_embed(self, tensor: ms.Tensor, position_embeddings: Optional[Tensor]):
+    def with_pos_embed(self, tensor: mindspore.Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
-        position_embeddings: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        position_embeddings: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         batch_size, target_len, embed_dim = hidden_states.shape
@@ -900,7 +899,7 @@ class DetaMultiheadAttention(nn.Module):
                 batch_size * self.num_heads, target_len, source_len
             )
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -916,7 +915,7 @@ class DetaMultiheadAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -960,9 +959,9 @@ class DetaEncoderLayer(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        attention_mask: ms.Tensor,
-        position_embeddings: ms.Tensor = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        position_embeddings: mindspore.Tensor = None,
         reference_points=None,
         spatial_shapes=None,
         level_start_index=None,
@@ -970,17 +969,17 @@ class DetaEncoderLayer(nn.Module):
     ):
         """
         Args:
-            hidden_states (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
                 Input to the layer.
-            attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`):
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 Attention mask.
-            position_embeddings (`ms.Tensor`, *optional*):
+            position_embeddings (`mindspore.Tensor`, *optional*):
                 Position embeddings, to be added to `hidden_states`.
-            reference_points (`ms.Tensor`, *optional*):
+            reference_points (`mindspore.Tensor`, *optional*):
                 Reference points.
-            spatial_shapes (`ms.Tensor`, *optional*):
+            spatial_shapes (`mindspore.Tensor`, *optional*):
                 Spatial shapes of the backbone feature maps.
-            level_start_index (`ms.Tensor`, *optional*):
+            level_start_index (`mindspore.Tensor`, *optional*):
                 Level start index.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -1001,7 +1000,7 @@ class DetaEncoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
         hidden_states = residual + hidden_states
@@ -1009,12 +1008,12 @@ class DetaEncoderLayer(nn.Module):
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.activation_dropout, training=self.training
         )
 
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
 
@@ -1066,30 +1065,30 @@ class DetaDecoderLayer(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        position_embeddings: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        position_embeddings: Optional[mindspore.Tensor] = None,
         reference_points=None,
         spatial_shapes=None,
         level_start_index=None,
-        encoder_hidden_states: Optional[ms.Tensor] = None,
-        encoder_attention_mask: Optional[ms.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ):
         """
         Args:
-            hidden_states (`ms.Tensor`):
+            hidden_states (`mindspore.Tensor`):
                 Input to the layer of shape `(batch, seq_len, embed_dim)`.
-            position_embeddings (`ms.Tensor`, *optional*):
+            position_embeddings (`mindspore.Tensor`, *optional*):
                 Position embeddings that are added to the queries and keys in the self-attention layer.
-            reference_points (`ms.Tensor`, *optional*):
+            reference_points (`mindspore.Tensor`, *optional*):
                 Reference points.
-            spatial_shapes (`ms.Tensor`, *optional*):
+            spatial_shapes (`mindspore.Tensor`, *optional*):
                 Spatial shapes.
-            level_start_index (`ms.Tensor`, *optional*):
+            level_start_index (`mindspore.Tensor`, *optional*):
                 Level start index.
-            encoder_hidden_states (`ms.Tensor`):
+            encoder_hidden_states (`mindspore.Tensor`):
                 cross attention input to the layer of shape `(batch, seq_len, embed_dim)`
-            encoder_attention_mask (`ms.Tensor`): encoder attention mask of size
+            encoder_attention_mask (`mindspore.Tensor`): encoder attention mask of size
                 `(batch, 1, target_len, source_len)` where padding elements are indicated by very large negative
                 values.
             output_attentions (`bool`, *optional*):
@@ -1105,7 +1104,7 @@ class DetaDecoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
         hidden_states = residual + hidden_states
@@ -1127,7 +1126,7 @@ class DetaDecoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
         hidden_states = second_residual + hidden_states
@@ -1137,11 +1136,11 @@ class DetaDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.activation_dropout, training=self.training
         )
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
         hidden_states = residual + hidden_states
@@ -1257,24 +1256,24 @@ DETA_START_DOCSTRING = r"""
 
 DETA_INPUTS_DOCSTRING = r"""
     Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
+        pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values. Padding will be ignored by default should you provide it.
             Pixel values can be obtained using [`AutoImageProcessor`]. See [`AutoImageProcessor.__call__`] for details.
-        pixel_mask (`ms.Tensor` of shape `(batch_size, height, width)`, *optional*):
+        pixel_mask (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):
             Mask to avoid performing attention on padding pixel values. Mask values selected in `[0, 1]`:
             - 1 for pixels that are real (i.e. **not masked**),
             - 0 for pixels that are padding (i.e. **masked**).
             [What are attention masks?](../glossary#attention-mask)
-        decoder_attention_mask (`ms.Tensor` of shape `(batch_size, num_queries)`, *optional*):
+        decoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, num_queries)`, *optional*):
             Not used by default. Can be used to mask object queries.
-        encoder_outputs (`tuple(tuple(ms.Tensor)`, *optional*):
+        encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
             Tuple consists of (`last_hidden_state`, *optional*: `hidden_states`, *optional*: `attentions`)
             `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)`, *optional*) is a sequence of
             hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the decoder.
-        inputs_embeds (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Optionally, instead of passing the flattened feature map (output of the backbone + projection layer), you
             can choose to directly pass a flattened representation of an image.
-        decoder_inputs_embeds (`ms.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
+        decoder_inputs_embeds (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
             Optionally, instead of initializing the queries with a tensor of zeros, you can choose to directly pass an
             embedded representation.
         output_attentions (`bool`, *optional*):
@@ -1314,17 +1313,18 @@ class DetaEncoder(DetaPreTrainedModel):
         """
         Get reference points for each feature map. Used in decoder.
         Args:
-            spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
+            spatial_shapes (`mindspore.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of each feature map.
-            valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
+            valid_ratios (`mindspore.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
                 Valid ratios of each feature map.
             device (`torch.device`):
                 Device on which to create the tensors.
         Returns:
-            `ms.Tensor` of shape `(batch_size, num_queries, num_feature_levels, 2)`
+            `mindspore.Tensor` of shape `(batch_size, num_queries, num_feature_levels, 2)`
         """
         reference_points_list = []
         for level, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             ref_y, ref_x = ops.meshgrid(
                 ops.linspace(
                     0.5,
@@ -1361,20 +1361,20 @@ class DetaEncoder(DetaPreTrainedModel):
     ):
         r"""
         Args:
-            inputs_embeds (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
                 Flattened feature map (output of the backbone + projection layer) that is passed to the encoder.
-            attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding pixel features. Mask values selected in `[0, 1]`:
                 - 1 for pixel features that are real (i.e. **not masked**),
                 - 0 for pixel features that are padding (i.e. **masked**).
                 [What are attention masks?](../glossary#attention-mask)
-            position_embeddings (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            position_embeddings (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
                 Position embeddings that are added to the queries and keys in each self-attention layer.
-            spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
+            spatial_shapes (`mindspore.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of each feature map.
-            level_start_index (`ms.Tensor` of shape `(num_feature_levels)`):
+            level_start_index (`mindspore.Tensor` of shape `(num_feature_levels)`):
                 Starting index of each feature map.
-            valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
+            valid_ratios (`mindspore.Tensor` of shape `(batch_size, num_feature_levels, 2)`):
                 Ratio of valid area in each feature level.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -1400,7 +1400,7 @@ class DetaEncoder(DetaPreTrainedModel):
         )
 
         hidden_states = inputs_embeds
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training
         )
 
@@ -1488,25 +1488,25 @@ class DetaDecoder(DetaPreTrainedModel):
     ):
         r"""
         Args:
-            inputs_embeds (`ms.Tensor` of shape `(batch_size, num_queries, hidden_size)`):
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`):
                 The query embeddings that are passed into the decoder.
-            encoder_hidden_states (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
-            encoder_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing cross-attention on padding pixel_values of the encoder. Mask values selected
                 in `[0, 1]`:
                 - 1 for pixels that are real (i.e. **not masked**),
                 - 0 for pixels that are padding (i.e. **masked**).
-            position_embeddings (`ms.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
+            position_embeddings (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
                 Position embeddings that are added to the queries and keys in each self-attention layer.
-            reference_points (`ms.Tensor` of shape `(batch_size, num_queries, 4)` is `as_two_stage` else `(batch_size, num_queries, 2)` or , *optional*):
+            reference_points (`mindspore.Tensor` of shape `(batch_size, num_queries, 4)` is `as_two_stage` else `(batch_size, num_queries, 2)` or , *optional*):
                 Reference point in range `[0, 1]`, top-left (0,0), bottom-right (1, 1), including padding area.
-            spatial_shapes (`ms.Tensor` of shape `(num_feature_levels, 2)`):
+            spatial_shapes (`mindspore.Tensor` of shape `(num_feature_levels, 2)`):
                 Spatial shapes of the feature maps.
-            level_start_index (`ms.Tensor` of shape `(num_feature_levels)`, *optional*):
+            level_start_index (`mindspore.Tensor` of shape `(num_feature_levels)`, *optional*):
                 Indexes for the start of each feature level. In range `[0, sequence_length]`.
-            valid_ratios (`ms.Tensor` of shape `(batch_size, num_feature_levels, 2)`, *optional*):
+            valid_ratios (`mindspore.Tensor` of shape `(batch_size, num_feature_levels, 2)`, *optional*):
                 Ratio of valid area in each feature level.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -1615,8 +1615,8 @@ class DetaDecoder(DetaPreTrainedModel):
                     all_cross_attentions += (layer_outputs[2],)
 
         # Keep batch_size as first dimension
-        intermediate = ops.stack(intermediate, axis=1)
-        intermediate_reference_points = ops.stack(intermediate_reference_points, axis=1)
+        intermediate = ops.stack(intermediate, dim=1)
+        intermediate_reference_points = ops.stack(intermediate_reference_points, dim=1)
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
@@ -1705,7 +1705,7 @@ class DetaModel(DetaPreTrainedModel):
         self.encoder = DetaEncoder(config)
         self.decoder = DetaDecoder(config)
 
-        self.level_embed = ms.Parameter(
+        self.level_embed = mindspore.Parameter(
             ops.zeros([config.num_feature_levels, config.d_model])
         )
 
@@ -1741,7 +1741,7 @@ class DetaModel(DetaPreTrainedModel):
             param.requires_grad = True
 
     # Copied from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrModel.get_valid_ratio
-    def get_valid_ratio(self, mask, dtype=ms.float32):
+    def get_valid_ratio(self, mask, dtype=mindspore.float32):
         """Get the valid ratio of all feature maps."""
 
         _, height, width = mask.shape
@@ -1762,7 +1762,7 @@ class DetaModel(DetaPreTrainedModel):
 
         dim_t = ops.arange(
             num_pos_feats,
-            dtype=ms.int64,
+            dtype=mindspore.int64,
         ).float()
         dim_t = temperature ** (
             2 * ops.div(dim_t, 2, rounding_mode="floor") / num_pos_feats
@@ -1773,7 +1773,7 @@ class DetaModel(DetaPreTrainedModel):
         pos = proposals[:, :, :, None] / dim_t
         # batch_size, num_queries, 4, 64, 2 -> batch_size, num_queries, 512
         pos = ops.stack(
-            (pos[:, :, :, 0::2].sin(), pos[:, :, :, 1::2].cos()), axis=4
+            (pos[:, :, :, 0::2].sin(), pos[:, :, :, 1::2].cos()), dim=4
         ).flatten(start_dim=2)
         return pos
 
@@ -1784,7 +1784,7 @@ class DetaModel(DetaPreTrainedModel):
             padding_mask (Tensor[batch_size, sequence_length]): Padding mask for `enc_output`.
             spatial_shapes (Tensor[num_feature_levels, 2]): Spatial shapes of the feature maps.
         Returns:
-            `tuple(ms.Tensor)`: A tuple of feature map and bbox prediction.
+            `tuple(mindspore.Tensor)`: A tuple of feature map and bbox prediction.
                 - object_query (Tensor[batch_size, sequence_length, hidden_size]): Object query features. Later used to
                   directly predict a bounding box. (without the need of a decoder)
                 - output_proposals (Tensor[batch_size, sequence_length, 4]): Normalized proposals, after an inverse
@@ -1821,15 +1821,15 @@ class DetaModel(DetaPreTrainedModel):
             scale = ops.cat(
                 [valid_width.unsqueeze(-1), valid_height.unsqueeze(-1)], 1
             ).view(batch_size, 1, 1, 2)
-            grid = (grid.unsqueeze(0).expand(batch_size, -1, -1, -1) + 0.5) / scale
+            grid = (ops.broadcast_to(grid.unsqueeze(0), (batch_size, -1, -1, -1)) + 0.5) / scale
             width_heigth = ops.ones_like(grid) * 0.05 * (2.0**level)
             proposal = ops.cat((grid, width_heigth), -1).view(batch_size, -1, 4)
             proposals.append(proposal)
             _cur += height * width
-            level_ids.append(grid.new_ones(height * width, dtype=ms.int64) * level)
+            level_ids.append(grid.new_ones(height * width, dtype=mindspore.int64) * level)
         output_proposals = ops.cat(proposals, 1)
         output_proposals_valid = (
-            (output_proposals > 0.01) & (output_proposals < 0.99)
+            (output_proposals > 0.01).to(mindspore.int32) & (output_proposals < 0.99).to(mindspore.int32)
         ).all(-1, keep_dims=True)
         output_proposals = ops.log(
             output_proposals / (1 - output_proposals)
@@ -1851,16 +1851,16 @@ class DetaModel(DetaPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: ms.Tensor,
-        pixel_mask: Optional[ms.Tensor] = None,
-        decoder_attention_mask: Optional[ms.Tensor] = None,
-        encoder_outputs: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        decoder_inputs_embeds: Optional[ms.Tensor] = None,
+        pixel_values: mindspore.Tensor,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[ms.Tensor], DetaModelOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], DetaModelOutput]:
         r"""
         Returns:
         Examples:
@@ -1895,7 +1895,7 @@ class DetaModel(DetaPreTrainedModel):
         batch_size, num_channels, height, width = pixel_values.shape
 
         if pixel_mask is None:
-            pixel_mask = ops.ones(((batch_size, height, width)), dtype=ms.int64)
+            pixel_mask = ops.ones(((batch_size, height, width)), dtype=mindspore.int64)
 
         # Extract multi-scale feature maps of same resolution `config.d_model` (cf Figure 4 in paper)
         # First, sent pixel_values + pixel_mask through Backbone to obtain the features
@@ -1919,9 +1919,9 @@ class DetaModel(DetaPreTrainedModel):
                     source = self.input_proj[level](features[-1][0])
                 else:
                     source = self.input_proj[level](sources[-1])
-                mask = ops.interpolate(
+                mask = F.interpolate(
                     pixel_mask[None].float(), size=source.shape[-2:]
-                ).to(ms.bool_)[0]
+                ).to(mindspore.bool_)[0]
                 pos_l = self.backbone.position_embedding(source, mask).to(source.dtype)
                 sources.append(source)
                 masks.append(mask)
@@ -1935,22 +1935,22 @@ class DetaModel(DetaPreTrainedModel):
         # Prepare encoder inputs (by flattening)
         spatial_shapes = [(source.shape[2:]) for source in sources]
         source_flatten = [
-            source.flatten(start_dim=2).swapaxes(1, 2) for source in sources
+            ops.flatten(source, start_dim=2).swapaxes(1, 2) for source in sources
         ]
-        mask_flatten = [mask.flatten(start_dim=1) for mask in masks]
+        mask_flatten = [ops.flatten(mask, start_dim=1) for mask in masks]
 
         lvl_pos_embed_flatten = []
         for level, pos_embed in enumerate(position_embeddings_list):
-            pos_embed = pos_embed.flatten(start_dim=2).swapaxes(1, 2)
+            pos_embed = ops.flatten(pos_embed, start_dim=2).swapaxes(1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
 
         source_flatten = ops.cat(source_flatten, 1)
         mask_flatten = ops.cat(mask_flatten, 1)
         lvl_pos_embed_flatten = ops.cat(lvl_pos_embed_flatten, 1)
-        spatial_shapes = ms.Tensor(spatial_shapes, dtype=ms.int64)
+        spatial_shapes = mindspore.tensor(spatial_shapes, dtype=mindspore.int32)
         level_start_index = ops.cat(
-            (spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1])
+            (ops.zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).to(mindspore.int32).cumsum(0)[:-1])
         )
         valid_ratios = ops.stack([self.get_valid_ratio(m) for m in masks], 1)
         valid_ratios = valid_ratios.float()
@@ -2060,17 +2060,17 @@ class DetaModel(DetaPreTrainedModel):
             else:
                 topk_proposals = ops.topk(enc_outputs_class[..., 0], topk, dim=1)[1]
 
-            topk_coords_logits = ops.gather_elements(
+            topk_coords_logits = ops.gather(
                 enc_outputs_coord_logits,
                 1,
-                topk_proposals.unsqueeze(-1).repeat(1, 1, 4),
+                ops.tile(topk_proposals.unsqueeze(-1), (1, 1, 4))
             )
             reference_points = topk_coords_logits.sigmoid()
             init_reference_points = reference_points
             pos_trans_out = self.pos_trans_norm(
                 self.pos_trans(self.get_proposal_pos_embed(topk_coords_logits))
             )
-            query_embed, target = ops.split(pos_trans_out, num_channels, axis=2)
+            query_embed, target = ops.split(pos_trans_out, num_channels, dim=2)
 
             topk_feats = ops.stack(
                 [
@@ -2080,9 +2080,9 @@ class DetaModel(DetaPreTrainedModel):
             )
             target = target + self.pix_trans_norm(self.pix_trans(topk_feats))
         else:
-            query_embed, target = ops.split(query_embeds, num_channels, axis=1)
-            query_embed = query_embed.unsqueeze(0).expand(batch_size, -1, -1)
-            target = target.unsqueeze(0).expand(batch_size, -1, -1)
+            query_embed, target = ops.split(query_embeds, num_channels, dim=1)
+            query_embed = query_embed.unsqueeze(0).broadcast_to((batch_size, -1, -1))
+            target = target.unsqueeze(0).broadcast_to((batch_size, -1, -1))
             reference_points = self.reference_points(query_embed).sigmoid()
             init_reference_points = reference_points
 
@@ -2157,10 +2157,10 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         prior_prob = 0.01
         bias_value = -math.log((1 - prior_prob) / prior_prob)
         self.class_embed.bias.set_data(
-            ms.Parameter(ops.ones(config.num_labels) * bias_value)
+            mindspore.Parameter(ops.ones(config.num_labels) * bias_value)
         )
         self.bbox_embed.layers[-1].weight.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(value=0),
                     self.bbox_embed.layers[-1].weight.shape,
@@ -2169,7 +2169,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
             )
         )
         self.bbox_embed.layers[-1].bias.set_data(
-            ms.Parameter(
+            mindspore.Parameter(
                 initializer(
                     Constant(value=0),
                     self.bbox_embed.layers[-1].bias.shape,
@@ -2185,7 +2185,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         if config.with_box_refine:
             self.class_embed = _get_clones(self.class_embed, num_pred)
             self.bbox_embed = _get_clones(self.bbox_embed, num_pred)
-            self.bbox_embed[0].layers[-1].bias.data[2:] = ms.Parameter(
+            self.bbox_embed[0].layers[-1].bias.data[2:] = mindspore.Parameter(
                 initializer(
                     Constant(-2.0),
                     self.bbox_embed[0].layers[-1].bias.data[2:].shape,
@@ -2196,7 +2196,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
             # hack implementation for iterative bounding box refinement
             self.model.decoder.bbox_embed = self.bbox_embed
         else:
-            self.bbox_embed.layers[-1].bias.data[2:] = ms.Parameter(
+            self.bbox_embed.layers[-1].bias.data[2:] = mindspore.Parameter(
                 initializer(
                     Constant(-2.0),
                     self.bbox_embed.layers[-1].bias.data[2:].shape,
@@ -2211,7 +2211,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
             # hack implementation for two-stage
             self.model.decoder.class_embed = self.class_embed
             for box_embed in self.bbox_embed:
-                box_embed.layers[-1].bias.data[2:] = ms.Parameter(
+                box_embed.layers[-1].bias.data[2:] = mindspore.Parameter(
                     initializer(
                         Constant(0.0),
                         box_embed.layers[-1].bias.data[2:].shape,
@@ -2236,23 +2236,23 @@ class DetaForObjectDetection(DetaPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: ms.Tensor,
-        pixel_mask: Optional[ms.Tensor] = None,
-        decoder_attention_mask: Optional[ms.Tensor] = None,
-        encoder_outputs: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        decoder_inputs_embeds: Optional[ms.Tensor] = None,
+        pixel_values: mindspore.Tensor,
+        pixel_mask: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
         labels: Optional[List[dict]] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[ms.Tensor], DetaObjectDetectionOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], DetaObjectDetectionOutput]:
         r"""
         labels (`List[Dict]` of len `(batch_size,)`, *optional*):
             Labels for computing the bipartite matching loss. List of dicts, each dictionary containing at least the
             following 2 keys: 'class_labels' and 'boxes' (the class labels and bounding boxes of an image in the batch
-            respectively). The class labels themselves should be a `ms.Tensor` of len `(number of bounding boxes
-            in the image,)` and the boxes a `ms.Tensor` of shape `(number of bounding boxes in the image, 4)`.
+            respectively). The class labels themselves should be a `mindspore.Tensor` of len `(number of bounding boxes
+            in the image,)` and the boxes a `mindspore.Tensor` of shape `(number of bounding boxes in the image, 4)`.
         Returns:
         Examples:
         ```python
@@ -2266,7 +2266,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         >>> inputs = image_processor(images=image, return_tensors="pt")
         >>> outputs = model(**inputs)
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-        >>> target_sizes = ms.Tensor([image.size[::-1]])
+        >>> target_sizes = mindspore.Tensor([image.size[::-1]])
         >>> results = image_processor.post_process_object_detection(outputs, threshold=0.5, target_sizes=target_sizes)[
         ...     0
         ... ]
@@ -2332,8 +2332,8 @@ class DetaForObjectDetection(DetaPreTrainedModel):
             outputs_classes.append(outputs_class)
             outputs_coords.append(outputs_coord)
         # Keep batch_size as first dimension
-        outputs_class = ops.stack(outputs_classes, axis=1)
-        outputs_coord = ops.stack(outputs_coords, axis=1)
+        outputs_class = ops.stack(outputs_classes, dim=1)
+        outputs_coord = ops.stack(outputs_coords, dim=1)
 
         logits = outputs_class[:, -1]
         pred_boxes = outputs_coord[:, -1]
@@ -2451,9 +2451,9 @@ def sigmoid_focal_loss(
     """
     Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
     Args:
-        inputs (`ms.Tensor` of arbitrary shape):
+        inputs (`mindspore.Tensor` of arbitrary shape):
             The predictions for each example.
-        targets (`ms.Tensor` with the same shape as `inputs`)
+        targets (`mindspore.Tensor` with the same shape as `inputs`)
             A tensor storing the binary classification label for each element in the `inputs` (0 for the negative class
             and 1 for the positive class).
         alpha (`float`, *optional*, defaults to `0.25`):
@@ -2464,7 +2464,7 @@ def sigmoid_focal_loss(
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = ops.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -2532,7 +2532,7 @@ class DetaLoss(nn.Module):
         target_classes = ops.full(
             source_logits.shape[:2],
             self.num_classes,
-            dtype=ms.int64,
+            dtype=mindspore.int64,
         )
         target_classes[idx] = target_classes_o
 
@@ -2542,13 +2542,13 @@ class DetaLoss(nn.Module):
                 source_logits.shape[1],
                 source_logits.shape[2] + 1,
             ],
-            dtype=ms.int64,
+            dtype=mindspore.int64,
         )
         tmp = ops.ones(
-            (source_logits.shape[0], source_logits.shape[1], 1), dtype=ms.int64
+            (source_logits.shape[0], source_logits.shape[1], 1), dtype=mindspore.int64
         )
         target_classes_onehot.scatter(2, target_classes.unsqueeze(-1), tmp)
-        target_classes_onehot = target_classes_onehot[:, :, :-1].astype(ms.float32)
+        target_classes_onehot = target_classes_onehot[:, :, :-1].astype(mindspore.float32)
         loss_ce = (
             sigmoid_focal_loss(
                 source_logits,
@@ -2571,10 +2571,10 @@ class DetaLoss(nn.Module):
         """
         logits = outputs["logits"]
 
-        target_lengths = ms.Tensor([len(v["class_labels"]) for v in targets])
+        target_lengths = mindspore.Tensor([len(v["class_labels"]) for v in targets])
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (logits.argmax(-1) != logits.shape[-1] - 1).sum(1)
-        card_err = ops.l1_loss(card_pred.float(), target_lengths.float())
+        card_err = F.l1_loss(card_pred.float(), target_lengths.float())
         losses = {"cardinality_error": card_err}
         return losses
 
@@ -2590,10 +2590,10 @@ class DetaLoss(nn.Module):
         idx = self._get_source_permutation_idx(indices)
         source_boxes = outputs["pred_boxes"][idx]
         target_boxes = ops.cat(
-            [t["boxes"][i] for t, (_, i) in zip(targets, indices)], axis=0
+            [t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0
         )
 
-        loss_bbox = ops.l1_loss(source_boxes, target_boxes, reduction="none")
+        loss_bbox = F.l1_loss(source_boxes, target_boxes, reduction="none")
 
         losses = {}
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
@@ -2611,7 +2611,7 @@ class DetaLoss(nn.Module):
     def _get_source_permutation_idx(self, indices):
         # permute predictions following indices
         batch_idx = ops.cat(
-            [ops.full_like(source, i) for i, (source, _) in enumerate(indices)]
+            [ops.full_like(source, i, dtype=mindspore.int64) for i, (source, _) in enumerate(indices)]
         )
         source_idx = ops.cat([source for (source, _) in indices])
         return batch_idx, source_idx
@@ -2660,7 +2660,7 @@ class DetaLoss(nn.Module):
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_boxes = sum(len(t["class_labels"]) for t in targets)
-        num_boxes = ms.Tensor([num_boxes], dtype=ms.float32)
+        num_boxes = mindspore.Tensor([num_boxes], dtype=mindspore.float32)
         # Check that we have initialized the distributed state
         world_size = 1
         # if is_accelerate_available():
@@ -2723,7 +2723,7 @@ class DetaMLPPredictionHead(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            x = ops.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 
@@ -2822,8 +2822,8 @@ class DetaHungarianMatcher(nn.Module):
         ]
         return [
             (
-                ms.Tensor(i, dtype=ms.int64),
-                ms.Tensor(j, dtype=ms.int64),
+                mindspore.Tensor(i, dtype=mindspore.int64),
+                mindspore.Tensor(j, dtype=mindspore.int64),
             )
             for i, j in indices
         ]
@@ -2833,9 +2833,9 @@ class DetaHungarianMatcher(nn.Module):
 def _upcast(t: Tensor) -> Tensor:
     # Protects from numerical overflows in multiplications by upcasting to the equivalent higher type
     if t.is_floating_point():
-        return t if t.dtype in (ms.float32, ms.float64) else t.float()
+        return t if t.dtype in (mindspore.float32, mindspore.float64) else t.float()
     else:
-        return t if t.dtype in (ms.int32, ms.int64) else t.int()
+        return t if t.dtype in (mindspore.int32, mindspore.int64) else t.int()
 
 
 # Copied from transformers.models.detr.modeling_detr.box_area
@@ -2843,11 +2843,11 @@ def box_area(boxes: Tensor) -> Tensor:
     """
     Computes the area of a set of bounding boxes, which are specified by its (x1, y1, x2, y2) coordinates.
     Args:
-        boxes (`ms.Tensor` of shape `(number_of_boxes, 4)`):
+        boxes (`mindspore.Tensor` of shape `(number_of_boxes, 4)`):
             Boxes for which the area will be computed. They are expected to be in (x1, y1, x2, y2) format with `0 <= x1
             < x2` and `0 <= y1 < y2`.
     Returns:
-        `ms.Tensor`: a tensor containing the area for each box.
+        `mindspore.Tensor`: a tensor containing the area for each box.
     """
     boxes = _upcast(boxes)
     return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
@@ -2875,7 +2875,7 @@ def generalized_box_iou(boxes1, boxes2):
     """
     Generalized IoU from https://giou.stanford.edu/. The boxes should be in [x0, y0, x1, y1] (corner) format.
     Returns:
-        `ms.Tensor`: a [N, M] pairwise matrix, where N = len(boxes1) and M = len(boxes2)
+        `mindspore.Tensor`: a [N, M] pairwise matrix, where N = len(boxes1) and M = len(boxes2)
     """
     # degenerate boxes gives inf / nan results
     # so do an early check
@@ -2975,13 +2975,13 @@ class DetaMatcher():
         assert match_quality_matrix.dim() == 2
         if match_quality_matrix.numel() == 0:
             default_matches = match_quality_matrix.new_full(
-                (match_quality_matrix.shape[1],), 0, dtype=ms.int64
+                (match_quality_matrix.shape[1],), 0, dtype=mindspore.int64
             )
             # When no gt boxes exist, we define IOU = 0 and therefore set labels
             # to `self.labels[0]`, which usually defaults to background class 0
             # To choose to ignore instead, can make labels=[-1,0,-1,1] + set appropriate thresholds
             default_match_labels = match_quality_matrix.new_full(
-                (match_quality_matrix.shape[1],), self.labels[0], dtype=ms.int8
+                (match_quality_matrix.shape[1],), self.labels[0], dtype=mindspore.int8
             )
             return default_matches, default_match_labels
 
@@ -2989,9 +2989,9 @@ class DetaMatcher():
 
         # match_quality_matrix is M (gt) x N (predicted)
         # Max over gt elements (dim 0) to find best gt candidate for each prediction
-        matched_vals, matches = ops.max(match_quality_matrix, axis=0)
+        matched_vals, matches = ops.max(match_quality_matrix, dim=0)
 
-        match_labels = ms.Tensor(ops.ones(matches.shape, dtype=ms.int8))
+        match_labels = mindspore.Tensor(ops.ones(matches.shape, dtype=mindspore.int8))
 
         for l, low, high in zip(self.labels, self.thresholds[:-1], self.thresholds[1:]):
             low_high = (matched_vals >= low) & (matched_vals < high)
@@ -3010,7 +3010,7 @@ class DetaMatcher():
         This function implements the RPN assignment case (i) in Sec. 3.1.2 of :paper:`Faster R-CNN`.
         """
         # For each gt, find the prediction with which it has highest quality
-        highest_quality_foreach_gt, _ = ops.max(match_quality_matrix, axis=1)
+        highest_quality_foreach_gt, _ = ops.max(match_quality_matrix, dim=1)
         # Find the highest quality match available, even if it is low, including ties.
         # Note that the matches qualities must be positive due to the use of
         # `torch.nonzero`.
@@ -3025,7 +3025,7 @@ class DetaMatcher():
 
 # from https://github.com/facebookresearch/detectron2/blob/cbbc1ce26473cb2a5cc8f58e8ada9ae14cb41052/detectron2/modeling/sampling.py#L9
 def subsample_labels(
-    labels: ms.Tensor, num_samples: int, positive_fraction: float, bg_label: int
+    labels: mindspore.Tensor, num_samples: int, positive_fraction: float, bg_label: int
 ):
     """
     Return `num_samples` (or fewer, if not enough found) random samples from `labels` which is a mixture of positives &
@@ -3075,7 +3075,7 @@ def sample_topk_per_gt(pr_inds, gt_inds, iou, k):
     # find topk matches for each gt
     gt_inds2, counts = gt_inds.unique(return_counts=True)
     scores, pr_inds2 = iou[gt_inds2].topk(k, dim=1)
-    gt_inds2 = gt_inds2[:, None].repeat(1, k)
+    gt_inds2 = ops.tile(gt_inds2[:, None], (1, k))
 
     # filter to as many matches that gt has
     pr_inds3 = ops.cat([pr[:c] for c, pr in zip(counts, pr_inds2)])
@@ -3097,9 +3097,9 @@ class DetaStage2Assigner(nn.Module):
 
     def _sample_proposals(
         self,
-        matched_idxs: ms.Tensor,
-        matched_labels: ms.Tensor,
-        gt_classes: ms.Tensor,
+        matched_idxs: mindspore.Tensor,
+        matched_labels: mindspore.Tensor,
+        gt_classes: mindspore.Tensor,
     ):
         """
         Based on the matching between N proposals and M groundtruth, sample the proposals and set their classification
@@ -3131,7 +3131,7 @@ class DetaStage2Assigner(nn.Module):
             gt_classes, self.batch_size_per_image, self.positive_fraction, self.bg_label
         )
 
-        sampled_idxs = ops.cat([sampled_fg_idxs, sampled_bg_idxs], axis=0)
+        sampled_idxs = ops.cat([sampled_fg_idxs, sampled_bg_idxs], dim=0)
         return sampled_idxs, gt_classes[sampled_idxs]
 
     def forward(self, outputs, targets, return_cost_matrix=False):
@@ -3208,8 +3208,8 @@ class DetaStage1Assigner(nn.Module):
             if len(targets[b]["boxes"]) == 0:
                 indices.append(
                     (
-                        ms.tensor([], dtype=ms.int64),
-                        ms.tensor([], dtype=ms.int64),
+                        mindspore.tensor([], dtype=mindspore.int64),
+                        mindspore.tensor([], dtype=mindspore.int64),
                     )
                 )
                 continue

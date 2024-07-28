@@ -194,7 +194,7 @@ class MptAttention(nn.Module):
 
         # (batch_size, n_heads, seq_length, key_length)
         attn_weights = ops.softmax(attention_scores.float(), axis=-1).to(dtype=value_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attn_dropout_p, training=self.training)
+        attn_weights = F.dropout(attn_weights, p=self.attn_dropout_p, training=self.training)
 
         context_states = ops.matmul(attn_weights, value_states)
         context_states = context_states.permute(0, 2, 1, 3).view(batch_size, seq_length, -1)
@@ -263,7 +263,7 @@ class MptMLP(nn.Module):
 
         intermediate_output = self.down_proj(hidden_states)
 
-        output = ops.dropout(intermediate_output, p=self.hidden_dropout, training=self.training)
+        output = F.dropout(intermediate_output, p=self.hidden_dropout, training=self.training)
         output = output + residual
 
         return output
@@ -441,7 +441,7 @@ class MptPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -451,7 +451,7 @@ class MptPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     @staticmethod
@@ -919,7 +919,7 @@ class MptForCausalLM(MptPreTrainedModel):
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length)
             )
 
@@ -1080,13 +1080,13 @@ class MptForSequenceClassification(MptPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits, labels)
+                loss = F.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1213,7 +1213,7 @@ class MptForTokenClassification(MptPreTrainedModel):
         loss = None
         if labels is not None:
             batch_size, seq_length = labels.shape
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(batch_size * seq_length, self.num_labels), labels.view(batch_size * seq_length)
             )
 
@@ -1319,8 +1319,8 @@ class MptForQuestionAnswering(MptPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss =ops.cross_entropy(start_logits,start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
+            start_loss =F.cross_entropy(start_logits,start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

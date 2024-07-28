@@ -260,7 +260,7 @@ class MultiHeadAttention(nn.Module):
         scores = scores.masked_fill(mask, np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)  # (bs, n_heads, qlen, klen)
 
         weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
-        weights = ops.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
+        weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -358,7 +358,7 @@ class TransformerFFN(nn.Module):
         x = self.lin1(input)
         x = self.act(x)
         x = self.lin2(x)
-        x = ops.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         return x
 
 
@@ -418,7 +418,7 @@ class XLMPreTrainedModel(PreTrainedModel):
             if self.config is not None and self.config.init_std is not None:
                 cell.weight.set_data(initializer(Normal(self.config.init_std),
                                                         cell.weight.shape, cell.weight.dtype))
-                if cell.bias:
+                if cell.bias is not None:
                     cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, nn.LayerNorm):
@@ -746,7 +746,7 @@ class XLMModel(XLMPreTrainedModel):
         if token_type_ids is not None:
             tensor = tensor + self.embeddings(token_type_ids)
         tensor = self.layer_norm_emb(tensor)
-        tensor = ops.dropout(tensor, p=self.dropout, training=self.training)
+        tensor = F.dropout(tensor, p=self.dropout, training=self.training)
         tensor *= mask.unsqueeze(-1).to(tensor.dtype)
 
         # transformer layers
@@ -767,14 +767,14 @@ class XLMModel(XLMPreTrainedModel):
             attn = attn_outputs[0]
             if output_attentions:
                 attentions = attentions + (attn_outputs[1],)
-            attn = ops.dropout(attn, p=self.dropout, training=self.training)
+            attn = F.dropout(attn, p=self.dropout, training=self.training)
             tensor = tensor + attn
             tensor = self.layer_norm1[i](tensor)
 
             # encoder attention (for decoder only)
             # if self.is_decoder and src_enc is not None:
             #     attn = self.encoder_attn[i](tensor, src_mask, kv=src_enc, cache=cache)
-            #     attn = ops.dropout(attn, p=self.dropout, training=self.training)
+            #     attn = F.dropout(attn, p=self.dropout, training=self.training)
             #     tensor = tensor + attn
             #     tensor = self.layer_norm15[i](tensor)
 
@@ -849,7 +849,7 @@ class XLMPredLayer(nn.Module):
             scores = self.proj(x)
             outputs = (scores,) + outputs
             if y is not None:
-                loss = ops.cross_entropy(scores.view(-1, self.n_words), y.view(-1), reduction="mean")
+                loss = F.cross_entropy(scores.view(-1, self.n_words), y.view(-1), reduction="mean")
                 outputs = (loss,) + outputs
         else:
             scores = self.proj.log_prob(x)
@@ -1141,13 +1141,13 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + transformer_outputs[1:]
@@ -1265,8 +1265,8 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1528,7 +1528,7 @@ class XLMForTokenClassification(XLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1684,7 +1684,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + transformer_outputs[1:]

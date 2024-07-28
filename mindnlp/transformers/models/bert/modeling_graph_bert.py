@@ -1067,7 +1067,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )

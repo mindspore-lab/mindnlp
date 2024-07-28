@@ -249,7 +249,7 @@ class AxialPositionEmbeddings(nn.Module):
                 # permute weights so that 2D correctly drops dims 1 and 2
                 transposed_weights = weights.swapaxes(2, 1)
                 # drop entire matrix of last two dims (prev dims 1 and 2)
-                dropped_transposed_weights = ops.dropout2d(
+                dropped_transposed_weights = F.dropout2d(
                     transposed_weights, p=self.dropout, training=self.training
                 )
                 dropped_weights = dropped_transposed_weights.swapaxes(2, 1)
@@ -334,7 +334,7 @@ class PositionEmbeddings(nn.Module):
             TypeError: If the dropout rate is not a float or the training flag is not a boolean.
         """
         position_embeddings = self.embedding(position_ids)
-        position_embeddings = ops.dropout(position_embeddings, p=self.dropout, training=self.training)
+        position_embeddings = F.dropout(position_embeddings, p=self.dropout, training=self.training)
         return position_embeddings
 
 
@@ -416,7 +416,7 @@ class ReformerEmbeddings(nn.Module):
             )
 
         # dropout
-        embeddings = ops.dropout(inputs_embeds, p=self.dropout, training=self.training)
+        embeddings = F.dropout(inputs_embeds, p=self.dropout, training=self.training)
 
         # add positional embeddings
         position_embeddings = self.position_embeddings(position_ids)
@@ -1165,7 +1165,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         del query_key_dots
 
         # dropout
-        attention_probs = ops.dropout(attention_probs, p=self.dropout, training=self.training)
+        attention_probs = F.dropout(attention_probs, p=self.dropout, training=self.training)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -1732,7 +1732,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         del logits
 
         # dropout
-        attention_probs = ops.dropout(attention_probs, p=self.dropout, training=self.training)
+        attention_probs = F.dropout(attention_probs, p=self.dropout, training=self.training)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -1916,7 +1916,7 @@ class ReformerSelfOutput(nn.Module):
             operations in the model.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
@@ -2147,7 +2147,7 @@ class ReformerFeedForwardDense(nn.Module):
             RuntimeError: If an error occurs during the dropout operation.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = self.act_fn(hidden_states)
         return hidden_states
 
@@ -2209,7 +2209,7 @@ class ReformerFeedForwardOutput(nn.Module):
             RuntimeError: If an error occurs during the computation of the output tensor.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
@@ -2815,7 +2815,7 @@ class ReformerEncoder(nn.Module):
         hidden_states = self.layer_norm(hidden_states)
 
         # Apply dropout
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         return ReformerEncoderOutput(
             hidden_states=hidden_states,
@@ -2969,7 +2969,7 @@ class ReformerPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -3548,7 +3548,7 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, self.config.vocab_size), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, self.config.vocab_size), shift_labels.view(-1))
 
         if not return_dict:
             output = (logits,) + reformer_outputs[1:]
@@ -3854,7 +3854,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + reformer_outputs[1:]
@@ -4066,13 +4066,13 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -4261,8 +4261,8 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

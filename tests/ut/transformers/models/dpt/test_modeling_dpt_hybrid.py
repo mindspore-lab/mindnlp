@@ -26,7 +26,8 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
+    from mindnlp.core.nn import functional as F
 
     from mindnlp.transformers import DPTForDepthEstimation, DPTForSemanticSegmentation, DPTModel
     from mindnlp.transformers.models.auto.modeling_auto import MODEL_MAPPING_NAMES
@@ -302,7 +303,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             # instead, we can rely on cos distance for image/speech models, similar to `diffusers`
             if "input_ids" not in batched_input:
                 return lambda tensor1, tensor2: (
-                        1.0 - ops.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0,
+                        1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0,
                                                     eps=1e-38)
                 )
             return lambda tensor1, tensor2: ops.max(ops.abs(tensor1 - tensor2))

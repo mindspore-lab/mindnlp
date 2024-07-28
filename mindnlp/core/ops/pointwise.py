@@ -2,7 +2,6 @@
 import mindspore
 from mindspore import ops
 from mindnlp.configs import USE_PYBOOST
-from mindspore.common.initializer import initializer
 
 # abs
 def abs(input):

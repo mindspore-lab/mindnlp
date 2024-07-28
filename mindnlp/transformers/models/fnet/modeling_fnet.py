@@ -716,10 +716,10 @@ class FNetForPreTraining(FNetPreTrainedModel):
 
         total_loss = None
         if labels is not None and next_sentence_label is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
-            next_sentence_loss = ops.cross_entropy(
+            next_sentence_loss = F.cross_entropy(
                 seq_relationship_score.view(-1, 2), next_sentence_label.view(-1)
             )
             total_loss = masked_lm_loss + next_sentence_loss
@@ -792,7 +792,7 @@ class FNetForMaskedLM(FNetPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -883,7 +883,7 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            next_sentence_loss = ops.cross_entropy(
+            next_sentence_loss = F.cross_entropy(
                 seq_relationship_scores.view(-1, 2), labels.view(-1)
             )
 
@@ -959,15 +959,15 @@ class FNetForSequenceClassification(FNetPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1047,7 +1047,7 @@ class FNetForMultipleChoice(FNetPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1106,7 +1106,7 @@ class FNetForTokenClassification(FNetPreTrainedModel):
         loss = None
         if labels is not None:
             # Only keep active parts of the loss
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1182,10 +1182,10 @@ class FNetForQuestionAnswering(FNetPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits, end_positions, ignore_index=ignored_index
             )
             total_loss = (start_loss + end_loss) / 2

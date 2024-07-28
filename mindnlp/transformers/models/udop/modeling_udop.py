@@ -269,7 +269,7 @@ class UdopPreTrainedModel(PreTrainedModel):
             # cell.weight.data = nn.init.trunc_normal_(module.weight.data.to(mindspore.float32), mean=0.0, std=factor).to(
             #     cell.weight.dtype
             # )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.data.set_data(initializer("zeros",cell.bias.data.shape,cell.bias.data.dtype))
                 #module.bias.data.zero_()
         elif isinstance(cell, RelativePositionBiasBase):
@@ -669,7 +669,7 @@ class UdopAttention(nn.Module):
         attn_weights = ops.softmax(scores.float(), axis=-1).type_as(
             scores
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -1700,7 +1700,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         if labels is not None:
             # loss_fct = CrossEntropyLoss(ignore_index=-100)
             # loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1),ignore_index=-100)
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1),ignore_index=-100)
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1),ignore_index=-100)
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[2:] + (encoder_outputs[0],) + encoder_outputs[2:]
             return ((loss,) + output) if loss is not None else output

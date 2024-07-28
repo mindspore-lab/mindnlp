@@ -608,7 +608,7 @@ class SplinterPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -971,10 +971,10 @@ class SplinterForQuestionAnswering(SplinterPreTrainedModel):
             start_positions.clamp(0, ignored_index)
             end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits, end_positions, ignore_index=ignored_index
             )
             total_loss = (start_loss + end_loss) / 2
@@ -1128,12 +1128,12 @@ class SplinterForPreTraining(SplinterPreTrainedModel):
             # during pretraining and zero is used for padding question
             # tokens as well as for start and end positions of padded
             # question tokens.
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits.view(batch_size * num_questions, sequence_length),
                 start_positions.view(batch_size * num_questions),
                 ignore_index=self.config.pad_token_id,
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits.view(batch_size * num_questions, sequence_length),
                 end_positions.view(batch_size * num_questions),
                 ignore_index=self.config.pad_token_id,

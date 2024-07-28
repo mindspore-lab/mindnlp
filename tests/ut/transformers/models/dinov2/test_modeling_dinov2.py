@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Dinov2 model."""
+"""Testing suite for the MindSpore Dinov2 model."""
 
 import unittest
 
@@ -29,12 +29,9 @@ import numpy as np
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
-
+    from mindnlp.core import nn
     from mindnlp.transformers import Dinov2ForImageClassification, Dinov2Model, Dinov2Backbone, Dinov2PreTrainedModel
-
     from PIL import Image
-
     from mindnlp.transformers import AutoImageProcessor
 
 
