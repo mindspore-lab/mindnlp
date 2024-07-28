@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
 import numpy as np
-
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -39,7 +40,7 @@ from .configuration_realm import RealmConfig
 
 logger = logging.get_logger(__name__)
 
-class RealmEmbeddings(nn.Cell):
+class RealmEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -50,14 +51,14 @@ class RealmEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
         self.token_type_ids =  ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -99,7 +100,7 @@ class RealmEmbeddings(nn.Cell):
         return embeddings
 
 
-class RealmSelfAttention(nn.Cell):
+class RealmSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -112,9 +113,9 @@ class RealmSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -131,7 +132,7 @@ class RealmSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -160,8 +161,8 @@ class RealmSelfAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -210,7 +211,7 @@ class RealmSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -233,14 +234,14 @@ class RealmSelfAttention(nn.Cell):
         return outputs
 
 
-class RealmSelfOutput(nn.Cell):
+class RealmSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -252,7 +253,7 @@ REALM_SELF_ATTENTION_CLASSES = {
 }
 
 
-class RealmAttention(nn.Cell):
+class RealmAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = REALM_SELF_ATTENTION_CLASSES[config._attn_implementation](
@@ -272,14 +273,14 @@ class RealmAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -303,36 +304,36 @@ class RealmAttention(nn.Cell):
         return outputs
 
 
-class RealmIntermediate(nn.Cell):
+class RealmIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class RealmOutput(nn.Cell):
+class RealmOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class RealmLayer(nn.Cell):
+class RealmLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -347,7 +348,7 @@ class RealmLayer(nn.Cell):
         self.intermediate = RealmIntermediate(config)
         self.output = RealmOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -418,14 +419,14 @@ class RealmLayer(nn.Cell):
         return layer_output
 
 
-class RealmEncoder(nn.Cell):
+class RealmEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([RealmLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([RealmLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -511,13 +512,13 @@ class RealmEncoder(nn.Cell):
         )
 
 
-class RealmPooler(nn.Cell):
+class RealmPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -639,79 +640,80 @@ class RealmForOpenQAOutput(ModelOutput):
     predicted_answer_ids: mindspore.Tensor = None
 
 
-class RealmPredictionHeadTransform(nn.Cell):
+class RealmPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class RealmLMPredictionHead(nn.Cell):
+class RealmLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = RealmPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        
+        self.bias = nn.Parameter(ops.zeros(config.vocab_size))
 
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
-
-        # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
+        # # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
     def _tie_weights(self):
-        self.decoder.bias = self.bias
+        # self.decoder.bias = self.bias
+        self.bias = self.decoder.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
-class RealmOnlyMLMHead(nn.Cell):
+class RealmOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = RealmLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
-class RealmScorerProjection(nn.Cell):
+class RealmScorerProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = RealmLMPredictionHead(config)
-        self.dense = nn.Dense(config.hidden_size, config.retriever_proj_size)
-        self.LayerNorm = nn.LayerNorm(config.retriever_proj_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.retriever_proj_size)
+        self.LayerNorm = nn.LayerNorm(config.retriever_proj_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class RealmReaderProjection(nn.Cell):
+class RealmReaderProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.dense_intermediate = nn.Dense(config.hidden_size, config.span_hidden_size * 2)
-        self.dense_output = nn.Dense(config.span_hidden_size, 1)
-        self.layer_normalization = nn.LayerNorm(config.span_hidden_size, epsilon=config.reader_layer_norm_eps)
+        self.dense_intermediate = nn.Linear(config.hidden_size, config.span_hidden_size * 2)
+        self.dense_output = nn.Linear(config.span_hidden_size, 1)
+        self.layer_normalization = nn.LayerNorm(config.span_hidden_size, eps=config.reader_layer_norm_eps)
         self.relu = nn.ReLU()
 
-    def construct(self, hidden_states, block_mask):
+    def forward(self, hidden_states, block_mask):
         def span_candidates(masks):
             """
             Generate span candidates.
@@ -737,8 +739,8 @@ class RealmReaderProjection(nn.Cell):
             ends = ops.cat(ends, 0)
 
             # [num_retrievals, num_spans]
-            start_masks = ops.index_select(masks, axis=-1, index=starts)
-            end_masks = ops.index_select(masks, axis=-1, index=ends)
+            start_masks = mindspore.ops.index_select(masks, axis=-1, index=starts)
+            end_masks = mindspore.ops.index_select(masks, axis=-1, index=ends)
             span_masks = start_masks * end_masks
 
             return starts, ends, span_masks
@@ -753,8 +755,8 @@ class RealmReaderProjection(nn.Cell):
 
         candidate_starts, candidate_ends, candidate_mask = span_candidates(block_mask)
 
-        candidate_start_projections = ops.index_select(start_projection, axis=1, index=candidate_starts)
-        candidate_end_projections = ops.index_select(end_projection, axis=1, index=candidate_ends)
+        candidate_start_projections = mindspore.ops.index_select(start_projection, axis=1, index=candidate_starts)
+        candidate_end_projections = mindspore.ops.index_select(end_projection, axis=1, index=candidate_ends)
         candidate_hidden = candidate_start_projections + candidate_end_projections
 
         # [reader_beam_size, num_candidates, span_hidden_size]
@@ -780,7 +782,7 @@ class RealmPreTrainedModel(PreTrainedModel):
 
     # def _init_weights(self, module):
     #     """Initialize the weights"""
-    #     if isinstance(module, nn.Dense):
+    #     if isinstance(module, nn.Linear):
     #         # Slightly different from the TF version which uses truncated_normal for initialization
     #         # cf https://github.com/pytorch/pytorch/pull/5617
     #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -795,12 +797,12 @@ class RealmPreTrainedModel(PreTrainedModel):
     #         module.weight.data.fill_(1.0)
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -858,7 +860,7 @@ class RealmBertModel(RealmPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -983,7 +985,7 @@ class RealmEmbedder(RealmPreTrainedModel):
     def set_input_embeddings(self, value):
         self.realm.embeddings.word_embeddings = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1058,7 +1060,7 @@ class RealmScorer(RealmPreTrainedModel):
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1205,7 +1207,7 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1305,18 +1307,18 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
             # [batch_size * num_candidates * joint_seq_len]
             mlm_targets = labels.tile((1, self.config.num_candidates)).view(-1)
             # [batch_size, num_candidates, joint_seq_len]
-            masked_lm_log_prob = - ops.cross_entropy(mlm_logits, mlm_targets, reduction="none").view(
+            masked_lm_log_prob = - F.cross_entropy(mlm_logits, mlm_targets, reduction="none").view(
                 batch_size, self.config.num_candidates, seq_length
             )
             # [batch_size, num_candidates, 1]
             # candidate_log_prob = candidate_score.log_softmax(-1).unsqueeze(-1)
-            candidate_log_prob = ops.log_softmax(candidate_score,-1).unsqueeze(-1)
+            candidate_log_prob = F.log_softmax(candidate_score,-1).unsqueeze(-1)
             # [batch_size, num_candidates, joint_seq_len]
             joint_gold_log_prob = candidate_log_prob + masked_lm_log_prob
             # [batch_size, joint_seq_len]
             marginal_gold_log_probs = joint_gold_log_prob.logsumexp(1)
             # []
-            masked_lm_loss = -ops.nansum(ops.sum(marginal_gold_log_probs * mlm_mask) / ops.sum(mlm_mask))
+            masked_lm_loss = - mindspore.ops.nansum(ops.sum(marginal_gold_log_probs * mlm_mask) / ops.sum(mlm_mask))
 
         if not return_dict:
             output = (prediction_scores,) + joint_outputs[2:4]
@@ -1340,7 +1342,7 @@ class RealmReader(RealmPreTrainedModel):
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1411,17 +1413,17 @@ class RealmReader(RealmPreTrainedModel):
         # [reader_beam_size, num_candidates]
         reader_logits += retriever_logits
         # # []
-        # predicted_block_index = ops.argmax(ops.max(reader_logits, axis=1).values)
+        # predicted_block_index = ops.argmax(ops.max(reader_logits, dim=1).values)
         # # []
-        # predicted_candidate = ops.argmax(ops.max(reader_logits, axis=0).values)
+        # predicted_candidate = ops.argmax(ops.max(reader_logits, dim=0).values)
         # []
-        predicted_block_index = ops.argmax(ops.max(reader_logits, axis=1)[0]).reshape(1)
+        predicted_block_index = ops.argmax(ops.max(reader_logits, dim=1)[0]).reshape(1)
         # []
-        predicted_candidate =  ops.argmax(ops.max(reader_logits, axis=0)[0]).reshape(1)
+        predicted_candidate =  ops.argmax(ops.max(reader_logits, dim=0)[0]).reshape(1)
         # [1]
-        predicted_start = ops.index_select(candidate_starts, axis=0, index=predicted_candidate)
+        predicted_start = mindspore.ops.index_select(candidate_starts, axis=0, index=predicted_candidate)
         # [1]
-        predicted_end = ops.index_select(candidate_ends, axis=0, index=predicted_candidate)
+        predicted_end = mindspore.ops.index_select(candidate_ends, axis=0, index=predicted_candidate)
 
         total_loss = None
         retriever_loss = None
@@ -1450,8 +1452,8 @@ class RealmReader(RealmPreTrainedModel):
                     return (1.0 - mask.type(dtype)) * np.finfo(mindspore.dtype_to_nptype(dtype)).min
 
                 # []
-                log_numerator = ops.logsumexp(logits + mask_to_score(is_correct, dtype=logits.dtype), axis=-1)
-                log_denominator = ops.logsumexp(logits, axis=-1)
+                log_numerator = ops.logsumexp(logits + mask_to_score(is_correct, dtype=logits.dtype), dim=-1)
+                log_denominator = ops.logsumexp(logits, dim=-1)
                 return log_denominator - log_numerator
 
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
@@ -1523,7 +1525,7 @@ class RealmForOpenQA(RealmPreTrainedModel):
             return self.config.searcher_beam_size
         return self.config.reader_beam_size
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1578,7 +1580,7 @@ class RealmForOpenQA(RealmPreTrainedModel):
         # [searcher_beam_size]
         retrieved_block_ids = retrieved_block_ids.squeeze()
         # [searcher_beam_size, projection_size]
-        retrieved_block_emb = ops.index_select(self.block_emb.value(), axis=0, index=retrieved_block_ids)
+        retrieved_block_emb = mindspore.ops.index_select(self.block_emb.value(), axis=0, index=retrieved_block_ids)
         # CPU computation ends.
 
         # Retrieve possible answers

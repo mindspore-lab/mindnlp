@@ -598,8 +598,8 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                 new_bias = Parameter(new_bias, name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad)
                 output_embeddings.bias = new_bias
 
-        if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
-            output_embeddings.out_channels = input_embeddings.vocab_size
+        if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
+            output_embeddings.out_features = input_embeddings.num_embeddings
 
     def resize_token_embeddings(
         self, new_num_tokens: Optional[int] = None, pad_to_multiple_of: Optional[int] = None
