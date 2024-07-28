@@ -619,7 +619,7 @@ class PerceiverPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif hasattr(cell, "latents"):
             cell.latents.set_data(initializer(Normal(self.config.initializer_range, 0.0), cell.latents.shape,

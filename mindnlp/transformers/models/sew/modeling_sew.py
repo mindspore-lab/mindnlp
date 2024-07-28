@@ -536,7 +536,7 @@ class SEWAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1381,7 +1381,7 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(-1, self.config.num_labels), labels.view(-1)
             )
 

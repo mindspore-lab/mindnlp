@@ -1029,7 +1029,7 @@ class GLMBlock(nn.Module):
         else:
             residual = hidden_states
 
-        layernorm_input = ops.dropout(attention_output, p=self.hidden_dropout, training=self.training)
+        layernorm_input = F.dropout(attention_output, p=self.hidden_dropout, training=self.training)
         layernorm_input = residual + layernorm_input
 
         # Layer norm post the self attention.
@@ -1044,7 +1044,7 @@ class GLMBlock(nn.Module):
         else:
             residual = layernorm_input
 
-        output = ops.dropout(mlp_output, p=self.hidden_dropout, training=self.training)
+        output = F.dropout(mlp_output, p=self.hidden_dropout, training=self.training)
         output = residual + output
 
         return output, kv_cache
@@ -1718,7 +1718,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
                                      ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
@@ -2200,13 +2200,13 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze().float(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze().float(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits.float(), labels)
+                    loss = F.mse_loss(logits.float(), labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels).float(), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels).float(), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits.float(), labels.view(-1, self.num_labels))
+                loss = F.binary_cross_entropy_with_logits(logits.float(), labels.view(-1, self.num_labels))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[1:]

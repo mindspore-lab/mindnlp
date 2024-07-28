@@ -12,17 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch DINOv2 model."""
+"""MindSpore DINOv2 model."""
 
 import collections.abc
 import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
-from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
@@ -90,7 +91,7 @@ class Dinov2Embeddings(nn.Module):
         if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
             raise ValueError("Width or height does not match with the interpolated position embeddings")
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(self, pixel_values: mindspore.Tensor, bool_masked_pos: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         batch_size, _, height, width = pixel_values.shape
@@ -104,7 +105,7 @@ class Dinov2Embeddings(nn.Module):
 
         # add the [CLS] token to the embedded patch tokens
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         # add positional encoding to each token
         embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
@@ -187,7 +188,7 @@ class Dinov2SelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -344,7 +345,7 @@ class Dinov2SwiGLUFFN(nn.Module):
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.weights_in(hidden_state)
         x1, x2 = hidden_state.chunk(2, axis=-1)
-        hidden = ops.silu(x1) * x2
+        hidden = F.silu(x1) * x2
         return self.weights_out(hidden)
 
 
@@ -606,7 +607,7 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
         cls_token = sequence_output[:, 0]
         patch_tokens = sequence_output[:, 1:]
 
-        linear_input = ops.cat([cls_token, patch_tokens.mean(axis=1)], axis=1)
+        linear_input = ops.cat([cls_token, patch_tokens.mean(axis=1)], dim=1)
 
         logits = self.classifier(linear_input)
 
@@ -623,13 +624,13 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

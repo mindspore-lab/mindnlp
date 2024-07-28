@@ -1462,7 +1462,7 @@ class SamVisionAttention(nn.Module):
 
         attn_weights = ops.softmax(attn_weights, dtype=mindspore.float32, axis=-1).to(query.dtype)
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = (attn_probs @ value).reshape(batch_size, self.num_attention_heads, height, width, -1)
         attn_output = attn_output.permute(0, 2, 3, 1, 4).reshape(batch_size, height, width, -1)

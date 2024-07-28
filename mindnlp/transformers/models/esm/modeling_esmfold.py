@@ -1105,7 +1105,7 @@ class EsmFoldPreTrainedModel(EsmPreTrainedModel):
                 cell.weight.set_data(initializer(XavierUniform(), cell.weight.shape, cell.weight.dtype))
             elif cell.init == "gating":
                 cell.weight[:] = 0
-                if cell.bias:
+                if cell.bias is not None:
                     cell.bias[:] = 1
             elif cell.init == "normal":
                 cell.weight.set_data(initializer(HeNormal(nonlinearity="linear"), cell.weight.shape, cell.weight.dtype))

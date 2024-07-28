@@ -861,8 +861,8 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            sentence_image_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            sentence_image_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
             total_loss = masked_lm_loss + sentence_image_loss
 
         if labels is not None and sentence_image_labels is None:
@@ -873,7 +873,7 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            total_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            total_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
@@ -1016,7 +1016,7 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1242,7 +1242,7 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
+            loss = F.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[2:]

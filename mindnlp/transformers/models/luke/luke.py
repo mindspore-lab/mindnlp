@@ -1123,7 +1123,7 @@ class LukePreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             if cell.embedding_size == 1:  # embedding for bias parameters
@@ -1730,9 +1730,9 @@ class LukeForEntityClassification(LukePreTrainedModel):
         loss = None
         if labels is not None:
             if labels.ndim == 1:
-                loss = ops.cross_entropy(logits, labels)
+                loss = F.cross_entropy(logits, labels)
             else:
-                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
+                loss = F.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
                                                             Tensor())
         return tuple(
             v
@@ -1848,9 +1848,9 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
         loss = None
         if labels is not None:
             if labels.ndim == 1:
-                loss = ops.cross_entropy(logits, labels)
+                loss = F.cross_entropy(logits, labels)
             else:
-                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
+                loss = F.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
                                                             Tensor())
         return tuple(
             v
@@ -1976,9 +1976,9 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
         loss = None
         if labels is not None:
             if labels.ndim == 2:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             else:
-                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits),
+                loss = F.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits),
                                                             weight=None, pos_weight=None)
 
         return tuple(
