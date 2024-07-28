@@ -621,9 +621,17 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         if new_num_tokens is None and pad_to_multiple_of is None:
             return model_embeds
+
+        # Since we are basically resuing the same old embeddings with new weight values, gathering is required
+        vocab_size = model_embeds.weight.shape[0]
+
         # Update base model and current model config
-        self.config.vocab_size = model_embeds.weight.shape[0]
-        self.vocab_size = model_embeds.weight.shape[0]
+        if hasattr(self.config, "text_config"):
+            self.config.text_config.vocab_size = vocab_size
+        else:
+            self.config.vocab_size = vocab_size
+        self.vocab_size = vocab_size
+
         # Tie weights again if needed
         self.tie_weights()
 

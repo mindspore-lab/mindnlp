@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging, ModelOutput
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
@@ -65,8 +66,6 @@ class EfficientFormerPatchEmbeddings(nn.Module):
             kernel_size=config.downsample_patch_size,
             stride=config.downsample_stride,
             padding=config.downsample_pad,
-            bias=True,
-            pad_mode="pad"
         )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps) if apply_norm else nn.Identity()
 
@@ -126,7 +125,7 @@ class EfficientFormerSelfAttention(nn.Module):
             self.attention_biases[:, self.attention_bias_idxs]
         )
 
-        attention_probs = ops.softmax(attention_probs,axis=-1)
+        attention_probs = ops.softmax(attention_probs,dim=-1)
 
         context_layer = ops.matmul(attention_probs, value_layer).swapaxes(1, 2)
         context_layer = context_layer.reshape(batch_size, sequence_length, self.total_expanded_key_dim)
@@ -141,10 +140,10 @@ class EfficientFormerConvStem(nn.Module):
     def __init__(self, config: EfficientFormerConfig, out_channels: int):
         super().__init__()
 
-        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1,bias=True,pad_mode="pad")
+        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1)
         self.batchnorm_before = nn.BatchNorm2d(out_channels // 2, eps=config.batch_norm_eps)
 
-        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1,bias=True,pad_mode="pad")
+        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1)
         self.batchnorm_after = nn.BatchNorm2d(out_channels, eps=config.batch_norm_eps)
 
         self.activation = nn.ReLU()
@@ -161,7 +160,7 @@ class EfficientFormerConvStem(nn.Module):
 class EfficientFormerPooling(nn.Module):
     def __init__(self, pool_size: int):
         super().__init__()
-        self.pool = nn.AvgPool2d(pool_size, stride=1, pad_mode="pad", padding=pool_size // 2, count_include_pad=False)
+        self.pool = nn.AvgPool2d(pool_size, stride=1, padding=pool_size // 2, count_include_pad=False)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         output = self.pool(hidden_states) - hidden_states

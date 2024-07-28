@@ -351,7 +351,6 @@ class Module:
                 return modules[name]
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-
     def __setattr__(self, name: str, value: Union[Tensor, 'Module']) -> None:
         def remove_from(*dicts_or_sets):
             for d in dicts_or_sets:
@@ -832,6 +831,42 @@ class Module:
 
     def to(self, *args, **kwargs):
         return self
+
+    def float(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``float`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.float() if t.is_floating_point() else t)
+
+
+    def double(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``double`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.double() if t.is_floating_point() else t)
+
+
+    def half(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``half`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.half() if t.is_floating_point() else t)
+
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         r"""Save module state to the `destination` dictionary.
