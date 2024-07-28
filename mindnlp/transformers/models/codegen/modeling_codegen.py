@@ -19,10 +19,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging, get_default_dtype
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -71,7 +72,7 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
     """
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.float32) / dim))
     sinusoid_inp = ops.einsum("i , j -> i j", ops.arange(num_pos, dtype=mindspore.int64).float(), inv_freq).float()
-    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
 
 
 # Copied from transformers.models.gptj.modeling_gptj.rotate_every_two
@@ -93,7 +94,7 @@ def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
     """
     x1 = x[:, :, :, ::2]
     x2 = x[:, :, :, 1::2]
-    x = ops.stack((-x2, x1), axis=-1)
+    x = ops.stack((-x2, x1), dim=-1)
     return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
 
 
@@ -163,7 +164,7 @@ class CodeGenAttention(nn.Module):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.causal_mask = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+        self.causal_mask = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).to(mindspore.bool_).view(
                 1, 1, max_positions, max_positions)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
@@ -260,7 +261,7 @@ class CodeGenAttention(nn.Module):
         attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
 
         attn_weights = attn_weights / self.scale_attn
-        mask_value = finfo(attn_weights.dtype, 'min')
+        mask_value = float(ops.finfo(attn_weights.dtype).min)
         # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
         mask_value = mindspore.tensor(mask_value, dtype=attn_weights.dtype)
         attn_weights = ops.where(causal_mask, attn_weights, mask_value)
@@ -324,7 +325,7 @@ class CodeGenAttention(nn.Module):
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
 
         local_dim = self.head_dim * self.num_attention_heads // mp_num
-        query, value, key = ops.split(qkv_split, local_dim, axis=-1)
+        query, value, key = ops.split(qkv_split, local_dim, dim=-1)
         query = self._split_heads(query, self.num_attention_heads, self.head_dim, mp_num=mp_num)
         key = self._split_heads(key, self.num_attention_heads, self.head_dim, mp_num=mp_num)
 
@@ -338,7 +339,7 @@ class CodeGenAttention(nn.Module):
         position_ids_shape = position_ids.shape
         sincos = embed_positions[position_ids.reshape(-1)].reshape(position_ids_shape + (embed_positions.shape[-1],))
 
-        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, axis=-1)
+        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, dim=-1)
 
         if self.rotary_dim is not None:
             k_rot = key[:, :, :, : self.rotary_dim]
@@ -350,8 +351,8 @@ class CodeGenAttention(nn.Module):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -362,8 +363,8 @@ class CodeGenAttention(nn.Module):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             # Note that this cast is quite ugly, but is not implemented before ROPE as k_rot in the original codebase is always in fp32.
@@ -620,7 +621,7 @@ class CodeGenPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -816,7 +817,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * finfo(self.dtype, 'min')
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -1011,7 +1012,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1075,7 +1076,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
             loss = loss.to(hidden_states.dtype)
 

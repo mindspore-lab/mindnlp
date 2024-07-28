@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch CLAP model."""
+"""MindSpore CLAP model."""
 
 import collections
 import math
@@ -20,15 +20,9 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.transformers.ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
+import mindnlp.core.nn.functional as F
+from mindnlp.core import nn, ops
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -37,7 +31,11 @@ from ...modeling_outputs import (
     BaseModelOutputWithPoolingAndCrossAttentions,
 )
 from ...modeling_utils import PreTrainedModel
-
+from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_clap import ClapAudioConfig, ClapConfig, ClapTextConfig
 
 
@@ -50,7 +48,7 @@ _CHECKPOINT_FOR_DOC = "laion/clap-htsat-fused"
 def interpolate(hidden_states, ratio):
     """
     Interpolate data in time domain. This is used to compensate the resolution reduction in downsampling of a CNN.
-
+s
     Args:
         hidden_states (`mindspore.Tensor` of shape (batch_size, time_length, classes_num)):
             Input hidden states
@@ -117,7 +115,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -125,7 +123,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/CLIP.html#CLIP-loss-function
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     labels = ops.arange(len(logits))
-    return ops.cross_entropy(logits, labels)
+    return nn.functional.cross_entropy(logits, labels)
 
 
 @dataclass
@@ -245,7 +243,7 @@ class ClapDropPath(nn.Module):
         shape = (hidden_states.shape[0],) + (1,) * (hidden_states.ndim - 1)
 
         random_tensor = keep_prob + ops.rand(shape, dtype=hidden_states.dtype)
-        random_tensor.floor_()  # binarize
+        random_tensor = random_tensor.floor()  # binarize
         output = hidden_states.div(keep_prob) * random_tensor
         return output
 
@@ -263,20 +261,20 @@ class ClapAudioAFFBlock(nn.Module):
         downsize_ratio = config.aff_block_r
         inter_channels = int(channels // downsize_ratio)
 
-        self.local_att = nn.SequentialCell([
-            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
+        self.local_att = nn.Sequential(
+            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0),
             nn.BatchNorm2d(inter_channels),
             nn.ReLU(),
-            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
-            nn.BatchNorm2d(channels),]
+            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(channels),
         )
-        self.global_att = nn.SequentialCell([
+        self.global_att = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
+            nn.Conv2d(channels, inter_channels, kernel_size=1, stride=1, padding=0),
             nn.BatchNorm2d(inter_channels),
             nn.ReLU(),
-            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0, pad_mode="pad", bias=True),
-            nn.BatchNorm2d(channels),]
+            nn.Conv2d(inter_channels, channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(channels),
         )
 
         self.sigmoid = nn.Sigmoid()
@@ -319,14 +317,13 @@ class ClapAudioPatchEmbed(nn.Module):
         padding = ((patch_size[0] - patch_stride[0]) // 2, (patch_size[1] - patch_stride[1]) // 2)
 
         scale_factor = 4 if (self.enable_fusion) and (config.fusion_type == "channel_map") else 1
+
         self.proj = nn.Conv2d(
             config.patch_embed_input_channels * scale_factor,
             config.patch_embeds_hidden_size,
             kernel_size=patch_size,
-            stride=tuple(patch_stride),
-            padding=padding[0],
-            pad_mode='pad',
-            bias=True
+            stride=patch_stride,
+            padding=padding,
         )
 
         self.norm = nn.LayerNorm(config.patch_embeds_hidden_size) if config.enable_patch_layer_norm else nn.Identity()
@@ -337,9 +334,7 @@ class ClapAudioPatchEmbed(nn.Module):
                 config.patch_embeds_hidden_size,
                 kernel_size=(patch_size[0], patch_size[1] * 3),
                 stride=(patch_stride[0], patch_stride[1] * 3),
-                padding=padding[0],
-                pad_mode='pad',
-                bias=True
+                padding=padding,
             )
 
     def forward(self, hidden_states, is_longer_idx=None):
@@ -367,10 +362,10 @@ class ClapAudioPatchEmbed(nn.Module):
 
                 _, features, height, width = local_hidden_states.shape
                 local_hidden_states = local_hidden_states.view(batch_size, num_channels, features, height, width)
-                local_hidden_states = local_hidden_states.permute((0, 2, 3, 1, 4)).flatten(start_dim=3)
+                local_hidden_states = local_hidden_states.permute((0, 2, 3, 1, 4)).flatten(3)
 
                 local_width = local_hidden_states.shape[-1]
-                local_hidden_states = ops.pad(
+                local_hidden_states = nn.functional.pad(
                     local_hidden_states, (0, output_width - local_width), "constant", 0
                 )
 
@@ -408,7 +403,7 @@ class ClapAudioSelfAttention(nn.Module):
             window_size if isinstance(window_size, collections.abc.Iterable) else (window_size, window_size)
         )
 
-        self.relative_position_bias_table = mindspore.Parameter(
+        self.relative_position_bias_table = nn.Parameter(
             ops.zeros((2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1), num_heads)
         )
 
@@ -416,20 +411,20 @@ class ClapAudioSelfAttention(nn.Module):
         coords_h = ops.arange(self.window_size[0])
         coords_w = ops.arange(self.window_size[1])
         coords = ops.stack(meshgrid([coords_h, coords_w], indexing="ij"))
-        coords_flatten = ops.flatten(coords, start_dim=1)
+        coords_flatten = ops.flatten(coords, 1)
         relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]
         relative_coords = relative_coords.permute(1, 2, 0)
         relative_coords[:, :, 0] += self.window_size[0] - 1
         relative_coords[:, :, 1] += self.window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1)
-        self.relative_position_index = relative_position_index
+        self.register_buffer("relative_position_index", relative_position_index)
 
         self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -473,7 +468,7 @@ class ClapAudioSelfAttention(nn.Module):
             attention_scores = attention_scores.view(-1, self.num_attention_heads, dim, dim)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -498,7 +493,7 @@ class ClapAudioSelfOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(dim, dim)
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -567,7 +562,7 @@ class ClapAudioOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(int(config.mlp_ratio * dim), dim)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -628,7 +623,7 @@ class ClapAudioLayer(nn.Module):
         pad_right = (self.window_size - width % self.window_size) % self.window_size
         pad_bottom = (self.window_size - height % self.window_size) % self.window_size
         pad_values = (0, 0, 0, pad_right, 0, pad_bottom)
-        hidden_states = ops.pad(hidden_states, pad_values)
+        hidden_states = nn.functional.pad(hidden_states, pad_values)
         return hidden_states, pad_values
 
     def forward(
@@ -657,7 +652,7 @@ class ClapAudioLayer(nn.Module):
         _, height_pad, width_pad, _ = hidden_states.shape
         # cyclic shift
         if self.shift_size > 0:
-            shifted_hidden_states = mindspore.Tensor(mindspore.numpy.roll(hidden_states, shift=(-self.shift_size, -self.shift_size), axis=(1, 2)))
+            shifted_hidden_states = ops.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
         else:
             shifted_hidden_states = hidden_states
 
@@ -679,7 +674,7 @@ class ClapAudioLayer(nn.Module):
 
         # reverse cyclic shift
         if self.shift_size > 0:
-            attention_windows = mindspore.Tensor(mindspore.numpy.roll(shifted_windows, shift=(self.shift_size, self.shift_size), axis=(1, 2)))
+            attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
         else:
             attention_windows = shifted_windows
 
@@ -784,7 +779,7 @@ class ClapAudioPatchMerging(nn.Module):
         should_pad = (height % 2 == 1) or (width % 2 == 1)
         if should_pad:
             pad_values = (0, 0, 0, width % 2, 0, height % 2)
-            input_feature = ops.pad(input_feature, pad_values)
+            input_feature = nn.functional.pad(input_feature, pad_values)
 
         return input_feature
 
@@ -870,11 +865,11 @@ class ClapAudioEncoder(nn.Module):
 
         # to avoid bicubic zero error
         if time_length < spec_width:
-            normalized_input_features = ops.interpolate(
+            normalized_input_features = nn.functional.interpolate(
                 normalized_input_features, (spec_width, freq_length), mode="bicubic", align_corners=True
             )
         if freq_length < spec_heigth:
-            normalized_input_features = ops.interpolate(
+            normalized_input_features = nn.functional.interpolate(
                 normalized_input_features, (time_length, spec_heigth), mode="bicubic", align_corners=True
             )
 
@@ -909,8 +904,7 @@ class ClapAudioEncoder(nn.Module):
         is_longer_list_idx = None
         if self.enable_fusion:
             is_longer_list = is_longer
-            # is_longer_list_idx = ops.where(is_longer_list == 1)[0]
-            is_longer_list_idx = ops.nonzero(is_longer_list == 1)[0][0].unsqueeze(0)
+            is_longer_list_idx = ops.where(is_longer_list == 1)[0]
 
         hidden_states = self.reshape_mel2img(normalized_input_features)
 
@@ -994,8 +988,8 @@ class ClapAudioEncoder(nn.Module):
         last_hidden_state = (
             last_hidden_state.permute(0, 1, 3, 2, 4).reshape(batch_size, n_channels, c_freq_bin, -1)
         )
-        latent_output = self.avgpool(ops.flatten(last_hidden_state, start_dim=2))
-        latent_output = ops.flatten(latent_output, start_dim=1)
+        latent_output = self.avgpool(ops.flatten(last_hidden_state, 2))
+        latent_output = ops.flatten(latent_output, 1)
 
         if not return_dict:
             return tuple(
@@ -1015,109 +1009,6 @@ class ClapAudioEncoder(nn.Module):
             hidden_states=all_reshaped_hidden_states,
             attentions=all_self_attentions,
         )
-
-
-CLAP_START_DOCSTRING = r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`ClapConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-CLAP_TEXT_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
-            it.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-        attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        position_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
-            config.max_position_embeddings - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-CLAP_AUDIO_INPUTS_DOCSTRING = r"""
-    Args:
-        input_features (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Input audio features. This should be returnes by the [`ClapFeatureExtractor`] class that you can also
-            retrieve from [`AutoFeatureExtractor`]. See [`ClapFeatureExtractor.__call__`] for details.
-        is_longer (`mindspore.Tensor`, of shape `(batch_size, 1)`, *optional*):
-            Whether the audio clip is longer than `max_length`. If `True`, a feature fusion will be enabled to enhance
-            the features.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-CLAP_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
-            it.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-        attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        position_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
-            config.max_position_embeddings - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
-        input_features (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Input audio features. This should be returnes by the [`ClapFeatureExtractor`] class that you can also
-            retrieve from [`AutoFeatureExtractor`]. See [`ClapFeatureExtractor.__call__`] for details.
-        return_loss (`bool`, *optional*):
-            Whether or not to return the contrastive loss.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class ClapProjectionLayer(nn.Module):
@@ -1154,11 +1045,15 @@ class ClapTextEmbeddings(nn.Module):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=True
+        )
+        self.register_buffer(
+            "token_type_ids", ops.zeros(self.position_ids.shape, dtype=mindspore.int64), persistent=True
+        )
 
         # End copy
         self.padding_idx = config.pad_token_id
@@ -1183,13 +1078,13 @@ class ClapTextEmbeddings(nn.Module):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -1221,7 +1116,7 @@ class ClapTextEmbeddings(nn.Module):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->ClapText
@@ -1242,11 +1137,11 @@ class ClapTextSelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
         self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
+        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -1286,8 +1181,8 @@ class ClapTextSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -1308,10 +1203,10 @@ class ClapTextSelfAttention(nn.Module):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
+        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
+                position_ids_l = mindspore.tensor(key_length - 1, dtype=mindspore.int64).view(
                     -1, 1
                 )
             else:
@@ -1336,7 +1231,7 @@ class ClapTextSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1365,7 +1260,7 @@ class ClapTextSelfOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -1453,7 +1348,7 @@ class ClapTextOutput(nn.Module):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -1709,9 +1604,8 @@ class ClapPreTrainedModel(PreTrainedModel):
             cell.weight.data.set_data(
                 initializer(Normal(in_proj_std),
                             cell.weight.data.shape, cell.weight.data.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
 
 class ClapAudioModel(ClapPreTrainedModel):
     config_class = ClapAudioConfig
@@ -1873,7 +1767,7 @@ class ClapTextModel(ClapPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -1942,13 +1836,13 @@ class ClapModel(ClapPreTrainedModel):
         super().__init__(config)
 
         if not isinstance(config.text_config, ClapTextConfig):
-            raise ValueError(
+            raise TypeError(
                 "config.text_config is expected to be of type ClapTextConfig but is of type"
                 f" {type(config.text_config)}."
             )
 
         if not isinstance(config.audio_config, ClapAudioConfig):
-            raise ValueError(
+            raise TypeError(
                 "config.audio_config is expected to be of type ClapAudioConfig but is of type"
                 f" {type(config.audio_config)}."
             )
@@ -1956,8 +1850,8 @@ class ClapModel(ClapPreTrainedModel):
         text_config = config.text_config
         audio_config = config.audio_config
 
-        self.logit_scale_a = mindspore.Parameter(mindspore.Tensor(math.log(config.logit_scale_init_value)).view(1))
-        self.logit_scale_t = mindspore.Parameter(mindspore.Tensor(math.log(config.logit_scale_init_value)).view(1))
+        self.logit_scale_a = nn.Parameter(mindspore.tensor(math.log(config.logit_scale_init_value)))
+        self.logit_scale_t = nn.Parameter(mindspore.tensor(math.log(config.logit_scale_init_value)))
 
         self.projection_dim = config.projection_dim
 
@@ -2013,8 +1907,7 @@ class ClapModel(ClapPreTrainedModel):
 
         pooled_output = text_outputs[1] if return_dict is not None else text_outputs.pooler_output
         text_features = self.text_projection(pooled_output)
-        l2_normalize = ops.L2Normalize(axis=-1)
-        text_features = l2_normalize(text_features)
+        text_features = F.normalize(text_features, dim=-1)
 
         return text_features
 
@@ -2059,8 +1952,7 @@ class ClapModel(ClapPreTrainedModel):
         pooled_output = audio_outputs[1] if not return_dict else audio_outputs.pooler_output
 
         audio_features = self.audio_projection(pooled_output)
-        l2_normalize = ops.L2Normalize(axis=-1)
-        audio_features = l2_normalize(audio_features)
+        audio_features = F.normalize(audio_features, dim=-1)
 
         return audio_features
 
@@ -2130,13 +2022,8 @@ class ClapModel(ClapPreTrainedModel):
         text_embeds = self.text_projection(text_embeds)
 
         # normalized features
-
-        # audio_embeds = audio_embeds / audio_embeds.norm(p=2, axis=-1, keepdim=True)
-        # text_embeds = text_embeds / text_embeds.norm(p=2, axis=-1, keepdim=True)
-        norm = ops.L2Normalize(axis=-1)
-        audio_embeds = audio_embeds / norm(audio_embeds)
-        text_embeds = text_embeds / norm(text_embeds)
-
+        audio_embeds = audio_embeds / ops.norm(audio_embeds, p=2, dim=-1, keepdim=True)
+        text_embeds = text_embeds / ops.norm(text_embeds, p=2, dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale_text = self.logit_scale_t.exp()
@@ -2231,6 +2118,7 @@ class ClapTextModelWithProjection(ClapPreTrainedModel):
             hidden_states=text_outputs.hidden_states,
             attentions=text_outputs.attentions,
         )
+
 
 class ClapAudioModelWithProjection(ClapPreTrainedModel):
     config_class = ClapAudioConfig

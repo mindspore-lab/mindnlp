@@ -166,8 +166,15 @@ class Conv1d(_ConvNd):
             in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
             False, _single(0), groups, bias, padding_mode, **factory_kwargs)
 
-        pad_mode = 'valid'
-        pad = (0,) * 4
+        pad_mode = 'pad'
+        pad = padding
+        if isinstance(padding, tuple):
+            pad = (0, 0, padding[0], padding[0])
+        elif isinstance(padding, int):
+            pad = (0, 0) + (padding,) * 2
+        if not isinstance(padding, (int, tuple)):
+            pad_mode = padding
+            pad = (0,) * 4
 
         self.conv2d = ops.Conv2D(out_channel=self.out_channels,
                                 kernel_size=(1,) + self.kernel_size,
@@ -189,6 +196,7 @@ class Conv1d(_ConvNd):
 
         output = output.squeeze(2)
         return output
+
 
 class Conv2d(_ConvNd):
 

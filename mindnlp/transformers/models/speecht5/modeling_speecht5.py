@@ -936,7 +936,7 @@ class SpeechT5Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1176,7 +1176,7 @@ class SpeechT5PreTrainedModel(PreTrainedModel):
                 initializer(Uniform(k), cell.projection.bias.shape, cell.projection.bias.dtype))
         elif isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -1847,7 +1847,7 @@ class SpeechT5SpectrogramLoss(nn.Module):
         logits = logits.masked_select(masks)
 
         # stop token loss
-        bce_loss = ops.binary_cross_entropy_with_logits(logits, stop_labels, pos_weight=mindspore.tensor(5.0))
+        bce_loss = F.binary_cross_entropy_with_logits(logits, stop_labels, pos_weight=mindspore.tensor(5.0))
 
         # combined loss
         loss = l1_loss + bce_loss
@@ -2157,7 +2157,7 @@ class SpeechT5ForSpeechToText(SpeechT5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -3028,7 +3028,7 @@ class SpeechT5HifiGan(PreTrainedModel):
         """Initialize the weights."""
         if isinstance(cell, (nn.Linear, nn.Conv1d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
     def apply_weight_norm(self):

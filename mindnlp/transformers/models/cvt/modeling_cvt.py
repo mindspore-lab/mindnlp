@@ -20,10 +20,11 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_outputs import ImageClassifierOutputWithNoAttention, ModelOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -80,7 +81,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
+    random_tensor = keep_prob + ops.rand(*shape, dtype=input.dtype)
     random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
@@ -228,7 +229,7 @@ class CvtConvEmbeddings(nn.Module):
         super().__init__()
         patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
         self.patch_size = patch_size
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding, pad_mode='pad', bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=stride, padding=padding)
         self.normalization = nn.LayerNorm(embed_dim)
 
     def forward(self, pixel_values):
@@ -299,10 +300,9 @@ class CvtSelfAttentionConvProjection(nn.Module):
             embed_dim,
             kernel_size=kernel_size,
             padding=padding,
-            pad_mode='pad',
             stride=stride,
             bias=False,
-            group=embed_dim,
+            groups=embed_dim,
         )
         self.normalization = nn.BatchNorm2d(embed_dim)
 
@@ -598,9 +598,9 @@ class CvtSelfAttention(nn.Module):
         value = self.convolution_projection_value(hidden_state)
 
         if self.with_cls_token:
-            query = ops.cat((cls_token, query), axis=1)
-            key = ops.cat((cls_token, key), axis=1)
-            value = ops.cat((cls_token, value), axis=1)
+            query = ops.cat((cls_token, query), dim=1)
+            key = ops.cat((cls_token, key), dim=1)
+            value = ops.cat((cls_token, value), dim=1)
 
         head_dim = self.embed_dim // self.num_heads
 
@@ -609,7 +609,7 @@ class CvtSelfAttention(nn.Module):
         value = self.rearrange_for_multi_head_attention(self.projection_value(value))
 
         attention_score = ops.einsum("bhlk,bhtk->bhlt", query, key) * self.scale
-        attention_probs = ops.softmax(attention_score, axis=-1)
+        attention_probs = ops.softmax(attention_score, dim=-1)
         attention_probs = self.dropout(attention_probs)
 
         context = ops.einsum("bhlt,bhtv->bhlv", attention_probs, value)
@@ -1131,7 +1131,7 @@ class CvtStage(nn.Module):
 
         drop_path_rates = [x.item() for x in ops.linspace(0, config.drop_path_rate[self.stage], config.depth[stage])]
 
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[
                 CvtLayer(
                     num_heads=config.num_heads[self.stage],
@@ -1178,8 +1178,8 @@ class CvtStage(nn.Module):
         # rearrange b c h w -> b (h w) c"
         hidden_state = hidden_state.view(batch_size, num_channels, height * width).permute(0, 2, 1)
         if self.config.cls_token[self.stage]:
-            cls_token = self.cls_token.expand(batch_size, -1, -1)
-            hidden_state = ops.cat((cls_token, hidden_state), axis=1)
+            cls_token = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+            hidden_state = ops.cat((cls_token, hidden_state), dim=1)
 
         for layer in self.layers:
             layer_outputs = layer(hidden_state, height, width)
@@ -1293,15 +1293,15 @@ class CvtPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.initialize(TruncatedNormal(self.config.initializer_range))
+            ops.initialize(module.weight, TruncatedNormal(self.config.initializer_range))
             if module.bias is not None:
-                module.bias.initialize('zeros')
+                ops.initialize(module.bias, 'zeros')
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize('zeros')
-            module.weight.initialize('ones')
+            ops.initialize(module.bias, 'zeros')
+            ops.initialize(module.weight, 'ones')
         elif isinstance(module, CvtStage):
             if self.config.cls_token[module.stage]:
-                module.cls_token.initialize(TruncatedNormal(self.config.initializer_range))
+                ops.initialize(module.cls_token, TruncatedNormal(self.config.initializer_range))
 
 
 class CvtModel(CvtPreTrainedModel):
@@ -1524,13 +1524,13 @@ class CvtForImageClassification(CvtPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

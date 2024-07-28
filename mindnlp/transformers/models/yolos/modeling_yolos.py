@@ -826,7 +826,7 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = ops.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -891,7 +891,7 @@ class YolosLoss(nn.Module):
         )
         target_classes[idx] = target_classes_o
 
-        loss_ce = ops.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
+        loss_ce = F.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
         losses = {"loss_ce": loss_ce}
 
         return losses

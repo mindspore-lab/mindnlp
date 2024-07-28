@@ -6,6 +6,7 @@ import numpy as np
 import mindspore
 from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
+from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 
 from mindnlp.configs import USE_PYBOOST
 
@@ -44,6 +45,9 @@ def elu(input, alpha=1.0):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.elu(input, alpha)
     return ops.elu(input, alpha)
+
+def glu(input, dim=-1):
+    return ops.glu(input, dim)
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
@@ -100,6 +104,13 @@ def dropout(input, p=0.5, training=True):
         return mindspore.mint.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
+def drop_and_mask(keep_prob, seed=None):
+    seed0, seed1 = _get_seed(seed, "dropout")
+    dropout_op = ops.Dropout(keep_prob=keep_prob, Seed0=seed0, Seed1=seed1)
+    dropout_op = _set_prim_op_user_data(dropout_op, "random_cache", False)
+    out, mask = dropout_op(input)
+    return out, mask
+
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
     if USE_PYBOOST:
@@ -135,6 +146,12 @@ def pad(input, pad, mode='constant', value=0.0):
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+
+def mse_loss(input, target, reduction='mean'):
+    return ops.mse_loss(input, target, reduction)
+
+def l1_loss(input, target, reduction='mean'):
+    return ops.l1_loss(input, target, reduction)
 
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
@@ -174,27 +191,27 @@ def normalize(input, p=2.0, dim=1):
     return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.batch_norm(
-                input,
-                running_mean,
-                running_var,
-                weight,
-                bias,
-                training,
-                momentum,
-                eps
-            )
-        return ops.batch_norm(
-                input,
-                running_mean,
-                running_var,
-                weight,
-                bias,
-                training,
-                momentum,
-                eps
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.batch_norm(
+            input,
+            running_mean,
+            running_var,
+            weight,
+            bias,
+            training,
+            momentum,
+            eps
         )
+    return ops.batch_norm(
+        input,
+        running_mean,
+        running_var,
+        weight,
+        bias,
+        training,
+        momentum,
+        eps
+    )
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
@@ -670,8 +687,8 @@ def multi_head_attention_forward(
     # add zero attention along batch dimension (now first)
     if add_zero_attn:
         zero_attn_shape = (bsz * num_heads, 1, head_dim)
-        k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], dim=1)
-        v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], dim=1)
+        k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], axis=1)
+        v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], axis=1)
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
@@ -788,3 +805,64 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     elif isinstance(input, mindspore.Tensor):
         return input.dtype
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
+
+def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
+    # if USE_PYBOOST:
+    #     return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
+    return ops.unfold(input, kernel_size, dilation, padding, stride)
+
+def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
+    return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
+
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, tuple):
+        pad = (0, 0, padding[0], padding[0])
+    elif isinstance(padding, int):
+        pad = (0, 0) + (padding,) * 2
+    if not isinstance(padding, (int, tuple)):
+        pad_mode = padding
+        pad = (0,) * 4
+
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
+                                        kernel_size=(1, weight.shape[-1]),
+                                        mode=1,
+                                        pad_mode=pad_mode,
+                                        pad=pad,
+                                        stride=(1, stride),
+                                        dilation=(1, dilation),
+                                        group=groups)
+
+    input = input.expand_dims(2)
+    output = _conv2d(input, weight.expand_dims(2))
+
+    if bias is not None:
+        output = ops.bias_add(output, bias)
+
+    output = output.squeeze(2)
+    return output
+
+def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
+    return ops.ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)[0]
+
+def one_hot(tensor, num_classes=-1):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.one_hot(tensor, num_classes)
+    return ops.one_hot(tensor, num_classes)
+
+def pixel_shuffle(input, upscale_factor):
+    return ops.pixel_shuffle(input, upscale_factor)
+
+def pixel_unshuffle(input, downscale_factor):
+    return ops.pixel_shuffle(input, downscale_factor)
+
+def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
+    if USE_PYBOOST:
+        return mindspore.mint.grid_sample(input, grid, mode, padding_mode, align_corners)
+    return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
+
+def cosine_similarity(x1, x2, dim=1, eps=1e-8):
+    return ops.cosine_similarity(x1, x2, dim, eps)

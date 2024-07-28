@@ -55,7 +55,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
                     dtype=cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -339,7 +339,7 @@ def bias_dropout_add(
     """
     if bias is not None:
         x = x + bias
-    out = ops.dropout(input=x, p=prob, training=training)
+    out = F.dropout(input=x, p=prob, training=training)
     if residual is not None:
         out = residual + out
     return out
@@ -704,7 +704,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shift_logits = lm_logits[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(
+            lm_loss = F.cross_entropy(
                 shift_logits.reshape(
                     -1,
                     shift_logits.shape[-1],

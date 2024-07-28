@@ -1,6 +1,6 @@
 """Container"""
 import operator
-from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, overload, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Tuple, Union
 from collections import OrderedDict, abc as container_abcs
 from typing_extensions import Self
 

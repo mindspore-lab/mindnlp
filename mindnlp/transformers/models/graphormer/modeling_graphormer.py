@@ -1002,7 +1002,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
             cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(init_zero(cell.bias))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=cell.weight.shape)
