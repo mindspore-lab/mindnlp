@@ -1285,7 +1285,7 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
                 shift_logits = logits[..., :-1, :]
                 shift_labels = labels[..., 1:]
 
-                loss = ops.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
+                loss = F.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
         else:
             outputs = self.language_model(
                 inputs_embeds=inputs_embeds,

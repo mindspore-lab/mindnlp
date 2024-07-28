@@ -696,7 +696,7 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy  # -100 index = padding token
+            loss_fct = F.cross_entropy  # -100 index = padding token
             masked_lm_loss = loss_fct(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
@@ -783,16 +783,16 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.mse_loss
+                loss_fct = F.mse_loss
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = ops.cross_entropy
+                loss_fct = F.cross_entropy
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.binary_cross_entropy_with_logits
+                loss_fct = F.binary_cross_entropy_with_logits
                 loss = loss_fct(logits, labels)
 
         if not return_dict:
@@ -889,7 +889,7 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
@@ -957,7 +957,7 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
@@ -1043,7 +1043,7 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             start_loss = loss_fct(
                 start_logits, start_positions, ignore_index=ignored_index
             )

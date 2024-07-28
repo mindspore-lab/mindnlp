@@ -636,7 +636,7 @@ class LongT5Attention(nn.Module):
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -858,7 +858,7 @@ class LongT5LocalAttention(nn.Module):
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -1159,7 +1159,7 @@ class LongT5TransientGlobalAttention(nn.Module):
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -2484,7 +2484,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
             # TODO(thom): Add z_loss
 
         if not return_dict:

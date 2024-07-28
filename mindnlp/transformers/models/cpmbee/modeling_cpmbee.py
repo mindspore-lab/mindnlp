@@ -20,12 +20,12 @@ from collections import UserDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...generation.beam_search import BeamHypotheses, BeamSearchScorer
 from ...generation.streamers import BaseStreamer
 from ...generation.utils import (
@@ -92,7 +92,7 @@ class CpmBeeLinear(nn.Linear):
         Returns:
             `mindspore.Tensor` of shape `(batch, seq_len, dim_out)`: The output of the linear transform y.
         """
-        x = ops.dense(x, self.weight)
+        x = F.linear(x, self.weight)
         x = x / math.sqrt(self.dim_in)
         return x
 
@@ -195,7 +195,7 @@ class CpmBeeAttention(nn.Module):
 
         self.attention_out = CpmBeeLinear(self.num_heads * self.dim_head, self.dim_model, dtype=config.ms_dtype)
 
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         if config.dropout_p is not None:
             self.dropout = nn.Dropout(p=config.dropout_p)
@@ -243,8 +243,8 @@ class CpmBeeAttention(nn.Module):
         value = value.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)
 
         if past_key_values is not None:
-            key = ops.cat([past_key_values[0], key], axis=-2)
-            value = ops.cat([past_key_values[1], value], axis=-2)
+            key = ops.cat([past_key_values[0], key], dim=-2)
+            value = ops.cat([past_key_values[1], value], dim=-2)
             len_k = key.shape[-2]
 
         # (batch_size, num_heads, len_q, dim_head) @ (batch_size, num_heads, dim_head, len_k) -> (batch_size, num_heads, len_q, len_k)
@@ -254,14 +254,14 @@ class CpmBeeAttention(nn.Module):
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.tensor(False),
-            ops.scalar_to_tensor(float("-inf"), dtype=score.dtype),
+            float("-inf"),
         )
         score = self.softmax(score)
 
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.tensor(False),
-            ops.scalar_to_tensor(0, dtype=score.dtype),
+            0.,
         )
         if output_attentions:
             attn_weights = score
@@ -871,7 +871,7 @@ class CpmBeeBucketPositionBias(nn.Module):
             relative_position_bucket,
         )
 
-        embeds = embedding(relative_position_bucket, self.relative_attention_bias)
+        embeds = F.embedding(relative_position_bucket, self.relative_attention_bias)
         embeds = embeds.permute(0, 3, 1, 2)
         return embeds
 
@@ -1037,11 +1037,11 @@ class CpmBeeRotaryEmbedding(nn.Module):
         x_pos = x_pos * self.distance_scale
         freqs = x_pos[..., None] * inv_freq[None, :]  # (..., dim/2)
 
-        emb = ops.cat((freqs, freqs), axis=-1)  # (..., dim)
+        emb = ops.cat((freqs, freqs), dim=-1)  # (..., dim)
         emb_cos = emb.cos()  # (..., dim)
         emb_sin = emb.sin()  # (..., dim)
 
-        rotate_x = ops.cat([-x[..., x.shape[-1] // 2 :], x[..., : x.shape[-1] // 2]], axis=-1)  # (..., dim)
+        rotate_x = ops.cat([-x[..., x.shape[-1] // 2 :], x[..., : x.shape[-1] // 2]], dim=-1)  # (..., dim)
 
         return x * emb_cos + rotate_x * emb_sin
 
@@ -1118,10 +1118,10 @@ class CpmBeeEmbeddingExt(nn.Embedding):
         Raises:
             None
         """
-        logits = ops.dense(x / math.sqrt(self.dim_model), self.weight)
+        logits = F.linear(x / math.sqrt(self.dim_model), self.weight)
         if ext_table is not None and 0 not in ext_table.shape:
-            logits_ext = ops.dense(x, ext_table)
-            logits = ops.cat([logits, logits_ext], axis=-1)
+            logits_ext = F.linear(x, ext_table)
+            logits = ops.cat([logits, logits_ext], dim=-1)
         return logits
 
 
@@ -1314,7 +1314,7 @@ class CpmBeeModel(CpmBeePreTrainedModel):
             batch, seq_length = input_ids.shape
             segment = ops.where(input_ids != 0, mindspore.tensor(2), 0).to(dtype=dtype)
             context = ops.full((batch, seq_length), 1, dtype=dtype)
-            position = ops.arange(seq_length, dtype=dtype).repeat(batch, 1)
+            position = ops.tile(ops.arange(seq_length, dtype=dtype), (batch, 1))
             input_id_sub = ops.full((batch, seq_length), 0, dtype=dtype)
             segment_rel_offset = ops.full((batch, seq_length), 0, dtype=dtype)
             segment_rel = ops.full((batch, seq_length), 0, dtype=dtype)
@@ -1330,13 +1330,13 @@ class CpmBeeModel(CpmBeePreTrainedModel):
             + segment[:, None, :]
             + segment_rel_offset[:, :, None],
             ~(
-                (sample_ids[:, :, None] == sample_ids[:, None, :])
-                & (span[:, None, :] == span[:, :, None])
+                (sample_ids[:, :, None] == sample_ids[:, None, :]).to(mindspore.int32)
+                & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
             ),  # not in the same span or sample
             0,  # avoid torch.gather overflow
         ).view(batch, seqlen * seqlen)
 
-        segment_bucket = ops.gather_elements(
+        segment_bucket = ops.gather(
             input=segment_rel,
             dim=1,
             index=segment_rel_2d.long(),
@@ -1344,8 +1344,8 @@ class CpmBeeModel(CpmBeePreTrainedModel):
 
         segment_bucket = segment_bucket.masked_fill(
             ~(
-                (sample_ids[:, :, None] == sample_ids[:, None, :])
-                & (span[:, None, :] == span[:, :, None])
+                (sample_ids[:, :, None] == sample_ids[:, None, :]).to(mindspore.int32)
+                & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
             ),  # not in the same span or sample
             1,  # bucket is used for in-context samples
         )
@@ -1355,12 +1355,12 @@ class CpmBeeModel(CpmBeePreTrainedModel):
             seqlen
         ).view(-1, 1)
         # sample mask
-        sample_mask_2d = (sample_ids[:, :, None] == 0) | (
+        sample_mask_2d = (sample_ids[:, :, None] == 0).to(mindspore.int32) | (
             sample_ids[:, :, None] == sample_ids[:, None, :]
-        )
+        ).to(mindspore.int32)
         # context mask
         attention_mask = context[:, None, :] | (
-            context[:, :, None].logical_not() & directional_mask_2d.view(1, seqlen, seqlen)
+            context[:, :, None].logical_not().to(mindspore.int32) & directional_mask_2d.view(1, seqlen, seqlen).to(mindspore.int32)
         )
         # span mask
         attention_mask = (
@@ -1368,12 +1368,12 @@ class CpmBeeModel(CpmBeePreTrainedModel):
         )
         # length mask
         mask_1d = (
-            ops.arange(seqlen)[None, :].repeat(batch, 1) < length[:, None]
-        )
+            ops.tile(ops.arange(seqlen)[None, :], (batch, 1)) < length[:, None]
+        ).to(mindspore.int32)
         attention_mask = (
             mask_1d.view(batch, seqlen, 1) & mask_1d.view(batch, 1, seqlen) & attention_mask
-        )
-        position = ops.arange(seqlen).expand(batch, seqlen)
+        ).to(mindspore.bool_)
+        position = ops.broadcast_to(ops.arange(seqlen), (batch, seqlen))
 
         hidden_states = self.input_embedding(input_ids, input_id_sub)
         position_bias = self.position_bias(position, position, segment_bucket)
@@ -1497,11 +1497,11 @@ class CpmBeeModel(CpmBeePreTrainedModel):
             present_segments = segment
             present_buffer = None
         else:
-            present_position = ops.cat([past_states["buffer_position"], position], axis=-1)
-            present_context = ops.cat([past_states["buffer_context"], context.astype(mindspore.int64)], axis=-1)
-            present_sample_ids = ops.cat([past_states["buffer_sample_ids"], sample_ids], axis=-1)
-            present_num_segments = ops.cat([past_states["buffer_num_segments"], num_segments], axis=-1)
-            present_segments = ops.cat([past_states["buffer_segments"], segment], axis=-1)
+            present_position = ops.cat([past_states["buffer_position"], position], dim=-1)
+            present_context = ops.cat([past_states["buffer_context"], context.astype(mindspore.int64)], dim=-1)
+            present_sample_ids = ops.cat([past_states["buffer_sample_ids"], sample_ids], dim=-1)
+            present_num_segments = ops.cat([past_states["buffer_num_segments"], num_segments], dim=-1)
+            present_segments = ops.cat([past_states["buffer_segments"], segment], dim=-1)
             present_buffer = past_states["buffer"]
 
         batch = input_ids.shape[0]
@@ -1516,7 +1516,7 @@ class CpmBeeModel(CpmBeePreTrainedModel):
             0,  # avoid torch.gather overflow
         ).view(batch, len_q * len_buffer)
 
-        segment_bucket = ops.gather_elements(
+        segment_bucket = ops.gather(
             input=segment_rel,
             dim=1,
             index=segment_rel_2d.long(),
@@ -2099,7 +2099,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.long().view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.long().view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]
@@ -2234,7 +2234,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]
@@ -2369,7 +2369,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                         batch_size * beam_scorer.num_beams, 1
                     ),
                 ],
-                axis=-1,
+                dim=-1,
             )
             _input_ids = input_ids[:, -1:]
 
@@ -2401,13 +2401,13 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         """
         old_past_states = model_kwargs["past_states"]
         model_kwargs["past_states"] = {
-            "buffer_position": ops.cat([old_past_states["buffer_position"], model_inputs["position"]], axis=-1),
-            "buffer_context": ops.cat([old_past_states["buffer_context"], model_inputs["context"].astype(mindspore.int64)], axis=-1),
-            "buffer_sample_ids": ops.cat([old_past_states["buffer_sample_ids"], model_inputs["sample_ids"]], axis=-1),
+            "buffer_position": ops.cat([old_past_states["buffer_position"], model_inputs["position"]], dim=-1),
+            "buffer_context": ops.cat([old_past_states["buffer_context"], model_inputs["context"].astype(mindspore.int64)], dim=-1),
+            "buffer_sample_ids": ops.cat([old_past_states["buffer_sample_ids"], model_inputs["sample_ids"]], dim=-1),
             "buffer_num_segments": ops.cat(
-                [old_past_states["buffer_num_segments"], model_inputs["num_segments"]], axis=-1
+                [old_past_states["buffer_num_segments"], model_inputs["num_segments"]], dim=-1
             ),
-            "buffer_segments": ops.cat([old_past_states["buffer_segments"], model_inputs["segment"]], axis=-1),
+            "buffer_segments": ops.cat([old_past_states["buffer_segments"], model_inputs["segment"]], dim=-1),
             "buffer": outputs.past_key_values,
         }
 
@@ -2488,11 +2488,11 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                     and isinstance(dict_to_expand[key], mindspore.Tensor)
                     and "ext_table" not in key
                 ):
-                    dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
+                    dict_to_expand[key] = ops.repeat_interleave(dict_to_expand[key], expand_size, dim=0)
             return dict_to_expand
 
         if input_ids is not None:
-            input_ids = input_ids.repeat_interleave(expand_size, dim=0)
+            input_ids = ops.repeat_interleave(input_ids, expand_size, dim=0)
 
         model_kwargs = _expand_dict_for_generation(model_kwargs)
 
@@ -2660,8 +2660,8 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                 None,
             )
 
-            _next_token_scores = ops.log_softmax(
-                next_token_logits, axis=-1
+            _next_token_scores = F.log_softmax(
+                next_token_logits, dim=-1
             )  # (batch_size * num_beams, vocab_size)
 
             next_token_scores_processed = logits_processor(input_ids, _next_token_scores)

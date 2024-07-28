@@ -1,4 +1,5 @@
 """creation ops"""
+import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
@@ -58,6 +59,8 @@ def range(start=0, end=None, step=1, dtype=None):
 def linspace(start, end, steps, *, dtype=None):
     if dtype is None:
         dtype = mindspore.float32
+    if USE_PYBOOST:
+        return mindspore.Tensor(np.linspace(start, end, steps)).to(dtype)
     return ops.linspace(start, end, steps).to(dtype)
 
 # logspace

@@ -976,7 +976,7 @@ class Wav2Vec2Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -2661,7 +2661,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             logits = logits.swapaxes(0, 2).reshape(-1, logits.shape[0])
             target = ((1 - mask_time_indices.long()) * -100).swapaxes(0, 1).flatten()
 
-            contrastive_loss = ops.cross_entropy(logits.float(), target, reduction="sum")
+            contrastive_loss = F.cross_entropy(logits.float(), target, reduction="sum")
             # 7. compute diversity loss: \mathbf{L}_d
             num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
             diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
@@ -3121,7 +3121,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         loss = None
         if labels is not None:
             labels = labels.astype(mindspore.int32)
-            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -3251,7 +3251,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         loss = None
         if labels is not None:
             labels = labels.astype(mindspore.int32)
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -3340,7 +3340,7 @@ class AMSoftmaxLoss(nn.Module):
 
         onehot = ops.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
-        loss = ops.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels)
         return loss
 
 

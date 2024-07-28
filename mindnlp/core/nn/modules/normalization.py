@@ -1,10 +1,8 @@
 """normalization"""
 import numbers
-import mindspore
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
 from ..functional import group_norm, layer_norm
 

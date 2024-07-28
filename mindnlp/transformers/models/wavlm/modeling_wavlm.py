@@ -826,7 +826,7 @@ class WavLMAttention(nn.Module):
                     attn_output_weights = ops.bmm(q_scaled, k.swapaxes(-2, -1))
                 attn_output_weights = ops.softmax(attn_output_weights, axis=-1)
                 if dropout_p > 0.0:
-                    attn_output_weights = ops.dropout(attn_output_weights, p=dropout_p)
+                    attn_output_weights = F.dropout(attn_output_weights, p=dropout_p)
 
                 attn_output = ops.bmm(attn_output_weights, v)
 
@@ -1388,7 +1388,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     module.bias.data.zero_()
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             # module.bias.data.zero_()
@@ -1403,7 +1403,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     nn.init.uniform_(module.bias, a=-k, b=k)
             cell.weight.set_data(
                 initializer(HeNormal(),cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k),
                                                     cell.bias.shape, cell.bias.dtype))
@@ -1987,7 +1987,7 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -2085,7 +2085,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
 
         if not return_dict:
@@ -2119,7 +2119,7 @@ class AMSoftmaxLoss(nn.Module):
 
         onehot = ops.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
-        loss = ops.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels)
 
         return loss
 

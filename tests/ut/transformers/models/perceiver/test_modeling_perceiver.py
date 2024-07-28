@@ -402,7 +402,7 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             config, _ = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
 
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

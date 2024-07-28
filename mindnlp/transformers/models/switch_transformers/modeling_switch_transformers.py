@@ -559,7 +559,7 @@ class SwitchTransformersAttention(nn.Module):
         attn_weights = ops.softmax(scores.float(), axis=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -1503,7 +1503,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
                 decoder_aux_loss = 0
 
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
 
             if output_router_logits:
                 z_loss = self.router_z_loss_coef * (encoder_z_loss + decoder_z_loss)

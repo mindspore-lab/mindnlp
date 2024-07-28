@@ -21,8 +21,6 @@ import math
 import unittest
 
 import numpy as np
-from mindspore import ops
-
 from mindnlp.transformers import DetrConfig, ResNetConfig
 
 from mindnlp.utils.testing_utils import is_mindspore_available, is_vision_available, require_mindspore, require_vision, slow, get_tests_dir
@@ -36,13 +34,12 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-
+    from mindnlp.core import ops
     from mindnlp.transformers import DetrForObjectDetection, DetrForSegmentation, DetrModel
 
 
 if is_vision_available():
     from PIL import Image
-
     from mindnlp.transformers import DetrImageProcessor
 
 
@@ -210,7 +207,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 for i in range(self.model_tester.batch_size):
                     target = {}
                     target["class_labels"] = ops.ones(
-                        (self.model_tester.n_targets,), dtype=mindspore.int64
+                        self.model_tester.n_targets, dtype=mindspore.int64
                     )
                     target["boxes"] = ops.ones(
                         self.model_tester.n_targets, 4, dtype=mindspore.float32
@@ -423,7 +420,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

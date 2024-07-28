@@ -1,13 +1,18 @@
 """random op"""
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
 
 # bernoulli
 def bernoulli(input):
+    if DEVICE_TARGET == 'Ascend':
+        random_numbers = rand(input.shape, dtype=input.dtype)
+        samples = random_numbers < input
+        samples = samples.int()
+        return samples
     return ops.bernoulli(input)
 
 # multinomial

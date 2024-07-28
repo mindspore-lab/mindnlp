@@ -3,6 +3,8 @@ import copy
 import numpy as np
 import mindspore
 from mindspore import ops
+from mindspore.common.initializer import initializer
+
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
@@ -38,6 +40,8 @@ def broadcast_to(input, shape):
 
 
 # cdist
+def cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return ops.cdist(x1, x2, p)
 
 # clone
 def clone(input):
@@ -69,6 +73,8 @@ def cumsum(input, dim, dtype=None):
     return ops.cumsum(input, dim, dtype)
 
 # diag
+def diag(input):
+    return ops.diag(input)
 
 # diag_embed
 
@@ -539,7 +545,7 @@ def flatten(input, start_dim=1, end_dim=-1):
 
 # meshgrid
 def meshgrid(*tensors, indexing=None):
-    return ops.meshgrid(*tensors, indexing)
+    return ops.meshgrid(*tensors, indexing=indexing)
 
 # lcm
 
@@ -557,6 +563,8 @@ def repeat_interleave(input, repeats, dim=None):
     return ops.repeat_elements(input, repeats, dim)
 
 # roll
+def roll(input, shifts, dims=None):
+    return mindspore.numpy.roll(input, shifts, dims)
 
 # searchsorted
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):
@@ -619,3 +627,28 @@ def contains(self, key):
     eq_res = eq(self, key)
     res = any(eq_res)
     return bool(res)
+
+def initialize(self, init_method):
+    r"""
+    Initializes the object with the given initialization method.
+    
+    Args:
+        self (object): The instance of the class.
+        init_method (str): The method used for initialization.
+            This parameter determines how the data is initialized.
+            Valid values for `init_method` are:
+                - "random": Initializes the data with random values.
+                - "zeros": Initializes the data with zeros.
+                - "ones": Initializes the data with ones.
+            Default value is "random".
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None.
+    
+    Note:
+        This function sets the data of the object using the specified `init_method` and the object's shape and data type.
+    """
+    self.set_data(initializer(init_method, self.shape, self.dtype))

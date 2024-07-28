@@ -26,7 +26,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import DPTForDepthEstimation, DPTForSemanticSegmentation, DPTModel
     from mindnlp.transformers.models.auto.modeling_auto import MODEL_MAPPING_NAMES
@@ -194,7 +194,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), nn.Module)
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

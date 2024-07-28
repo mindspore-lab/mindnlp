@@ -73,7 +73,8 @@ def matmul(input, other):
 # matrix_exp
 
 # mm
-
+def mm(input, other):
+    return matmul(input, other)
 
 # mv
 

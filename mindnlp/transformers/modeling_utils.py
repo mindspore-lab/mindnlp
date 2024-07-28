@@ -2024,14 +2024,14 @@ class SQuADHead(nn.Module):
             # during training, compute the end logits based on the ground truth of the start position
             end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
             if cls_index is not None and is_impossible is not None:
                 # Predict answerability from the representation of CLS and START
                 cls_logits = self.answer_class(hidden_states, start_positions=start_positions, cls_index=cls_index)
-                cls_loss = ops.binary_cross_entropy_with_logits(cls_logits, is_impossible)
+                cls_loss = F.binary_cross_entropy_with_logits(cls_logits, is_impossible)
 
                 # note(zhiliny): by default multiply the loss by 0.5 so that the scale is comparable to start_loss and end_loss
                 total_loss += cls_loss * 0.5

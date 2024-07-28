@@ -1,51 +1,32 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 """Tokenization classes for ConvBERT."""
+
 import json
 from typing import List, Optional, Tuple
 
 from tokenizers import normalizers
 
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
-from .convbert_tokenizer import ConvBertTokenizer
+from ....utils import logging
+from .tokenization_convbert import ConvBertTokenizer
 
+
+logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
-
-PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {
-        "YituTech/conv-bert-base": "https://huggingface.co/YituTech/conv-bert-base/resolve/main/vocab.txt",
-        "YituTech/conv-bert-medium-small": (
-            "https://huggingface.co/YituTech/conv-bert-medium-small/resolve/main/vocab.txt"
-        ),
-        "YituTech/conv-bert-small": "https://huggingface.co/YituTech/conv-bert-small/resolve/main/vocab.txt",
-    }
-}
-
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "YituTech/conv-bert-base": 512,
-    "YituTech/conv-bert-medium-small": 512,
-    "YituTech/conv-bert-small": 512,
-}
-
-
-PRETRAINED_INIT_CONFIGURATION = {
-    "YituTech/conv-bert-base": {"do_lower_case": True},
-    "YituTech/conv-bert-medium-small": {"do_lower_case": True},
-    "YituTech/conv-bert-small": {"do_lower_case": True},
-}
 
 
 # Copied from transformers.models.bert.tokenization_bert_fast.BertTokenizerFast with bert-base-cased->YituTech/conv-bert-base, Bert->ConvBert, BERT->ConvBERT
@@ -88,10 +69,8 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         wordpieces_prefix (`str`, *optional*, defaults to `"##"`):
             The prefix for subwords.
     """
+
     vocab_files_names = VOCAB_FILES_NAMES
-    pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
-    pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
-    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     slow_tokenizer_class = ConvBertTokenizer
 
     def __init__(
@@ -108,31 +87,6 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
-        """
-        This method initializes an instance of the ConvBertTokenizerFast class.
-        
-        Args:
-            self: The instance of the ConvBertTokenizerFast class.
-            vocab_file (str): The path to the vocabulary file. Default is None.
-            tokenizer_file (str): The path to the tokenizer file. Default is None.
-            do_lower_case (bool): A flag indicating whether the text should be lowercased. Default is True.
-            unk_token (str): The unknown token to be used. Default is '[UNK]'.
-            sep_token (str): The separator token to be used. Default is '[SEP]'.
-            pad_token (str): The padding token to be used. Default is '[PAD]'.
-            cls_token (str): The classification token to be used. Default is '[CLS]'.
-            mask_token (str): The mask token to be used. Default is '[MASK]'.
-            tokenize_chinese_chars (bool): A flag indicating whether to tokenize Chinese characters. Default is True.
-            strip_accents (str): A flag indicating whether to strip accents. Default is None.
-            **kwargs: Additional keyword arguments.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If the normalizer state does not match the specified parameters.
-            TypeError: If the normalizer class is not found or if an invalid argument type is provided.
-            json.JSONDecodeError: If there is an error decoding the normalizer state from JSON format.
-        """
         super().__init__(
             vocab_file,
             tokenizer_file=tokenizer_file,
@@ -215,20 +169,6 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-        """
-        Save the vocabulary files for the ConvBertTokenizerFast model.
-        
-        Args:
-            self (ConvBertTokenizerFast): The instance of the ConvBertTokenizerFast class.
-            save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str]): The prefix to be added to the vocabulary file names. Defaults to None.
-        
-        Returns:
-            Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
-        
-        Raises:
-            (Exception): If an error occurs while saving the vocabulary files.
-        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

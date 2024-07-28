@@ -296,6 +296,42 @@ class AdaptiveAvgPool2d(_AdaptiveAvgPoolNd):
     def forward(self, input: Tensor) -> Tensor:
         return ops.adaptive_avg_pool2d(input, self.output_size)
 
+class AdaptiveAvgPool1d(_AdaptiveAvgPoolNd):
+    r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+
+    The output size is :math:`L_{out}`, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size :math:`L_{out}`.
+
+    Shape:
+        - Input: :math:`(N, C, L_{in})` or :math:`(C, L_{in})`.
+        - Output: :math:`(N, C, L_{out})` or :math:`(C, L_{out})`, where
+          :math:`L_{out}=\text{output\_size}`.
+
+    Examples:
+        >>> # target output size of 5
+        >>> m = nn.AdaptiveAvgPool1d(5)
+        >>> input = torch.randn(1, 64, 8)
+        >>> output = m(input)
+
+    """
+
+    output_size: _size_1_t
+
+    def forward(self, input: Tensor) -> Tensor:
+        # Add a dimension to make it 2D
+        input_2d = input.unsqueeze(2)
+
+        # Perform adaptive average pooling
+        output_2d = ops.adaptive_avg_pool2d(input_2d, (self.output_size, 1))
+
+        # Remove the added dimension to make it back to 1D
+        output_1d = output_2d.squeeze(2)
+
+        return output_1d
+
 class _AvgPoolNd(Module):
     __constants__ = ['kernel_size', 'stride', 'padding', 'ceil_mode', 'count_include_pad']
 

@@ -28,7 +28,7 @@ from ...modeling_outputs import (
     QuestionAnsweringModelOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from .convbert_config import ConvBertConfig
+from .configuration_convbert import ConvBertConfig
 from ...ms_utils import (
     find_pruneable_heads_and_indices,
     prune_linear_layer,
@@ -112,7 +112,7 @@ class MSConvBertEmbeddings(nn.Module):
 
         embeddings = inputs_embeds + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
-        embeddings = ops.dropout(embeddings, p=self.dropout_p)
+        embeddings = F.dropout(embeddings, p=self.dropout_p)
         return embeddings
 
 
@@ -398,7 +398,7 @@ class MSConvBertSelfAttention(nn.Module):
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = ops.dropout(attention_probs, p=self.dropout_p)
+        attention_probs = F.dropout(attention_probs, p=self.dropout_p)
 
         context_layer = ops.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3)
@@ -464,7 +464,7 @@ class MSConvBertSelfOutput(nn.Module):
             None.
         '''
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
+        hidden_states = F.dropout(hidden_states, p=self.dropout_p)
         hidden_states = hidden_states + input_tensor
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
@@ -652,7 +652,7 @@ class MSConvBertOutput(nn.Module):
             RuntimeError: If there are issues during the tensor processing or combination steps.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
+        hidden_states = F.dropout(hidden_states, p=self.dropout_p)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 

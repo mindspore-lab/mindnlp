@@ -17,10 +17,11 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
@@ -126,59 +127,24 @@ class ConvNextDropPath(nn.Module):
 
 
 class ConvNextLayerNorm(nn.Module):
-    r"""
-    LayerNorm that supports two data formats: channels_last (default) or channels_first.
+    r"""LayerNorm that supports two data formats: channels_last (default) or channels_first.
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
+
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-        """
-        Initializes an instance of the ConvNextLayerNorm class.
-
-        Args:
-            self: The object itself.
-            normalized_shape (tuple): The shape of the input tensor normalized over the specified axes.
-            eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-06.
-            data_format (str, optional): The format of the input data. Must be either 'channels_last' or 'channels_first'.
-                Defaults to 'channels_last'.
-
-        Returns:
-            None
-
-        Raises:
-            NotImplementedError: If the data format is not supported.
-
-        """
         super().__init__()
-        self.weight = Parameter(ops.ones(normalized_shape))
-        self.bias = Parameter(ops.zeros(normalized_shape))
+        self.weight = nn.Parameter(ops.ones(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
         self.eps = eps
         self.data_format = data_format
         if self.data_format not in ["channels_last", "channels_first"]:
             raise NotImplementedError(f"Unsupported data format: {self.data_format}")
         self.normalized_shape = (normalized_shape,)
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                        begin_params_axis=-1,
-                                        epsilon=eps)
 
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs the ConvNextLayerNorm.
-
-        Args:
-            self (ConvNextLayerNorm): An instance of the ConvNextLayerNorm class.
-            x (mindspore.Tensor): The input tensor to be normalized.
-
-        Returns:
-            mindspore.Tensor: The normalized tensor.
-
-        Raises:
-            TypeError: If the input tensor is not of type mindspore.Tensor.
-            ValueError: If the data format is not 'channels_last' or 'channels_first'.
-            ValueError: If the input tensor has an unsupported dtype.
-        """
         if self.data_format == "channels_last":
-            x, _, _ = self.layer_norm(x, self.weight, self.bias)
+            x = nn.functional.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
         elif self.data_format == "channels_first":
             input_dtype = x.dtype
             x = x.float()
@@ -188,7 +154,6 @@ class ConvNextLayerNorm(nn.Module):
             x = x.to(dtype=input_dtype)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
         return x
-
 
 class ConvNextEmbeddings(nn.Module):
     """
@@ -211,9 +176,9 @@ class ConvNextEmbeddings(nn.Module):
         """
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
-            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size,
-            pad_mode='valid', bias=True
+            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size
         )
+
         self.layernorm = ConvNextLayerNorm(config.hidden_sizes[0], eps=1e-6, data_format="channels_first")
         self.num_channels = config.num_channels
 
@@ -275,7 +240,7 @@ class ConvNextLayer(nn.Module):
             TypeError: If config.layer_scale_init_value is not a positive number.
         '''
         super().__init__()
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, pad_mode='pad', group=dim, bias=True)  # depthwise conv
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim)  # depthwise conv
         self.layernorm = ConvNextLayerNorm(dim, eps=1e-6)
         self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
         self.act = ACT2FN[config.hidden_act]
@@ -350,14 +315,14 @@ class ConvNextStage(nn.Module):
         super().__init__()
 
         if in_channels != out_channels or stride > 1:
-            self.downsampling_layer = nn.SequentialCell(
+            self.downsampling_layer = nn.Sequential(
                 ConvNextLayerNorm(in_channels, eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', bias=True),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride),
             )
         else:
             self.downsampling_layer = nn.Identity()
         drop_path_rates = drop_path_rates or [0.0] * depth
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[ConvNextLayer(config, dim=out_channels, drop_path=drop_path_rates[j]) for j in range(depth)]
         )
 
@@ -498,12 +463,12 @@ class ConvNextPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.initialize(Normal(self.config.initializer_range))
+            ops.initialize(module.weight, Normal(self.config.initializer_range))
             if module.bias is not None:
-                module.bias.initialize('zeros')
+                ops.initialize(module.bias, 'zeros')
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize('zeros')
-            module.weight.initialize('ones')
+            ops.initialize(module.bias, 'zeros')
+            ops.initialize(module.weight, 'ones')
 
 
 class ConvNextModel(ConvNextPreTrainedModel):
@@ -696,13 +661,13 @@ class ConvNextForImageClassification(ConvNextPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
