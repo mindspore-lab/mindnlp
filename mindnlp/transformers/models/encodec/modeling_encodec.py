@@ -20,8 +20,9 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 from mindspore.common.initializer import initializer, Normal, Uniform
-from mindnlp.core import nn, ops
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 from mindnlp.core.nn.utils import weight_norm
 from mindnlp.core.nn import functional as F
@@ -621,7 +622,7 @@ class EncodecEuclideanCodebook(nn.Module):
         Raises:
             None.
         """
-        quantize = embedding(embed_ind, self.embed)
+        quantize = F.embedding(embed_ind, self.embed)
         return quantize
 
 

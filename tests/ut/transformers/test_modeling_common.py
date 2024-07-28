@@ -236,7 +236,6 @@ class ModelTesterMixin:
             self.assertLessEqual(max_diff, 1e-4)
 
         for model_class in self.all_model_classes:
-            print(model_class)
             model = model_class(config)
             model.set_train(False)
 

@@ -22,10 +22,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -112,7 +113,7 @@ class ErnieMEmbeddings(nn.Module):
         if position_ids is None:
             input_shape = inputs_embeds.shape[:-1]
             ones = ops.ones(input_shape, dtype=mindspore.int64)
-            seq_length = ops.cumsum(ones, axis=1)
+            seq_length = ops.cumsum(ones, dim=1)
             position_ids = seq_length - ones
 
             if past_key_values_length > 0:
@@ -278,8 +279,8 @@ class ErnieMSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.k_proj(hidden_states))
             value_layer = self.transpose_for_scores(self.v_proj(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.k_proj(hidden_states))
             value_layer = self.transpose_for_scores(self.v_proj(hidden_states))
@@ -328,7 +329,7 @@ class ErnieMSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -930,7 +931,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
             if past_key_values is not None:
                 batch_size = past_key_values[0][0].shape[0]
                 past_mask = ops.zeros([batch_size, 1, 1, past_key_values_length], dtype=attention_mask.dtype)
-                attention_mask = ops.concat([past_mask, attention_mask], axis=-1)
+                attention_mask = ops.concat([past_mask, attention_mask], dim=-1)
         # For 2D attention_mask from tokenizer
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.to(self.dtype)
@@ -1592,8 +1593,8 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.binary_cross_entropy(start_prob, start_positions)
-            end_loss = ops.binary_cross_entropy(end_prob, end_positions)
+            start_loss = F.binary_cross_entropy_with_logits(start_prob, start_positions)
+            end_loss = F.binary_cross_entropy_with_logits(end_prob, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1669,8 +1670,8 @@ class UIEM(ErnieMForInformationExtraction):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.binary_cross_entropy(start_prob, start_positions)
-            end_loss = ops.binary_cross_entropy(end_prob, end_positions)
+            start_loss = F.binary_cross_entropy_with_logits(start_prob, start_positions)
+            end_loss = F.binary_cross_entropy_with_logits(end_prob, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

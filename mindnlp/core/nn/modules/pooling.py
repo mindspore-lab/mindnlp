@@ -487,7 +487,7 @@ class AvgPool2d(_AvgPoolNd):
         self.padding = padding
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        self.divisor_override = divisor_override
+        self.divisor_override = divisor_override if divisor_override is not None else 0
 
     def forward(self, input: Tensor) -> Tensor:
         return F.avg_pool2d(input, self.kernel_size, self.stride,
