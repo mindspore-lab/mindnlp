@@ -37,11 +37,11 @@ if is_mindspore_available() and is_vision_available():
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import FuyuForCausalLM
 
-mindspore.set_context(device_target="CPU")
+# mindspore.set_context(device_target="CPU")
 
 class FuyuModelTester:
     def __init__(
@@ -218,8 +218,8 @@ class FuyuModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,

@@ -19,10 +19,10 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
-
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...modeling_outputs import CausalLMOutputWithPast
@@ -42,7 +42,7 @@ class FuyuPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         std = self.config.initializer_range
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -64,7 +64,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
             config.text_config
         )
 
-        self.vision_embed_tokens = nn.Dense(
+        self.vision_embed_tokens = nn.Linear(
             config.patch_size * config.patch_size * config.num_channels, config.hidden_size
         )
 

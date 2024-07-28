@@ -47,7 +47,7 @@ from ...image_utils import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
 
 logger = logging.get_logger(__name__)
@@ -677,7 +677,7 @@ class FuyuImageProcessor(BaseImageProcessor):
                             image_newline_id,
                             dtype=mindspore.int32,
                         )
-                        tensor_of_image_ids = ops.cat([tensor_of_image_ids, newline_ids], axis=1)
+                        tensor_of_image_ids = ops.cat([tensor_of_image_ids, newline_ids], dim=1)
                         tensor_of_image_ids = tensor_of_image_ids.reshape(-1)
 
                     images.append([image])

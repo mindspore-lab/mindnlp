@@ -36,7 +36,7 @@ logger = logging.get_logger(__name__)
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
 
 TEXT_REPR_BBOX_OPEN = "<box>"
@@ -101,10 +101,10 @@ def construct_full_unpacked_stream(
         # and append to lists. We use lists rather than tensors because each subsequence is variable-sized.
         # TODO Remove this logic in a subsequent release since subsequences are not supported.
         image_adjustment = image_tokens[batch_index][0].to(input_stream.dtype)
-        subsequence_stream = ops.cat([image_adjustment, input_stream[batch_index, 0]], axis=0)
+        subsequence_stream = ops.cat([image_adjustment, input_stream[batch_index, 0]], dim=0)
         num_real_tokens = image_adjustment.shape[0] + num_real_text_tokens[batch_index][0]
         all_si_stream.append(subsequence_stream[:num_real_tokens])
-        all_bi_stream.append(ops.cat(all_si_stream, axis=0))
+        all_bi_stream.append(ops.cat(all_si_stream, dim=0))
 
     return all_bi_stream
 
@@ -351,7 +351,7 @@ class FuyuProcessor(ProcessorMixin):
                             ops.full((tensor.shape[0], num_padding_tokens), self.pad_token_id, dtype=mindspore.int64),
                             tensor,
                         ],
-                        axis=1,
+                        dim=1,
                     )
                     batched_inputs[key].append(padded_input_ids)
 
@@ -374,14 +374,14 @@ class FuyuProcessor(ProcessorMixin):
                             ),
                             tensor,
                         ],
-                        axis=1,
+                        dim=1,
                     )
                     batched_inputs[key].append(padded_indices)
         batched_keys = ["input_ids", "image_patches_indices"]
         if return_attention_mask:
             batched_keys.append("attention_mask")
         for key in batched_keys:
-            batched_inputs[key] = ops.cat(batched_inputs[key], axis=0)
+            batched_inputs[key] = ops.cat(batched_inputs[key], dim=0)
         return batched_inputs
 
     def get_sample_encoding(
