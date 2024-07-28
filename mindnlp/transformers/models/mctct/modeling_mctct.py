@@ -576,7 +576,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
         if attention_mask is not None:
             attention_mask = self._get_feature_vector_attention_mask(inputs_embeds.shape[1], attention_mask)
 
-        hidden_states = ops.dropout(inputs_embeds, p=self.hidden_dropout_prob, training=self.training)
+        hidden_states = F.dropout(inputs_embeds, p=self.hidden_dropout_prob, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:

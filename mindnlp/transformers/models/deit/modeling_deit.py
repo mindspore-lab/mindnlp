@@ -20,10 +20,11 @@ from dataclasses import dataclass
 from typing import Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -106,7 +107,7 @@ class DeiTEmbeddings(nn.Module):
         )
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
 
-        return ops.cat((class_pos_embed.unsqueeze(0), dist_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), dist_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(
         self,
@@ -129,7 +130,7 @@ class DeiTEmbeddings(nn.Module):
 
         distillation_tokens = self.distillation_token.broadcast_to((batch_size, -1, -1))
 
-        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, distillation_tokens, embeddings), dim=1)
         position_embedding = self.position_embeddings
 
         if interpolate_pos_encoding:
@@ -160,8 +161,7 @@ class DeiTPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size,
-                                    padding=0, pad_mode="valid", bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -213,7 +213,7 @@ class DeiTSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -481,13 +481,13 @@ class DeiTPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.data.initialize(TruncatedNormal(sigma=self.config.initializer_range))
+            ops.initialize(module.weight, TruncatedNormal(sigma=self.config.initializer_range))
             if module.bias is not None:
-                module.bias.initialize('zeros')
+                ops.initialize(module.bias, 'zeros')
 
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize('zeros')
-            module.weight.data.fill(1.0)
+            ops.initialize(module.bias, 'zeros')
+            ops.initialize(module.weight, 'ones')
 
 
 class DeiTModel(DeiTPreTrainedModel):
@@ -599,7 +599,7 @@ class DeiTForMaskedImageModeling(DeiTPreTrainedModel):
 
         self.deit = DeiTModel(config, add_pooling_layer=False, use_mask_token=True)
 
-        self.decoder = nn.SequentialCell(
+        self.decoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=config.hidden_size,
                 out_channels=config.encoder_stride**2 * config.num_channels,
@@ -646,8 +646,8 @@ class DeiTForMaskedImageModeling(DeiTPreTrainedModel):
         >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
 
         >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-        >>> loss, reforwarded_pixel_values = outputs.loss, outputs.reforwardion
-        >>> list(reforwarded_pixel_values.shape)
+        >>> loss, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+        >>> list(reconstructed_pixel_values.shape)
         [1, 3, 224, 224]
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -671,27 +671,27 @@ class DeiTForMaskedImageModeling(DeiTPreTrainedModel):
         sequence_output = sequence_output.permute(0, 2, 1).reshape(batch_size, num_channels, height, width)
 
         # Reforward pixel values
-        reforwarded_pixel_values = self.decoder(sequence_output)
+        reconstructed_pixel_values = self.decoder(sequence_output)
 
         masked_im_loss = None
         if bool_masked_pos is not None:
             size = self.config.image_size // self.config.patch_size
             bool_masked_pos = bool_masked_pos.reshape(-1, size, size)
             mask = (
-                bool_masked_pos.repeat_interleave(self.config.patch_size, 1)
-                .repeat_interleave(self.config.patch_size, 2)
+                ops.repeat_interleave(ops.repeat_interleave(bool_masked_pos, self.config.patch_size, 1), 
+                self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reforwardion_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
-            masked_im_loss = (reforwardion_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
+            reconstruction_loss = F.l1_loss(pixel_values, reconstructed_pixel_values, reduction="none")
+            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
-            output = (reforwarded_pixel_values,) + outputs[1:]
+            output = (reconstructed_pixel_values,) + outputs[1:]
             return ((masked_im_loss,) + output) if masked_im_loss is not None else output
 
         return MaskedImageModelingOutput(
             loss=masked_im_loss,
-            reforwardion=reforwarded_pixel_values,
+            reconstruction=reconstructed_pixel_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
@@ -781,13 +781,13 @@ class DeiTForImageClassification(DeiTPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output

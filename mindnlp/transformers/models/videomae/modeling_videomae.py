@@ -480,7 +480,7 @@ class VideoMAEPreTrainedModel(PreTrainedModel):
             # `trunc_normal_cpu` not implemented in `half` issues
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -759,7 +759,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
             batch_size, _, num_channels = videos_patch.shape
             labels = videos_patch[bool_masked_pos].reshape((batch_size, -1, num_channels))
 
-        loss = ops.mse_loss(logits, labels)
+        loss = F.mse_loss(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -827,13 +827,13 @@ class VideoMAEForVideoClassification(VideoMAEPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]

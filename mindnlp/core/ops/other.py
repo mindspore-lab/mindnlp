@@ -3,6 +3,8 @@ import copy
 import numpy as np
 import mindspore
 from mindspore import ops
+from mindspore.common.initializer import initializer
+
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
@@ -38,6 +40,8 @@ def broadcast_to(input, shape):
 
 
 # cdist
+def cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return ops.cdist(x1, x2, p)
 
 # clone
 def clone(input):
@@ -69,6 +73,8 @@ def cumsum(input, dim, dtype=None):
     return ops.cumsum(input, dim, dtype)
 
 # diag
+def diag(input):
+    return ops.diag(input)
 
 # diag_embed
 
@@ -539,7 +545,7 @@ def flatten(input, start_dim=1, end_dim=-1):
 
 # meshgrid
 def meshgrid(*tensors, indexing=None):
-    return ops.meshgrid(*tensors, indexing)
+    return ops.meshgrid(*tensors, indexing=indexing)
 
 # lcm
 

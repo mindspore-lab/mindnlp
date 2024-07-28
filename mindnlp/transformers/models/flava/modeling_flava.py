@@ -733,7 +733,7 @@ class FlavaPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1718,7 +1718,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 sequence_for_image = mindspore.Tensor(sequence_for_image.asnumpy()[masked_tokens.asnumpy(), :], mindspore.float32)
                 mim_logits = self.mim_head(sequence_for_image)
                 if return_loss:
-                    mim_loss = ops.cross_entropy(
+                    mim_loss = F.cross_entropy(
                         mim_logits.view(-1, self.image_vocab_size), mim_labels_filtered.view(-1)
                     )
                     mim_loss *= self.mim_weight
@@ -1737,7 +1737,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 sequence_for_text = mindspore.Tensor(sequence_for_text.asnumpy()[masked_tokens.asnumpy(), :], mindspore.float32)
                 mlm_logits = self.mlm_head(sequence_for_text)
                 if return_loss:
-                    mlm_loss = ops.cross_entropy(
+                    mlm_loss = F.cross_entropy(
                         mlm_logits.view(-1, self.text_vocab_size), mlm_labels_filtered.view(-1)
                     )
                     mlm_loss *= self.mlm_weight
@@ -1753,7 +1753,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # pos_mask = ops.where(pos_pairs.any(), pos_pairs, pos_pairs.new([True]))
                 pos_mask = ops.where(pos_pairs.any(), pos_pairs, mindspore.Tensor([True], dtype=pos_pairs.dtype))
                 if return_loss:
-                    itm_loss = ops.cross_entropy(itm_logits, ops.cast(itm_labels, mindspore.int32))
+                    itm_loss = F.cross_entropy(itm_logits, ops.cast(itm_labels, mindspore.int32))
                     itm_loss *= self.itm_weight
 
                 if multimodal_masked_embeddings is not None:
@@ -1787,7 +1787,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # sequence_for_image = sequence_for_image[masked_tokens, :]
                 mmm_image_logits = self.mmm_image_head(sequence_for_image)
                 if return_loss:
-                    mmm_image_loss = ops.cross_entropy(
+                    mmm_image_loss = F.cross_entropy(
                         mmm_image_logits.view(-1, self.image_vocab_size), mim_labels_filtered.view(-1)
                     )
                     mmm_image_loss *= self.mmm_image_weight
@@ -1807,7 +1807,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # sequence_for_text = sequence_for_text[masked_tokens, :]
                 mmm_text_logits = self.mmm_text_head(sequence_for_text)
                 if return_loss:
-                    mmm_text_loss = ops.cross_entropy(
+                    mmm_text_loss = F.cross_entropy(
                         mmm_text_logits.view(-1, self.text_vocab_size), mlm_labels_filtered.view(-1)
                     )
                     mmm_text_loss *= self.mmm_text_weight
@@ -1837,8 +1837,8 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 gc_labels = gc_labels[pos_mask]
 
             if return_loss:
-                gc_loss_image = ops.cross_entropy(logits_per_image, gc_labels)
-                gc_loss_text = ops.cross_entropy(logits_per_text, gc_labels)
+                gc_loss_image = F.cross_entropy(logits_per_image, gc_labels)
+                gc_loss_text = F.cross_entropy(logits_per_text, gc_labels)
                 gc_loss = (gc_loss_image + gc_loss_text) / 2
                 gc_loss *= self.global_contrastive_weight
 

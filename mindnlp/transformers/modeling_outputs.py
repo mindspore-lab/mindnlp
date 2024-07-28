@@ -1740,7 +1740,7 @@ class MaskedImageModelingOutput(ModelOutput):
             the self-attention heads.
     """
     loss: Optional[mindspore.Tensor] = None
-    reforwardion: mindspore.Tensor = None
+    reconstruction: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 

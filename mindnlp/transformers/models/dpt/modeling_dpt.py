@@ -25,11 +25,12 @@ from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore.nn import CrossEntropyLoss
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import ModelOutput, logging
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, DepthEstimatorOutput, SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
@@ -138,10 +139,10 @@ class DPTViTHybridEmbeddings(nn.Module):
         self.patch_size = patch_size[0]
         self.num_channels = num_channels
 
-        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1, pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1)
 
-        self.cls_token = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
-        self.position_embeddings = mindspore.Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
                                                        'position_embeddings')
 
     def _resize_pos_embed(self, posemb, grid_size_height, grid_size_width, start_index=1):
@@ -151,10 +152,10 @@ class DPTViTHybridEmbeddings(nn.Module):
         old_grid_size = int(math.sqrt(len(posemb_grid)))
 
         posemb_grid = posemb_grid.reshape(1, old_grid_size, old_grid_size, -1).permute(0, 3, 1, 2)
-        posemb_grid = ops.interpolate(posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear")
+        posemb_grid = F.interpolate(posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear")
         posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, grid_size_height * grid_size_width, -1)
 
-        posemb = ops.cat([posemb_tok, posemb_grid], axis=1)
+        posemb = ops.cat([posemb_tok, posemb_grid], dim=1)
 
         return posemb
 
@@ -186,8 +187,8 @@ class DPTViTHybridEmbeddings(nn.Module):
 
         embeddings = self.projection(features).flatten(start_dim=2).swapaxes(1, 2)
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        cls_tokens = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         # add positional encoding to each token
         embeddings = embeddings + position_embeddings
@@ -211,10 +212,10 @@ class DPTViTEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.cls_token = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
         self.patch_embeddings = DPTViTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = mindspore.Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
                                                        'position_embeddings')
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.config = config
@@ -226,10 +227,10 @@ class DPTViTEmbeddings(nn.Module):
         old_grid_size = int(posemb_grid.shape[0] ** 0.5)
 
         posemb_grid = posemb_grid.reshape(1, old_grid_size, old_grid_size, -1).permute(0, 3, 1, 2)
-        posemb_grid = ops.interpolate(posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear")
+        posemb_grid = F.interpolate(posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear")
         posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, grid_size_height * grid_size_width, -1)
 
-        posemb = ops.cat([posemb_tok, posemb_grid], axis=1)
+        posemb = ops.cat([posemb_tok, posemb_grid], dim=1)
 
         return posemb
 
@@ -247,8 +248,8 @@ class DPTViTEmbeddings(nn.Module):
         batch_size, seq_len, _ = embeddings.shape
 
         # add the [CLS] token to the embedded patch tokens
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        cls_tokens = ops.broadcast_to(self.cls_token, (batch_size, -1, -1))
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         # add positional encoding to each token
         embeddings = embeddings + position_embeddings
@@ -280,8 +281,8 @@ class DPTViTPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size,
-                                    pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
+
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -333,7 +334,7 @@ class DPTViTSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -591,10 +592,10 @@ class DPTReassembleStage(nn.Module):
         hidden_size = _get_backbone_hidden_size(config)
         for i in range(len(config.neck_hidden_sizes)):
             if i <= 1:
-                self.readout_projects.append(nn.SequentialCell(nn.Identity()))
+                self.readout_projects.append(nn.Sequential(nn.Identity()))
             elif i > 1:
                 self.readout_projects.append(
-                    nn.SequentialCell(nn.Linear(2 * hidden_size, hidden_size), ACT2FN[config.hidden_act])
+                    nn.Sequential(nn.Linear(2 * hidden_size, hidden_size), ACT2FN[config.hidden_act])
                 )
 
     def _init_reassemble_dpt(self, config):
@@ -606,7 +607,7 @@ class DPTReassembleStage(nn.Module):
             hidden_size = _get_backbone_hidden_size(config)
             for _ in range(len(config.neck_hidden_sizes)):
                 self.readout_projects.append(
-                    nn.SequentialCell(nn.Linear(2 * hidden_size, hidden_size), ACT2FN[config.hidden_act])
+                    nn.Sequential(nn.Linear(2 * hidden_size, hidden_size), ACT2FN[config.hidden_act])
                 )
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) \
@@ -660,19 +661,18 @@ class DPTReassembleLayer(nn.Module):
         super().__init__()
         # projection
         hidden_size = _get_backbone_hidden_size(config)
-        self.projection = nn.Conv2d(in_channels=hidden_size, out_channels=channels, kernel_size=1,
-                                    pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(in_channels=hidden_size, out_channels=channels, kernel_size=1)
+
 
         # up/down sampling depending on factor
         if factor > 1:
-            self.resize = nn.Conv2dTranspose(channels, channels, kernel_size=factor, stride=factor,
-                                             padding=0, bias=True)
+            self.resize = nn.ConvTranspose2d(channels, channels, kernel_size=factor, stride=factor, padding=0)
+
         elif factor == 1:
             self.resize = nn.Identity()
         elif factor < 1:
             # so should downsample
-            self.resize = nn.Conv2d(channels, channels, kernel_size=3, stride=int(1 / factor), padding=1,
-                                    pad_mode='pad', bias=True)
+            self.resize = nn.Conv2d(channels, channels, kernel_size=3, stride=int(1 / factor), padding=1)
 
     def forward(self, hidden_state):
         hidden_state = self.projection(hidden_state)
@@ -729,7 +729,6 @@ class DPTPreActResidualLayer(nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode='pad',
             bias=use_bias_in_fusion_residual,
         )
 
@@ -740,7 +739,6 @@ class DPTPreActResidualLayer(nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode='pad',
             bias=use_bias_in_fusion_residual,
         )
 
@@ -781,8 +779,7 @@ class DPTFeatureFusionLayer(nn.Module):
 
         self.align_corners = align_corners
 
-        self.projection = nn.Conv2d(config.fusion_hidden_size, config.fusion_hidden_size, kernel_size=1,
-                                    pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(config.fusion_hidden_size, config.fusion_hidden_size, kernel_size=1, bias=True)
 
         self.residual_layer1 = DPTPreActResidualLayer(config)
         self.residual_layer2 = DPTPreActResidualLayer(config)
@@ -790,13 +787,13 @@ class DPTFeatureFusionLayer(nn.Module):
     def forward(self, hidden_state, residual=None):
         if residual is not None:
             if hidden_state.shape != residual.shape:
-                residual = ops.interpolate(
+                residual = F.interpolate(
                     residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=False
                 )
             hidden_state = hidden_state + self.residual_layer1(residual)
 
         hidden_state = self.residual_layer2(hidden_state)
-        hidden_state = ops.interpolate(
+        hidden_state = F.interpolate(
             hidden_state, scale_factor=2., mode="bilinear", align_corners=self.align_corners,
             recompute_scale_factor=True
         )
@@ -818,11 +815,11 @@ class DPTPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d, nn.Conv2dTranspose)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0), cell.weight.shape,
                                              cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -984,8 +981,7 @@ class DPTNeck(nn.Module):
 
         self.convs = nn.ModuleList()
         for channel in config.neck_hidden_sizes:
-            self.convs.append(nn.Conv2d(channel, config.fusion_hidden_size, kernel_size=3, padding=1,
-                                        pad_mode='pad', bias=False))
+            self.convs.append(nn.Conv2d(channel, config.fusion_hidden_size, kernel_size=3, padding=1, bias=False))
 
         # fusion
         self.fusion_stage = DPTFeatureFusionStage(config)
@@ -1030,16 +1026,15 @@ class DPTDepthEstimationHead(nn.Module):
 
         self.projection = None
         if config.add_projection:
-            self.projection = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=1,
-                                        pad_mode='pad', bias=True)
+            self.projection = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
 
         features = config.fusion_hidden_size
-        self.head = nn.SequentialCell(
-            nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1, pad_mode='pad', bias=True),
+        self.head = nn.Sequential(
+            nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1),
             nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
-            nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1, pad_mode='pad', bias=True),
+            nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, pad_mode='pad', bias=True),
+            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
             nn.ReLU(),
         )
 
@@ -1049,7 +1044,7 @@ class DPTDepthEstimationHead(nn.Module):
 
         if self.projection is not None:
             hidden_states = self.projection(hidden_states)
-            hidden_states = nn.ReLU()(hidden_states)
+            hidden_states = F.relu(hidden_states)
 
         predicted_depth = self.head(hidden_states)
 
@@ -1197,12 +1192,12 @@ class DPTSemanticSegmentationHead(nn.Module):
         self.config = config
 
         features = config.fusion_hidden_size
-        self.head = nn.SequentialCell(
-            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', bias=False),
+        self.head = nn.Sequential(
+            nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(features),
             nn.ReLU(),
             nn.Dropout(p=config.semantic_classifier_dropout),
-            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', bias=True),
+            nn.Conv2d(features, config.num_labels, kernel_size=1),
             nn.Upsample(scale_factor=2., mode="bilinear", align_corners=True, recompute_scale_factor=True),
         )
 
@@ -1220,12 +1215,12 @@ class DPTAuxiliaryHead(nn.Module):
         super().__init__()
 
         features = config.fusion_hidden_size
-        self.head = nn.SequentialCell(
-            nn.Conv2d(features, features, kernel_size=3, padding=1, pad_mode='pad', bias=False),
+        self.head = nn.Sequential(
+            nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(features),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Conv2d(features, config.num_labels, kernel_size=1, pad_mode='valid', bias=True),
+            nn.Conv2d(features, config.num_labels, kernel_size=1),
         )
 
     def forward(self, hidden_states):
@@ -1341,17 +1336,16 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
         loss = None
         if labels is not None:
             # upsample logits to the images' original size
-            upsampled_logits = ops.interpolate(
+            upsampled_logits = F.interpolate(
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
             if auxiliary_logits is not None:
-                upsampled_auxiliary_logits = ops.interpolate(
+                upsampled_auxiliary_logits = F.interpolate(
                     auxiliary_logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
                 )
             # compute weighted loss
-            loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
-            main_loss = loss_fct(upsampled_logits, labels.to(mindspore.int32))
-            auxiliary_loss = loss_fct(upsampled_auxiliary_logits, labels.to(mindspore.int32))
+            main_loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+            auxiliary_loss = F.cross_entropy(upsampled_auxiliary_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
             loss = main_loss + self.config.auxiliary_loss_weight * auxiliary_loss
 
         if not return_dict:

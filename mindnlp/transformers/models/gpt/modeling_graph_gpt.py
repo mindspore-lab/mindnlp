@@ -318,7 +318,7 @@ class GPTPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(self.config.initializer_range),
@@ -585,7 +585,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits,) + transformer_outputs[1:]
         if loss is not None:
@@ -700,11 +700,11 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         lm_loss, mc_loss = None, None
         if mc_labels is not None:
-            mc_loss = ops.cross_entropy(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
+            mc_loss = F.cross_entropy(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
         if labels is not None:
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
-            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            lm_loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits, mc_logits) + transformer_outputs[1:]
         if mc_loss is not None:
