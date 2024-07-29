@@ -254,7 +254,8 @@ def log1p(input):
     return ops.log1p(input)
 
 # log2
-
+def log2(input):
+    return ops.log2(input)
 
 # logaddexp
 

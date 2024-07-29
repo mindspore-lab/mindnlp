@@ -19,9 +19,10 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindspore import dtype as mstype
 from mindspore.common.initializer import  initializer,Normal
 from mindnlp.utils import (
@@ -44,18 +45,6 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = Kosmos2Config
 
 
-# def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
-#     """
-#     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
-#     """
-#     bsz, src_len = mask.shape
-#     tgt_len = tgt_len if tgt_len is not None else src_len
-
-#     expanded_mask = mask[:, None, None, :].broadcast_to((bsz, 1, tgt_len, src_len)).to(dtype)
-
-#     inverted_mask = 1.0 - expanded_mask
-
-#     return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_),finfo(dtype).min)
 def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
     """
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
@@ -71,7 +60,7 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
     return inverted_mask.masked_fill(
         inverted_mask.to(mindspore.bool_),
-        mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
+        float(ops.finfo(dtype).min),
     )
 
 def _make_causal_mask(
@@ -84,11 +73,11 @@ def _make_causal_mask(
     mask = ops.full((tgt_len, tgt_len),Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min, dtype))
     #mask = ops.full((tgt_len, tgt_len),finfo(dtype).min)
     mask_cond = ops.arange(mask.shape[-1])
-    mask = ops.masked_fill(mask, Tensor(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1)), 0)
+    mask = ops.masked_fill(mask, Tensor(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1)), 0.)
     mask = mask.to(dtype)
 
     if past_key_values_length > 0:
-        mask = ops.cat([ops.zeros(tgt_len, past_key_values_length, dtype=dtype), mask], axis=-1)
+        mask = ops.cat([ops.zeros(tgt_len, past_key_values_length, dtype=dtype), mask], dim=-1)
     return mask[None, None, :, :].broadcast_to((bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
 
@@ -105,7 +94,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -253,7 +242,7 @@ class Kosmos2VisionEmbeddings(nn.Module):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -332,7 +321,7 @@ class Kosmos2VisionAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -619,10 +608,10 @@ class Kosmos2TextSinusoidalPositionalEmbedding(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
@@ -746,8 +735,8 @@ class KosmosTextAttention(nn.Module):
             value_states = self._shape(self.v_proj(current_states))
             if past_key_value is not None and not is_cross_attention:
                 # reuse k, v, self_attention
-                key_states = ops.cat([past_key_value[0], key_states], axis=2)
-                value_states = ops.cat([past_key_value[1], value_states], axis=2)
+                key_states = ops.cat([past_key_value[0], key_states], dim=2)
+                value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         query_states = self._shape(self.q_proj(hidden_states) * self.scaling)
         attn_weights = ops.matmul(query_states, key_states.swapaxes(-1, -2))
@@ -771,7 +760,7 @@ class KosmosTextAttention(nn.Module):
                 )
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Mask heads if we want to
         if layer_head_mask is not None:
@@ -1205,22 +1194,22 @@ class Kosmos2PreTrainedModel(PreTrainedModel):
             cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),cell.k_proj.weight.shape,cell.k_proj.weight.dtype))
             cell.v_proj.weight.set_data(initializer(Normal(in_proj_std),cell.v_proj.weight.shape,cell.v_proj.weight.dtype))
             cell.out_proj.weight.set_data(initializer(Normal(out_proj_std),cell.out_proj.weight.shape,cell.out_proj.weight.dtype))
-            if cell.q_proj.bias:
+            if cell.q_proj.bias is not None:
                 cell.q_proj.bias.data.set_data(initializer("zeros",cell.q_proj.bias.data.shape,cell.q_proj.bias.data.dtype))
-            if cell.k_proj.bias:
+            if cell.k_proj.bias is not None:
                 cell.k_proj.bias.data.set_data(initializer("zeros",cell.k_proj.bias.data.shape,cell.k_proj.bias.data.dtype))
-            if cell.v_proj.bias:
+            if cell.v_proj.bias is not None:
                 cell.v_proj.bias.data.set_data(initializer("zeros",cell.v_proj.bias.data.shape,cell.v_proj.bias.data.dtype))
-            if cell.out_proj.bias:
+            if cell.out_proj.bias is not None:
                 cell.out_proj.bias.data.set_data(initializer("zeros",cell.out_proj.bias.data.shape,cell.out_proj.bias.data.dtype))
         elif isinstance(cell, Kosmos2VisionMLP):
             in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
             cell.fc1.weight.set_data(initializer(Normal(fc_std),cell.fc1.weight.shape,cell.fc1.weight.dtype))
             cell.fc2.weight.set_data(initializer(Normal(in_proj_std),cell.fc2.weight.shape,cell.fc2.weight.dtype))
-            if cell.fc1.bias:
+            if cell.fc1.bias is not None:
                 cell.fc1.bias.set_data(initializer("zeros",cell.fc1.bias.shape,cell.fc1.bias.dtype))
-            if cell.fc2.bias:
+            if cell.fc2.bias is not None:
                 cell.fc2.bias.set_data(initializer("zeros",cell.fc2.bias.shape,cell.fc2.bias.dtype))
         elif isinstance(cell, Kosmos2VisionEncoderLayer):
             cell.layer_norm1.bias.data.set_data(initializer("zeros",cell.layer_norm1.bias.data.shape,cell.layer_norm1.bias.data.dtype))
@@ -1237,35 +1226,34 @@ class Kosmos2PreTrainedModel(PreTrainedModel):
             cell.k_proj.weight.set_data(initializer(Normal(std),cell.k_proj.weight.shape,cell.k_proj.weight.dtype))
             cell.v_proj.weight.set_data(initializer(Normal(std),cell.v_proj.weight.shape,cell.v_proj.weight.dtype))
             cell.out_proj.weight.set_data(initializer(Normal(std),cell.out_proj.weight.shape,cell.out_proj.weight.dtype))
-            if cell.q_proj.bias:
+            if cell.q_proj.bias is not None:
                 cell.q_proj.bias.data.set_data(initializer("zeros",cell.q_proj.bias.data.shape,cell.q_proj.bias.data.dtype))
-            if cell.k_proj.bias:
+            if cell.k_proj.bias is not None:
                 cell.k_proj.bias.data.set_data(initializer("zeros",cell.k_proj.bias.data.shape,cell.k_proj.bias.data.dtype))
-            if cell.v_proj.bias:
+            if cell.v_proj.bias is not None:
                 cell.v_proj.bias.data.set_data(initializer("zeros",cell.v_proj.bias.data.shape,cell.v_proj.bias.data.dtype))
-            if cell.out_proj.bias:
+            if cell.out_proj.bias is not None:
                 cell.out_proj.bias.data.set_data(initializer("zeros",cell.out_proj.bias.data.shape,cell.out_proj.bias.data.dtype))
         elif isinstance(cell, Kosmos2TextFFN):
             cell.fc1.weight.set_data(initializer(Normal(std),cell.fc1.weight.shape,cell.fc1.weight.dtype))
             cell.fc2.weight.set_data(initializer(Normal(std),cell.fc2.weight.shape,cell.fc2.weight.dtype))
-            if cell.fc1.bias:
+            if cell.fc1.bias is not None:
                 cell.fc1.bias.set_data(initializer("zeros",cell.fc1.bias.shape,cell.fc1.bias.dtype))
-            if cell.fc2.bias:
+            if cell.fc2.bias is not None:
                 cell.fc2.bias.set_data(initializer("zeros",cell.fc2.bias.shape,cell.fc2.bias.dtype))
         elif isinstance(cell, Kosmos2TextForCausalLM):
             cell.lm_head.weight.set_data(initializer(Normal(std),cell.lm_head.weight.shape,cell.lm_head.weight.dtype))
-            if cell.lm_head.bias:
+            if cell.lm_head.bias is not None:
                 cell.lm_head.bias.set_data(initializer("zeros",cell.lm_head.bias.shape,cell.lm_head.bias.dtype))
         elif isinstance(cell, Kosmos2ImageToTextProjection):
             cell.dense.weight.set_data(initializer(Normal(std),cell.dense.weight.shape,cell.dense.weight.dtype))
-            if cell.dense.bias:
+            if cell.dense.bias is not None:
                 cell.dense.bias.set_data(initializer("zeros",cell.dense.bias.shape,cell.dense.bias.dtype))
         elif isinstance(cell, Kosmos2TextTransformer):
             cell.embed_tokens.weight.data.set_data(initializer(Normal(std),cell.embed_tokens.weight.data.shape,cell.embed_tokens.weight.data.dtype))
             if cell.embed_tokens.padding_idx is not None:
-                weights = np.zeros(shape=cell.embed_tokens.weight.data[cell.embed_tokens.padding_idx].shape)
+                cell.embed_tokens.weight.data[cell.embed_tokens.padding_idx] = 0
 
-                cell.embed_tokens.weight.data[cell.embed_tokens.padding_idx] =Tensor(weights,cell.embed_tokens.weight.data[cell.embed_tokens.padding_idx].dtype)
 
 class Kosmos2VisionModel(Kosmos2PreTrainedModel):
     config_class = Kosmos2VisionConfig
@@ -1365,7 +1353,7 @@ class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel):
         super().__init__(config)
 
         self.model = Kosmos2TextTransformer(config)
-        self.lm_head = nn.Linear(in_channels=config.embed_dim, out_channels=config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.embed_dim, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1496,7 +1484,7 @@ class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel):
                     image_embeds_position_mask,
                     ops.zeros(batch_size, seq_len - mask_len, dtype=mindspore.int64)
                 ),
-                axis=1
+                dim=1
             )
         return {
             "input_ids": input_ids,
@@ -1541,7 +1529,7 @@ class Kosmos2ImageToTextProjection(nn.Module):
 
         # shape = [batch, latent_query_num, h_dim]
         latent_query = self.latent_query.unsqueeze(0).broadcast_to((hidden_states.shape[0], -1, -1))
-        key_value_states = ops.cat([hidden_states, latent_query], axis=1)
+        key_value_states = ops.cat([hidden_states, latent_query], dim=1)
 
         hidden_states, attn_weights, _ = self.x_attn(
             hidden_states=latent_query,
@@ -1644,8 +1632,7 @@ class Kosmos2Model(Kosmos2PreTrainedModel):
             # The whole `last_hidden_state` through `post_layernorm` instead of just `pooled_output`.
             image_embeds = self.vision_model.model.post_layernorm(vision_model_output[0])
             # normalized features
-            image_embeds = ops.L2Normalize(axis=-1)(image_embeds)
-
+            image_embeds = nn.functional.normalize(image_embeds, dim=-1)
             image_embeds, projection_attentions = self.image_to_text_projection(image_embeds)
 
         outputs = self.text_model(
@@ -1790,7 +1777,7 @@ class Kosmos2ForConditionalGeneration(Kosmos2PreTrainedModel):
             # The whole `last_hidden_state` through `post_layernorm` instead of just `pooled_output`.
             image_embeds = self.vision_model.model.post_layernorm(vision_model_output[0])
             # normalized features
-            image_embeds = ops.L2Normalize(axis=-1)(image_embeds)
+            image_embeds = nn.functional.normalize(image_embeds, dim=-1)
             image_embeds, projection_attentions = self.image_to_text_projection(image_embeds)
 
         lm_outputs = self.text_model(
@@ -1848,7 +1835,7 @@ class Kosmos2ForConditionalGeneration(Kosmos2PreTrainedModel):
             # The whole `last_hidden_state` through `post_layernorm` instead of just `pooled_output`.
             image_embeds = self.vision_model.model.post_layernorm(vision_model_output[0])
             # normalized features
-            image_embeds = ops.L2Normalize(axis=-1)(image_embeds)
+            image_embeds = nn.functional.normalize(image_embeds, dim=-1)
             image_embeds, projection_attentions = self.image_to_text_projection(image_embeds)
 
         output = self.text_model.generate(

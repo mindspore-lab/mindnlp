@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 import requests
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 from mindnlp.transformers import (
     CONFIG_MAPPING,
     InstructBlipConfig,
@@ -174,7 +174,7 @@ class InstructBlipVisionModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
