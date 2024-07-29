@@ -46,7 +46,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import (
         FlavaForPreTraining,

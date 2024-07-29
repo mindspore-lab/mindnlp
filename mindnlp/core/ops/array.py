@@ -69,7 +69,10 @@ def hstack(tensors):
 
 
 # index_select
-
+def index_select(input, dim, index):
+    if USE_PYBOOST:
+        return mindspore.mint.index_select(input, dim, index)
+    return ops.index_select(input, dim, index)
 
 # masked_select
 

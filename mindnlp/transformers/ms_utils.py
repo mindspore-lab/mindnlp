@@ -99,10 +99,10 @@ def prune_conv1d_layer(layer, index, dim=1):
     new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
-    new_layer.weight = gama_l.copy()
+    new_layer.weight.set_data(gama_l)
     new_layer.weight.requires_grad = True
     new_layer.bias.requires_grad = False
-    new_layer.bias = beta_l.copy()
+    new_layer.bias.set_data(beta_l)
     new_layer.bias.requires_grad = True
     return new_layer
 
