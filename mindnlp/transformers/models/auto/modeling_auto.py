@@ -91,6 +91,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("flava", "FlavaModel"),
         ("fnet","FNetModel"),
         ("focalnet", "FocalNetModel"),
+        ("fuyu","FuyuForCausalLM"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
         ("gemma", "GemmaModel"),
         ("git", "GitModel"),
