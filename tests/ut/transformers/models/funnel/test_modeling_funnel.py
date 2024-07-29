@@ -42,7 +42,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.funnel.modeling_funnel import FUNNEL_PRETRAINED_MODEL_ARCHIVE_LIST
 
-mindspore.set_context(pynative_synchronize=True)
 
 class FunnelModelTester:
     """You can also import this e.g, from .test_modeling_funnel import FunnelModelTester"""
