@@ -139,7 +139,6 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("qdqbert", "QDQBertModel"),
         ("qwen2", "Qwen2Model"),
         ("qwen2_moe", "Qwen2MoeModel"),
-        ("realm", "RealmEmbedder"),
         ("reformer", "ReformerModel"),
         ("rembert", "RemBertModel"),
         ("resnet", "ResNetModel"),
