@@ -14,16 +14,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""I-BERT quant model"""
 
 import decimal
 
 import numpy as np
 import mindspore
+from mindspore.common.api import _no_grad
+from mindspore.nn import Cell
 from mindnlp.core import nn, ops
 
-from mindnlp.utils import logging
-from mindnlp.core.nn import functional as F
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -31,7 +31,7 @@ logger = logging.get_logger(__name__)
 
 class QuantEmbedding(nn.Module):
     """
-    Quantized version of `torch.nn.Embedding`. Adds quantization-specific arguments on top of `torch.nn.Embedding`.
+    Quantized version of `nn.Embedding`. Adds quantization-specific arguments on top of `nn.Embedding`.
 
     Args:
         weight_bit (`int`, *optional*, defaults to `8`):
@@ -65,9 +65,9 @@ class QuantEmbedding(nn.Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
 
-        self.weight = mindspore.Parameter(ops.zeros([num_embeddings, embedding_dim]), 'weight')
-        self.weight_scaling_factor = ops.zeros(1)
-        self.weight_integer = ops.zeros_like(self.weight)
+        self.weight = nn.Parameter(ops.zeros([num_embeddings, embedding_dim]))
+        self.register_buffer("weight_scaling_factor", ops.zeros(1))
+        self.register_buffer("weight_integer", ops.zeros_like(self.weight))
 
         self.weight_bit = weight_bit
         self.momentum = momentum
@@ -77,26 +77,32 @@ class QuantEmbedding(nn.Module):
     def forward(self, x, positions=None, incremental_state=None):
         if not self.quant_mode:
             return (
-                F.embedding(
+                nn.functional.embedding(
                     x,
                     self.weight,
+                    self.padding_idx,
+                    self.max_norm,
+                    self.norm_type,
+                    self.scale_grad_by_freq,
                 ),
                 None,
             )
 
         w = self.weight
-        w_transform = w.data.copy()
-        w_transform.requires_grad = False
-
+        w_transform = w.data
         w_min = w_transform.min().broadcast_to((1,))
         w_max = w_transform.max().broadcast_to((1,))
 
         self.weight_scaling_factor = symmetric_linear_quantization_params(self.weight_bit, w_min, w_max, False)
         self.weight_integer = SymmetricQuantFunction(self.weight_bit, self.percentile_mode, self.weight_scaling_factor)(self.weight)
 
-        emb_int = F.embedding(
+        emb_int = nn.functional.embedding(
             x,
             self.weight_integer,
+            self.padding_idx,
+            self.max_norm,
+            self.norm_type,
+            self.scale_grad_by_freq,
         )
         return emb_int * self.weight_scaling_factor, self.weight_scaling_factor
 
@@ -128,9 +134,9 @@ class QuantAct(nn.Module):
         self.percentile = False
 
         if not self.per_channel:
-            self.x_min = ops.zeros(1)
-            self.x_max = ops.zeros(1)
-            self.act_scaling_factor = ops.zeros(1)
+            self.register_buffer("x_min", ops.zeros(1))
+            self.register_buffer("x_max", ops.zeros(1))
+            self.register_buffer("act_scaling_factor", ops.zeros(1))
             self.x_min -= 1e-5
             self.x_max += 1e-5
         else:
@@ -172,8 +178,8 @@ class QuantAct(nn.Module):
             # exponential moving average (EMA)
             # use momentum to prevent the quantized values change greatly every iteration
             elif self.act_range_momentum == -1:
-                self.x_min = ops.minimum(self.x_min, x_min)
-                self.x_max = ops.maximum(self.x_max, x_max)
+                self.x_min = ops.min(self.x_min, x_min)
+                self.x_max = ops.max(self.x_max, x_max)
             else:
                 self.x_min = self.x_min * self.act_range_momentum + x_min * (1 - self.act_range_momentum)
                 self.x_max = self.x_max * self.act_range_momentum + x_max * (1 - self.act_range_momentum)
@@ -194,6 +200,7 @@ class QuantAct(nn.Module):
         else:
             quant_act_int = FixedPointMul(pre_act_scaling_factor, self.activation_bit, self.act_scaling_factor, identity_scaling_factor)(x, identity)
 
+
         correct_output_scale = self.act_scaling_factor.view(-1)
 
         return quant_act_int * correct_output_scale, self.act_scaling_factor
@@ -201,7 +208,7 @@ class QuantAct(nn.Module):
 
 class QuantLinear(nn.Module):
     """
-    Quantized version of `torch.nn.Linear`. Adds quantization-specific arguments on top of `torch.nn.Linear`.
+    Quantized version of `nn.Linear`. Adds quantization-specific arguments on top of `nn.Linear`.
 
     Args:
         weight_bit (`int`, *optional*, defaults to `8`):
@@ -221,12 +228,12 @@ class QuantLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.weight = mindspore.Parameter(ops.zeros([out_features, in_features]), 'weight')
-        self.weight_integer = ops.zeros_like(self.weight)
-        self.fc_scaling_factor = ops.zeros(self.out_features)
+        self.weight = nn.Parameter(ops.zeros([out_features, in_features]))
+        self.register_buffer("weight_integer", ops.zeros_like(self.weight))
+        self.register_buffer("fc_scaling_factor", ops.zeros(self.out_features))
         if bias:
-            self.bias = mindspore.Parameter(ops.zeros(out_features), 'bias')
-            self.bias_integer = ops.zeros_like(self.bias)
+            self.bias = nn.Parameter(ops.zeros(out_features))
+            self.register_buffer("bias_integer", ops.zeros_like(self.bias))
 
         self.weight_bit = weight_bit
         self.quant_mode = quant_mode
@@ -242,7 +249,7 @@ class QuantLinear(nn.Module):
 
     def forward(self, x, prev_act_scaling_factor=None):
         if not self.quant_mode:
-            return ops.dense(x, weight=self.weight, bias=self.bias), None
+            return nn.functional.linear(x, weight=self.weight, bias=self.bias), None
 
         # assert that prev_act_scaling_factor is a scalar tensor
         assert prev_act_scaling_factor is not None and prev_act_scaling_factor.shape == (1,), (
@@ -251,17 +258,17 @@ class QuantLinear(nn.Module):
         )
 
         w = self.weight
-        w_transform = w.data.copy()
-        w_transform.requires_grad = False
+        w_transform = w.data
         if self.per_channel:
-            w_min, _ = ops.min(w_transform, axis=1)
-            w_max, _ = ops.max(w_transform, axis=1)
+            w_min, _ = ops.min(w_transform, dim=1)
+            w_max, _ = ops.max(w_transform, dim=1)
         else:
             w_min = w_transform.min().broadcast_to((1,))
             w_max = w_transform.max().broadcast_to((1,))
 
         self.fc_scaling_factor = symmetric_linear_quantization_params(self.weight_bit, w_min, w_max, self.per_channel)
         self.weight_integer = SymmetricQuantFunction(self.weight_bit, self.percentile_mode, self.fc_scaling_factor)(self.weight)
+
 
         bias_scaling_factor = self.fc_scaling_factor * prev_act_scaling_factor
 
@@ -272,14 +279,14 @@ class QuantLinear(nn.Module):
         x_int = x / prev_act_scaling_factor
 
         return (
-            ops.dense(x_int, weight=self.weight_integer, bias=self.bias_integer) * bias_scaling_factor,
+            nn.functional.linear(x_int, weight=self.weight_integer, bias=self.bias_integer) * bias_scaling_factor,
             bias_scaling_factor,
         )
 
 
 class IntGELU(nn.Module):
     """
-    Quantized version of `torch.nn.GELU`. Adds quantization-specific arguments on top of `torch.nn.GELU`.
+    Quantized version of `nn.GELU`. Adds quantization-specific arguments on top of `nn.GELU`.
 
     Args:
         quant_mode (`bool`, *optional*, defaults to `False`):
@@ -297,13 +304,12 @@ class IntGELU(nn.Module):
             self.quant_mode = False
 
         if not self.quant_mode:
-            self.activation_fn = nn.GELU(approximate=False)
+            self.activation_fn = nn.GELU()
 
         self.k = 1.4142
         self.const = 14  # dummy integer constant
         self.coeff = [-0.2888, -1.769, 1]  # a(x+b)**2 + c
         self.coeff[2] /= self.coeff[0]
-        self.floor_ste = floor_ste()
 
     def int_erf(self, x_int, scaling_factor):
         b_int = ops.floor(self.coeff[1] / scaling_factor)
@@ -315,7 +321,7 @@ class IntGELU(nn.Module):
         scaling_factor = scaling_factor**2 * self.coeff[0]
 
         # avoid overflow
-        y_int = self.floor_ste(y_int / 2**self.const)
+        y_int = floor_ste()(y_int / 2**self.const)
         scaling_factor = scaling_factor * 2**self.const
 
         return y_int, scaling_factor
@@ -337,7 +343,7 @@ class IntGELU(nn.Module):
 
 class IntSoftmax(nn.Module):
     """
-    Quantized version of `torch.nn.Softmax`. Adds quantization-specific arguments on top of `torch.nn.Softmax`.
+    Quantized version of `nn.Softmax`. Adds quantization-specific arguments on top of `nn.Softmax`.
 
     Args:
         output_bit (`int`):
@@ -364,33 +370,34 @@ class IntSoftmax(nn.Module):
         self.coef = [0.35815147, 0.96963238, 1.0]  # ax**2 + bx + c
         self.coef[1] /= self.coef[0]
         self.coef[2] /= self.coef[0]
-        self.floor_ste = floor_ste()
 
     def int_polynomial(self, x_int, scaling_factor):
-        b_int = ops.floor(self.coef[1] / scaling_factor)
-        c_int = ops.floor(self.coef[2] / scaling_factor**2)
+        with _no_grad():
+            b_int = ops.floor(self.coef[1] / scaling_factor)
+            c_int = ops.floor(self.coef[2] / scaling_factor**2)
         z = (x_int + b_int) * x_int + c_int
         scaling_factor = self.coef[0] * scaling_factor**2
         return z, scaling_factor
 
     def int_exp(self, x_int, scaling_factor):
-        x0_int = ops.floor(self.x0 / scaling_factor)
+        with _no_grad():
+            x0_int = ops.floor(self.x0 / scaling_factor)
         x_int = ops.maximum(x_int, self.const * x0_int)
 
-        q = self.floor_ste(x_int / x0_int)
+        q = floor_ste()(x_int / x0_int)
         r = x_int - x0_int * q
         exp_int, exp_scaling_factor = self.int_polynomial(r, scaling_factor)
-        exp_int = ops.clamp(self.floor_ste(exp_int * 2 ** (self.const - q)), min=0)
+        exp_int = ops.clamp(floor_ste()(exp_int * 2 ** (self.const - q)), min=0)
         scaling_factor = exp_scaling_factor / 2**self.const
         return exp_int, scaling_factor
 
     def forward(self, x, scaling_factor):
         if not self.quant_mode:
-            return ops.softmax(x, axis=-1), None
+            return nn.functional.softmax(x, dim=-1), None
 
         x_int = x / scaling_factor
 
-        x_int_max, _ = ops.max(x_int, axis=-1, keepdims=True)
+        x_int_max, _ = ops.max(x_int, dim=-1, keepdim=True)
         x_int = x_int - x_int_max
         exp_int, exp_scaling_factor = self.int_exp(x_int, scaling_factor)
 
@@ -398,16 +405,16 @@ class IntSoftmax(nn.Module):
         exp, exp_scaling_factor = self.act(exp_int, exp_scaling_factor)
         exp_int = exp / exp_scaling_factor
 
-        exp_int_sum = exp_int.sum(axis=-1, keepdims=True)
-        factor = self.floor_ste(2**self.max_bit / exp_int_sum)
-        exp_int = self.floor_ste(exp_int * factor / 2 ** (self.max_bit - self.output_bit))
+        exp_int_sum = ops.sum(exp_int, dim=-1, keepdim=True)
+        factor = floor_ste()(2**self.max_bit / exp_int_sum)
+        exp_int = floor_ste()(exp_int * factor / 2 ** (self.max_bit - self.output_bit))
         scaling_factor = 1 / 2**self.output_bit
         return exp_int * scaling_factor, scaling_factor
 
 
 class IntLayerNorm(nn.Module):
     """
-    Quantized version of `torch.nn.LayerNorm`. Adds quantization-specific arguments on top of `torch.nn.LayerNorm`.
+    Quantized version of `nn.LayerNorm`. Adds quantization-specific arguments on top of `nn.LayerNorm`.
 
     Args:
         output_bit (`int`, *optional*, defaults to `8`):
@@ -423,29 +430,28 @@ class IntLayerNorm(nn.Module):
         self.normalized_shape = normalized_shape
         self.eps = eps
 
-        self.weight = mindspore.Parameter(ops.zeros(normalized_shape), 'weight')
-        self.bias = mindspore.Parameter(ops.zeros(normalized_shape), 'bias')
+        self.weight = nn.Parameter(ops.zeros(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
 
         self.quant_mode = quant_mode
         if force_dequant in ["nonlinear", "layernorm"]:
             logger.info("Force dequantize layernorm")
             self.quant_mode = False
 
-        self.shift = ops.zeros(1)
+        self.register_buffer("shift", ops.zeros(1))
         self.output_bit = output_bit
         self.max_bit = 32
         self.dim_sqrt = None
         self.activation = QuantAct(self.output_bit, quant_mode=self.quant_mode)
-        self.floor_ste = floor_ste()
-        self.round_ste = round_ste()
 
     def set_shift(self, y_int):
-        y_sq_int = y_int**2
-        var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
-        shift = (ops.log2(ops.sqrt(var_int / 2**self.max_bit)).ceil()).max()
-        shift_old = self.shift
-        self.shift = ops.maximum(self.shift, shift)
-        logger.info(f"Dynamic shift adjustment: {int(shift_old)} -> {int(self.shift)}")
+        with _no_grad():
+            y_sq_int = y_int**2
+            var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
+            shift = (ops.log2(ops.sqrt(var_int / 2**self.max_bit)).ceil()).max()
+            shift_old = self.shift
+            self.shift = ops.maximum(self.shift, shift)
+            logger.info(f"Dynamic shift adjustment: {int(shift_old)} -> {int(self.shift)}")
 
     def overflow_fallback(self, y_int):
         """
@@ -453,16 +459,16 @@ class IntLayerNorm(nn.Module):
         to avoid overflow in the subsequent runs.
         """
         self.set_shift(y_int)  # adjusts `self.shift`
-        y_int_shifted = self.floor_ste(y_int / 2**self.shift)
+        y_int_shifted = floor_ste()(y_int / 2**self.shift)
         y_sq_int = y_int_shifted**2
         var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
         return var_int
 
     def forward(self, x, scaling_factor=None):
         if not self.quant_mode:
-            mean = x.mean(axis=2, keep_dims=True)
+            mean = ops.mean(x, dim=2, keepdim=True)
             y = x - mean
-            var = ops.mean(y**2, axis=2, keep_dims=True)
+            var = ops.mean(y**2, dim=2, keepdim=True)
             x = y / ops.sqrt(self.eps + var)
             x = x * self.weight + self.bias
             return x, None
@@ -474,9 +480,9 @@ class IntLayerNorm(nn.Module):
 
         # Normalization: computes mean and variance(std)
         x_int = x / scaling_factor
-        mean_int = self.round_ste(x_int.mean(axis=2, keep_dims=True))
+        mean_int = round_ste()(x_int.mean(axis=2, keep_dims=True))
         y_int = x_int - mean_int
-        y_int_shifted = self.floor_ste(y_int / 2**self.shift)
+        y_int_shifted = floor_ste()(y_int / 2**self.shift)
         y_sq_int = y_int_shifted**2
         var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
 
@@ -491,15 +497,14 @@ class IntLayerNorm(nn.Module):
                 )
 
         # To be replaced with integer-sqrt kernel that produces the same output
-        std_int = self.floor_ste(ops.sqrt(var_int)) * 2**self.shift
-        factor = self.floor_ste(2**31 / std_int)
-        y_int = self.floor_ste(y_int * factor / 2)
+        std_int = floor_ste()(ops.sqrt(var_int)) * 2**self.shift
+        factor = floor_ste()(2**31 / std_int)
+        y_int = floor_ste()(y_int * factor / 2)
         scaling_factor = self.dim_sqrt / 2**30
 
         # scaling and shifting
-        bias = self.bias.data.copy() / (self.weight.data).copy()
-        bias.requires_grad = False
-        bias_int = self.floor_ste(bias / scaling_factor)
+        bias = self.bias / (self.weight)
+        bias_int = floor_ste()(bias / scaling_factor)
 
         y_int = y_int + bias_int
         scaling_factor = scaling_factor * self.weight
@@ -513,7 +518,7 @@ def get_percentile_min_max(input, lower_percentile, upper_percentile, output_ten
     Calculate the percentile max and min values in a given tensor
 
     Args:
-        input (`torch.Tensor`):
+        input (`mindspore.Tensor`):
             The target tensor to calculate percentile max and min.
         lower_percentile (`float`):
             If 0.1, means we return the value of the smallest 0.1% value in the tensor as percentile min.
@@ -523,19 +528,20 @@ def get_percentile_min_max(input, lower_percentile, upper_percentile, output_ten
             If True, this function returns tensors, otherwise it returns values.
 
     Returns:
-        `Tuple(torch.Tensor, torch.Tensor)`: Percentile min and max value of *input*
+        `Tuple(mindspore.Tensor, mindspore.Tensor)`: Percentile min and max value of *input*
     """
     input_length = input.shape[0]
 
     lower_index = round(input_length * (1 - lower_percentile * 0.01))
     upper_index = round(input_length * upper_percentile * 0.01)
-    upper_bound = kthvalue(input, k=upper_index)[0]
+
+    upper_bound = ops.kthvalue(input, k=upper_index).values
 
     if lower_percentile == 0:
         lower_bound = upper_bound * 0
         # lower_index += 1
     else:
-        lower_bound = -kthvalue(-input, k=lower_index)[0]
+        lower_bound = -ops.kthvalue(-input, k=lower_index).values
 
     if not output_tensor:
         lower_bound = lower_bound.item()
@@ -548,17 +554,17 @@ def linear_quantize(input, scale, zero_point, inplace=False):
     Quantize single-precision input tensor to integers with the given scaling factor and zeropoint.
 
     Args:
-        input (`torch.Tensor`):
+        input (`mindspore.Tensor`):
             Single-precision input tensor to be quantized.
-        scale (`torch.Tensor`):
+        scale (`mindspore.Tensor`):
             Scaling factor for quantization.
-        zero_pint (`torch.Tensor`):
+        zero_pint (`mindspore.Tensor`):
             Shift for quantization.
         inplace (`bool`, *optional*, defaults to `False`):
             Whether to compute inplace or not.
 
     Returns:
-        `torch.Tensor`: Linearly quantized value of *input* according to *scale* and *zero_point*.
+        `mindspore.Tensor`: Linearly quantized value of *input* according to *scale* and *zero_point*.
     """
     # reshape scale and zeropoint for convolutional weights and activation
     if len(input.shape) == 4:
@@ -583,33 +589,34 @@ def symmetric_linear_quantization_params(num_bits, saturation_min, saturation_ma
     Compute the scaling factor with the given quantization range for symmetric quantization.
 
     Args:
-        saturation_min (`torch.Tensor`):
+        saturation_min (`mindspore.Tensor`):
             Lower bound for quantization range.
-        saturation_max (`torch.Tensor`):
+        saturation_max (`mindspore.Tensor`):
             Upper bound for quantization range.
         per_channel (`bool`, *optional*, defaults to `False`):
             Whether to or not use channel-wise quantization.
 
     Returns:
-        `torch.Tensor`: Scaling factor that linearly quantizes the given range between *saturation_min* and
+        `mindspore.Tensor`: Scaling factor that linearly quantizes the given range between *saturation_min* and
         *saturation_max*.
     """
     # in this part, we do not need any gradient computation,
-    # in order to enforce this, we put torch.no_grad()
-    n = 2 ** (num_bits - 1) - 1
+    # in order to enforce this, we put _no_grad()
+    with _no_grad():
+        n = 2 ** (num_bits - 1) - 1
 
-    if per_channel:
-        scale, _ = ops.max(ops.stack([saturation_min.abs(), saturation_max.abs()], axis=1), axis=1)
-        scale = ops.clamp(scale, min=1e-8) / n
+        if per_channel:
+            scale, _ = ops.max(ops.stack([saturation_min.abs(), saturation_max.abs()], dim=1), dim=1)
+            scale = ops.clamp(scale, min=1e-8) / n
 
-    else:
-        scale = max((saturation_min.abs(), saturation_max.abs()))
-        scale = ops.clamp(scale, min=1e-8) / n
+        else:
+            scale = max(saturation_min.abs(), saturation_max.abs())
+            scale = ops.clamp(scale, min=1e-8) / n
 
     return scale
 
 
-class SymmetricQuantFunction(nn.Module):
+class SymmetricQuantFunction(Cell):
     """
     Class to quantize the given floating-point values using symmetric quantization with given range and bitwidth.
     """
@@ -620,21 +627,21 @@ class SymmetricQuantFunction(nn.Module):
         self.percentile_mode = percentile_mode
         self.scale = scale
 
-    def forward(self, x):
+    def construct(self, x):
         """
         Args:
-            x (`torch.Tensor`):
+            x (`mindspore.Tensor`):
                 Floating point tensor to be quantized.
             k (`int`):
                 Quantization bitwidth.
             percentile_mode (`bool`):
                 Whether or not to use percentile calibration.
-            scale (`torch.Tensor`):
+            scale (`mindspore.Tensor`):
                 Pre-calculated scaling factor for *x*. Note that the current implementation of SymmetricQuantFunction
                 requires pre-calculated scaling factor.
 
         Returns:
-            `torch.Tensor`: Symmetric-quantized value of *input*.
+            `mindspore.Tensor`: Symmetric-quantized value of *input*.
         """
         zero_point = mindspore.tensor(0.0)
 
@@ -657,47 +664,38 @@ class SymmetricQuantFunction(nn.Module):
 
         return (dout.copy() / scale,)
 
-
-class floor_ste(nn.Module):
+class floor_ste(Cell):
     """
-    Straight-through Estimator(STE) for torch.floor()
+    Straight-through Estimator(STE) for ops.floor()
     """
-
-    def __init__(self):
-        super(floor_ste, self).__init__()
-
-    def forward(self, x):
+    def construct(self, x):
         return ops.floor(x)
 
     def bprop(self, x, out, dout):
         return (dout.copy(),)
 
 
-class round_ste(nn.Module):
-    """
-    Straight-through Estimator(STE) for torch.round()
-    """
 
-    def __init__(self):
-        super(round_ste, self).__init__()
-
-    def forward(self, x):
+class round_ste(Cell):
+    """
+    Straight-through Estimator(STE) for ops.round()
+    """
+    def construct(self, x):
         return ops.round(x)
 
     def bprop(self, x, out, dout):
         return (dout.copy(),)
-
 
 def batch_frexp(inputs, max_bit=31):
     """
     Decompose the scaling factor into mantissa and twos exponent.
 
     Args:
-        scaling_factor (`torch.Tensor`):
+        scaling_factor (`mindspore.Tensor`):
             Target scaling factor to decompose.
 
     Returns:
-        ``Tuple(torch.Tensor, torch.Tensor)`: mantisa and exponent
+        ``Tuple(mindspore.Tensor, mindspore.Tensor)`: mantisa and exponent
     """
 
     shape_of_input = inputs.shape
@@ -722,28 +720,29 @@ def batch_frexp(inputs, max_bit=31):
     )
 
 
-class FixedPointMul(nn.Module):
+class FixedPointMul(Cell):
     """
     Function to perform fixed-point arithmetic that can match integer arithmetic on hardware.
 
     Args:
-        pre_act (`torch.Tensor`):
+        pre_act (`mindspore.Tensor`):
             Input tensor.
-        pre_act_scaling_factor (`torch.Tensor`):
+        pre_act_scaling_factor (`mindspore.Tensor`):
             Scaling factor of the input tensor *pre_act*.
         bit_num (`int`):
             Quantization bitwidth.
-        z_scaling_factor (`torch.Tensor`):
+        z_scaling_factor (`mindspore.Tensor`):
             Scaling factor of the output tensor.
-        identity (`torch.Tensor`, *optional*):
+        identity (`mindspore.Tensor`, *optional*):
             Identity tensor, if exists.
-        identity_scaling_factor (`torch.Tensor`, *optional*):
+        identity_scaling_factor (`mindspore.Tensor`, *optional*):
             Scaling factor of the identity tensor *identity*, if exists.
 
     Returns:
-        `torch.Tensor`: Output tensor(*pre_act* if *identity* is not given, otherwise the addition of *pre_act* and
+        `mindspore.Tensor`: Output tensor(*pre_act* if *identity* is not given, otherwise the addition of *pre_act* and
         *identity*), whose scale is rescaled to *z_scaling_factor*.
     """
+
     def __init__(self,
         pre_act_scaling_factor,
         bit_num,
@@ -762,7 +761,7 @@ class FixedPointMul(nn.Module):
     def reshape_other(self, x):
         return x.view(1, 1, -1)
 
-    def forward(
+    def construct(
         self,
         pre_act,
         identity=None
@@ -814,11 +813,3 @@ class FixedPointMul(nn.Module):
         if self.identity is not None:
             identity_grad = dout.copy() / self.z_scaling_factor
         return dout.copy() / self.z_scaling_factor, identity_grad
-
-
-def kthvalue(input, k, dim=None, keepdim=False):
-    sorted, indices = ops.Sort(dim, descending=False)(input)
-    sorted = ops.index_select(sorted, dim, mindspore.Tensor([k-1]))
-    indices = ops.index_select(indices, dim, mindspore.Tensor([k-1]))
-
-    return sorted, indices

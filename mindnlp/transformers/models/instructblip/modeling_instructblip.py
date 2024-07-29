@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -91,8 +92,7 @@ class InstructBlipVisionEmbeddings(nn.Module):
         self.class_embedding = Parameter(ops.randn(1, 1, self.embed_dim))
 
         self.patch_embedding = nn.Conv2d(
-            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size,
-            bias=True, pad_mode='valid'
+            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -124,22 +124,22 @@ class InstructBlipVisionEmbeddings(nn.Module):
         h0, w0 = h0 + 0.1, w0 + 0.1
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             patch_pos_embed,
             scale_factor=(h0 / math.sqrt(num_positions), w0 / math.sqrt(num_positions)),
             mode="bicubic",
             align_corners=False,
         )
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1).to(target_dtype)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1)).to(target_dtype)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         if interpolate_pos_encoding:
             position_embedding = self.interpolate_pos_encoding(embeddings, height, width)
         else:
@@ -208,7 +208,7 @@ class InstructBlipAttention(nn.Module):
         attention_scores = attention_scores * self.scale
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -555,8 +555,8 @@ class InstructBlipQFormerMultiHeadAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -594,7 +594,7 @@ class InstructBlipQFormerMultiHeadAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         if is_cross_attention and self.save_attention:
             self.save_attention_map(attention_probs)
@@ -794,7 +794,7 @@ class InstructBlipQFormerLayer(nn.Module):
                     self.seq_len_dim,
                     attention_output[:, query_length:, :],
                 )
-                layer_output = ops.cat([layer_output, layer_output_text], axis=1)
+                layer_output = ops.cat([layer_output, layer_output_text], dim=1)
         else:
             layer_output = apply_chunking_to_forward(
                 self.feed_forward_chunk,
@@ -952,7 +952,7 @@ class InstructBlipQFormerEmbeddings(nn.Module):
                 embeddings = embeddings + position_embeddings
 
             if query_embeds is not None:
-                embeddings = ops.cat((query_embeds, embeddings), axis=1)
+                embeddings = ops.cat((query_embeds, embeddings), dim=1)
         else:
             embeddings = query_embeds
 
@@ -1238,11 +1238,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
 
         # difference with BLIP-2 here: we also feed the instruction prompt to the Q-Former
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = self.query_tokens.broadcast_to((image_embeds.shape[0], -1, -1))
         query_attention_mask = ops.ones(query_tokens.shape[:-1], dtype=mindspore.int64)
         if qformer_attention_mask is None:
             qformer_attention_mask = ops.ones_like(qformer_input_ids)
-        qformer_attention_mask = ops.cat([query_attention_mask, qformer_attention_mask], axis=1)
+        qformer_attention_mask = ops.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
             attention_mask=qformer_attention_mask,
@@ -1262,11 +1262,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         )
 
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
+        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
 
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_model_attention_mask.astype(mindspore.bool_), attention_mask.astype(mindspore.bool_)], axis=1)
+        attention_mask = ops.cat([language_model_attention_mask.astype(mindspore.bool_), attention_mask.astype(mindspore.bool_)], dim=1)
 
         if self.config.use_decoder_only_language_model:
             outputs = self.language_model(
@@ -1355,11 +1355,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
 
         image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = self.query_tokens.broadcast_to((image_embeds.shape[0], -1, -1))
         query_attention_mask = ops.ones(query_tokens.shape[:-1], dtype=mindspore.int64)
         if qformer_attention_mask is None:
             qformer_attention_mask = ops.ones_like(qformer_input_ids)
-        qformer_attention_mask = ops.cat([query_attention_mask.astype(mindspore.bool_), qformer_attention_mask.astype(mindspore.bool_)], axis=1)
+        qformer_attention_mask = ops.cat([query_attention_mask.astype(mindspore.bool_), qformer_attention_mask.astype(mindspore.bool_)], dim=1)
 
 
         query_outputs = self.qformer(
@@ -1384,11 +1384,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             )
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_attention_mask, attention_mask], axis=1)
+        attention_mask = ops.cat([language_attention_mask, attention_mask], dim=1)
 
         # concatenate query embeddings with prompt embeddings
         inputs_embeds = self.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
+        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
 
         # add image_embeds length to max_length, so that the final max_length in counted only on token embeds
         # -1 is to account for the prepended BOS after `generate.`
@@ -1415,9 +1415,9 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             )
             bos_tokens = mindspore.Tensor([[bos_token_id]]).repeat(batch_size, 1)
             if not isinstance(outputs, mindspore.Tensor):
-                outputs.sequences = ops.cat([bos_tokens, outputs.sequences], axis=-1)
+                outputs.sequences = ops.cat([bos_tokens, outputs.sequences], dim=-1)
             else:
-                outputs = ops.cat([bos_tokens, outputs], axis=-1)
+                outputs = ops.cat([bos_tokens, outputs], dim=-1)
 
         return outputs
 __all__ = [

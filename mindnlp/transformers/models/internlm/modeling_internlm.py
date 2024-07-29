@@ -20,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .configuration_internlm import InternLMConfig
 from ...activations import ACT2FN
@@ -54,7 +55,7 @@ def _make_causal_mask(
 
     if past_key_values_length > 0:
         mask = ops.concat(
-            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1
+            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], dim=-1
         )
     return ops.broadcast_to(
         mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length)
@@ -143,7 +144,7 @@ class InternLMRotaryEmbedding(nn.Module):
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper,
         # but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()[None, None, :, :]
         self.sin_cached = emb.sin()[None, None, :, :]
 
@@ -179,7 +180,7 @@ class InternLMRotaryEmbedding(nn.Module):
             t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
             freqs = ops.einsum("i,j->ij", t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
             self.cos_cached = emb.cos()[None, None, :, :]
             self.sin_cached = emb.sin()[None, None, :, :]
         return (
@@ -277,7 +278,7 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
 
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -285,7 +286,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     """
@@ -505,8 +506,8 @@ class InternLMAttention(nn.Module):
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         past_key_value = (key_states, value_states) if use_cache else None
         kv_seq_len = key_states.shape[-2]
@@ -526,7 +527,7 @@ class InternLMAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
             attn_weights = ops.maximum(attn_weights,Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
 
-        attn_weights = ops.softmax(attn_weights, axis=-1).astype(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, dim=-1).astype(query_states.dtype)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
