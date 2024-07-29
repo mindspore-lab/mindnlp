@@ -24,7 +24,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
 
@@ -38,7 +38,7 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging, get_default_dtype
+from ....utils import logging
 from .configuration_stablelm import StableLmConfig
 
 

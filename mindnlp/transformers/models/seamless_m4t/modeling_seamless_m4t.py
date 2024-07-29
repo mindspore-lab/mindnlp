@@ -21,11 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, Uniform, HeNormal
 
-from mindnlp.utils import ModelOutput, logging, get_default_dtype
+from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (

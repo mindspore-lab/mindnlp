@@ -29,7 +29,7 @@ from mindspore.common.initializer import (
     Normal,
     Constant,
 )
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
 
 from .image_processing_deta import batched_nms
@@ -42,7 +42,6 @@ from ....utils import (
     is_vision_available,
     logging,
     requires_backends,
-    get_default_dtype,
 )
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput

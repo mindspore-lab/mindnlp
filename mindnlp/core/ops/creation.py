@@ -1,6 +1,7 @@
 """creation ops"""
 import numpy as np
 import mindspore
+from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import USE_PYBOOST
@@ -74,7 +75,10 @@ def eye(n, m=None, *, dtype=None):
     return ops.eye(n, n, dtype)
 
 # empty
-
+def empty(*size, dtype=None):
+    if dtype is None:
+        dtype = mindspore.float32
+    return CTensor(dtype, size)
 
 # empty_like
 

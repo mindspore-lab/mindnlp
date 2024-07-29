@@ -19,7 +19,7 @@ import warnings
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
@@ -35,7 +35,7 @@ from ...modeling_outputs import (
     dataclass,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging, get_default_dtype
+from ....utils import logging
 from .configuration_jetmoe import JetMoEConfig
 from .utils import MoE, ParallelExperts
 
