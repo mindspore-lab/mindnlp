@@ -55,6 +55,11 @@ def softplus(input, beta=1, threshold=20):
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
+def leaky_relu(input, alpha=0.2):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.leaky_relu(input, alpha)
+    return ops.leaky_relu(input, alpha)
+
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
     Perform 1D average pooling on the input array of shape (N, C, L) without using explicit for loops.
@@ -133,7 +138,8 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
         if pad_height > 0 or pad_width > 0:
             input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
         
-        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride))
+        pad_mode = "SAME" if ceil_mode else "VALID"
+        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
         output = _avgpool2d(input)
         return output
 
@@ -906,3 +912,6 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
     return ops.cosine_similarity(x1, x2, dim, eps)
+
+# def pairwise_distance():
+#     return ops.pairwise_distance

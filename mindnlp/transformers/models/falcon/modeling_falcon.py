@@ -68,7 +68,7 @@ def rotate_half(x):
     Returns:
         Tensor: The rotated tensor."""
     x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
@@ -93,7 +93,7 @@ def _get_unpad_data(padding_mask):
     seqlens_in_batch = padding_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(padding_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -181,7 +181,7 @@ class FalconRotaryEmbedding(nn.Module):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # freqs = ops.matmul()(t.reshape(-1, 1), self.inv_freq.reshape(1, -1))
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
@@ -256,7 +256,7 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
         t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
@@ -319,7 +319,7 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
 
         t = ops.arange(seq_len)
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
@@ -372,9 +372,9 @@ def build_alibi_tensor(
         extra_powers = ops.arange(
             1, 1 + 2 * num_remaining_heads, 2, dtype=mindspore.int32
         )
-        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], axis=0)
+        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], dim=0)
 
-    arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
+    arange_tensor = ((attention_mask.int().cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None].astype(mindspore.float32) * arange_tensor
     return ops.reshape(alibi, (batch_size * num_heads, 1, seq_length)).astype(dtype)
 
@@ -689,22 +689,21 @@ class FalconAttention(nn.Module):
             # concatenate along seq_length dimension:
             #  - key: [batch_size, self.num_heads, kv_length, head_dim]
             #  - value: [batch_size, self.num_heads, kv_length, head_dim]
-            key_layer = ops.cat((past_key, key_layer), axis=-2)
-            value_layer = ops.cat((past_value, value_layer), axis=-2)
+            key_layer = ops.cat((past_key, key_layer), dim=-2)
+            value_layer = ops.cat((past_value, value_layer), dim=-2)
 
         kv_length = key_layer.shape[-2]
         present = (key_layer, value_layer) if use_cache else None
 
         if alibi is None:
-            if hasattr(F, "_scaled_dot_product_attention") and not output_attentions:
-                attn_output, attention_scores = F._scaled_dot_product_attention(
+            if hasattr(F, "scaled_dot_product_attention") and not output_attentions:
+                attn_output = F.scaled_dot_product_attention(
                     query_layer,
                     key_layer,
                     value_layer,
                     attention_mask,
                     0.0,
                     is_causal=False,
-                    is_training=self.training,
                 )
             else:
                 attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
@@ -712,7 +711,7 @@ class FalconAttention(nn.Module):
 
                 attention_scores = ops.softmax(
                     attention_scores + attention_mask,
-                    axis=-1,
+                    dim=-1,
                     dtype=hidden_states.dtype,
                 )
                 attn_output = ops.matmul(attention_scores, value_layer)
@@ -755,7 +754,7 @@ class FalconAttention(nn.Module):
         )
         attention_logits *= self.inv_norm_factor
         attention_probs = ops.softmax(
-            attention_logits + attention_mask, axis=-1, dtype=hidden_states.dtype
+            attention_logits + attention_mask, dim=-1, dtype=hidden_states.dtype
         )
         # [batch_size, num_heads, q_length, kv_length]
         attention_probs = self.attention_dropout(attention_probs)
@@ -813,7 +812,7 @@ class FalconMLP(nn.Module):
         self.dense_h_to_4h = FalconLinear(
             hidden_size, 4 * hidden_size, bias=config.bias
         )
-        self.act = nn.GELU(approximate=False)
+        self.act = nn.GELU()
         self.dense_4h_to_h = FalconLinear(
             4 * hidden_size, hidden_size, bias=config.bias
         )
@@ -1442,7 +1441,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
             and position_ids is None
         ):
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
