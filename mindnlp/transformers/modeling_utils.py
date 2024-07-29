@@ -420,7 +420,6 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
             :obj:`nn.Module`: A mindspore cell mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
-        print(base_model)
         if base_model is not self:
             return base_model.get_input_embeddings()
         raise NotImplementedError

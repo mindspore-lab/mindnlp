@@ -181,7 +181,7 @@ def erfinv(input):
 # exp
 def exp(input):
     if USE_PYBOOST:
-        return mindspore.mint.exp
+        return mindspore.mint.exp(input)
     return ops.exp(input)
 
 # exp2
