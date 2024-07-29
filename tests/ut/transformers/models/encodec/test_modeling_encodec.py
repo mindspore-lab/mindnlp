@@ -29,8 +29,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-
+    from mindnlp.core import ops
 
 
 def prepare_inputs_dict(
@@ -218,7 +217,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
             inputs = self._prepare_for_class(inputs_dict, model_class)
-            inputs["input_values"] = inputs["input_values"].repeat(1, 1, 10)
+            inputs["input_values"] = ops.tile(inputs["input_values"], (1, 1, 10))
 
             hidden_states_no_chunk = model(**inputs)[0]
 

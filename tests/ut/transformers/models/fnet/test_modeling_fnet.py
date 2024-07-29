@@ -32,7 +32,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops
+    from mindnlp.core import ops
     from mindnlp.transformers.models.auto.modeling_auto import (
         MODEL_FOR_PRETRAINING_MAPPING,
     )
@@ -331,11 +331,11 @@ class FNetModelTester:
         config.num_choices = self.num_choices
         model = FNetForMultipleChoice(config=config)
         model.set_train(False)
-        multiple_choice_inputs_ids = input_ids.unsqueeze(1).expand(
-            -1, self.num_choices, -1
+        multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to(
+            (-1, self.num_choices, -1)
         )
-        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).expand(
-            -1, self.num_choices, -1
+        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to(
+            (-1, self.num_choices, -1)
         )
         result = model(
             multiple_choice_inputs_ids,

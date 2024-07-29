@@ -16,12 +16,10 @@
 Big Code GPT Model.
 """
 
-from . import gpt_bigcode, gpt_bigcode_config, gpt_bigcode_tokenizer
-from .gpt_bigcode import *
-from .gpt_bigcode_config import *
-from .gpt_bigcode_tokenizer import *
+from . import configuration_gpt_bigcode, modeling_gpt_bigcode
+from .modeling_gpt_bigcode import *
+from .configuration_gpt_bigcode import *
 
 __all__ = []
-__all__.extend(gpt_bigcode.__all__)
-__all__.extend(gpt_bigcode_config.__all__)
-__all__.extend(gpt_bigcode_tokenizer.__all__)
+__all__.extend(modeling_gpt_bigcode.__all__)
+__all__.extend(configuration_gpt_bigcode.__all__)
