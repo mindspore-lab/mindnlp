@@ -615,6 +615,9 @@ def masked_fill(input, mask, value):
 def finfo(dtype):
     return np.finfo(mindspore.dtype_to_nptype(dtype))
 
+def iinfo(dtype):
+    return np.iinfo(mindspore.dtype_to_nptype(dtype))
+
 def contains(self, key):
     r"""
     Args:

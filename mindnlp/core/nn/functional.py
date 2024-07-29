@@ -137,7 +137,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
         # Add padding to the input array
         if pad_height > 0 or pad_width > 0:
             input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
-        
+
         pad_mode = "SAME" if ceil_mode else "VALID"
         _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
         output = _avgpool2d(input)

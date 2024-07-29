@@ -60,6 +60,8 @@ def min(input, dim=None, keepdim=False):
 # dist
 
 # logsumexp
+def logsumexp(input, dim, keepdim=False):
+    return ops.logsumexp(input, dim, keepdim)
 
 # mean
 def mean(input, dim, keepdim=False, *, dtype=None):

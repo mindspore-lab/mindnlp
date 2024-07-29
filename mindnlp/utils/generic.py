@@ -26,17 +26,8 @@ from contextlib import ExitStack
 import numpy as np
 import mindspore
 from mindspore.common.api import _pynative_executor
-from mindnlp.configs import DEFAULT_DTYPE
 from .import_utils import is_mindspore_available
 
-def set_default_dtype(dtype):
-    "set default dtype"
-    global DEFAULT_DTYPE
-    DEFAULT_DTYPE = dtype
-
-def get_default_dtype():
-    "get default dtype"
-    return DEFAULT_DTYPE
 
 def is_tensor(x):
     """

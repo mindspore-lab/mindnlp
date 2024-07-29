@@ -1,3 +1,4 @@
+"""reduction utils"""
 import warnings
 from typing import Optional
 
