@@ -22,11 +22,12 @@ import collections.abc
 import math
 from typing import Optional, Tuple, Union
 
-import mindspore as ms
-from mindnlp.core import nn, ops
+import mindspore
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, ModelOutput
 from ...modeling_utils import PreTrainedModel
@@ -55,25 +56,25 @@ class FocalNetEncoderOutput(ModelOutput):
     FocalNet encoder's outputs, with potential hidden states.
 
     Args:
-        last_hidden_state (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
 
-        reshaped_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, hidden_size, height, width)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
             include the spatial dimensions.
     """
 
-    last_hidden_state: ms.Tensor = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
-    reshaped_hidden_states: Optional[Tuple[ms.Tensor]] = None
+    last_hidden_state: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 @dataclass
 class FocalNetModelOutput(ModelOutput):
@@ -81,27 +82,27 @@ class FocalNetModelOutput(ModelOutput):
     FocalNet model's outputs that also contains a pooling of the last hidden states.
 
     Args:
-        last_hidden_state (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        pooler_output (`ms.Tensor` of shape `(batch_size, hidden_size)`, *optional*, returned when `add_pooling_layer=True` is passed):
+        pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`, *optional*, returned when `add_pooling_layer=True` is passed):
             Average pooling of the last layer hidden-state.
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        reshaped_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, hidden_size, height, width)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
             include the spatial dimensions.
     """
 
-    last_hidden_state: ms.Tensor = None
-    pooler_output: Optional[ms.Tensor] = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
-    reshaped_hidden_states: Optional[Tuple[ms.Tensor]] = None
+    last_hidden_state: mindspore.Tensor = None
+    pooler_output: Optional[mindspore.Tensor] = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -110,27 +111,27 @@ class FocalNetMaskedImageModelingOutput(ModelOutput):
     FocalNet masked image model outputs.
 
     Args:
-        loss (`ms.Tensor` of shape `(1,)`, *optional*, returned when `bool_masked_pos` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `bool_masked_pos` is provided):
             Masked image modeling (MLM) loss.
-        reforwardion (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
+        reconstruction (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Reforwarded pixel values.
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        reshaped_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, hidden_size, height, width)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
             include the spatial dimensions.
     """
 
-    loss: Optional[ms.Tensor] = None
-    reforwardion: ms.Tensor = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
-    reshaped_hidden_states: Optional[Tuple[ms.Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    reconstruction: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -139,27 +140,27 @@ class FocalNetImageClassifierOutput(ModelOutput):
     FocalNet outputs for image classification.
 
     Args:
-        loss (`ms.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Classification (or regression if config.num_labels==1) loss.
-        logits (`ms.Tensor` of shape `(batch_size, config.num_labels)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        reshaped_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, hidden_size, height, width)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
             include the spatial dimensions.
     """
 
-    loss: Optional[ms.Tensor] = None
-    logits: ms.Tensor = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
-    reshaped_hidden_states: Optional[Tuple[ms.Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
 
@@ -187,8 +188,8 @@ class FocalNetEmbeddings(nn.Module):
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
     def forward(
-        self, pixel_values: Optional[ms.Tensor], bool_masked_pos: Optional[ms.Tensor] = None
-    ) -> Tuple[ms.Tensor]:
+        self, pixel_values: Optional[mindspore.Tensor], bool_masked_pos: Optional[mindspore.Tensor] = None
+    ) -> Tuple[mindspore.Tensor]:
         embeddings, output_dimensions = self.patch_embeddings(pixel_values)
         embeddings = self.norm(embeddings)
         batch_size, seq_len, _ = embeddings.shape
@@ -236,13 +237,13 @@ class FocalNetPatchEmbeddings(nn.Module):
                 padding = 1
                 stride = 2
             self.projection = nn.Conv2d(
-                num_channels, embed_dim, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode='pad', bias=True
+                num_channels, embed_dim, kernel_size=kernel_size, stride=stride, padding=padding
             )
         else:
-            self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+            self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
 
         if add_norm:
-            self.norm = nn.LayerNorm((embed_dim,), eps=config.layer_norm_eps)
+            self.norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         else:
             self.norm = None
 
@@ -255,7 +256,7 @@ class FocalNetPatchEmbeddings(nn.Module):
             pixel_values = ops.pad(pixel_values, pad_values)
         return pixel_values
 
-    def forward(self, pixel_values: Optional[ms.Tensor]) -> Tuple[ms.Tensor, Tuple[int]]:
+    def forward(self, pixel_values: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
         _, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -276,7 +277,7 @@ class FocalNetPatchEmbeddings(nn.Module):
 
 
 # Copied from transformers.models.beit.modeling_beit.drop_path
-def drop_path(input: ms.Tensor, drop_prob: float = 0.0, training: bool = False) -> ms.Tensor:
+def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
     Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
 
@@ -290,8 +291,8 @@ def drop_path(input: ms.Tensor, drop_prob: float = 0.0, training: bool = False) 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor()  # binarize
+    random_tensor = keep_prob + ops.rand(*shape, dtype=input.dtype)
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -304,7 +305,7 @@ class FocalNetDropPath(nn.Module):
         super().__init__()
         self.drop_prob = drop_prob
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
@@ -334,9 +335,9 @@ class FocalNetModulation(nn.Module):
         for k in range(self.focal_level):
             kernel_size = self.focal_factor * k + self.focal_window
             self.focal_layers.append(
-                nn.SequentialCell(
+                nn.Sequential(
                     nn.Conv2d(
-                        dim, dim, kernel_size=kernel_size, stride=1, group=dim, padding=kernel_size // 2, pad_mode='pad', bias=False
+                        dim, dim, kernel_size=kernel_size, stride=1, groups=dim, padding=kernel_size // 2, bias=False
                     ),
                     nn.GELU(),
                 )
@@ -517,7 +518,7 @@ class FocalNetStage(nn.Module):
 
         self.pointing = False
 
-    def forward(self, hidden_states: ms.Tensor, input_dimensions: Tuple[int, int]) -> Tuple[ms.Tensor]:
+    def forward(self, hidden_states: mindspore.Tensor, input_dimensions: Tuple[int, int]) -> Tuple[mindspore.Tensor]:
         height, width = input_dimensions
         for layer_module in self.layers:
             hidden_states = layer_module(hidden_states, input_dimensions)
@@ -571,7 +572,7 @@ class FocalNetEncoder(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
+        hidden_states: mindspore.Tensor,
         input_dimensions: Tuple[int, int],
         output_hidden_states: Optional[bool] = False,
         output_hidden_states_before_downsampling: Optional[bool] = False,
@@ -684,8 +685,8 @@ class FocalNetModel(FocalNetPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        bool_masked_pos: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FocalNetModelOutput]:
@@ -740,7 +741,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
 
         self.num_stages = len(config.depths)
         num_features = int(config.embed_dim * 2 ** (self.num_stages - 1))
-        self.decoder = nn.SequentialCell(
+        self.decoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=num_features,
                 out_channels=config.encoder_stride**2 * config.num_channels,
@@ -755,8 +756,8 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        bool_masked_pos: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FocalNetMaskedImageModelingOutput]:
@@ -818,8 +819,8 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
                 .repeat_interleave(self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reforwardion_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
-            masked_im_loss = (reforwardion_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
+            reconstruction_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
+            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
             output = (reforwarded_pixel_values,) + outputs[2:]
@@ -827,7 +828,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
 
         return FocalNetMaskedImageModelingOutput(
             loss=masked_im_loss,
-            reforwardion=reforwarded_pixel_values,
+            reconstruction=reforwarded_pixel_values,
             hidden_states=outputs.hidden_states,
             reshaped_hidden_states=outputs.reshaped_hidden_states,
         )
@@ -853,8 +854,8 @@ class FocalNetForImageClassification(FocalNetPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FocalNetImageClassifierOutput]:
@@ -881,7 +882,7 @@ class FocalNetForImageClassification(FocalNetPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -922,7 +923,7 @@ class FocalNetBackbone(FocalNetPreTrainedModel, BackboneMixin):
 
     def forward(
         self,
-        pixel_values: ms.Tensor,
+        pixel_values: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> BackboneOutput:

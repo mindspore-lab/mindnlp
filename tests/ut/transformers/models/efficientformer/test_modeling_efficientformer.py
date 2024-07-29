@@ -50,7 +50,6 @@ if is_mindspore_available():
         EFFICIENTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
 
-
 if is_vision_available():
     from PIL import Image
 

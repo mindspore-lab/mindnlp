@@ -15,7 +15,7 @@
 r"""Weight Normalization from https://arxiv.org/abs/1602.07868."""
 from typing import Any, TypeVar
 from mindspore import Parameter
-from . import Module
+from .modules import Module
 from .. import ops
 
 __all__ = ['WeightNorm', 'weight_norm', 'remove_weight_norm']

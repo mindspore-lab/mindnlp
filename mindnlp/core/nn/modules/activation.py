@@ -183,6 +183,50 @@ class ELU(Module):
     def forward(self, input):
         return F.elu(input)
 
+class Softplus(Module):
+    r"""Applies the Softplus function element-wise.
+
+    .. math::
+        \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))
+
+    SoftPlus is a smooth approximation to the ReLU function and can be used
+    to constrain the output of a machine to always be positive.
+
+    For numerical stability the implementation reverts to the linear function
+    when :math:`input \times \beta > threshold`.
+
+    Args:
+        beta: the :math:`\beta` value for the Softplus formulation. Default: 1
+        threshold: values above this revert to a linear function. Default: 20
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    .. image:: ../scripts/activation_images/Softplus.png
+
+    Examples::
+
+        >>> m = nn.Softplus()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['beta', 'threshold']
+    beta: float
+    threshold: float
+
+    def __init__(self, beta: float = 1.0, threshold: float = 20.0) -> None:
+        super().__init__()
+        self.beta = beta
+        self.threshold = threshold
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.softplus(input, self.beta, self.threshold)
+
+    def extra_repr(self) -> str:
+        return f'beta={self.beta}, threshold={self.threshold}'
+
 class MultiheadAttention(Module):
     r"""Allows the model to jointly attend to information
     from different representation subspaces as described in the paper:

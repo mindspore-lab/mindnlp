@@ -9,6 +9,7 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 
 from mindnlp.configs import USE_PYBOOST
+from .modules.utils import _pair
 
 def gelu(input, approximate='none'):
     if USE_PYBOOST:
@@ -48,6 +49,16 @@ def elu(input, alpha=1.0):
 
 def glu(input, dim=-1):
     return ops.glu(input, dim)
+
+def softplus(input, beta=1, threshold=20):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.softplus(input, beta, threshold)
+    return ops.softplus(input, beta, threshold)
+
+def leaky_relu(input, alpha=0.2):
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.leaky_relu(input, alpha)
+    return ops.leaky_relu(input, alpha)
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
@@ -98,6 +109,41 @@ def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count
         output_array = ops.sum(windows, dim=-1) / valid_counts
 
     return output_array
+
+def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0):
+    """
+    Perform 2D average pooling on the input array.
+
+    Parameters:
+    - input_array (numpy array): The input array to be pooled, shape (N, C, H, W).
+    - pool_size (tuple): The size of the pooling window (pool_height, pool_width).
+    - stride (tuple): The stride of the pooling window (stride_height, stride_width).
+    - padding (int or tuple): The amount of zero-padding to add to all sides of the input array.
+    - ceil_mode (bool): If True, use ceil instead of floor to compute the output length.
+    - count_include_pad (bool): If True, include padding in the average calculation.
+
+    Returns:
+    - numpy array: The result of the average pooling operation.
+    """
+    if USE_PYBOOST:
+        if stride is None:
+            stride = kernel_size
+
+        if isinstance(padding, int):
+            pad_height, pad_width = padding, padding
+        else:
+            pad_height, pad_width = padding
+
+        # Add padding to the input array
+        if pad_height > 0 or pad_width > 0:
+            input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
+        
+        pad_mode = "SAME" if ceil_mode else "VALID"
+        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
+        output = _avgpool2d(input)
+        return output
+
+    return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def dropout(input, p=0.5, training=True):
     if USE_PYBOOST:
@@ -866,3 +912,6 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
     return ops.cosine_similarity(x1, x2, dim, eps)
+
+# def pairwise_distance():
+#     return ops.pairwise_distance

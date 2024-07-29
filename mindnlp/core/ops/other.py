@@ -517,7 +517,10 @@ def flatten(input, start_dim=1, end_dim=-1):
     return ops.reshape(input, new_shape)
 
 # flip
-
+def flip(input, dims):
+    if USE_PYBOOST:
+        return mindspore.mint.flip(input, dims)
+    return ops.flip(input, dims)
 
 # fliplr
 
@@ -560,7 +563,7 @@ def meshgrid(*tensors, indexing=None):
 
 # repeat_interleave
 def repeat_interleave(input, repeats, dim=None):
-    return ops.repeat_elements(input, repeats, dim)
+    return input.repeat(repeats, dim)
 
 # roll
 def roll(input, shifts, dims=None):
