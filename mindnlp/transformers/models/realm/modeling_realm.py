@@ -739,8 +739,8 @@ class RealmReaderProjection(nn.Module):
             ends = ops.cat(ends, 0)
 
             # [num_retrievals, num_spans]
-            start_masks = mindspore.ops.index_select(masks, axis=-1, index=starts)
-            end_masks = mindspore.ops.index_select(masks, axis=-1, index=ends)
+            start_masks = ops.index_select(masks, dim=-1, index=starts)
+            end_masks = ops.index_select(masks, dim=-1, index=ends)
             span_masks = start_masks * end_masks
 
             return starts, ends, span_masks
@@ -755,8 +755,8 @@ class RealmReaderProjection(nn.Module):
 
         candidate_starts, candidate_ends, candidate_mask = span_candidates(block_mask)
 
-        candidate_start_projections = mindspore.ops.index_select(start_projection, axis=1, index=candidate_starts)
-        candidate_end_projections = mindspore.ops.index_select(end_projection, axis=1, index=candidate_ends)
+        candidate_start_projections = ops.index_select(start_projection, dim=1, index=candidate_starts)
+        candidate_end_projections = ops.index_select(end_projection, dim=1, index=candidate_ends)
         candidate_hidden = candidate_start_projections + candidate_end_projections
 
         # [reader_beam_size, num_candidates, span_hidden_size]
@@ -1421,9 +1421,9 @@ class RealmReader(RealmPreTrainedModel):
         # []
         predicted_candidate =  ops.argmax(ops.max(reader_logits, dim=0)[0]).reshape(1)
         # [1]
-        predicted_start = mindspore.ops.index_select(candidate_starts, axis=0, index=predicted_candidate)
+        predicted_start = ops.index_select(candidate_starts, dim=0, index=predicted_candidate)
         # [1]
-        predicted_end = mindspore.ops.index_select(candidate_ends, axis=0, index=predicted_candidate)
+        predicted_end = ops.index_select(candidate_ends, dim=0, index=predicted_candidate)
 
         total_loss = None
         retriever_loss = None
@@ -1580,7 +1580,7 @@ class RealmForOpenQA(RealmPreTrainedModel):
         # [searcher_beam_size]
         retrieved_block_ids = retrieved_block_ids.squeeze()
         # [searcher_beam_size, projection_size]
-        retrieved_block_emb = mindspore.ops.index_select(self.block_emb.value(), axis=0, index=retrieved_block_ids)
+        retrieved_block_emb = ops.index_select(self.block_emb.value(), dim=0, index=retrieved_block_ids)
         # CPU computation ends.
 
         # Retrieve possible answers
