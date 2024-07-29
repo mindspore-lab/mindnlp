@@ -357,7 +357,7 @@ class FuyuProcessor(ProcessorMixin):
 
                     attention_mask = ops.cat(
                         [ops.zeros((tensor.shape[0], num_padding_tokens), dtype=mindspore.int64), ops.ones_like(tensor)],
-                        axis = 1,
+                        dim = 1,
                     )
                     batched_inputs["attention_mask"].append(attention_mask)
 

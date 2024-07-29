@@ -37,11 +37,11 @@ if is_mindspore_available() and is_vision_available():
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import FuyuForCausalLM
 
-# mindspore.set_context(device_target="CPU")
+mindspore.set_context(device_target="CPU")
 # mindspore.set_context(pynative_synchronize=True)
 
 class FuyuModelTester:
@@ -324,7 +324,7 @@ class FuyuModelIntegrationTest(unittest.TestCase):
 
     def test_greedy_generation(self):
         processor = self.default_processor
-        # model = self.default_model
+        model = self.default_model
 
         url = "https://hf-mirror.com/adept/fuyu-8b/resolve/main/bus.png"
         image = Image.open(io.BytesIO(requests.get(url).content))

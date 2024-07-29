@@ -592,8 +592,10 @@ class FuyuImageProcessor(BaseImageProcessor):
         # torch implementation is faster but does not handle non-squares
 
         batch_size, channels, _, _ = image.shape
-        unfolded_along_height = image.unfold(2, patch_height, patch_height)
-        patches = unfolded_along_height.unfold(3, patch_width, patch_width)
+        # unfolded_along_height = image.unfold(2, patch_height, patch_height)
+        unfolded_along_height = ops.stack(image.split(30, axis=2),dim=2).permute(0,1,2,4,3)
+        # patches = unfolded_along_height.unfold(3, patch_width, patch_width)
+        patches = ops.stack(unfolded_along_height.split(30, axis=3),dim=3).permute(0,1,2,3,5,4)
         # patches = patches.contiguous()
         patches = patches.view(batch_size, channels, -1, patch_height, patch_width)
         patches = patches.permute(0, 2, 3, 4, 1)
@@ -701,7 +703,7 @@ class FuyuImageProcessor(BaseImageProcessor):
             for subseq_image_input_ids in sample_image_input_ids:
                 # Indices of image patches.
                 patches_mask = subseq_image_input_ids == image_placeholder_id
-                num_patches = ops.count_nonzero(patches_mask.to(mindspore.int64))
+                num_patches = ops.count_nonzero(patches_mask.to(mindspore.int64),dim=())
                 indices = ops.arange(num_patches, dtype=mindspore.int64).type_as(
                     subseq_image_input_ids
                 )
@@ -710,7 +712,7 @@ class FuyuImageProcessor(BaseImageProcessor):
                 indices_in_stream_per_batch = ops.full_like(subseq_image_input_ids, -1)
                 indices_in_stream_per_subsequence = ops.full_like(subseq_image_input_ids, -1)
                 # patches_inds = ops.nonzero(patches_mask, as_tuple=True)[0]
-                patches_inds = ops.nonzero(patches_mask.to(mindspore.int64)).reshape(-1)
+                patches_inds = mindspore.ops.nonzero(patches_mask.to(mindspore.int64)).reshape(-1)
 
                 indices_in_stream_per_batch[patches_inds] = indices + index_offset
                 indices_in_stream_per_subsequence[patches_inds] = indices

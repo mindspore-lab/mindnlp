@@ -135,7 +135,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
             # positions in word_embeddings that we want to replace with content from continuous_embeddings.
 
             # dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0, as_tuple=True)[0]
-            dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0).reshape(-1)
+            dst_indices = mindspore.ops.nonzero(image_patch_input_indices[batch_idx] >= 0).reshape(-1)
 
             # Next look up those indices in image_patch_input_indices to find the indices in continuous_embeddings that we
             # want to use to replace the values in word_embeddings.
