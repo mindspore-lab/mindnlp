@@ -6,7 +6,7 @@ from mindspore import ops, Tensor
 
 from mindnlp.configs import USE_PYBOOST
 from .module import Module
-from .utils import _single
+from ._utils import _single
 from ..common_types import (_size_any_t, _size_1_t, _size_2_t, _size_3_t,
                             _ratio_3_t, _ratio_2_t, _size_any_opt_t, _size_2_opt_t, _size_3_opt_t)
 from .. import functional as F

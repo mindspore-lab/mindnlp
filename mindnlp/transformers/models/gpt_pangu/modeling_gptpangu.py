@@ -18,9 +18,10 @@ from typing import Tuple
 import math
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -150,7 +151,7 @@ class GPTPanguAttention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.astype(value.dtype)
@@ -227,8 +228,8 @@ class GPTPanguAttention(nn.Module):
 
         if layer_past is not None:
             past_key, past_value = layer_past
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)

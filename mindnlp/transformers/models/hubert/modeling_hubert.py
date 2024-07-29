@@ -19,10 +19,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform, HeNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -218,7 +219,6 @@ class HubertNoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="valid",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -284,7 +284,6 @@ class HubertLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="valid",
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -362,7 +361,6 @@ class HubertGroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="valid",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
         # NOTE: the naming is confusing, but let it be...
@@ -435,12 +433,12 @@ class HubertPositionalConvEmbedding(nn.Module):
             config.hidden_size,
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
-            pad_mode='pad',
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
-            bias=True,      # TODO: confirm this
+            groups=config.num_conv_pos_embedding_groups,
         )
-        self.conv = weight_norm(self.conv, name='weight', dim=2)
+
+        weight_norm = nn.utils.weight_norm
+        self.conv = weight_norm(self.conv, name="weight", dim=2)
         self.padding = HubertSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -472,7 +470,6 @@ class HubertPositionalConvEmbedding(nn.Module):
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2SamePadLayer with Wav2Vec2->Hubert
 class HubertSamePadLayer(nn.Module):
-
     """
     This class represents a layer in the Hubert model that performs same padding on the input hidden states.
 
@@ -793,8 +790,8 @@ class HubertAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -830,7 +827,7 @@ class HubertAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -1310,14 +1307,14 @@ class HubertEncoder(nn.Module):
 
         if attention_mask is not None:
             # make sure padded tokens output 0
-            expand_attention_mask = attention_mask.unsqueeze(-1).repeat(1, 1, hidden_states.shape[2])
+            expand_attention_mask = attention_mask.unsqueeze(-1).tile((1, 1, hidden_states.shape[2]))
             hidden_states[~expand_attention_mask] = 0
 
             # extend attention_mask
             attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-            attention_mask = attention_mask * finfo(hidden_states.dtype, 'min')
-            attention_mask = attention_mask.expand(
-                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
+            attention_mask = attention_mask.broadcast_to(
+                (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
             )
 
         position_embeddings = self.pos_conv_embed(hidden_states)
@@ -1450,14 +1447,14 @@ class HubertEncoderStableLayerNorm(nn.Module):
 
         if attention_mask is not None:
             # make sure padded tokens are not attended to
-            expand_attention_mask = attention_mask.unsqueeze(-1).repeat(1, 1, hidden_states.shape[2])
+            expand_attention_mask = attention_mask.unsqueeze(-1).tile((1, 1, hidden_states.shape[2]))
             hidden_states[~expand_attention_mask] = 0
 
             # extend attention_mask
             attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-            attention_mask = attention_mask * finfo(hidden_states.dtype, 'min')
-            attention_mask = attention_mask.expand(
-                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
+            attention_mask = attention_mask.broadcast_to(
+                (attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1])
             )
 
         position_embeddings = self.pos_conv_embed(hidden_states)
@@ -1566,7 +1563,7 @@ class HubertPreTrainedModel(PreTrainedModel):
         attention_mask = ops.zeros((batch_size, feature_vector_length), dtype=attention_mask.dtype)
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
         return attention_mask
 
 
@@ -1679,7 +1676,7 @@ class HubertModel(HubertPreTrainedModel):
                 min_masks=self.config.mask_feature_min_masks,
             )
             mask_feature_indices = Tensor(mask_feature_indices, dtype=mindspore.bool_)
-            mask_feature_indices = mask_feature_indices[:, None].expand(-1, sequence_length, -1)
+            mask_feature_indices = mask_feature_indices[:, None].broadcast_to((-1, sequence_length, -1))
             hidden_states[mask_feature_indices] = 0
 
         return hidden_states
@@ -1931,8 +1928,8 @@ class HubertForCTC(HubertPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
-            loss, log_alpha = ops.ctc_loss(
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
+            loss = F.ctc_loss(
                 log_probs,   # [T, N/B, C/NC]
                 labels,      # [N/B, S], replace `flattened_targets`
                 input_lengths,
@@ -2051,8 +2048,8 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
