@@ -72,7 +72,7 @@ class PersimmonRotaryEmbedding(nn.Module):
 
         freqs = ops.einsum("i,j->ij",t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -101,7 +101,7 @@ class PersimmonLinearScalingRotaryEmbedding(PersimmonRotaryEmbedding):
 
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -130,7 +130,7 @@ class PersimmonDynamicNTKScalingRotaryEmbedding(PersimmonRotaryEmbedding):
 
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -140,7 +140,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
@@ -324,8 +324,8 @@ class PersimmonAttention(nn.Module):
         query_rot, key_rot = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
 
         # [batch_size, seq_length, num_heads, head_dim]
-        query_states = ops.cat((query_rot, query_pass), axis=-1)
-        key_states = ops.cat((key_rot, key_pass), axis=-1)
+        query_states = ops.cat((query_rot, query_pass), dim=-1)
+        key_states = ops.cat((key_rot, key_pass), dim=-1)
 
         if past_key_value is not None:
             # Specific to RoPE models with partial rotation
@@ -350,7 +350,7 @@ class PersimmonAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, dtype=ms.float32, axis=-1).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, dtype=ms.float32, dim=-1).to(query_states.dtype)
         attn_weights = self.attention_dropout(attn_weights)
 
         attn_output = ops.matmul(attn_weights, value_states)
@@ -652,7 +652,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
 
         dtype = input_tensor.dtype
         # min_dtype = torch.finfo(dtype).min
-        min_dtype = finfo(dtype=dtype,attr="min")
+        min_dtype = ops.finfo(dtype).min
         sequence_length = input_tensor.shape[1]
         if using_static_cache:
             target_length = past_key_values.get_max_length()
@@ -676,7 +676,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
                 # causal_mask = torch.triu(causal_mask, diagonal=1)
                 causal_mask = ops.triu(causal_mask, diagonal=1)
             causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
+            causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
             if attention_mask is not None:
                 causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]

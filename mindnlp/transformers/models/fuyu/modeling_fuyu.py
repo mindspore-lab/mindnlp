@@ -97,12 +97,12 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
         # TODO: config.vocab_size is deprecated and will be removed in v4.43.
         # `resize_token_embeddings` should work from `modeling_utils.py``
         model_embeds = self.language_model.resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
-        # self.config.text_config.vocab_size = model_embeds.num_embeddings
-        # self.config.vocab_size = model_embeds.num_embeddings
-        # self.vocab_size = model_embeds.num_embeddings
-        self.config.text_config.vocab_size = model_embeds.vocab_size
-        self.config.vocab_size = model_embeds.vocab_size
-        self.vocab_size = model_embeds.vocab_size
+        self.config.text_config.vocab_size = model_embeds.num_embeddings
+        self.config.vocab_size = model_embeds.num_embeddings
+        self.vocab_size = model_embeds.num_embeddings
+        # self.config.text_config.vocab_size = model_embeds.vocab_size
+        # self.config.vocab_size = model_embeds.vocab_size
+        # self.vocab_size = model_embeds.vocab_size
         return model_embeds
 
     def gather_continuous_embeddings(
@@ -149,7 +149,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
             output_embeddings[batch_idx, dst_indices] = continuous_embeddings[batch_idx][src_indices]
         return output_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         image_patches: mindspore.Tensor = None,  # [batch_size, num_total_patches, patch_size_ x patch_size x num_channels ]
