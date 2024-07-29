@@ -22,12 +22,12 @@ from typing import List, Optional, Tuple, Union
 from functools import partial
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
-from mindspore import Tensor
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindspore.common.initializer import initializer, Normal
-from .gpt_bigcode_config import GPTBigCodeConfig
+from .configuration_gpt_bigcode import GPTBigCodeConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -48,7 +48,7 @@ def upcast_masked_softmax(
     input_dtype = input_x.dtype
     input_x = input_x.to(softmax_dtype) * scale
     input_x = ops.where(mask, input_x, mask_value)
-    input_x = ops.softmax(input_x, axis=-1).to(input_dtype)
+    input_x = ops.softmax(input_x, dim=-1).to(input_dtype)
     return input_x
 
 
@@ -56,14 +56,14 @@ def upcast_softmax(input_x: mindspore.Tensor, scale: float, softmax_dtype: minds
     """Fuse kernel for upcast softmax."""
     input_dtype = input_x.dtype
     input_x = input_x.to(softmax_dtype) * scale
-    input_x = ops.softmax(input_x, axis=-1).to(input_dtype)
+    input_x = ops.softmax(input_x, dim=-1).to(input_dtype)
     return input_x
 
 
 def masked_softmax(input_x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor):
     """Fuse kernel for masked softmax."""
     input_x = ops.where(mask, input_x, mask_value)
-    input_x = ops.softmax(input_x, axis=-1)
+    input_x = ops.softmax(input_x, dim=-1)
     return input_x
 
 
@@ -147,7 +147,7 @@ class GPTBigCodeAttention(nn.Module):
         """
         # torch.where expects a tensor. We use a cache to avoid recreating it every time.
         if self.mask_value is None or self.mask_value.dtype != dtype:
-            tmp_value = np.finfo(mindspore.dtype_to_nptype(dtype)).min
+            tmp_value = ops.finfo(dtype).min
             self.mask_value = ops.full([], Tensor(
                 tmp_value, dtype=dtype), dtype=dtype)
         return self.mask_value
@@ -242,7 +242,7 @@ class GPTBigCodeAttention(nn.Module):
                 attn_weights = ops.where(
                     Tensor(attention_mask, dtype=mindspore.bool_), attn_weights, mask_value)
 
-            attn_weights = ops.softmax(attn_weights, axis=-1)
+            attn_weights = ops.softmax(attn_weights, dim=-1)
 
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -324,7 +324,7 @@ class GPTBigCodeAttention(nn.Module):
             )
 
         if layer_past is not None:
-            key_value = ops.cat((layer_past, key_value), axis=-2)
+            key_value = ops.cat((layer_past, key_value), dim=-2)
         present = key_value if use_cache else None
 
         key, value = key_value.split((self.head_dim, self.head_dim), axis=-1)
@@ -802,7 +802,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         if attention_mask is not None and len(attention_mask.shape) == 2 and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_length > 0:
                 position_ids = position_ids[:,
@@ -1021,7 +1021,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1]:]

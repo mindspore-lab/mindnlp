@@ -6,7 +6,7 @@ from mindspore import ops, Tensor
 
 from mindnlp.configs import USE_PYBOOST
 from .module import Module
-from .utils import _single
+from ._utils import _single
 from ..common_types import (_size_any_t, _size_1_t, _size_2_t, _size_3_t,
                             _ratio_3_t, _ratio_2_t, _size_any_opt_t, _size_2_opt_t, _size_3_opt_t)
 from .. import functional as F
@@ -487,7 +487,7 @@ class AvgPool2d(_AvgPoolNd):
         self.padding = padding
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        self.divisor_override = divisor_override
+        self.divisor_override = divisor_override if divisor_override is not None else 0
 
     def forward(self, input: Tensor) -> Tensor:
         return F.avg_pool2d(input, self.kernel_size, self.stride,

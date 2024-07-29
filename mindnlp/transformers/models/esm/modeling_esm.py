@@ -20,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -64,7 +65,7 @@ def rotate_half(x):
         None
     """
     x1, x2 = x.chunk(2, axis=-1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 def apply_rotary_pos_emb(x, cos, sin):
@@ -166,7 +167,7 @@ class RotaryEmbedding(nn.Module):
             self._seq_len_cached = seq_len
             t = ops.arange(x.shape[seq_dimension]).astype(self.inv_freq.dtype)
             freqs = ops.outer(t, self.inv_freq)
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
 
             self._cos_cached = emb.cos()[None, None, :, :]
             self._sin_cached = emb.sin()[None, None, :, :]
@@ -552,8 +553,8 @@ class EsmSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -603,7 +604,7 @@ class EsmSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1627,7 +1628,7 @@ class EsmModel(EsmPreTrainedModel):
             None.
         """
         attns = self(tokens, attention_mask=attention_mask, return_dict=True, output_attentions=True).attentions
-        attns = ops.stack(attns, axis=1)  # Matches the original model layout
+        attns = ops.stack(attns, dim=1)  # Matches the original model layout
         # In the original model, attentions for padding tokens are completely zeroed out.
         # This makes no difference most of the time because the other tokens won't attend to them,
         # but it does for the contact prediction task, which takes attentions as input,
@@ -2123,7 +2124,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 __all__ = [
