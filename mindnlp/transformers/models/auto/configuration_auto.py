@@ -90,6 +90,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("focalnet", "FocalNetConfig"),
         ("funnel", "FunnelConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
+        ("fsmt","FSMTConfig"),
         ("gemma", "GemmaConfig"),
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
