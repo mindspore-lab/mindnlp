@@ -21,9 +21,10 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -43,6 +44,7 @@ OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     # See all OpenAI GPT models at https://hf-mirror.com/models?filter=openai-gpt
 ]
 
+ACT_FNS = {"relu": nn.ReLU(), "silu": silu, "gelu": gelu_new, "swish": silu}
 
 class Attention(nn.Module):
 
@@ -194,7 +196,7 @@ class Attention(nn.Module):
             # Apply the attention mask
             w = w + attention_mask
 
-        w = ops.softmax(w, axis=-1)
+        w = ops.softmax(w, dim=-1)
         w = self.attn_dropout(w)
 
         # Mask heads if we want to
@@ -1271,10 +1273,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        if isinstance(sequence_lengths, int):
-            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
-        else:
-            pooled_logits = ops.gather(logits, sequence_lengths, 1, 1)
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:

@@ -9,7 +9,7 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 
 from mindnlp.configs import USE_PYBOOST
-from .modules.utils import _pair
+from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
     if USE_PYBOOST:

@@ -267,7 +267,8 @@ def ones_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.ones_(w)
     """
-    return _no_grad_fill_(tensor, 1.0)
+    tensor.set_data(initializer('ones', tensor.shape, tensor.dtype))
+    return tensor
 
 
 def zeros_(tensor: Tensor) -> Tensor:
@@ -280,7 +281,8 @@ def zeros_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.zeros_(w)
     """
-    return _no_grad_zero_(tensor)
+    tensor.set_data(initializer('zeros', tensor.shape, tensor.dtype))
+    return tensor
 
 
 def eye_(tensor):

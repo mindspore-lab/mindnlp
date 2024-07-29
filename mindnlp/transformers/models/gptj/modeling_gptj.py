@@ -18,10 +18,10 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
-from mindspore import Tensor
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
@@ -51,24 +51,24 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return indices, cu_seqlens, max_seqlen_in_batch
 
 
 def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.int64) / dim))
     sinusoid_inp = ops.einsum("i , j -> i j", ops.arange(num_pos, dtype=mindspore.int64).float(), inv_freq).float()
-    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
 
 
 def get_embed_positions(embed_positions, position_ids):
-    return embed_positions.repeat(position_ids.shape[0], 1, 1)
+    return ops.tile(embed_positions, (position_ids.shape[0], 1, 1))
 
 
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
     x1 = x[:, :, :, ::2]
     x2 = x[:, :, :, 1::2]
-    x = ops.stack((-x2, x1), axis=-1)
+    x = ops.stack((-x2, x1), dim=-1)
 
     return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
 
@@ -85,8 +85,8 @@ class GPTJAttention(nn.Module):
         super().__init__()
         self.config = config
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
-                1, 1, max_positions, max_positions)
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).view(
+                1, 1, max_positions, max_positions).to(mindspore.bool_)
         self.masked_bias = mindspore.Tensor(-1e9)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
@@ -170,7 +170,7 @@ class GPTJAttention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
         attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -184,7 +184,7 @@ class GPTJAttention(nn.Module):
 
     def _get_embed_positions(self, position_ids):
         embed_positions = self.embed_positions
-        return embed_positions.repeat(position_ids.shape[0], 1, 1)
+        return ops.tile(embed_positions, (position_ids.shape[0], 1, 1))
 
     def forward(
         self,
@@ -214,11 +214,10 @@ class GPTJAttention(nn.Module):
         # else:
         embed_positions = self._get_embed_positions(position_ids)
 
-        repeated_position_ids = position_ids.unsqueeze(-1).repeat(1, 1, embed_positions.shape[-1])
-        # sincos = ops.gather(embed_positions, repeated_position_ids, axis=1)
-        sincos = ops.gather_elements(embed_positions, 1, repeated_position_ids)
+        repeated_position_ids = ops.tile(position_ids.unsqueeze(-1), (1, 1, embed_positions.shape[-1]))
+        sincos = ops.gather(embed_positions, 1, repeated_position_ids)
 
-        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, axis=-1)
+        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, dim=-1)
 
         if self.rotary_dim is not None:
             k_rot = key[:, :, :, : self.rotary_dim]
@@ -230,8 +229,8 @@ class GPTJAttention(nn.Module):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -242,8 +241,8 @@ class GPTJAttention(nn.Module):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             # Note that this cast is quite ugly, but is not implemented before ROPE as the original codebase keeps the key in float32 all along the computation.
@@ -694,7 +693,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             # position_ids.masked_fill_(attention_mask == 0, 1)
             position_ids=ops.where(attention_mask == 0, 1, position_ids)
             if past_key_values:

@@ -2084,38 +2084,39 @@ class SQuADHead(nn.Module):
 
 
 class SequenceSummary(nn.Module):
+    r"""
+    Compute a single vector summary of a sequence hidden states.
+
+    Args:
+        config ([`PretrainedConfig`]):
+            The config used by the model. Relevant arguments in the config class of the model are (refer to the actual
+            config class of your model for the default values it uses):
+
+            - **summary_type** (`str`) -- The method to use to make this summary. Accepted values are:
+
+                - `"last"` -- Take the last token hidden state (like XLNet)
+                - `"first"` -- Take the first token hidden state (like Bert)
+                - `"mean"` -- Take the mean of all tokens hidden states
+                - `"cls_index"` -- Supply a Tensor of classification token position (GPT/GPT-2)
+                - `"attn"` -- Not implemented now, use multi-head attention
+
+            - **summary_use_proj** (`bool`) -- Add a projection after the vector extraction.
+            - **summary_proj_to_labels** (`bool`) -- If `True`, the projection outputs to `config.num_labels` classes
+              (otherwise to `config.hidden_size`).
+            - **summary_activation** (`Optional[str]`) -- Set to `"tanh"` to add a tanh activation to the output,
+              another string or `None` will add no activation.
+            - **summary_first_dropout** (`float`) -- Optional dropout probability before the projection and activation.
+            - **summary_last_dropout** (`float`)-- Optional dropout probability after the projection and activation.
     """
-    GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
-    """
-    def __init__(self, config):
-        """
-        Initialize the SequenceSummary class.
 
-        Args:
-            self: An instance of the SequenceSummary class.
-            config: The configuration object containing various parameters for sequence summarization.
-
-        Returns:
-            None.
-
-        Raises:
-            NotImplementedError: If the 'summary_type' attribute in the config is set to 'attn'.
-
-        This method initializes the SequenceSummary instance with the provided configuration.
-        It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified.
-        If 'summary_type' is 'attn', it raises a NotImplementedError.
-        The method then initializes the 'summary' attribute as an nn.Identity() object and checks
-        if 'summary_use_proj' is specified in the config and is set to True.
-        If so, it creates a Dense layer for summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config.
-        The activation function for the summarization is determined based on the 'summary_activation' attribute in the config,
-        defaulting to nn.Identity() if not specified.
-        The first and last dropout layers are initialized based on the 'summary_first_dropout' and 'summary_last_dropout' attributes
-        in the config, respectively, using nn.Identity() if not specified.
-        """
+    def __init__(self, config: PretrainedConfig):
         super().__init__()
 
         self.summary_type = getattr(config, "summary_type", "last")
         if self.summary_type == "attn":
+            # We should use a standard multi-head attention module with absolute positional embedding for that.
+            # Cf. https://github.com/zihangdai/xlnet/blob/master/modeling.py#L253-L276
+            # We can probably just use the multi-head attention module of PyTorch >=1.1.0
             raise NotImplementedError
 
         self.summary = nn.Identity()
@@ -2127,83 +2128,59 @@ class SequenceSummary(nn.Module):
             self.summary = nn.Linear(config.hidden_size, num_classes)
 
         activation_string = getattr(config, "summary_activation", None)
-        self.activation = get_activation(activation_string) if activation_string else nn.Identity()
+        self.activation: Callable = get_activation(activation_string) if activation_string else nn.Identity()
 
         self.first_dropout = nn.Identity()
         if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
-            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
+            self.first_dropout = nn.Dropout(config.summary_first_dropout)
 
         self.last_dropout = nn.Identity()
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
-            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
+            self.last_dropout = nn.Dropout(config.summary_last_dropout)
 
-    def forward(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
+    def forward(
+        self, hidden_states: mindspore.Tensor, cls_index: Optional[mindspore.Tensor] = None
+    ) -> mindspore.Tensor:
         """
-        Constructs a summary of hidden states based on the specified summary type.
+        Compute a single vector summary of a sequence hidden states.
 
         Args:
-            self (SequenceSummary): The instance of the SequenceSummary class.
-            hidden_states (Tensor): The tensor of hidden states to be summarized.
-            cls_index (Optional[Tensor]): The tensor containing the indices of the CLS tokens.
-                Defaults to None.
+            hidden_states (`mindspore.Tensor` of shape `[batch_size, seq_len, hidden_size]`):
+                The hidden states of the last layer.
+            cls_index (`mindspore.Tensor` of shape `[batch_size]` or `[batch_size, ...]` where ... are optional leading dimensions of `hidden_states`, *optional*):
+                Used if `summary_type == "cls_index"` and takes the last token of the sequence as classification token.
 
         Returns:
-            Tensor: The summarized tensor based on the specified summary type.
-
-        Raises:
-            ValueError: If the summary type is not one of the available options.
-            TypeError: If the input arguments are of incorrect types.
-
-        The method performs the following steps to forward the summary:
-
-        1. If the summary type is 'last', it selects the last hidden state from each input sequence.
-        2. If the summary type is 'first', it selects the first hidden state from each input sequence.
-        3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
-        4. If the summary type is 'cls_index', it uses the CLS token indices to select the corresponding hidden states.
-           If cls_index is not provided, the last token in each sequence is used as the CLS token index.
-        5. If the summary type is not one of the available options, it returns the original hidden states.
-        6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
-        7. Finally, the output tensor is returned.
-
-        Note:
-            - The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.
-            - The cls_index parameter is only used when the summary type is 'cls_index'.
-            - The hidden_states tensor should have shape (batch_size, sequence_length, hidden_size).
-            - The cls_index tensor should have shape (batch_size, 1).
-
-        Example:
-            ```python
-            >>> summary = SequenceSummary()
-            >>> hidden_states = torch.randn(2, 5, 10)
-            >>> cls_index = torch.tensor([[0], [1]])
-            >>> output = summary.forward(hidden_states, cls_index)
-            ```
+            `mindspore.Tensor`: The summary of the sequence hidden states.
         """
         if self.summary_type == "last":
-            output = hidden_states[:, -1, :]
+            output = hidden_states[:, -1]
         elif self.summary_type == "first":
-            output = hidden_states[:, 0, :]
+            output = hidden_states[:, 0]
         elif self.summary_type == "mean":
             output = hidden_states.mean(dim=1)
         elif self.summary_type == "cls_index":
             if cls_index is None:
-                cls_index = ops.fill(
-                    mindspore.int64,
-                    hidden_states[..., :1, :].shape,
+                cls_index = ops.full_like(
+                    hidden_states[..., :1, :],
                     hidden_states.shape[-2] - 1,
+                    dtype=mindspore.int64,
                 )
             else:
-                cls_index = cls_index.expand_dims(-1).expand_dims(-1)
-                cls_index = cls_index.broadcast_to((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
-            output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
-        else:
-            output = hidden_states
+                cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
+                cls_index = cls_index.broadcast_to((-1,) * (cls_index.dim() - 1) + (hidden_states.shape[-1],))
+            # shape of cls_index: (bsz, XX, 1, hidden_size) where XX are optional leading dim of hidden_states
+            output = ops.gather(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
+        elif self.summary_type == "attn":
+            raise NotImplementedError
 
         output = self.first_dropout(output)
         output = self.summary(output)
         output = self.activation(output)
         output = self.last_dropout(output)
+
         return output
+
 
 def replace_references(old_obj, new_obj, ignore_vars=None):
     """use replace_references instead of Tensor.set_data due to mindspore errors."""

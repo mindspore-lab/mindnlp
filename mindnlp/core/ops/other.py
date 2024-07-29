@@ -655,3 +655,7 @@ def initialize(self, init_method):
         This function sets the data of the object using the specified `init_method` and the object's shape and data type.
     """
     self.set_data(initializer(init_method, self.shape, self.dtype))
+
+_stop_gradient = ops.StopGradient()
+def stop_gradient(input):
+    return _stop_gradient(input)
