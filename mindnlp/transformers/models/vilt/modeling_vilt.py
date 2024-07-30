@@ -20,10 +20,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -102,7 +103,7 @@ class ViltEmbeddings(nn.Module):
 
         x = self.patch_embeddings(pixel_values)
         x_mask = pixel_mask[:, None, :, :].float()
-        x_mask = ops.interpolate(x_mask, size=(x.shape[2], x.shape[3])).long()
+        x_mask = F.interpolate(x_mask, size=(x.shape[2], x.shape[3])).long()
         x_h = x_mask[:, 0].sum(axis=1)[:, 0]
         x_w = x_mask[:, 0].sum(axis=2)[:, 0]
 
@@ -112,7 +113,7 @@ class ViltEmbeddings(nn.Module):
         pos_embed = ops.cat(
             [
                 ops.pad(
-                    ops.interpolate(
+                    F.interpolate(
                         spatial_pos,
                         size=(int(h.asnumpy()), int(w.asnumpy())),
                         mode="bilinear",
@@ -122,14 +123,14 @@ class ViltEmbeddings(nn.Module):
                 )
                 for h, w in zip(x_h, x_w)
             ],
-            axis=0,
+            dim=0,
         )
 
         pos_embed = pos_embed.flatten(start_dim=2).swapaxes(1, 2)
         x = x.flatten(start_dim=2).swapaxes(1, 2)
         # Set `device` here, otherwise `patch_index` will always be on `CPU` and will fail near the end for torch>=1.13
         patch_index = ops.stack(
-            meshgrid([ops.arange(x_mask.shape[-2]), ops.arange(x_mask.shape[-1])], indexing="ij"), axis=-1
+            meshgrid([ops.arange(x_mask.shape[-2]), ops.arange(x_mask.shape[-1])], indexing="ij"), dim=-1
         )
         patch_index = patch_index[None, None, :, :, :]
         patch_index = patch_index.expand(x_mask.shape[0], x_mask.shape[1], -1, -1, -1)
@@ -164,9 +165,9 @@ class ViltEmbeddings(nn.Module):
                 select.append(valid_row_idx[i][valid_choice])
             else:
                 pad_choice = ops.multinomial(ops.ones(nv).float(), p, replacement=True)
-                select.append(ops.cat([valid_row_idx[i], non_valid_row_idx[i][pad_choice]], axis=0))
+                select.append(ops.cat([valid_row_idx[i], non_valid_row_idx[i][pad_choice]], dim=0))
 
-        select = ops.cat(select, axis=0)
+        select = ops.cat(select, dim=0)
         x = x[select[:, 0], select[:, 1]].view(batch_size, -1, num_channels)
         x_mask = x_mask[select[:, 0], select[:, 1]].view(batch_size, -1)
         # `patch_index` should be on the same device as `select` (for torch>=1.13), which is ensured at definition time.
@@ -174,14 +175,14 @@ class ViltEmbeddings(nn.Module):
         pos_embed = pos_embed[select[:, 0], select[:, 1]].view(batch_size, -1, num_channels)
 
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        x = ops.cat((cls_tokens, x), axis=1)
+        x = ops.cat((cls_tokens, x), dim=1)
         pos_embed = ops.cat(
-            (self.position_embeddings[:, 0, :][:, None, :].expand(batch_size, -1, -1), pos_embed), axis=1
+            (self.position_embeddings[:, 0, :][:, None, :].expand(batch_size, -1, -1), pos_embed), dim=1
         )
         x = x + pos_embed
         x = self.dropout(x)
 
-        x_mask = ops.cat([ops.ones((x_mask.shape[0], 1), dtype=x_mask.dtype), x_mask], axis=1)
+        x_mask = ops.cat([ops.ones((x_mask.shape[0], 1), dtype=x_mask.dtype), x_mask], dim=1)
 
         return x, x_mask, (patch_index, (height, width))
 
@@ -221,9 +222,9 @@ class ViltEmbeddings(nn.Module):
         )
 
         # PART 4: concatenate
-        embeddings = ops.cat([text_embeds, image_embeds], axis=1)
-        image_masks = ops.cast(image_masks, attention_mask.dtype)
-        masks = ops.cat([attention_mask, image_masks], axis=1)
+        embeddings = ops.cat([text_embeds, image_embeds], dim=1)
+        image_masks = image_masks.to(attention_mask.dtype)
+        masks = ops.cat([attention_mask, image_masks], dim=1)
 
         return embeddings, masks
 
@@ -299,7 +300,7 @@ class ViltPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -351,7 +352,7 @@ class ViltSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1337,7 +1338,7 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
             if output_attentions:
                 attentions.append(outputs.attentions)
 
-        pooled_output = ops.cat(pooler_outputs, axis=-1)
+        pooled_output = ops.cat(pooler_outputs, dim=-1)
         logits = self.classifier(pooled_output)
 
         loss = None

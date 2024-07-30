@@ -18,7 +18,7 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops

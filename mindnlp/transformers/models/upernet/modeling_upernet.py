@@ -17,9 +17,9 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore.nn import CrossEntropyLoss
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss
 from ...modeling_outputs import SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
 from .configuration_upernet import UPerNetConfig
@@ -109,11 +109,8 @@ class UPerNetConvModule(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel_size,
             padding=padding,
-            pad_mode='pad',
             bias=bias,
             dilation=dilation,
-            weight_init='ones',
-            bias_init='zeros'
         )
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.activation = nn.ReLU()
@@ -195,8 +192,7 @@ class UPerNetHead(nn.Module):
         self.in_channels = in_channels
         self.channels = config.hidden_size
         self.align_corners = False
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
-                                    bias_init='zeros')
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True)
 
         # PSP Module
         self.psp_modules = UPerNetPyramidPoolingModule(
@@ -242,7 +238,7 @@ class UPerNetHead(nn.Module):
         x = inputs[-1]
         psp_outs = [x]
         psp_outs.extend(self.psp_modules(x))
-        psp_outs = ops.cat(psp_outs, axis=1)
+        psp_outs = ops.cat(psp_outs, dim=1)
         output = self.bottleneck(psp_outs)
 
         return output
@@ -270,7 +266,7 @@ class UPerNetHead(nn.Module):
             fpn_outs[i] = ops.interpolate(
                 fpn_outs[i], size=fpn_outs[0].shape[2:], mode="bilinear", align_corners=self.align_corners
             )
-        fpn_outs = ops.cat(fpn_outs, axis=1)
+        fpn_outs = ops.cat(fpn_outs, dim=1)
         output = self.fpn_bottleneck(fpn_outs)
         output = self.classifier(output)
 
@@ -320,14 +316,13 @@ class UPerNetFCNHead(nn.Module):
         if self.num_convs == 0:
             self.convs = nn.Identity()
         else:
-            self.convs = nn.SequentialCell(*convs)
+            self.convs = nn.Sequential(*convs)
         if self.concat_input:
             self.conv_cat = UPerNetConvModule(
                 self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
             )
 
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True, weight_init='ones',
-                                    bias_init='zeros')
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True)
 
     def init_weights(self):
         self.apply(self._init_weights)
@@ -345,7 +340,7 @@ class UPerNetFCNHead(nn.Module):
         hidden_states = encoder_hidden_states[self.in_index]
         output = self.convs(hidden_states)
         if self.concat_input:
-            output = self.conv_cat(ops.cat([hidden_states, output], axis=1))
+            output = self.conv_cat(ops.cat([hidden_states, output], dim=1))
         output = self.classifier(output)
         return output
 

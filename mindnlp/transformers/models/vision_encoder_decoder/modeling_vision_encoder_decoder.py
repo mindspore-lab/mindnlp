@@ -17,7 +17,8 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig

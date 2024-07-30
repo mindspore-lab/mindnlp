@@ -23,7 +23,7 @@ from mindspore.experimental.optim import Optimizer
 from mindspore.experimental.optim.lr_scheduler import LRScheduler, LambdaLR, ReduceLROnPlateau
 
 from ..engine.utils import SchedulerType
-from ..core.utils import logging
+from ..utils import logging
 
 
 logger = logging.get_logger(__name__)

@@ -12,25 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=arguments-differ
-# pylint: disable=too-many-arguments
-# pylint: disable=unused-argument
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=consider-using-dict-items
-# pylint: disable=too-many-locals
-# pylint: disable=simplifiable-if-expression
 "Adalora Layer"
 import warnings
 from typing import Any, List, Optional
 
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor, Parameter, get_grad
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.peft.utils import transpose
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict, ModuleDict
+from mindnlp.peft.utils import transpose
 from mindnlp.transformers.ms_utils import Conv1D
 
 from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
@@ -66,14 +57,14 @@ class AdaLoraLayer(BaseTunerLayer):
         self.r = {}
         self.lora_alpha = {}
         self.scaling = {}
-        self.lora_dropout = CellDict()
+        self.lora_dropout = ModuleDict()
         self.lora_E = ParameterDict({})
         self.lora_A = ParameterDict({})
         self.lora_B = ParameterDict({})
         self.ranknum = ParameterDict({})
         # For Embedding layer
-        self.lora_embedding_A = CellDict()
-        self.lora_embedding_B = CellDict()
+        self.lora_embedding_A = ModuleDict()
+        self.lora_embedding_B = ModuleDict()
         if isinstance(base_layer, nn.Linear):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
@@ -480,7 +471,7 @@ applied.
             # Budget decreasing with a cubic scheduler
             mul_coeff = 1 - (step - tinit) / (total_step - tfinal - tinit)
             budget = int((self.init_bgt - self.target_bgt) * (mul_coeff**3) + self.target_bgt)
-            mask_ind = True if step % self.peft_config.deltaT == 0 else False
+            mask_ind = step % self.peft_config.deltaT == 0
         return budget, mask_ind
 
     def update_ipt(self, model,gradient):
@@ -585,7 +576,7 @@ applied.
         for n, p in model.parameters_and_names():
             if f"lora_A.{self.adapter_name}" in n:
                 entry_ipt = self._element_score(n)
-                comb_ipt = ops.mean(entry_ipt, axis=1, keep_dims=True)
+                comb_ipt = ops.mean(entry_ipt, dim=1, keepdim=True)
                 name_m = n.replace("lora_A", "%s")
                 if name_m not in vector_ipt:
                     vector_ipt[name_m] = [comb_ipt]
@@ -593,7 +584,7 @@ applied.
                     vector_ipt[name_m].append(comb_ipt)
             if f"lora_B.{self.adapter_name}" in n:
                 entry_ipt = self._element_score(n)
-                comb_ipt = ops.mean(entry_ipt, axis=0, keep_dims=False).view(-1, 1)
+                comb_ipt = ops.mean(entry_ipt, dim=0, keepdim=False).view(-1, 1)
                 name_m = n.replace("lora_B", "%s")
                 if name_m not in vector_ipt:
                     vector_ipt[name_m] = [comb_ipt]
@@ -608,7 +599,7 @@ applied.
         # Calculate the score for each triplet
         for name_m in vector_ipt:
             ipt_E = value_ipt[name_m]
-            ipt_AB = ops.cat(vector_ipt[name_m], axis=1)
+            ipt_AB = ops.cat(vector_ipt[name_m], dim=1)
             sum_ipt = self._combine_ipt(ipt_E, ipt_AB)
             name_E = name_m % "lora_E"
             triplet_ipt[name_E] = sum_ipt.view(-1, 1)

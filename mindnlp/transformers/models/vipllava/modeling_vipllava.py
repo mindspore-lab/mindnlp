@@ -20,10 +20,9 @@ from functools import reduce
 import numpy as np
 
 import mindspore as ms
+from mindspore import Tensor
+
 from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
-
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...cache_utils import Cache
@@ -595,7 +594,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                          text_to_overwrite] = labels[batch_indices, non_image_indices]
 
         # 5. Fill the embeddings corresponding to the images. Anything that is still zeros needs filling
-        image_to_overwrite = ops.all(final_embedding == 0, axis=-1)
+        image_to_overwrite = ops.all(final_embedding == 0, dim=-1)
         image_to_overwrite &= image_to_overwrite.cumsum(
             -1) - 1 >= nb_image_pad[:, None]
 
@@ -695,7 +694,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                 # We select the features from index 1: for the layers -2, -5, -8, -11 and 6
                 image_features = [image_outputs.hidden_states[index][:, 1:]
                                   for index in vision_feature_layers]
-                image_features = ops.cat(image_features, axis=-1)
+                image_features = ops.cat(image_features, dim=-1)
 
                 image_features = self.multi_modal_projector(image_features)
                 inputs_embeds, attention_mask, labels, position_ids = self._merge_input_ids_with_image_features(
@@ -736,7 +735,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                                             new_non_attended_tokens] = 0
 
                     attention_mask = ops.cat(
-                        (extended_attention_mask, attention_mask[:, -target_length:]), axis=1)
+                        (extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                     position_ids = ops.sum(
                         attention_mask, dim=1).unsqueeze(-1) - 1
 

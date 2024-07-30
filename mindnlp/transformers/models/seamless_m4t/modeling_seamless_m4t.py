@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, Uniform, HeNormal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -92,7 +93,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -236,10 +237,10 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Module):
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
         )
 
-        # self.conv = weight_norm(self.conv, name="weight", axis=2)
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = SeamlessM4TConformerSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.speech_encoder_hidden_act]
@@ -329,7 +330,7 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Module):
         # Embeddings are computed in the dtype of the inv_freq constant
         time_stamps = ops.arange(sequence_length).type_as(self.inv_freq)
         freqs = ops.einsum("i,j->ij", time_stamps, self.inv_freq)
-        embeddings = ops.cat((freqs, freqs), axis=-1)
+        embeddings = ops.cat((freqs, freqs), dim=-1)
 
         cos_embeddings = embeddings.cos()[:, None, None, :]
         sin_embeddings = embeddings.sin()[:, None, None, :]
@@ -415,7 +416,7 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Module):
         # as in https://arxiv.org/abs/1901.02860
         pe_positive = ops.flip(pe_positive, [0]).unsqueeze(0)
         pe_negative = pe_negative[1:].unsqueeze(0)
-        pe = ops.cat([pe_positive, pe_negative], axis=1)
+        pe = ops.cat([pe_positive, pe_negative], dim=1)
         self.pe = pe.to(dtype=x.dtype)
 
     def forward(self, hidden_states: mindspore.Tensor):
@@ -718,14 +719,13 @@ class SeamlessM4TConformerConvolutionModule(nn.Module):
             padding=0,
             bias=False,
         )
-        self.glu = nn.GLU(axis=1)
+        self.glu = nn.GLU(dim=1)
         self.depthwise_conv = nn.Conv1d(
             config.hidden_size,
             config.hidden_size,
             config.conv_depthwise_kernel_size,
             stride=1,
-            pad_mode="same",
-            group=config.hidden_size,
+            groups=config.hidden_size,
             bias=False,
         )
         self.batch_norm = nn.BatchNorm1d(config.hidden_size)
@@ -908,7 +908,7 @@ class SeamlessM4TConformerSelfAttention(nn.Module):
             scores = scores + attention_mask
 
         # => (batch, head, time1, time2)
-        probs = ops.softmax(scores, axis=-1)
+        probs = ops.softmax(scores, dim=-1)
         probs = self.dropout(probs)
 
         # => (batch, head, time1, d_k)
@@ -949,7 +949,7 @@ class SeamlessM4TConformerSelfAttention(nn.Module):
         hidden_states = hidden_states.swapaxes(0, 1)
         rotated_states_begin = hidden_states[..., : self.head_size // 2]
         rotated_states_end = hidden_states[..., self.head_size // 2 :]
-        rotated_states = ops.cat((-rotated_states_end, rotated_states_begin), axis=rotated_states_begin.ndim - 1)
+        rotated_states = ops.cat((-rotated_states_end, rotated_states_begin), dim=rotated_states_begin.ndim - 1)
         hidden_states = (hidden_states * cos) + (rotated_states * sin)
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -1002,7 +1002,7 @@ class SeamlessM4TConformerSelfAttention(nn.Module):
 
         # 5. shift matrix b and matrix d
         zero_pad = ops.zeros((*scores_bd.shape[:3], 1), dtype=scores_bd.dtype)
-        scores_bd_padded = ops.cat([zero_pad, scores_bd], axis=-1)
+        scores_bd_padded = ops.cat([zero_pad, scores_bd], dim=-1)
         scores_bd_padded_shape = scores_bd.shape[:2] + (scores_bd.shape[3] + 1, scores_bd.shape[2])
         scores_bd_padded = scores_bd_padded.view(*scores_bd_padded_shape)
         scores_bd = scores_bd_padded[:, :, 1:].view_as(scores_bd)
@@ -1346,10 +1346,9 @@ class SeamlessM4TConformerAdapterLayer(nn.Module):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
-        self.activation = nn.GLU(axis=1)
+        self.activation = nn.GLU(dim=1)
 
         # Self-Attention
         self.self_attn_layer_norm = nn.LayerNorm([embed_dim])
@@ -1358,7 +1357,6 @@ class SeamlessM4TConformerAdapterLayer(nn.Module):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
         self.self_attn = SeamlessM4TConformerSelfAttention(config, use_position_embeddings=False)
@@ -1639,10 +1637,10 @@ class SeamlessM4TSinusoidalPositionalEmbedding(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.float32) * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.float32).unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
@@ -1813,8 +1811,8 @@ class SeamlessM4TAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -1852,7 +1850,7 @@ class SeamlessM4TAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -2293,7 +2291,7 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
                                               cell.weight.shape, cell.weight.dtype))
 
             if cell.bias is not None:
-                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
+                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(k),
                                    cell.bias.shape, cell.bias.dtype))
 
@@ -2345,7 +2343,7 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
         # 1. First, let's compute last_hidden_states from hidden_states.
         # For each generation step, takes the hidden state from the last layer.
         # shape: (batch_size*vocab_size*num_return_sequences, # generation_steps, hidden_dim)
-        last_hidden_states = ops.concat([hidden_states[-1] for hidden_states in hidden_states], axis=1)
+        last_hidden_states = ops.concat([hidden_states[-1] for hidden_states in hidden_states], dim=1)
 
         # 2. In absence of `beam_indices`, we can assume that we come from e.g. greedy search, which is equivalent
         # to a beam search approach were the first (and only) beam is always selected
@@ -2849,7 +2847,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
 
         if embed_tokens is not None:
             # if embed_tokens defined, use its shape instead
-            self.embed_tokens = nn.Embedding(embed_tokens.vocab_size, embed_tokens.embedding_size, self.padding_idx)
+            self.embed_tokens = nn.Embedding(embed_tokens.num_embeddings, embed_tokens.embedding_dim, self.padding_idx)
             self.embed_tokens.weight = embed_tokens.weight
         else:
             self.embed_tokens = nn.Embedding(self.vocab_size, config.hidden_size, self.padding_idx)
@@ -3719,7 +3717,6 @@ class HifiGanResidualBlock(nn.Module):
                     kernel_size,
                     stride=1,
                     dilation=dilation[i],
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, dilation[i]),
                 )
                 for i in range(len(dilation))
@@ -3733,7 +3730,6 @@ class HifiGanResidualBlock(nn.Module):
                     kernel_size,
                     stride=1,
                     dilation=1,
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, 1),
                 )
                 for _ in range(len(dilation))
@@ -3870,7 +3866,6 @@ class SeamlessM4TVariancePredictor(nn.Module):
             embed_dim,
             embed_dim,
             kernel_size=kernel_size,
-            pad_mode='pad',
             padding=(kernel_size - 1) // 2,
         )
         self.activation_fuction = nn.ReLU()
@@ -3880,7 +3875,6 @@ class SeamlessM4TVariancePredictor(nn.Module):
             embed_dim,
             embed_dim,
             kernel_size=kernel_size,
-            pad_mode='pad',
             padding=1,
         )
         self.ln2 = nn.LayerNorm([embed_dim])
@@ -3987,19 +3981,17 @@ class SeamlessM4THifiGan(nn.Module):
             config.upsample_initial_channel,
             kernel_size=7,
             stride=1,
-            pad_mode='pad',
             padding=3,
         )
 
         self.upsampler = nn.ModuleList()
         for i, (upsample_rate, kernel_size) in enumerate(zip(config.upsample_rates, config.upsample_kernel_sizes)):
             self.upsampler.append(
-                nn.Conv1dTranspose(
+                nn.ConvTranspose1d(
                     config.upsample_initial_channel // (2**i),
                     config.upsample_initial_channel // (2 ** (i + 1)),
                     kernel_size=kernel_size,
                     stride=upsample_rate,
-                    pad_mode='pad',
                     padding=(kernel_size - upsample_rate) // 2,
                 )
             )
@@ -4010,7 +4002,7 @@ class SeamlessM4THifiGan(nn.Module):
             for kernel_size, dilation in zip(config.resblock_kernel_sizes, config.resblock_dilation_sizes):
                 self.resblocks.append(HifiGanResidualBlock(channels, kernel_size, dilation, config.leaky_relu_slope))
 
-        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, pad_mode='pad', padding=3)
+        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, padding=3)
 
     def forward(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor:
         r"""
@@ -4106,7 +4098,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
         # take care of edge cases where no padding or too many padding
         unit_lengths = ops.clamp(unit_lengths, 0, dur_out.shape[1] - 1)
 
-        cumulative_dur_out = ops.cumsum(dur_out, axis=1)
+        cumulative_dur_out = ops.cumsum(dur_out, dim=1)
         unit_lengths = cumulative_dur_out.gather_elements(dim=1, index=unit_lengths.unsqueeze(1)).squeeze()
 
         return unit_lengths
@@ -4175,7 +4167,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
         dur_out = ops.clamp(ops.round((ops.exp(log_dur_pred) - 1)).long(), min=1)
         # B x C x T
         if hidden_states.shape[0] == 1:
-            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), axis=2)
+            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), dim=2)
         else:
             # if batched sample, need to interleave per sample, and pad -> loss of parallelism
             if hidden_states.shape[0] > 1 and self.training:
@@ -4184,7 +4176,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
                                forward pass because the samples are interleaved."""
                 )
             hidden_states = [
-                ops.repeat_interleave(hidden_state, duration, axis=-1).swapaxes(0, 1)
+                ops.repeat_interleave(hidden_state, duration, dim=-1).swapaxes(0, 1)
                 for (hidden_state, duration) in zip(hidden_states, dur_out)
             ]
 
@@ -4193,7 +4185,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
 
         spkr = spkr.repeat(1, 1, hidden_states.shape[-1])
         lang = lang.repeat(1, 1, hidden_states.shape[-1])
-        hidden_states = ops.cat([lang, hidden_states, spkr], axis=1)
+        hidden_states = ops.cat([lang, hidden_states, spkr], dim=1)
 
         hidden_states = self.hifi_gan(hidden_states)
 

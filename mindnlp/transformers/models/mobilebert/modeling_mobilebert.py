@@ -25,11 +25,9 @@ from dataclasses import dataclass
 
 import mindspore
 from mindspore import Parameter, Tensor
-import mindspore.numpy as mnp
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
 
-from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
 from mindnlp.utils import ModelOutput
 from .configuration_mobilebert import MobileBertConfig
@@ -1486,7 +1484,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
         if head_mask is not None:
             if head_mask.ndim == 1:
                 head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
-                head_mask = mnp.broadcast_to(head_mask, (self.num_hidden_layers, -1, -1, -1, -1))
+                head_mask = ops.broadcast_to(head_mask, (self.num_hidden_layers, -1, -1, -1, -1))
             elif head_mask.ndim == 2:
                 head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
         else:

@@ -767,7 +767,7 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                     inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
 
                     if problem_type["num_labels"] > 1:
-                        inputs["labels"] = inputs["labels"].unsqueeze(1).repeat(1, problem_type["num_labels"])
+                        inputs["labels"] = inputs["labels"].unsqueeze(1).tile((1, problem_type["num_labels"]))
 
                     inputs["labels"] = inputs["labels"].to(problem_type["dtype"])
 

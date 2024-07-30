@@ -19,8 +19,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-import mindspore.common.dtype as mstype
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
@@ -66,7 +65,7 @@ class NystromformerEmbeddings(nn.Module):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1)) + 2
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mstype.int64)
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
     def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
@@ -88,7 +87,7 @@ class NystromformerEmbeddings(nn.Module):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -594,7 +593,7 @@ class NystromformerModel(NystromformerPreTrainedModel):
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -779,7 +778,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (mstype.int64, mstype.int32)):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

@@ -19,13 +19,11 @@
 """MindNLP gpt model"""
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.nn import Dropout, Matmul
-from mindnlp._legacy.functional import split, softmax, arange
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_gpt import GPTConfig
 from ...modeling_utils import PreTrainedModel, SequenceSummary
 from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
@@ -56,7 +54,7 @@ class MLP(nn.Module):
         self.c_fc = Conv1D(n_state, n_embd)
         self.c_proj = Conv1D(n_embd, n_state)
         self.act = ACT2FN[config.afn]
-        self.dropout = Dropout(p=config.resid_pdrop)
+        self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def forward(self, x):
         """
@@ -137,9 +135,8 @@ class Attention(nn.Module):
         self.c_attn = Conv1D(n_state * 3, n_state)
         self.c_attn = Conv1D(n_state * 3, n_state)
         self.c_proj = Conv1D(n_state, n_state)
-        self.attn_dropout = Dropout(p=config.attn_pdrop)
-        self.resid_dropout = Dropout(p=config.resid_pdrop)
-        self.matmul = Matmul()
+        self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
+        self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
         self.pruned_heads = set()
 
         self.output_attentions = config.output_attentions
@@ -180,7 +177,7 @@ class Attention(nn.Module):
         Raises:
             None specified.
         """
-        w = self.matmul(q, k)
+        w = ops.matmul(q, k)
         if self.scale:
             w = w / ops.sqrt(ops.scalar_to_tensor(v.shape[-1]))
         b = self.bias[:, :, : w.shape[-2], : w.shape[-1]]
@@ -189,7 +186,7 @@ class Attention(nn.Module):
         if attention_mask is not None:
             w = w + attention_mask
 
-        w = softmax(w)
+        w = ops.softmax(w)
         w = self.attn_dropout(w)
 
         if head_mask is not None:
@@ -233,7 +230,7 @@ class Attention(nn.Module):
             RuntimeError: If an error occurs during the attention mechanism computation.
         """
         x = self.c_attn(x)
-        query, key, value = split(x, self.split_size, axis=2)
+        query, key, value = ops.split(x, self.split_size, dim=2)
         query = self.split_heads(query)
         key = self.split_heads(key, k=True)
         value = self.split_heads(value)
@@ -362,7 +359,7 @@ class GPTModel(GPTPreTrainedModel):
         self.config = config
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
-        self.drop = Dropout(p=config.embd_pdrop)
+        self.drop = nn.Dropout(p=config.embd_pdrop)
         self.h = nn.ModuleList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
         self.position_ids = ops.arange(config.n_positions)
 
@@ -817,7 +814,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[arange(batch_size), sequence_lengths]
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
 

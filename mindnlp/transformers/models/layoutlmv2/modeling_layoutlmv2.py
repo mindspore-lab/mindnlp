@@ -21,14 +21,12 @@ import mindspore
 import numpy as np
 from mindspore import Tensor, Parameter
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindspore.common.initializer import Normal, initializer, Constant
-from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
-from mindnlp.transformers.ms_utils import apply_chunking_to_forward
-from mindnlp.utils import logging
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
+from ...ms_utils import apply_chunking_to_forward
+from ....utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,

@@ -23,12 +23,10 @@ import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import (
@@ -66,7 +64,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -76,59 +74,16 @@ def _get_unpad_data(attention_mask):
 
 class OlmoLayerNorm(nn.Module):
     """LayerNorm but with no learnable weight or bias."""
+
     def __init__(self, hidden_size: int) -> None:
-        """
-        Initializes a new instance of the OlmoLayerNorm class.
-
-        Args:
-            self (OlmoLayerNorm): The instance of the class.
-            hidden_size (int): The size of the hidden dimension for the layer normalization.
-                It determines the shape of the normalized layer. The hidden size must be a positive integer.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.normalized_shape = (hidden_size,)
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                      begin_params_axis=-1,
-                                      epsilon=1e-5)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs the OlmoLayerNorm for the given hidden states.
-
-        Args:
-            self (OlmoLayerNorm): An instance of the OlmoLayerNorm class.
-            hidden_states (mindspore.Tensor): The input hidden states to be normalized.
-
-        Returns:
-            mindspore.Tensor: The normalized hidden states.
-
-        Raises:
-            TypeError: If the input hidden states are not of type mindspore.Tensor.
-            ValueError: If the input hidden states are empty or have incompatible shape.
-
-        Note:
-            - The input hidden states should have a valid shape compatible with the layer normalization operation.
-            - The hidden states are expected to be of a specific data type.
-
-        Example:
-            ```python
-            >>> norm = OlmoLayerNorm()
-            >>> input_states = mindspore.Tensor([1, 2, 3], mindspore.float32)
-            >>> output_states = norm.forward(input_states)
-            ```
-        """
         orig_dtype = hidden_states.dtype
-        y, _, _ = self.layer_norm(hidden_states.to(dtype=mindspore.float32),
-                                  ops.ones(self.normalized_shape, mindspore.float32),
-                                  ops.zeros(self.normalized_shape, mindspore.float32))
-        return y.to(orig_dtype)
-
+        return F.layer_norm(hidden_states.to(dtype=mindspore.float32), self.normalized_shape, None, None, eps=1e-5).to(
+            orig_dtype
+        )
 
 ALL_LAYERNORM_LAYERS.append(OlmoLayerNorm)
 
@@ -179,7 +134,7 @@ class OlmoRotaryEmbedding(nn.Module):
         t = t / self.scaling_factor
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self._cos_cached = emb.cos().to(get_default_dtype())
         self._sin_cached = emb.sin().to(get_default_dtype())
 
@@ -244,12 +199,12 @@ class OlmoRotaryEmbedding(nn.Module):
             None
         """
         # x: [bs, num_attention_heads, seq_len, head_size]
-        inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
+        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 since bfloat16 loses precision on long contexts
         # See https://github.com/huggingface/transformers/pull/29285
         freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).swapaxes(1, 2)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         cos = emb.cos()
         sin = emb.sin()
         return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)
@@ -303,7 +258,7 @@ class OlmoDynamicNTKScalingRotaryEmbedding(OlmoRotaryEmbedding):
             None.
         """
         # difference to the original RoPE: inv_freq is recomputed when the sequence length > original length
-        seq_len = ops.max(position_ids)[0] + 1
+        seq_len = ops.max(position_ids) + 1
         if seq_len > self.max_position_embeddings:
             base = self.base * (
                 (self.scaling_factor * seq_len / self.max_position_embeddings) - (self.scaling_factor - 1)
@@ -322,7 +277,7 @@ def rotate_half(x):
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2 :]
     x1, x2 = x.tensor_split(2, -1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -446,7 +401,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -646,7 +601,7 @@ class OlmoAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
         attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
@@ -820,80 +775,16 @@ class OlmoPreTrainedModel(PreTrainedModel):
     _skip_keys_device_placement = ["past_key_values"]
     _supports_cache_class = True
 
-    def _init_weights(self, cell):
-        """
-        Initializes the weights of a cell in the OlmoPreTrainedModel.
-
-        Args:
-            self (OlmoPreTrainedModel): The instance of the OlmoPreTrainedModel class.
-            cell: The cell to initialize the weights for.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
+    def _init_weights(self, module):
         std = self.config.initializer_range
-        if isinstance(cell, nn.Linear):
-            cell.weight.initialize(Normal(std))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
-
-    def _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None):
-        """
-        This method initializes the cache for the model's past key-value pairs used in self-attention mechanisms.
-
-        Args:
-            self (OlmoPreTrainedModel): The instance of the OlmoPreTrainedModel class.
-            cache_cls (class): The class representing the cache implementation to be used.
-            max_batch_size (int): The maximum batch size for caching past key-value pairs.
-            max_cache_len (Optional[int]): The maximum length of the cache. Defaults to None.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: Raised if the `static` cache implementation is selected while using 
-                `attn_implementation==flash_attention_2`.  In such cases, it is recommended to use `sdpa` instead and 
-                report the issue at https://github.com/huggingface/transformers.
-        """
-        if self.config._attn_implementation == "flash_attention_2" and cache_cls == StaticCache:
-            raise ValueError(
-                "`static` cache implementation is not compatible with `attn_implementation==flash_attention_2` "
-                "make sure to use `sdpa` in the mean time, and open an issue at https://github.com/huggingface/transformers"
-            )
-
-        for layer in self.model.layers:
-            if hasattr(self.config, "_pre_quantization_dtype"):
-                dtype = self.config._pre_quantization_dtype
-            else:
-                dtype = layer.self_attn.o_proj.weight.dtype
-            layer.self_attn.past_key_value = cache_cls(
-                self.config, max_batch_size, max_cache_len, dtype=dtype
-            )
-
-    def _reset_cache(self):
-        """
-        Resets the cache for the self-attention layers in the OlmoPreTrainedModel.
-
-        Args:
-            self (OlmoPreTrainedModel): The instance of the OlmoPreTrainedModel class.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        for layer in self.model.layers:
-            layer.self_attn.past_key_value = None
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 
 class OlmoModel(OlmoPreTrainedModel):
@@ -1138,7 +1029,7 @@ class OlmoModel(OlmoPreTrainedModel):
                 in the input tensors.
         """
         dtype = input_tensor.dtype
-        min_dtype = finfo(dtype, 'min')
+        min_dtype = float(ops.finfo(dtype).min)
         sequence_length = input_tensor.shape[1]
         if hasattr(getattr(self.layers[0], "self_attn", {}), "past_key_value"):  # static cache
             target_length = self.config.max_position_embeddings
@@ -1153,13 +1044,13 @@ class OlmoModel(OlmoPreTrainedModel):
         if sequence_length != 1:
             causal_mask = ops.triu(causal_mask, diagonal=1)
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
-        causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
+        causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
         if attention_mask is not None:
             causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
             if attention_mask.ndim == 2:
                 mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[..., :mask_length].eq(0.0) & attention_mask[:, None, None, :].eq(0.0)
-                causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(padding_mask, min_dtype)
+                padding_mask = causal_mask[..., :mask_length].eq(0.0).int() & attention_mask[:, None, None, :].eq(0.0).int()
+                causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(padding_mask.bool(), min_dtype)
             elif attention_mask.ndim == 4:
                 # backwards compatibility: we allow passing a 4D attention mask shorter than the input length with
                 # cache. In that case, the 4D attention mask attends to the newest tokens only.
@@ -1495,7 +1386,7 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]

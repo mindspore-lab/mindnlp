@@ -1473,8 +1473,8 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
         """
         super().__init__(config)
         self.model = PegasusModel(config)
-        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, bias=False)
+        self.final_logits_bias = ops.zeros((1, self.model.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

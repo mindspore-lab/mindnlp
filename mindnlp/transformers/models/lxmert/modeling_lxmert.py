@@ -24,7 +24,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss, SmoothL1Loss
-from ...activations import ACT2FN, gelu
+from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
     ModelOutput,
@@ -37,14 +37,6 @@ logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "unc-nlp/lxmert-base-uncased"
 _CONFIG_FOR_DOC = "LxmertConfig"
-
-
-class GeLU(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return gelu(x)
 
 
 @dataclass
@@ -673,7 +665,7 @@ class LxmertVisualAnswerHead(nn.Module):
         hid_dim = config.hidden_size
         self.logit_fc = nn.Sequential(
             nn.Linear(hid_dim, hid_dim * 2),
-            GeLU(),
+            nn.GELU(),
             nn.LayerNorm([hid_dim * 2], eps=1e-12),
             nn.Linear(hid_dim * 2, num_labels),
         )

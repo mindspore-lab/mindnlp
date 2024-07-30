@@ -64,7 +64,7 @@ def logsumexp(input, dim, keepdim=False):
     return ops.logsumexp(input, dim, keepdim)
 
 # mean
-def mean(input, dim, keepdim=False, *, dtype=None):
+def mean(input, dim=None, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.mean(input, dim, keepdim, dtype=dtype)
     out = ops.mean(input, dim, keepdim)
@@ -91,10 +91,11 @@ def norm(input, p='fro', dim=None, keepdim=False, dtype=None):
     return ops.norm(input, p, dim, keepdim, dtype=dtype)
 
 # nansum
-
+def nansum(input, dim=None, keepdim=False, *, dtype=None):
+    return ops.nansum(input, dim, keepdim, dtype=dtype)
 
 # prod
-def prod(input, dim, keepdim=False, *, dtype=None):
+def prod(input, dim=None, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.prod(input, dim, keepdim, dtype=dtype)
     return ops.prod(input, dim, keepdim).to(dtype)

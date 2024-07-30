@@ -22,11 +22,10 @@ from typing import List, Optional, Tuple, Union
 from functools import partial
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindspore.common.initializer import initializer, Normal
 from .configuration_gpt_bigcode import GPTBigCodeConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN

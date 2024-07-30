@@ -414,26 +414,6 @@ class MptPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["MptBlock"]
     _keys_to_ignore_on_load_missing = [r"lm_head.*."]
 
-    def __init__(self, *inputs, **kwargs):
-        """
-        Initializes a new instance of the MptPreTrainedModel class.
-
-        Args:
-            self:
-                The object itself.
-
-                - Type: MptPreTrainedModel
-                - Purpose: Represents the current instance of the MptPreTrainedModel class.
-                - Restrictions: None
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        super().__init__(*inputs, **kwargs)
-
     def _init_weights(self, cell):
         """Initialize the weights."""
         if isinstance(cell, nn.Linear):

@@ -19,10 +19,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, TruncatedNormal
+
+from mindnlp.core import nn, ops
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import (

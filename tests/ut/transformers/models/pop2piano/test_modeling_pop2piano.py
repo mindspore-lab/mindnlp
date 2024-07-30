@@ -38,7 +38,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, serialization
     
     from mindnlp.transformers.models.pop2piano.modeling_pop2piano import Pop2PianoForConditionalGeneration
     from mindnlp.transformers.models.pop2piano.modeling_pop2piano import POP2PIANO_PRETRAINED_MODEL_ARCHIVE_LIST
@@ -403,8 +403,9 @@ class Pop2PianoModelTester:
             # torch.manual_seed(0)
             model = model_class(config=config).set_train(False)
             # load state dict copies weights but does not tie them
-            mindspore.load_param_into_net(model.encoder, model.decoder.parameters_dict(), \
-                                          strict_load=False)
+            model = model_class(config=config).eval()
+            # load state dict copies weights but does not tie them
+            model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
 
             # torch.manual_seed(0)
             tied_config = copy.deepcopy(config)

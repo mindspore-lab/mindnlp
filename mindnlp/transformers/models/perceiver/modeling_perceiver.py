@@ -174,7 +174,7 @@ class PerceiverEmbeddings(nn.Module):
         self.latents = mindspore.Parameter(ops.randn((config.num_latents, config.d_latents)), 'latents')
 
     def forward(self, batch_size: int):
-        return self.latents.expand((batch_size, -1, -1))  # Thanks, Phil Wang
+        return self.latents.broadcast_to((batch_size, -1, -1))  # Thanks, Phil Wang
 
 
 class PerceiverSelfAttention(nn.Module):
@@ -2393,14 +2393,14 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
     """
 
     def __init__(
-            self,
-            config: PerceiverConfig,
-            modalities: Dict[str, PerceiverAbstractDecoder],
-            num_outputs: int,
-            output_num_channels: int,
-            min_padding_size: Optional[int] = 2,
-            subsampled_index_dims: Optional[Dict[str, PerceiverAbstractDecoder]] = None,
-            **decoder_kwargs,
+        self,
+        config: PerceiverConfig,
+        modalities: Dict[str, PerceiverAbstractDecoder],
+        num_outputs: int,
+        output_num_channels: int,
+        min_padding_size: Optional[int] = 2,
+        subsampled_index_dims: Optional[Dict[str, PerceiverAbstractDecoder]] = None,
+        **decoder_kwargs,
     ) -> None:
         super().__init__()
         self.modalities = nn.ModuleDict(modalities)
@@ -2416,13 +2416,12 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
             num_channels=self.num_query_channels,
             **decoder_kwargs,
         )
-        self.padding = {
-            modality: mindspore.Parameter(
-                ops.normal((1, self.num_query_channels - decoder.num_query_channels), 0, 0.02),
-                modality)
-            for modality, decoder in modalities.items()
-        }
-
+        self.padding = nn.ParameterDict(
+            {
+                modality: nn.Parameter(ops.randn(1, self.num_query_channels - decoder.num_query_channels))
+                for modality, decoder in modalities.items()
+            }
+        )
     @property
     def num_query_channels(self) -> int:
         max_channel_size = max(decoder.num_query_channels for _, decoder in self.modalities.items())
@@ -2578,7 +2577,6 @@ class Conv2DDownsample(nn.Module):
 
         self.conv = Conv2dSamePadding(
             in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, bias=False,
-            pad_mode='valid'
         )
         self.batchnorm = nn.BatchNorm2d(num_features=out_channels) if use_batchnorm else nn.Identity()
         self.relu = nn.ReLU()
@@ -2641,7 +2639,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     # Concatenate the raw input positions.
     if concat_pos:
         # Adds d bands to the encoding.
-        per_pos_features = ops.cat([pos, per_pos_features.expand((batch_size, -1, -1))], dim=-1)
+        per_pos_features = ops.cat([pos, per_pos_features.broadcast_to((batch_size, -1, -1))], dim=-1)
     return per_pos_features
 
 
@@ -2735,7 +2733,7 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
             position_embeddings = self.interpolate_pos_encoding(position_embeddings, height, width)
 
         if batch_size is not None:
-            position_embeddings = position_embeddings.expand((batch_size, -1, -1))
+            position_embeddings = position_embeddings.broadcast_to((batch_size, -1, -1))
         return position_embeddings
 
 
@@ -2756,7 +2754,7 @@ def _check_or_build_spatial_positions(pos, index_dims, batch_size):
     """
     if pos is None:
         pos = build_linear_positions(index_dims)
-        pos = pos[None].expand((batch_size,) + pos.shape)
+        pos = pos[None].broadcast_to((batch_size,) + pos.shape)
         pos = ops.reshape(pos, [batch_size, int(np.prod(index_dims)), -1])
     else:
         # Just a warning label: you probably don't want your spatial features to
@@ -3373,24 +3371,24 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
     """
 
     def __init__(
-            self,
-            modalities: Mapping[str, PreprocessorType],
-            mask_probs: Optional[Mapping[str, float]] = None,
-            min_padding_size: int = 2,
+        self,
+        modalities: Mapping[str, PreprocessorType],
+        mask_probs: Optional[Mapping[str, float]] = None,
+        min_padding_size: int = 2,
     ):
         super().__init__()
         self.modalities = nn.ModuleDict(modalities)
         self.min_padding_size = min_padding_size
         self.mask_probs = mask_probs if mask_probs is not None else {}
-        self.padding = {
-            modality: mindspore.Parameter(ops.normal((1, self.num_channels - preprocessor.num_channels), 0, 0.02),
-                                          modality)
-            for modality, preprocessor in modalities.items()
-        }
-        self.mask = {
-            modality: mindspore.Parameter(ops.normal((1, self.num_channels), 0, 0.02), modality) for modality, _ in
-            self.mask_probs.items()
-        }
+        self.padding = nn.ParameterDict(
+            {
+                modality: nn.Parameter(ops.randn(1, self.num_channels - preprocessor.num_channels))
+                for modality, preprocessor in modalities.items()
+            }
+        )
+        self.mask = nn.ParameterDict(
+            {modality: nn.Parameter(ops.randn(1, self.num_channels)) for modality, _ in self.mask_probs.items()}
+        )
 
     @property
     def num_channels(self) -> int:
@@ -3416,7 +3414,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
             # pad to the same common_channel_size.
             batch_size, num_samples, num_channels = output.shape
-            pos_enc = self.padding[modality].expand((batch_size, -1, -1))
+            pos_enc = self.padding[modality].broadcast_to((batch_size, -1, -1))
 
             padding = ops.broadcast_to(
                 pos_enc,
@@ -3426,10 +3424,9 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
             # mask if required
             if modality in self.mask_probs:
-                mask_token = self.mask[modality].expand((batch_size, -1, -1))
+                mask_token = self.mask[modality].broadcast_to((batch_size, -1, -1))
                 mask_prob = self.mask_probs[modality]
-                # mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
-                mask = ops.bernoulli(ops.zeros([batch_size, num_samples], dtype=mindspore.int64), p=mask_prob)
+                mask = ops.bernoulli(ops.full([batch_size, num_samples], mask_prob))
                 mask = ops.unsqueeze(mask, dim=2)
                 output_padded = (1 - mask) * output_padded + mask * mask_token
 

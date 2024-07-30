@@ -12,13 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch SwiftFormer model."""
+"""MindSpore SwiftFormer model."""
 
 import collections.abc
 from typing import Optional, Tuple, Union
-from mindnlp.core import nn, ops
-from mindspore.common.initializer import initializer, TruncatedNormal, Constant
 import mindspore
+from mindspore.common.initializer import initializer, TruncatedNormal, Constant
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -66,7 +68,6 @@ class SwiftFormerPatchEmbedding(nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-                pad_mode="pad",
                 bias=True,
             ),
             nn.BatchNorm2d(out_chs // 2, eps=config.batch_norm_eps),
@@ -77,7 +78,6 @@ class SwiftFormerPatchEmbedding(nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-                pad_mode="pad",
                 bias=True,
             ),
             nn.BatchNorm2d(out_chs, eps=config.batch_norm_eps),
@@ -170,7 +170,6 @@ class SwiftFormerEmbeddings(nn.Module):
             kernel_size=patch_size,
             stride=stride,
             padding=padding,
-            pad_mode="pad",
             bias=True,
         )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps)
@@ -195,15 +194,15 @@ class SwiftFormerConvEncoder(nn.Module):
         hidden_dim = int(config.mlp_ratio * dim)
 
         self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", bias=True
+            dim, dim, kernel_size=3, padding=1, groups=dim, bias=True
         )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
         self.point_wise_conv1 = nn.Conv2d(
-            dim, hidden_dim, kernel_size=1, pad_mode="pad", bias=True
+            dim, hidden_dim, kernel_size=1, bias=True
         )
         self.act = nn.GELU()
         self.point_wise_conv2 = nn.Conv2d(
-            hidden_dim, dim, kernel_size=1, pad_mode="pad", bias=True
+            hidden_dim, dim, kernel_size=1, bias=True
         )
         self.drop_path = nn.Dropout(p=config.drop_conv_encoder_rate)
         self.layer_scale = mindspore.Parameter(
@@ -235,7 +234,7 @@ class SwiftFormerMlp(nn.Module):
         hidden_features = int(in_features * config.mlp_ratio)
         self.norm1 = nn.BatchNorm2d(in_features, eps=config.batch_norm_eps)
         self.fc1 = nn.Conv2d(
-            in_features, hidden_features, 1, pad_mode="pad", bias=True
+            in_features, hidden_features, 1, bias=True
         )
         self.act = ACT2FN["gelu_new"]
         # if isinstance(config.hidden_act, str):
@@ -243,7 +242,7 @@ class SwiftFormerMlp(nn.Module):
         # else:
         #     self.act_layer = config.hidden_act
         self.fc2 = nn.Conv2d(
-            hidden_features, in_features, 1, pad_mode="pad", bias=True
+            hidden_features, in_features, 1, bias=True
         )
         self.drop = nn.Dropout(p=config.drop_mlp_rate)
 
@@ -272,7 +271,7 @@ class SwiftFormerEfficientAdditiveAttention(nn.Module):
         self.to_query = nn.Linear(dim, dim)
         self.to_key = nn.Linear(dim, dim)
 
-        self.w_g = mindspore.Parameter(ops.randn(dim, 1))
+        self.w_g = nn.Parameter(ops.randn(dim, 1))
         self.scale_factor = dim**-0.5
         self.proj = nn.Linear(dim, dim)
         self.final = nn.Linear(dim, dim)
@@ -280,16 +279,16 @@ class SwiftFormerEfficientAdditiveAttention(nn.Module):
     def forward(self, x):
         query = self.to_query(x)
         key = self.to_key(x)
-        l2 = ops.L2Normalize(axis=-1)
-        query = l2(query)
-        key = l2(key)
+
+        query = nn.functional.normalize(query, dim=-1)
+        key = nn.functional.normalize(key, dim=-1)
 
         query_weight = query @ self.w_g
         scaled_query_weight = query_weight * self.scale_factor
-        scaled_query_weight = ops.softmax(scaled_query_weight, axis=-1)
+        scaled_query_weight = ops.softmax(scaled_query_weight, dim=-1)
 
         global_queries = ops.sum(scaled_query_weight * query, dim=1)
-        global_queries = global_queries.unsqueeze(1).repeat(1, key.shape[1], 1)
+        global_queries = global_queries.unsqueeze(1).tile((1, key.shape[1], 1))
 
         out = self.proj(global_queries * key) + query
         out = self.final(out)
@@ -310,15 +309,15 @@ class SwiftFormerLocalRepresentation(nn.Module):
         super().__init__()
 
         self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", bias=True
+            dim, dim, kernel_size=3, padding=1, groups=dim, bias=True
         )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
         self.point_wise_conv1 = nn.Conv2d(
-            dim, dim, kernel_size=1, pad_mode="pad", bias=True
+            dim, dim, kernel_size=1, bias=True
         )
         self.act = nn.GELU()
         self.point_wise_conv2 = nn.Conv2d(
-            dim, dim, kernel_size=1, pad_mode="pad", bias=True
+            dim, dim, kernel_size=1, bias=True
         )
         self.drop_path = nn.Identity()
         self.layer_scale = mindspore.Parameter(

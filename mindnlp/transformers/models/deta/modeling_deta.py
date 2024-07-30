@@ -1021,7 +1021,7 @@ class DetaEncoderLayer(nn.Module):
 
         if self.training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype).max - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(
                     hidden_states, min=-clamp_value, max=clamp_value
                 )
@@ -3060,8 +3060,8 @@ def subsample_labels(
     # randomly select positive and negative examples
     seed = 0
     offset = 0
-    perm1 = ops.randperm(int(positive.numel()),seed, offset, dtype=mstype.int64)[:num_pos]
-    perm2 = ops.randperm(int(negative.numel()),seed, offset, dtype=mstype.int64)[:num_neg]
+    perm1 = ops.randperm(int(positive.numel()),seed, offset, dtype=mindspore.int64)[:num_pos]
+    perm2 = ops.randperm(int(negative.numel()),seed, offset, dtype=mindspore.int64)[:num_neg]
 
     pos_idx = positive[perm1]
     neg_idx = negative[perm2]

@@ -19,11 +19,11 @@ import math
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, HeNormal, TruncatedNormal
 from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, BaseModelOutput
 from ...modeling_utils import PreTrainedModel
@@ -245,7 +245,7 @@ class VitDetAttention(nn.Module):
                 attention_scores, queries, self.rel_pos_h, self.rel_pos_w, (height, width), (height, width)
             )
 
-        attention_probs = ops.softmax(attention_scores,axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         hidden_state = attention_probs @ values
         hidden_state = hidden_state.view(batch_size, self.num_heads, height, width, -1)
@@ -345,7 +345,7 @@ class VitDetResBottleneckBlock(nn.Module):
         self.norm1 = VitDetLayerNorm(bottleneck_channels)
         self.act1 = ACT2FN[config.hidden_act]
 
-        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, pad_mode='pad', bias=False)
+        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, bias=False)
         self.norm2 = VitDetLayerNorm(bottleneck_channels)
         self.act2 = ACT2FN[config.hidden_act]
 

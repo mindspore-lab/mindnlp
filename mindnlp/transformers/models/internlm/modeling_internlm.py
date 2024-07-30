@@ -90,7 +90,7 @@ class InternLMRMSNorm(nn.Module):
         """
         super().__init__()
         self.weight = Parameter(ops.ones(hidden_size), 'weight')
-        self.variance_epsilon = epsilon
+        self.variance_epsilon = eps
 
     def forward(self, hidden_states):
         """

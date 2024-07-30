@@ -19,10 +19,11 @@ import copy
 import warnings
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.api import _no_grad
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -222,7 +223,7 @@ def split_tensor_along_last_dim(
     last_dim = tensor.ndim - 1
     last_dim_size = tensor.shape[last_dim] // num_partitions
     # Split.
-    tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+    tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
     return tensor_list
 
 
@@ -287,7 +288,7 @@ class RotaryEmbedding(nn.Module):
         # Calculate the product of position index and $\theta_i$
         idx_theta = ops.outer(seq_idx, theta).float()
 
-        cache = ops.stack([ops.cos(idx_theta), ops.sin(idx_theta)], axis=-1)
+        cache = ops.stack([ops.cos(idx_theta), ops.sin(idx_theta)], dim=-1)
 
         # this is to mimic the behaviour of complex32, else we will get different results
         if dtype in (mindspore.float16, mindspore.bfloat16, mindspore.int8):
@@ -342,59 +343,9 @@ def apply_rotary_pos_emb(x: mindspore.Tensor, rope_cache: mindspore.Tensor) -> m
         -1,
     )
     x_out2 = x_out2.flatten(start_dim=3)
-    return ops.cat((x_out2, x_pass), axis=-1)
+    return ops.cat((x_out2, x_pass), dim=-1)
 
-
-class LayerNorm(nn.LayerNorm):
-
-    """
-    This class represents a layer normalization operation in a neural network.
-
-    Layer normalization is a technique used to normalize the activations of a neural network layer.
-    It helps in improving the training performance and generalization of deep neural networks. The LayerNorm
-    class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
-
-    The LayerNorm class takes the following parameters:
-
-    - normalized_shape: The shape of the input tensor to be normalized.
-    - begin_norm_axis: The axis of the input tensor from which normalization should begin. The default value is -1, indicating the last axis.
-    - begin_params_axis: The axis of the input tensor from which parameter initialization should begin. The default value is -1, indicating the last axis.
-    - gamma_init: The initialization method for the scaling factor parameter. The default value is 'ones', which initializes all elements of the scaling factor to 1.
-    - beta_init: The initialization method for the bias parameter. The default value is 'zeros', which initializes all elements of the bias to 0.
-    - eps: A small value added to the denominator for numerical stability. The default value is 1e-07.
-    - dtype: The data type of the input tensor. The default value is mindspore.float32.
-
-    The LayerNorm class initializes an instance of the class by calling the __init__ method of the nn.LayerNorm class with the provided parameters.
-
-    Example:
-        ```python
-        >>> # Create a LayerNorm instance with normalized_shape=(256,), begin_norm_axis=1, and gamma_init='ones'
-        >>> layer_norm = LayerNorm(normalized_shape=(256,), begin_norm_axis=1, gamma_init='ones')
-        ```
-    """
-    def __init__(self, normalized_shape, begin_norm_axis=-1, begin_params_axis=-1,
-                 gamma_init='ones', beta_init='zeros', eps=1e-7, dtype=mindspore.float32):
-        """
-        Initializes an instance of the LayerNorm class.
-
-        Args:
-            self: The object instance.
-            normalized_shape (tuple): The shape of the input tensor to be normalized.
-            begin_norm_axis (int, optional): The axis from which the normalization is applied. Defaults to -1.
-            begin_params_axis (int, optional): The axis from which the parameter initialization is applied. Defaults to -1.
-            gamma_init (str or initializer, optional): The initializer for the gamma parameter. Defaults to 'ones'.
-            beta_init (str or initializer, optional): The initializer for the beta parameter. Defaults to 'zeros'.
-            eps (float, optional): A small value added to the variance to avoid division by zero. Defaults to 1e-07.
-            dtype (mindspore.dtype, optional): The data type of the input tensor. Defaults to mindspore.float32.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        super().__init__([normalized_shape], begin_norm_axis, begin_params_axis, gamma_init, beta_init, eps, dtype)
-
+LayerNorm = nn.LayerNorm
 
 class RMSNorm(nn.Module):
 
@@ -637,7 +588,7 @@ class CoreAttention(nn.Module):
             attention_mask = ~attention_mask
         if attention_mask is not None:
             attention_scores = attention_scores.masked_fill(attention_mask, float("-inf"))
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(value_layer.dtype)
 
         # This is actually dropping out entire tokens to attend to, which might
@@ -797,8 +748,8 @@ class SelfAttention(nn.Module):
         # adjust key and value for inference
         if kv_cache is not None:
             cache_k, cache_v = kv_cache
-            key_layer = ops.cat((cache_k, key_layer), axis=0)
-            value_layer = ops.cat((cache_v, value_layer), axis=0)
+            key_layer = ops.cat((cache_k, key_layer), dim=0)
+            value_layer = ops.cat((cache_v, value_layer), dim=0)
         if use_cache:
             kv_cache = (key_layer, value_layer)
         else:
@@ -888,7 +839,7 @@ class MLP(nn.Module):
         )
 
         def swiglu(x):
-            x = ops.chunk(x, 2, axis=-1)
+            x = ops.chunk(x, 2, dim=-1)
             return ops.silu(x[0]) * x[1]
 
         self.activation_func = swiglu
@@ -1212,7 +1163,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
         if past_key_values:
             past_length = past_key_values[0][0].shape[0]
         if past_length:
-            full_attention_mask = ops.cat((ops.ones(batch_size, seq_length, past_length), full_attention_mask), axis=-1)
+            full_attention_mask = ops.cat((ops.ones(batch_size, seq_length, past_length), full_attention_mask), dim=-1)
         if padding_mask is not None:
             full_attention_mask = full_attention_mask * padding_mask.unsqueeze(1)
         if not past_length and padding_mask is not None:
@@ -1451,7 +1402,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
                                                   dtype=inputs_embeds.dtype)
             if attention_mask is not None:
                 attention_mask = ops.cat([attention_mask.new_ones((batch_size, self.pre_seq_len), dtype=attention_mask.dtype),
-                                            attention_mask], axis=-1)
+                                            attention_mask], dim=-1)
 
         if full_attention_mask is None:
             if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
@@ -1569,7 +1520,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         if "attention_mask" in model_kwargs:
             attention_mask = model_kwargs["attention_mask"]
             model_kwargs["attention_mask"] = ops.cat(
-                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], axis=-1
+                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], dim=-1
             )
 
         # update position ids
@@ -1578,7 +1529,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         model_kwargs["is_first_forward"] = False
@@ -1916,7 +1867,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 past_length -= self.transformer.pre_seq_len
             inputs['position_ids'] = inputs.position_ids + past_length # mindspore do not support `x += 1`
             attention_mask = inputs.attention_mask
-            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), axis=1)
+            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), dim=1)
             inputs['attention_mask'] = attention_mask
         for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,
                                             return_past_key_values=return_past_key_values, **gen_kwargs):
@@ -2046,14 +1997,14 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
