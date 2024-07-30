@@ -13,14 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch QDQBERT model."""
-
+"""MindSpore QDQBERT model."""
 import math
 import warnings
 from typing import Dict, List, Optional, Tuple, Union
 from mindspore.common.initializer import initializer, Normal
 import mindspore as ms
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -208,8 +208,8 @@ class QDQBertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -268,7 +268,7 @@ class QDQBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1296,14 +1296,14 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
 
         attention_mask = ops.cat(
             [attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))],
-            axis=-1,
+            dim=-1,
         )
         dummy_token = ops.full(
             (effective_batch_size, 1),
             self.config.pad_token_id,
             dtype=ms.int64,
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 

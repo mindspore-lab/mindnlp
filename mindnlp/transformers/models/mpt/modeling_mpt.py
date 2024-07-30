@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch MPT model."""
-# pylint: disable=W0235
-# pylint: disable=E1123
-
+"""MindSpore MPT model."""
 import math
 from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from .configuration_mpt import MptConfig, MPT_PRETRAINED_MODEL_ARCHIVE_LIST
@@ -59,7 +58,7 @@ def build_mpt_alibi_tensor(num_heads, sequence_length, alibi_bias_max=8):
     slopes = slopes.view(1, num_heads_power_of_2, 1, 1)
 
     if num_heads_power_of_2 != num_heads:
-        slopes = ops.concat([slopes[:, 1::2, ...], slopes[:, ::2, ...]], axis=1)[:, :num_heads, ...]
+        slopes = ops.concat([slopes[:, 1::2, ...], slopes[:, ::2, ...]], dim=1)[:, :num_heads, ...]
 
     alibi = alibi * slopes
     return alibi.squeeze(0)
@@ -167,8 +166,8 @@ class MptAttention(nn.Module):
 
         if past_key_value is not None:
             if len(past_key_value) != 0:
-                key_states = ops.cat([past_key_value[0], key_states], axis=2)
-                value_states = ops.cat([past_key_value[1], value_states], axis=2)
+                key_states = ops.cat([past_key_value[0], key_states], dim=2)
+                value_states = ops.cat([past_key_value[1], value_states], dim=2)
             past_key_value = (key_states, value_states)
         else:
             past_key_value = (key_states, value_states)
@@ -190,10 +189,10 @@ class MptAttention(nn.Module):
             attention_scores = attention_scores + position_bias
 
         if attention_mask is not None:
-            attention_scores = attention_scores.masked_fill(attention_mask, finfo(query_states.dtype, 'min'))
+            attention_scores = attention_scores.masked_fill(attention_mask, float(ops.finfo(query_states.dtype).min))
 
         # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.softmax(attention_scores.float(), axis=-1).to(dtype=value_states.dtype)
+        attn_weights = ops.softmax(attention_scores.float(), dim=-1).to(dtype=value_states.dtype)
         attn_weights = F.dropout(attn_weights, p=self.attn_dropout_p, training=self.training)
 
         context_states = ops.matmul(attn_weights, value_states)
@@ -239,7 +238,7 @@ class MptMLP(nn.Module):
         hidden_size = config.hidden_size
 
         self.up_proj = nn.Linear(hidden_size, 4 * hidden_size, bias=False)
-        self.act = nn.GELU(approximate=False)
+        self.act = nn.GELU()
         self.down_proj = nn.Linear(4 * hidden_size, hidden_size, bias=False)
         self.hidden_dropout = config.attn_config.attn_pdrop
 

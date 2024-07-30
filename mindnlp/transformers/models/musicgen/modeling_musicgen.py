@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch Musicgen model."""
+""" MindSpore Musicgen model."""
 import copy
 import inspect
 import math
@@ -22,10 +22,11 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...generation.configuration_utils import GenerationConfig
@@ -150,10 +151,10 @@ class MusicgenSinusoidalPositionalEmbedding(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.cos(emb), ops.sin(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.cos(emb), ops.sin(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         return emb.to(get_default_dtype())
 
     def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
@@ -294,8 +295,8 @@ class MusicgenAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -333,7 +334,7 @@ class MusicgenAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -1216,7 +1217,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
 
         hidden_states = outputs[0]
 
-        lm_logits = ops.stack([head(hidden_states) for head in self.lm_heads], axis=1)
+        lm_logits = ops.stack([head(hidden_states) for head in self.lm_heads], dim=1)
 
         loss = None
         if labels is not None:
@@ -2264,7 +2265,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
             encoder_hidden_states = self.enc_to_dec_proj(encoder_hidden_states)
 
         if attention_mask is not None:
-            encoder_hidden_states = encoder_hidden_states * attention_mask[..., None]
+            encoder_hidden_states = encoder_hidden_states * attention_mask[..., None].astype(encoder_hidden_states.dtype)
 
         if (labels is not None) and (decoder_input_ids is None and decoder_inputs_embeds is None):
             decoder_input_ids = shift_tokens_right(
@@ -2456,12 +2457,12 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
         # user input but doesn't start with decoder_start_token_id -> prepend decoder_start_token_id (and adjust
         # decoder_attention_mask if provided)
         elif (decoder_input_ids[..., 0] != decoder_start_token_id).all().item():
-            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids.astype(mindspore.int64)], axis=-1)
+            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids.astype(mindspore.int64)], dim=-1)
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 decoder_attention_mask = ops.cat(
                     (ops.ones_like(decoder_attention_mask)[:, :1], decoder_attention_mask),
-                    axis=-1,
+                    dim=-1,
                 )
                 model_kwargs["decoder_attention_mask"] = decoder_attention_mask
 
@@ -2521,10 +2522,10 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
 
         # for classifier free guidance we need to add a 'null' input to our encoder hidden states
         if guidance_scale is not None and guidance_scale > 1:
-            last_hidden_state = ops.cat([last_hidden_state, ops.zeros_like(last_hidden_state)], axis=0)
+            last_hidden_state = ops.cat([last_hidden_state, ops.zeros_like(last_hidden_state)], dim=0)
             if "attention_mask" in model_kwargs:
                 model_kwargs["attention_mask"] = ops.cat(
-                    [model_kwargs["attention_mask"], ops.zeros_like(model_kwargs["attention_mask"])], axis=0
+                    [model_kwargs["attention_mask"], ops.zeros_like(model_kwargs["attention_mask"])], dim=0
                 )
 
         model_kwargs["encoder_outputs"] = BaseModelOutput(last_hidden_state=last_hidden_state)
@@ -2617,7 +2618,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
             audio_codes[:, :, 1::2, :] = audio_codes_right
 
             if audio_scales_left != [None] or audio_scales_right != [None]:
-                audio_scales = ops.stack([audio_scales_left, audio_scales_right], axis=1)
+                audio_scales = ops.stack([audio_scales_left, audio_scales_right], dim=1)
             else:
                 audio_scales = [None] * bsz
 
@@ -3010,7 +3011,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
             codec_outputs_right = self.audio_encoder.decode(output_ids[:, :, 1::2, :], audio_scales=audio_scales)
             output_values_right = codec_outputs_right.audio_values
 
-            output_values = ops.cat([output_values_left, output_values_right], axis=1)
+            output_values = ops.cat([output_values_left, output_values_right], dim=1)
 
         if generation_config.return_dict_in_generate:
             outputs.sequences = output_values

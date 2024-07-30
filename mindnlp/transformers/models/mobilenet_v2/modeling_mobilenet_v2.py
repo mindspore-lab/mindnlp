@@ -17,9 +17,10 @@
 from typing import Optional, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPoolingAndNoAttention,
@@ -120,17 +121,17 @@ class MobileNetV2ConvLayer(nn.Module):
             stride=stride,
             padding=padding,
             dilation=dilation,
-            group=groups,
+            groups=groups,
             bias=bias,
-            pad_mode="pad",
         )
 
         if use_normalization:
             self.normalization = nn.BatchNorm2d(
                 num_features=out_channels,
                 eps=config.layer_norm_eps if layer_norm_eps is None else layer_norm_eps,
-                momentum=1 - 0.997,
-                affine=True
+                momentum=0.997,
+                affine=True,
+                track_running_stats=True,
             )
         else:
             self.normalization = None
@@ -506,13 +507,13 @@ class MobileNetV2DeepLabV3Plus(nn.Module):
 
         features_pool = self.avg_pool(features)
         features_pool = self.conv_pool(features_pool)
-        features_pool = ops.interpolate(
+        features_pool = F.interpolate(
             features_pool, size=spatial_size, mode="bilinear", align_corners=True
         )
 
         features_aspp = self.conv_aspp(features)
 
-        features = ops.cat([features_pool, features_aspp], axis=1)
+        features = ops.cat([features_pool, features_aspp], dim=1)
 
         features = self.conv_projection(features)
         features = self.dropout(features)
@@ -589,7 +590,7 @@ class MobileNetV2ForSemanticSegmentation(MobileNetV2PreTrainedModel):
         loss = None
         if labels is not None:
             # upsample logits to the images' original size
-            upsampled_logits = ops.interpolate(
+            upsampled_logits = F.interpolate(
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
             loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)

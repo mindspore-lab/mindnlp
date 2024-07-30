@@ -7,13 +7,13 @@ from .comparison import topk
 from .pointwise import div, log
 
 # bernoulli
-def bernoulli(input):
+def bernoulli(input, p=0.5):
     if DEVICE_TARGET == 'Ascend':
         random_numbers = rand(input.shape, dtype=input.dtype)
-        samples = random_numbers < input
+        samples = random_numbers < p
         samples = samples.int()
         return samples
-    return ops.bernoulli(input)
+    return ops.bernoulli(input, p)
 
 # multinomial
 def multinomial(input, num_samples, replacement=False):

@@ -22,14 +22,14 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithCrossAttentions
 from ...modeling_utils import PreTrainedModel
@@ -272,7 +272,7 @@ class PerceiverSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -2015,7 +2015,7 @@ class PerceiverProjectionDecoder(PerceiverAbstractDecoder):
             self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         # (batch_size, num_latents, d_latents) -> (batch_size, d_latents)
-        z = ops.mean(z, axis=1)
+        z = ops.mean(z, dim=1)
         # (batch_size, d_latents) -> (batch_size, config.num_labels)
         logits = self.classifier(z)
         return logits
@@ -2139,7 +2139,7 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
             # stack to get the [n, d] tensor of coordinates
             indices = [mindspore.Tensor.from_numpy(x) for x in
                        np.unravel_index(subsampled_points.asnumpy(), self.output_index_dims)]
-            pos = ops.stack(indices, axis=1)
+            pos = ops.stack(indices, dim=1)
             batch_size = inputs.shape[0]
             # Map these coordinates to [-1, 1]
             pos = -1 + 2 * pos / mindspore.Tensor(self.output_index_dims)[None, :]
@@ -2173,7 +2173,7 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
         if self.concat_preprocessed_input:
             if inputs_without_pos is None:
                 raise ValueError("Value is required for inputs_without_pos if concat_preprocessed_input is True")
-            pos_emb = ops.cat([inputs_without_pos, pos_emb], axis=-1)
+            pos_emb = ops.cat([inputs_without_pos, pos_emb], dim=-1)
 
         return pos_emb
 
@@ -2456,11 +2456,11 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
             x = ops.reshape(x, [x.shape[0], int(np.prod(x.shape[1:-1])), x.shape[-1]])
             pos = self.padding[modality]
             pos = ops.broadcast_to(pos, (x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]))
-            return ops.cat([x, pos], axis=2)
+            return ops.cat([x, pos], dim=2)
 
         # Apply a predictable ordering to the modalities
         return ops.cat(
-            [embed(modality, decoder_queries[modality]) for modality in sorted(self.modalities.keys())], axis=1
+            [embed(modality, decoder_queries[modality]) for modality in sorted(self.modalities.keys())], dim=1
         )
 
     def forward(
@@ -2622,7 +2622,7 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     min_freq = 1.0
     # Nyquist frequency at the target resolution:
     freq_bands = ops.stack(
-        [ops.linspace(start=min_freq, end=res / 2, steps=num_bands) for res in max_resolution], axis=0
+        [ops.linspace(start=min_freq, end=res / 2, steps=num_bands) for res in max_resolution], dim=0
     )
 
     # Get frequency bands for each spatial dimension.
@@ -2636,12 +2636,12 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     else:
         # Output is size [n, 2 * d * num_bands]
         per_pos_features = ops.cat(
-            [ops.sin(np.pi * per_pos_features), ops.cos(np.pi * per_pos_features)], axis=-1
+            [ops.sin(np.pi * per_pos_features), ops.cos(np.pi * per_pos_features)], dim=-1
         )
     # Concatenate the raw input positions.
     if concat_pos:
         # Adds d bands to the encoding.
-        per_pos_features = ops.cat([pos, per_pos_features.expand((batch_size, -1, -1))], axis=-1)
+        per_pos_features = ops.cat([pos, per_pos_features.expand((batch_size, -1, -1))], dim=-1)
     return per_pos_features
 
 
@@ -2668,7 +2668,7 @@ def build_linear_positions(index_dims, output_range=(-1.0, 1.0)):
     else:
         array_index_grid = [dim_ranges[0]]
 
-    return ops.stack(array_index_grid, axis=-1)
+    return ops.stack(array_index_grid, dim=-1)
 
 
 class PerceiverAbstractPositionEncoding(nn.Module, metaclass=abc.ABCMeta):
@@ -2831,7 +2831,7 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
     def __init__(self, config: PerceiverConfig) -> None:
         super().__init__()
         self.config = config
-        self.embeddings = nn.Embedding(vocab_size=config.vocab_size, embedding_size=config.d_model)
+        self.embeddings = nn.Embedding(config.vocab_size, config.d_model)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.d_model)
 
     @property
@@ -3077,7 +3077,6 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 kernel_size=(1, 1),
                 # spatial_downsample is unconstrained for 1x1 convolutions.
                 stride=(spatial_downsample, spatial_downsample),
-                pad_mode='valid',
                 bias=True
             )
 
@@ -3163,7 +3162,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             sh = inputs.shape
             pos_enc = ops.reshape(pos_enc, list(sh)[:-1] + [-1])
         if self.concat_or_add_pos == "concat":
-            inputs_with_pos = ops.cat([inputs, pos_enc], axis=-1)
+            inputs_with_pos = ops.cat([inputs, pos_enc], dim=-1)
         elif self.concat_or_add_pos == "add":
             inputs_with_pos = inputs + pos_enc
         return inputs_with_pos, inputs
@@ -3335,7 +3334,7 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         pos_enc = self.positions_projection(pos_enc)
 
         if self.concat_or_add_pos == "concat":
-            inputs_with_pos = ops.cat([inputs, pos_enc], axis=-1)
+            inputs_with_pos = ops.cat([inputs, pos_enc], dim=-1)
         elif self.concat_or_add_pos == "add":
             inputs_with_pos = inputs + pos_enc
 
@@ -3423,7 +3422,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
                 pos_enc,
                 (batch_size, num_samples, self.num_channels - num_channels),
             )
-            output_padded = ops.cat([output, padding], axis=2)
+            output_padded = ops.cat([output, padding], dim=2)
 
             # mask if required
             if modality in self.mask_probs:
@@ -3441,7 +3440,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         padded_ls = [padded[k] for k in sorted(padded.keys())]
 
         # Finally, concatenate along the time dimension
-        final_inputs = ops.cat(padded_ls, axis=1)
+        final_inputs = ops.cat(padded_ls, dim=1)
 
         return final_inputs, modality_sizes, inputs_without_pos
 

@@ -20,11 +20,11 @@ from typing import Any, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
+from mindspore import dtype as mstype
+from mindspore.common.initializer import  initializer,Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindspore import dtype as mstype
-from mindspore.common.initializer import  initializer,Normal
 from mindnlp.utils import (
     ModelOutput,
     logging,

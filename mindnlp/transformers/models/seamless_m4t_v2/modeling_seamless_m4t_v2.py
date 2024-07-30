@@ -23,11 +23,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
-from mindspore import Tensor, Parameter
-
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, Uniform, HeNormal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -184,7 +184,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -542,17 +542,15 @@ class SeamlessM4Tv2ConformerConvolutionModule(nn.Module):
             2 * config.hidden_size,
             kernel_size=1,
             stride=1,
-            pad_mode='valid',
             bias=False,
         )
-        self.glu = nn.GLU(axis=1)
+        self.glu = nn.GLU(dim=1)
         self.depthwise_conv = nn.Conv1d(
             config.hidden_size,
             config.hidden_size,
             config.conv_depthwise_kernel_size,
             stride=1,
-            pad_mode='valid',
-            group=config.hidden_size,
+            groups=config.hidden_size,
             bias=False,
         )
         self.depthwise_layer_norm = nn.LayerNorm([config.hidden_size])
@@ -562,7 +560,6 @@ class SeamlessM4Tv2ConformerConvolutionModule(nn.Module):
             config.hidden_size,
             kernel_size=1,
             stride=1,
-            pad_mode='valid',
             bias=False,
         )
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
@@ -720,7 +717,7 @@ class SeamlessM4Tv2ConformerSelfAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
 
         # => (batch, head, time1, time2)
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
         attn_weights = self.dropout(attn_weights)
 
         # => (batch, head, time1, d_k)
@@ -1063,10 +1060,9 @@ class SeamlessM4Tv2ConformerAdapterLayer(nn.Module):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
-        self.activation = nn.GLU(axis=1)
+        self.activation = nn.GLU(dim=1)
 
         # Self-Attention
         self.self_attn_layer_norm = nn.LayerNorm([embed_dim])
@@ -1075,7 +1071,6 @@ class SeamlessM4Tv2ConformerAdapterLayer(nn.Module):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
         self.self_attn = SeamlessM4Tv2ConformerSelfAttention(config, use_position_embeddings=False)
@@ -1320,10 +1315,10 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.float32) * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.float32).unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
@@ -1480,8 +1475,8 @@ class SeamlessM4Tv2Attention(nn.Module):
             value_states = self._shape(self.v_proj(current_states))
             if past_key_value is not None and not is_cross_attention:
                 # reuse k, v, self_attention
-                key_states = ops.cat([past_key_value[0], key_states], axis=2)
-                value_states = ops.cat([past_key_value[1], value_states], axis=2)
+                key_states = ops.cat([past_key_value[0], key_states], dim=2)
+                value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         query_states = self._shape(self.q_proj(hidden_states) * self.scaling)
         attention_scores = ops.matmul(query_states, key_states.swapaxes(-1, -2))
@@ -1500,7 +1495,7 @@ class SeamlessM4Tv2Attention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.softmax(attention_scores.float(), axis=-1).type_as(attention_scores)
+        attn_weights = ops.softmax(attention_scores.float(), dim=-1).type_as(attention_scores)
         attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         #  attn_output = torch.bmm(attn_probs, value_states) ?
@@ -1963,9 +1958,9 @@ class SeamlessM4Tv2TextToUnitDecoderLayer(nn.Module):
         )
         self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
 
-        self.conv1 = nn.Conv1d(self.embed_dim, self.embed_dim, kernel_size=7, stride=1, pad_mode="same")
+        self.conv1 = nn.Conv1d(self.embed_dim, self.embed_dim, kernel_size=7, stride=1)
         self.activation_fn = ACT2FN[config.activation_function]
-        self.conv2 = nn.Conv1d(self.embed_dim, self.embed_dim, kernel_size=7, stride=1, pad_mode="same")
+        self.conv2 = nn.Conv1d(self.embed_dim, self.embed_dim, kernel_size=7, stride=1)
 
         self.conv_layer_norm = nn.LayerNorm([config.hidden_size])
         self.conv_dropout = nn.Dropout(p=self.dropout)
@@ -2275,7 +2270,7 @@ class SeamlessM4Tv2PreTrainedModel(PreTrainedModel):
                 Indicates how many times to repeat time segments.
         """
         if hidden_states.shape[0] == 1:
-            hidden_states = ops.repeat_interleave(hidden_states, durations.view(-1), axis=1)
+            hidden_states = ops.repeat_interleave(hidden_states, durations.view(-1), dim=1)
         else:
             # if batched sample, need to interleave per sample, and pad -> loss of parallelism
             if hidden_states.shape[0] > 1 and self.training:
@@ -2284,7 +2279,7 @@ class SeamlessM4Tv2PreTrainedModel(PreTrainedModel):
                                forward pass because the samples are interleaved."""
                 )
             hidden_states = [
-                ops.repeat_interleave(hidden_state, duration, axis=0)
+                ops.repeat_interleave(hidden_state, duration, dim=0)
                 for (hidden_state, duration) in zip(hidden_states, durations)
             ]
 
@@ -3637,7 +3632,6 @@ class HifiGanResidualBlock(nn.Module):
                     kernel_size,
                     stride=1,
                     dilation=dilation[i],
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, dilation[i]),
                 )
                 for i in range(len(dilation))
@@ -3651,7 +3645,6 @@ class HifiGanResidualBlock(nn.Module):
                     kernel_size,
                     stride=1,
                     dilation=1,
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, 1),
                 )
                 for _ in range(len(dilation))
@@ -3807,7 +3800,6 @@ class SeamlessM4Tv2VariancePredictor(nn.Module):
             embed_dim,
             hidden_dim,
             kernel_size=kernel_size,
-            pad_mode="same",
         )
         self.activation_fuction = nn.ReLU()
         self.ln1 = nn.LayerNorm([hidden_dim])
@@ -3816,7 +3808,6 @@ class SeamlessM4Tv2VariancePredictor(nn.Module):
             hidden_dim,
             hidden_dim,
             kernel_size=kernel_size,
-            pad_mode="same",
         )
         self.ln2 = nn.LayerNorm([hidden_dim])
         self.proj = nn.Linear(hidden_dim, 1)
@@ -3911,19 +3902,17 @@ class SeamlessM4Tv2HifiGan(nn.Module):
             config.upsample_initial_channel,
             kernel_size=7,
             stride=1,
-            pad_mode='pad',
             padding=3,
         )
 
         self.upsampler = nn.ModuleList()
         for i, (upsample_rate, kernel_size) in enumerate(zip(config.upsample_rates, config.upsample_kernel_sizes)):
             self.upsampler.append(
-                nn.Conv1dTranspose(
+                nn.ConvTranspose1d(
                     config.upsample_initial_channel // (2**i),
                     config.upsample_initial_channel // (2 ** (i + 1)),
                     kernel_size=kernel_size,
                     stride=upsample_rate,
-                    pad_mode='pad',
                     padding=(kernel_size - upsample_rate) // 2,
                 )
             )
@@ -3934,7 +3923,7 @@ class SeamlessM4Tv2HifiGan(nn.Module):
             for kernel_size, dilation in zip(config.resblock_kernel_sizes, config.resblock_dilation_sizes):
                 self.resblocks.append(HifiGanResidualBlock(channels, kernel_size, dilation, config.leaky_relu_slope))
 
-        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, pad_mode='pad', padding=3)
+        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, padding=3)
 
     def forward(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor:
         r"""
@@ -4050,7 +4039,7 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
         # take care of edge cases where no padding or too many padding
         unit_lengths = ops.clamp(unit_lengths, 0, dur_out.shape[1] - 1)
 
-        cumulative_dur_out = ops.cumsum(dur_out, axis=1)
+        cumulative_dur_out = ops.cumsum(dur_out, dim=1)
         unit_lengths = cumulative_dur_out.gather_elements(dim=1, index=unit_lengths.unsqueeze(1)).squeeze()
 
         return unit_lengths
@@ -4121,7 +4110,7 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
         dur_out = ops.clamp(ops.round((ops.exp(log_dur_pred) - 1)).long(), min=1)
         # B x C x T
         if hidden_states.shape[0] == 1:
-            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), axis=2)
+            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), dim=2)
         else:
             # if batched sample, need to interleave per sample, and pad -> loss of parallelism
             if hidden_states.shape[0] > 1 and self.training:
@@ -4130,7 +4119,7 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
                                forward pass because the samples are interleaved."""
                 )
             hidden_states = [
-                ops.repeat_interleave(hidden_state, duration, axis=-1).swapaxes(0, 1)
+                ops.repeat_interleave(hidden_state, duration, dim=-1).swapaxes(0, 1)
                 for (hidden_state, duration) in zip(hidden_states, dur_out)
             ]
 
@@ -4138,7 +4127,7 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
 
         spkr = spkr.repeat(1, 1, hidden_states.shape[-1])
         lang = lang.repeat(1, 1, hidden_states.shape[-1])
-        hidden_states = ops.cat([lang, hidden_states, spkr], axis=1)
+        hidden_states = ops.cat([lang, hidden_states, spkr], dim=1)
 
         hidden_states = self.hifi_gan(hidden_states)
 
@@ -5687,11 +5676,11 @@ class SeamlessM4Tv2ForTextToSpeech(SeamlessM4Tv2PreTrainedModel):
 
         if attention_mask is not None:
             # repeat attention mask alongside batch dimension
-            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, axis=0)
+            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, dim=0)
         encoder_hidden_states = text_generation_output.encoder_hidden_states[-1]
 
         # repeat attention mask alongside batch dimension
-        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, axis=0)
+        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, dim=0)
 
         # get decoder last hidden state - must do a pass through the text decoder
         t2u_input_embeds = self.text_decoder(
@@ -5722,7 +5711,7 @@ class SeamlessM4Tv2ForTextToSpeech(SeamlessM4Tv2PreTrainedModel):
 
         # Add pads for lang, EOS tokens as per NLLB "source" tokenizer mode.
         pad_zero = t2u_char_count_per_id.new_zeros((t2u_char_count_per_id.shape[0], 1))
-        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], axis=1)
+        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], dim=1)
         t2u_char_input_ids = self._get_char_input_ids(
             t2u_input_ids, t2u_subwords, t2u_char_count_per_id, pad_token_id=pad_token_id
         )
@@ -5745,7 +5734,7 @@ class SeamlessM4Tv2ForTextToSpeech(SeamlessM4Tv2PreTrainedModel):
         else:
             t2u_logits = t2u_logits / temperature
             # apply softmax
-            probs = ops.softmax(t2u_logits, axis=-1)
+            probs = ops.softmax(t2u_logits, dim=-1)
             # reshape to 2D: (batch_size, seq_len, t2u_vocab_size) -> (batch_size*seq_len, t2u_vocab_size)
             probs = probs.reshape((-1, probs.shape[2]))
             # multinomial then reshape : (batch_size*seq_len)-> (batch_size,seq_len)
@@ -6307,10 +6296,10 @@ class SeamlessM4Tv2ForSpeechToSpeech(SeamlessM4Tv2PreTrainedModel):
             )
 
             # repeat attention mask alongside batch dimension
-            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, axis=0)
+            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, dim=0)
 
         # repeat attention mask alongside batch dimension
-        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, axis=0)
+        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, dim=0)
 
         # get decoder last hidden state - must do a pass through the text decoder
         t2u_input_embeds = self.text_decoder(
@@ -6341,7 +6330,7 @@ class SeamlessM4Tv2ForSpeechToSpeech(SeamlessM4Tv2PreTrainedModel):
 
         # Add pads for lang, EOS tokens as per NLLB "source" tokenizer mode.
         pad_zero = t2u_char_count_per_id.new_zeros((t2u_char_count_per_id.shape[0], 1))
-        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], axis=1)
+        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], dim=1)
         t2u_char_input_ids = self._get_char_input_ids(
             t2u_input_ids, t2u_subwords, t2u_char_count_per_id, pad_token_id=pad_token_id
         )
@@ -6364,7 +6353,7 @@ class SeamlessM4Tv2ForSpeechToSpeech(SeamlessM4Tv2PreTrainedModel):
         else:
             t2u_logits = t2u_logits / temperature
             # apply softmax
-            probs = ops.softmax(t2u_logits, axis=-1)
+            probs = ops.softmax(t2u_logits, dim=-1)
             # reshape to 2D: (batch_size, seq_len, t2u_vocab_size) -> (batch_size*seq_len, t2u_vocab_size)
             probs = probs.reshape((-1, probs.shape[2]))
             # multinomial then reshape : (batch_size*seq_len)-> (batch_size,seq_len)
@@ -7005,10 +6994,10 @@ class SeamlessM4Tv2Model(SeamlessM4Tv2PreTrainedModel):
 
         if attention_mask is not None:
             # repeat attention mask alongside batch dimension
-            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, axis=0)
+            attention_mask = ops.repeat_interleave(attention_mask, num_return_sequences, dim=0)
 
         # repeat attention mask alongside batch dimension
-        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, axis=0)
+        encoder_hidden_states = ops.repeat_interleave(encoder_hidden_states, num_return_sequences, dim=0)
 
         # get decoder last hidden state - must do a pass through the text decoder
         t2u_input_embeds = self.text_decoder(
@@ -7038,7 +7027,7 @@ class SeamlessM4Tv2Model(SeamlessM4Tv2PreTrainedModel):
         )
         # Add pads for lang, EOS tokens as per NLLB "source" tokenizer mode.
         pad_zero = t2u_char_count_per_id.new_zeros((t2u_char_count_per_id.shape[0], 1))
-        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], axis=1)
+        t2u_char_count_per_id = ops.cat([pad_zero, t2u_char_count_per_id, pad_zero], dim=1)
         t2u_char_input_ids = self._get_char_input_ids(
             t2u_input_ids, t2u_subwords, t2u_char_count_per_id, pad_token_id=pad_token_id
         )
@@ -7061,7 +7050,7 @@ class SeamlessM4Tv2Model(SeamlessM4Tv2PreTrainedModel):
         else:
             t2u_logits = t2u_logits / temperature
             # apply softmax
-            probs = ops.softmax(t2u_logits, axis=-1)
+            probs = ops.softmax(t2u_logits, dim=-1)
             # reshape to 2D: (batch_size, seq_len, t2u_vocab_size) -> (batch_size*seq_len, t2u_vocab_size)
             probs = probs.reshape((-1, probs.shape[2]))
             # multinomial then reshape : (batch_size*seq_len)-> (batch_size,seq_len)

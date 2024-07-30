@@ -20,10 +20,10 @@ import math
 from typing import Dict, Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
@@ -98,9 +98,8 @@ class MobileViTConvLayer(nn.Module):
             stride=stride,
             padding=padding,
             dilation=dilation,
-            group=groups,
+            groups=groups,
             bias=bias,
-            pad_mode="pad",
         )
 
         if use_normalization:
@@ -247,7 +246,7 @@ class MobileViTSelfAttention(nn.Module):
             math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -452,7 +451,7 @@ class MobileViTLayer(nn.Module):
         interpolate = False
         if new_width != orig_width or new_height != orig_height:
             # Note: Padding can be done, but then it needs to be handled in attention function.
-            features = ops.interpolate(
+            features = F.interpolate(
                 features, size=(new_height, new_width), mode="bilinear", align_corners=False
             )
             interpolate = True
@@ -508,7 +507,7 @@ class MobileViTLayer(nn.Module):
         )
 
         if info_dict["interpolate"]:
-            features = ops.interpolate(
+            features = F.interpolate(
                 features, size=info_dict["orig_size"], mode="bilinear", align_corners=False
             )
 
@@ -536,7 +535,7 @@ class MobileViTLayer(nn.Module):
         features = self.folding(patches, info_dict)
 
         features = self.conv_projection(features)
-        features = self.fusion(ops.cat((residual, features), axis=1))
+        features = self.fusion(ops.cat((residual, features), dim=1))
         return features
 
 
@@ -653,15 +652,17 @@ class MobileViTPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["MobileViTLayer"]
 
-    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.data.initialize(Normal(self.config.initializer_range))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize('zeros')
-            cell.weight.data.fill(1.0)
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class MobileViTModel(MobileViTPreTrainedModel):
@@ -728,7 +729,7 @@ class MobileViTModel(MobileViTPreTrainedModel):
 
             # global average pooling: (batch_size, channels, height, width) -> (batch_size, channels)
             pooled_output = ops.mean(
-                last_hidden_state, axis=[-2, -1], keep_dims=False)
+                last_hidden_state, dim=[-2, -1], keepdim=False)
         else:
             last_hidden_state = encoder_outputs[0]
             pooled_output = None
@@ -841,7 +842,7 @@ class MobileViTASPPPooling(nn.Module):
         spatial_size = features.shape[-2:]
         features = self.global_pool(features)
         features = self.conv_1x1(features)
-        features = ops.interpolate(
+        features = F.interpolate(
             features, size=spatial_size, mode="bilinear", align_corners=False)
         return features
 
@@ -898,7 +899,7 @@ class MobileViTASPP(nn.Module):
         pyramid = []
         for conv in self.convs:
             pyramid.append(conv(features))
-        pyramid = ops.cat(pyramid, axis=1)
+        pyramid = ops.cat(pyramid, dim=1)
 
         pooled_features = self.project(pyramid)
         pooled_features = self.dropout(pooled_features)
@@ -1005,7 +1006,7 @@ class MobileViTForSemanticSegmentation(MobileViTPreTrainedModel):
                     "The number of labels should be greater than one")
             else:
                 # upsample logits to the images' original size
-                upsampled_logits = ops.interpolate(
+                upsampled_logits = F.interpolate(
                     logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
                 )
                 loss_fct = CrossEntropyLoss(

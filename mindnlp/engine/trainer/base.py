@@ -35,12 +35,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops, optim
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 import mindspore.experimental
 import mindspore.experimental.optim
 from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 
+from mindnlp.core import nn, ops, optim
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
@@ -551,7 +551,7 @@ class Trainer:
             num_training_steps (int): The number of training steps to do.
         """
         if self.lr_scheduler is None:
-            from ...modules.optimization import get_scheduler
+            from ...transformers.optimization import get_scheduler
             self.lr_scheduler = get_scheduler(
                 self.args.lr_scheduler_type,
                 optimizer=self.optimizer if optimizer is None else optimizer,
