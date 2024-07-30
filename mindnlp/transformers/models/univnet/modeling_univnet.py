@@ -11,16 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch UnivNetModel model."""
+"""MindSpore UnivNetModel model."""
 
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_utils import ModelOutput, PreTrainedModel
 from .configuration_univnet import UnivNetConfig
@@ -79,7 +79,6 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
             self.channels,
             self.kernel_size,
             padding=padding,
-            pad_mode="pad",
             bias=True,
         )
         self.conv2 = nn.Conv1d(
@@ -87,7 +86,6 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
             self.channels,
             self.kernel_size,
             padding=padding,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -102,12 +100,12 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
         return hidden_states + residual
 
     def apply_weight_norm(self):
-        weight_norm(self.conv1)
-        weight_norm(self.conv2)
+        F.weight_norm(self.conv1)
+        F.weight_norm(self.conv2)
 
     def remove_weight_norm(self):
-        remove_weight_norm(self.conv1)
-        remove_weight_norm(self.conv2)
+        F.remove_weight_norm(self.conv1)
+        F.remove_weight_norm(self.conv2)
 
 
 class UnivNetKernelPredictor(nn.Module):
@@ -162,7 +160,6 @@ class UnivNetKernelPredictor(nn.Module):
             self.resnet_hidden_channels,
             5,
             padding=2,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -178,7 +175,6 @@ class UnivNetKernelPredictor(nn.Module):
             self.kernel_channels,
             self.resnet_kernel_size,
             padding=padding,
-            pad_mode="pad",
             bias=True,
         )
         self.bias_conv = nn.Conv1d(
@@ -186,7 +182,6 @@ class UnivNetKernelPredictor(nn.Module):
             self.bias_channels,
             self.resnet_kernel_size,
             padding=padding,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -237,18 +232,18 @@ class UnivNetKernelPredictor(nn.Module):
         return kernels, biases
 
     def apply_weight_norm(self):
-        weight_norm(self.input_conv)
+        F.weight_norm(self.input_conv)
         for layer in self.resblocks:
             layer.apply_weight_norm()
-        weight_norm(self.kernel_conv)
-        weight_norm(self.bias_conv)
+        F.weight_norm(self.kernel_conv)
+        F.weight_norm(self.bias_conv)
 
     def remove_weight_norm(self):
-        remove_weight_norm(self.input_conv)
+        F.remove_weight_norm(self.input_conv)
         for layer in self.resblocks:
             layer.remove_weight_norm()
-        remove_weight_norm(self.kernel_conv)
-        remove_weight_norm(self.bias_conv)
+        F.remove_weight_norm(self.kernel_conv)
+        F.remove_weight_norm(self.bias_conv)
 
 
 class UnivNetLvcResidualBlock(nn.Module):
@@ -284,7 +279,6 @@ class UnivNetLvcResidualBlock(nn.Module):
             self.kernel_size,
             padding=padding,
             dilation=self.dilation,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -372,10 +366,10 @@ class UnivNetLvcResidualBlock(nn.Module):
         return output_hidden_states
 
     def apply_weight_norm(self):
-        weight_norm(self.conv)
+        F.weight_norm(self.conv)
 
     def remove_weight_norm(self):
-        remove_weight_norm(self.conv)
+        F.remove_weight_norm(self.conv)
 
 
 class UnivNetLvcBlock(nn.Module):
@@ -411,13 +405,12 @@ class UnivNetLvcBlock(nn.Module):
         self.leaky_relu_slope = config.leaky_relu_slope
         self.num_blocks = len(self.dilations)
 
-        self.convt_pre = nn.Conv1dTranspose(
+        self.convt_pre = nn.ConvTranspose1d(
             self.hidden_channels,
             self.hidden_channels,
             2 * self.stride,
             stride=self.stride,
             padding=self.stride // 2 + self.stride % 2,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -450,13 +443,13 @@ class UnivNetLvcBlock(nn.Module):
         return hidden_states
 
     def apply_weight_norm(self):
-        weight_norm(self.convt_pre)
+        F.weight_norm(self.convt_pre)
         self.kernel_predictor.apply_weight_norm()
         for layer in self.resblocks:
             layer.apply_weight_norm()
 
     def remove_weight_norm(self):
-        remove_weight_norm(self.convt_pre)
+        F.remove_weight_norm(self.convt_pre)
         self.kernel_predictor.remove_weight_norm()
         for layer in self.resblocks:
             layer.remove_weight_norm()
@@ -524,7 +517,6 @@ class UnivNetModel(PreTrainedModel):
             kernel_size=7,
             stride=1,
             padding=3,
-            pad_mode="pad",
             bias=True,
         )
 
@@ -547,7 +539,7 @@ class UnivNetModel(PreTrainedModel):
             ]
         )
         self.conv_post = nn.Conv1d(
-            config.model_hidden_channels, 1, 7, padding=3, pad_mode="pad", bias=True
+            config.model_hidden_channels, 1, 7, padding=3, bias=True
         )
         # Initialize weights and apply final processing
         self.post_init()
@@ -611,7 +603,7 @@ class UnivNetModel(PreTrainedModel):
                 self.config.model_in_channels,
             )
             noise_sequence = ops.randn(
-                noise_sequence_shape, seed=generator, dtype=input_features.dtype
+                noise_sequence_shape, dtype=input_features.dtype
             )
         noise_sequence_batch_size = noise_sequence.shape[0]
 
@@ -686,16 +678,16 @@ class UnivNetModel(PreTrainedModel):
                 )
 
     def apply_weight_norm(self):
-        weight_norm(self.conv_pre)
+        F.weight_norm(self.conv_pre)
         for layer in self.resblocks:
             layer.apply_weight_norm()
-        weight_norm(self.conv_post)
+        F.weight_norm(self.conv_post)
 
     def remove_weight_norm(self):
-        remove_weight_norm(self.conv_pre)
+        F.remove_weight_norm(self.conv_pre)
         for layer in self.resblocks:
             layer.remove_weight_norm()
-        remove_weight_norm(self.conv_post)
+        F.remove_weight_norm(self.conv_post)
 
 
 __all__ = ["UnivNetModel"]

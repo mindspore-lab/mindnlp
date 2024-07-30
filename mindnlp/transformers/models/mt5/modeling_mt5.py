@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, Constant
 
 from mindnlp.core import nn, ops

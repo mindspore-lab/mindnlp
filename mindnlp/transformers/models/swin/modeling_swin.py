@@ -239,7 +239,7 @@ class WindowPartition(nn.Module):
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         b, h, w, c = x.shape
         x = ops.reshape(x, (b, h // self.window_size, self.window_size, w // self.window_size, self.window_size, c))
-        x = ops.transpose(x, (0, 1, 3, 2, 4, 5))
+        x = ops.permute(x, (0, 1, 3, 2, 4, 5))
         x = ops.reshape(x, (b * h * w // (self.window_size**2), self.window_size, self.window_size, c))
         return x
 
@@ -254,8 +254,8 @@ class WindowReverse(nn.Module):
     ) -> mindspore.Tensor:
         b = windows.shape[0] // (h * w // window_size // window_size)
         x = ops.reshape(windows, (b, h // window_size, w // window_size, window_size, window_size, -1))
-        x = ops.transpose(x, (0, 1, 3, 2, 4, 5))
-        x = ops.reshape(x, (b, h, w, -1))
+        x = ops.permute(x, (0, 1, 3, 2, 4, 5))
+        x = ops.permute(x, (b, h, w, -1))
         return x
 
 

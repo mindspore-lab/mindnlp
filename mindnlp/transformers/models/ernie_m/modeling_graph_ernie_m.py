@@ -21,12 +21,12 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -111,7 +111,7 @@ class MSErnieMEmbeddings(nn.Module):
         if position_ids is None:
             input_shape = inputs_embeds.shape[:-1]
             ones = ops.ones(input_shape, dtype=mindspore.int64)
-            seq_length = ops.cumsum(ones, axis=1)
+            seq_length = ops.cumsum(ones, dim=1)
             position_ids = seq_length - ones
 
             if past_key_values_length > 0:
@@ -265,8 +265,8 @@ class MSErnieMSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.k_proj(hidden_states))
             value_layer = self.transpose_for_scores(self.v_proj(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.k_proj(hidden_states))
             value_layer = self.transpose_for_scores(self.v_proj(hidden_states))
@@ -315,7 +315,7 @@ class MSErnieMSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -974,16 +974,16 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
         # Adapted from paddlenlp.transformers.ernie_m.ErnieMModel
         if attention_mask is None:
             attention_mask = (input_ids == 0).to(self.dtype)
-            attention_mask = attention_mask * finfo(attention_mask.dtype, 'min')
+            attention_mask = attention_mask * float(ops.finfo(attention_mask.dtype).min)
             if past_key_values is not None:
                 batch_size = past_key_values[0][0].shape[0]
                 past_mask = ops.zeros([batch_size, 1, 1, past_key_values_length], dtype=attention_mask.dtype)
-                attention_mask = ops.concat([past_mask, attention_mask], axis=-1)
+                attention_mask = ops.concat([past_mask, attention_mask], dim=-1)
         # For 2D attention_mask from tokenizer
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.to(self.dtype)
             attention_mask = 1.0 - attention_mask
-            attention_mask = attention_mask * finfo(attention_mask.dtype, 'min')
+            attention_mask = attention_mask * float(ops.finfo(attention_mask.dtype).min)
 
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(1)
 

@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
+from mindnlp.core import nn, ops
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -241,7 +241,7 @@ class Swin2SRPatchMerging(nn.Module):
         # [batch_size, height/2, width/2, num_channels]
         input_feature_3 = input_feature[:, 1::2, 1::2, :]
         # [batch_size, height/2 * width/2, 4*num_channels]
-        input_feature = ops.cat([input_feature_0, input_feature_1, input_feature_2, input_feature_3], axis=-1)
+        input_feature = ops.cat([input_feature_0, input_feature_1, input_feature_2, input_feature_3], dim=-1)
         input_feature = input_feature.view(batch_size, -1, 4 * num_channels)  # [batch_size, height/2 * width/2, 4*C]
 
         input_feature = self.reduction(input_feature)
@@ -357,7 +357,7 @@ class Swin2SRSelfAttention(nn.Module):
             attention_scores = attention_scores.view(-1, self.num_attention_heads, dim, dim)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.

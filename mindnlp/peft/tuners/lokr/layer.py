@@ -19,12 +19,10 @@ from typing import List, Optional, Union, Any, Set, Tuple
 from abc import abstractmethod
 
 import mindspore as ms
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Zero
 
-# import mindnlp._legacy.functional as F
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict
-# from ..import_utils import is_bnb_4bit_available, is_bnb_available
 
 from ..tuners_utils import (
     BaseTunerLayer,

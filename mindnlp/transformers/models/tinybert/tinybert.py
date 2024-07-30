@@ -146,7 +146,7 @@ class TinyBertSelfAttention(nn.Module):
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -839,21 +839,21 @@ class TinyBertPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight = ops.normal(
-                shape=module.weight.shape,
+                size=module.weight.shape,
                 mean=0.0,
-                stddev=self.config.initializer_range
+                std=self.config.initializer_range
             )
         elif isinstance(module, nn.LayerNorm):
-            module.bias = ops.fill(
-                type=module.bias.dtype, shape=module.bias.shape, value=0)
-            module.weight = ops.fill(
-                type=module.weight.dtype, shape=module.weight.shape, value=1.0)
+            module.bias = ops.full(
+                dtype=module.bias.dtype, size=module.bias.shape, fill_value=0)
+            module.weight = ops.full(
+                dtype=module.weight.dtype, size=module.weight.shape, fill_value=1.0)
         if isinstance(module, nn.Linear):
             module.weight = ops.normal(
-                shape=module.weight.shape, mean=0.0, stddev=self.config.initializer_range)
+                size=module.weight.shape, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias = ops.fill(
-                    type=module.bias.dtype, shape=module.bias.shape, value=0)
+                module.bias = ops.full(
+                    dtype=module.bias.dtype, size=module.bias.shape, fill_value=0)
 
     def get_input_embeddings(self) -> "nn.Module":
         """

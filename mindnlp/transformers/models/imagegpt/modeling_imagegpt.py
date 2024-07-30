@@ -15,15 +15,12 @@
 """MindSpore OpenAI ImageGPT model."""
 
 import math
-import os
 import warnings
 from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 
 import mindspore
-from mindspore import numpy as mnp
-from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
@@ -162,7 +159,7 @@ class ImageGPTAttention(nn.Module):
         _, _, k_seq_len, _ = key.shape
 
         # Preallocate attn_weights for `baddbmm`
-        attn_weights = mnp.empty((
+        attn_weights = ops.empty((
             bsz * num_heads, q_seq_len, k_seq_len), dtype=mindspore.float32)
 
         # Compute Scale Factor

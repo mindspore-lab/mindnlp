@@ -18,11 +18,12 @@ Moss model
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-from mindspore.nn import CrossEntropyLoss
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, Zero, One
-from mindnlp.transformers.activations import ACT2FN
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss
+from ...activations import ACT2FN
 from .moss_configuration import MossConfig
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -48,7 +49,7 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> Tensor:
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2) * 1.0 / dim))
     sinusoid_inp = ops.einsum(
         "i , j -> i j", ops.arange(num_pos, dtype=mindspore.float32), inv_freq).float()
-    res = ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    res = ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
     return res
 
 
@@ -58,7 +59,7 @@ def rotate_every_two(input_tensor: Tensor) -> Tensor:
     """
     tensor1 = input_tensor[:, :, :, ::2]
     tensor2 = input_tensor[:, :, :, 1::2]
-    out_tensor = ops.stack((-tensor2, tensor1), axis=-1)
+    out_tensor = ops.stack((-tensor2, tensor1), dim=-1)
     return ops.flatten(out_tensor, start_dim=-2)
 
 
@@ -229,7 +230,7 @@ class MossAttention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = nn.Softmax(axis=-1)(attn_weights)
+        attn_weights = nn.Softmax(dim=-1)(attn_weights)
         attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -282,7 +283,7 @@ class MossAttention(nn.Module):
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
 
         local_dim = self.head_dim * self.num_attention_heads // mp_num
-        query, value, key = ops.split(qkv_split, local_dim, axis=-1)
+        query, value, key = ops.split(qkv_split, local_dim, dim=-1)
 
         query = self._split_heads(
             query, self.num_attention_heads, self.head_dim, mp_num=mp_num)
@@ -311,8 +312,8 @@ class MossAttention(nn.Module):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -322,8 +323,8 @@ class MossAttention(nn.Module):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)

@@ -22,12 +22,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
+from mindspore.common.initializer import initializer, Normal, XavierUniform
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindspore.common.initializer import initializer, Normal, XavierUniform
 from mindnlp.utils import requires_backends, is_scipy_available
-
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithCrossAttentions
 from ...modeling_utils import PreTrainedModel

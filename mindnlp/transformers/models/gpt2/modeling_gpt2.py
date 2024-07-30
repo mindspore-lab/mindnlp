@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
+from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
     ModelOutput,

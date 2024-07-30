@@ -21,12 +21,12 @@ from copy import deepcopy
 from typing import Dict, Optional
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.train.serialization import _exec_save
 
-from .config import PeftConfig, PromptLearningConfig
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import ModuleDict
+from .config import PeftConfig, PromptLearningConfig
 from ..transformers import PreTrainedModel
 
 from .tuners import (
@@ -205,7 +205,7 @@ class PeftModel(nn.Module):
         """
         config = self.peft_config[adapter_name]
         if not hasattr(self, "prompt_encoder"):
-            self.prompt_encoder = CellDict({})
+            self.prompt_encoder = ModuleDict({})
             self.prompt_tokens = {}
         transformer_backbone = None
         for name, cell in self.base_model.cells_and_names():
@@ -239,7 +239,7 @@ class PeftModel(nn.Module):
         else:
             raise ValueError("Not supported")
 
-        self.prompt_encoder.update(CellDict({adapter_name: prompt_encoder}))
+        self.prompt_encoder.update(ModuleDict({adapter_name: prompt_encoder}))
         self.prompt_tokens[adapter_name] = ops.arange(
             config.num_virtual_tokens * config.num_transformer_submodules
         ).long()
@@ -333,7 +333,7 @@ class PeftModel(nn.Module):
                 peft_config.token_dim // peft_config.num_attention_heads,
             )
             if peft_config.num_transformer_submodules == 2:
-                past_key_values = ops.cat([past_key_values, past_key_values], axis=2)
+                past_key_values = ops.cat([past_key_values, past_key_values], dim=2)
             past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(
                 peft_config.num_transformer_submodules * 2
             )
@@ -521,7 +521,7 @@ class PeftModelForSequenceClassification(PeftModel):
         if attention_mask is not None:
             # concat prompt attention mask
             prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens, dtype=attention_mask.dtype)
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=1)
         if kwargs.get("position_ids", None) is not None:
             warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
             kwargs["position_ids"] = None
@@ -543,13 +543,13 @@ class PeftModelForSequenceClassification(PeftModel):
                     ops.zeros(batch_size, peft_config.num_virtual_tokens, dtype=kwargs["token_type_ids"].dtype),
                     kwargs["token_type_ids"],
                 ),
-                axis=1,
+                dim=1,
             )
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
         prompts = self.get_prompt(batch_size=batch_size)
         prompts = prompts.to(inputs_embeds.dtype)
-        inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+        inputs_embeds = ops.cat((prompts, inputs_embeds), dim=1)
         return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
 
 
@@ -626,7 +626,7 @@ class PeftModelForCausalLM(PeftModel):
         if attention_mask is not None:
             # concat prompt attention mask
             prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=1)
 
         if kwargs.get("position_ids", None) is not None:
             warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
@@ -652,10 +652,10 @@ class PeftModelForCausalLM(PeftModel):
         # concat prompt labels
         if labels is not None:
             prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100)
-            kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
+            kwargs["labels"] = ops.cat((prefix_labels, labels), dim=1)
         prompts = self.get_prompt(batch_size=batch_size)
         prompts = prompts.to(inputs_embeds.dtype)
-        inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+        inputs_embeds = ops.cat((prompts, inputs_embeds), dim=1)
         return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
 
     def generate(self, **kwargs):
@@ -685,7 +685,7 @@ class PeftModelForCausalLM(PeftModel):
                 prefix_attention_mask = ops.ones(
                     model_kwargs["input_ids"].shape[0], peft_config.num_virtual_tokens)
                 model_kwargs["attention_mask"] = ops.cat(
-                    (prefix_attention_mask, model_kwargs["attention_mask"]), axis=1
+                    (prefix_attention_mask, model_kwargs["attention_mask"]), dim=1
                 )
 
             if model_kwargs.get("position_ids", None) is not None:
@@ -706,7 +706,7 @@ class PeftModelForCausalLM(PeftModel):
                     inputs_embeds = self.word_embeddings(model_kwargs["input_ids"])
                     prompts = self.get_prompt(batch_size=model_kwargs["input_ids"].shape[0])
                     prompts = prompts.to(inputs_embeds.dtype)
-                    model_kwargs["inputs_embeds"] = ops.cat((prompts, inputs_embeds), axis=1)
+                    model_kwargs["inputs_embeds"] = ops.cat((prompts, inputs_embeds), dim=1)
                     model_kwargs["input_ids"] = None
 
         return model_kwargs
@@ -780,7 +780,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
         if decoder_attention_mask is not None:
             # concat prompt attention mask
             prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-            decoder_attention_mask = ops.cat((prefix_attention_mask, decoder_attention_mask), axis=1)
+            decoder_attention_mask = ops.cat((prefix_attention_mask, decoder_attention_mask), dim=1)
 
         if kwargs.get("position_ids", None) is not None:
             warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
@@ -811,11 +811,11 @@ class PeftModelForSeq2SeqLM(PeftModel):
             if attention_mask is not None:
                 # concat prompt attention mask
                 prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-                kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+                kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), dim=1)
 
             prompts = self.get_prompt(batch_size=batch_size)
             prompts = prompts.to(inputs_embeds.dtype)
-            inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), axis=1)
+            inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), dim=1)
 
             return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
         else:
@@ -830,22 +830,22 @@ class PeftModelForSeq2SeqLM(PeftModel):
             if attention_mask is not None:
                 # concat prompt attention mask
                 prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens, dtype=attention_mask.dtype)
-                kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+                kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), dim=1)
             # concat prompt labels
             if labels is not None:
                 if peft_config.num_transformer_submodules == 1:
                     kwargs["labels"] = labels
                 elif peft_config.num_transformer_submodules == 2:
                     prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100)
-                    kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
+                    kwargs["labels"] = ops.cat((prefix_labels, labels), dim=1)
             prompts = self.get_prompt(batch_size=batch_size, task_ids=task_ids)
             prompts = prompts.to(inputs_embeds.dtype)
-            inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), axis=1)
+            inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), dim=1)
             if peft_config.num_transformer_submodules == 1:
                 return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
             elif peft_config.num_transformer_submodules == 2:
                 decoder_inputs_embeds = ops.cat(
-                    (prompts[:, peft_config.num_virtual_tokens :], decoder_inputs_embeds), axis=1
+                    (prompts[:, peft_config.num_virtual_tokens :], decoder_inputs_embeds), dim=1
                 )
                 return self.base_model(
                     inputs_embeds=inputs_embeds, decoder_inputs_embeds=decoder_inputs_embeds, **kwargs
@@ -893,12 +893,12 @@ class PeftModelForSeq2SeqLM(PeftModel):
                     prompts = self.get_prompt(batch_size=batch_size)
                     prompts = prompts.to(inputs_embeds.dtype)
 
-                    inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), axis=1)
+                    inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), dim=1)
                     kwargs["inputs_embeds"] = inputs_embeds
 
                     if "attention_mask" in kwargs:
                         prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-                        kwargs["attention_mask"] = ops.cat((prefix_attention_mask, kwargs["attention_mask"]), axis=1)
+                        kwargs["attention_mask"] = ops.cat((prefix_attention_mask, kwargs["attention_mask"]), dim=1)
 
                     return self.base_model.generate(**kwargs)
                 else:
@@ -1002,7 +1002,7 @@ class PeftModelForTokenClassification(PeftModel):
         if attention_mask is not None:
             # concat prompt attention mask
             prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=1)
         if kwargs.get("position_ids", None) is not None:
             warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
             kwargs["position_ids"] = None
@@ -1025,13 +1025,13 @@ class PeftModelForTokenClassification(PeftModel):
                         ops.zeros(batch_size, peft_config.num_virtual_tokens),
                         kwargs["token_type_ids"],
                     ),
-                    axis=1,
+                    dim=1,
                 ).long()
             if inputs_embeds is None:
                 inputs_embeds = self.word_embeddings(input_ids)
             prompts = self.get_prompt(batch_size=batch_size)
             prompts = prompts.to(inputs_embeds.dtype)
-            inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+            inputs_embeds = ops.cat((prompts, inputs_embeds), dim=1)
             return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
 
     def _prefix_tuning_forward(

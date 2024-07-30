@@ -918,3 +918,54 @@ def cosine_similarity(x1, x2, dim=1, eps=1e-8):
 
 # def pairwise_distance():
 #     return ops.pairwise_distance
+
+def make_attention_mask(
+    query_input: Tensor,
+    key_input: Tensor,
+    dtype=mindspore.float32,
+):
+    """Mask-making helper for attention weights.
+
+    In case of 1d inputs (i.e., `[batch..., len_q]`, `[batch..., len_kv]`, the
+    attention weights will be `[batch..., heads, len_q, len_kv]` and this
+    function will produce `[batch..., 1, len_q, len_kv]`.
+
+    Args:
+      query_input: a batched, flat input of query_length size
+      key_input: a batched, flat input of key_length size
+      dtype: mask return dtype
+
+    Returns:
+      A `[batch..., 1, len_q, len_kv]` shaped mask for 1d attention.
+    """
+    mask = ops.greater_equal(
+        ops.expand_dims(query_input, axis=-1), ops.expand_dims(key_input, axis=-2)
+    )
+    mask = ops.expand_dims(mask, axis=-3)
+    return mask.astype(dtype)
+
+
+def make_causal_mask(
+    x: Tensor, dtype=mindspore.float32
+) -> Tensor:
+    """Make a causal mask for self-attention.
+
+    In case of 1d inputs (i.e., `[batch..., len]`, the self-attention weights
+    will be `[batch..., heads, len, len]` and this function will produce a
+    causal mask of shape `[batch..., 1, len, len]`.
+
+    Args:
+      x: input array of shape `[batch..., len]`
+      extra_batch_dims: number of batch dims to add singleton axes for, none by
+        default
+      dtype: mask return dtype
+
+    Returns:
+      A `[batch..., 1, len, len]` shaped causal mask for 1d attention.
+    """
+    idxs = ops.broadcast_to(ops.arange(x.shape[-1], dtype=mindspore.int32), x.shape)
+    return make_attention_mask(
+        idxs,
+        idxs,
+        dtype=dtype,
+    )

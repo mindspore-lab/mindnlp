@@ -18,11 +18,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 from functools import reduce
 
-import numpy as np
-
 import mindspore
 from mindspore import Tensor, Parameter
-from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F

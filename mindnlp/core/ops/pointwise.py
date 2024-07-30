@@ -270,10 +270,10 @@ def logical_and(input, other):
     return ops.logical_and(input, other)
 
 # logical_not
-def logical_not(input, other):
+def logical_not(input):
     if USE_PYBOOST:
-        return mindspore.mint.logical_not(input, other)
-    return ops.logical_not(input, other)
+        return mindspore.mint.logical_not(input)
+    return ops.logical_not(input)
 
 # logical_or
 def logical_or(input, other):

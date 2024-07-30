@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
- PyTorch XLNet model.
+MindSpore XLNet model.
 """
 import warnings
 from dataclasses import dataclass
@@ -24,15 +24,14 @@ import numpy as np
 from mindspore.common.initializer import initializer, Normal
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-
-from mindnlp. transformers. ms_utils import apply_chunking_to_forward
-from mindnlp. transformers. activations import ACT2FN
-from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
-from mindnlp.utils import (ModelOutput, logging)
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from ...ms_utils import apply_chunking_to_forward
+from ...activations import ACT2FN
+from ...modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
+from ....utils import (ModelOutput, logging)
 from .configuration_xlnet import XLNetConfig
 
 logger = logging.get_logger(__name__)
@@ -245,7 +244,7 @@ class XLNetRelativeAttention(nn.Module):
                 attn_score = attn_score - 1e30 * ops.einsum("ijbn->bnij", attn_mask)
 
         # attention probability
-        attn_prob = ops.softmax(attn_score, axis=3)
+        attn_prob = ops.softmax(attn_score, dim=3)
         attn_prob = self.dropout(attn_prob)
 
         # Mask heads if we want to
@@ -320,7 +319,7 @@ class XLNetRelativeAttention(nn.Module):
             # Two-stream attention with relative positional encoding.
             # content based attention score
             if mems is not None and mems.dim() > 1:
-                cat = ops.cat([mems, h], axis=0)
+                cat = ops.cat([mems, h], dim=0)
             else:
                 cat = h
 
@@ -401,7 +400,7 @@ class XLNetRelativeAttention(nn.Module):
         else:
             # Multi-head attention with relative positional encoding
             if mems is not None and mems.dim() > 1:
-                cat = ops.cat([mems, h], axis=0)
+                cat = ops.cat([mems, h], dim=0)
             else:
                 cat = h
 
@@ -1171,7 +1170,7 @@ class XLNetModel(XLNetPreTrainedModel):
             # if `use_mems` is active and `mem_len` is defined, the model
             new_mem = curr_out[cutoff:]
         else:
-            new_mem = ops.cat([prev_mem, curr_out], axis=0)[cutoff:]
+            new_mem = ops.cat([prev_mem, curr_out], dim=0)[cutoff:]
 
         return new_mem
 
@@ -1214,7 +1213,7 @@ class XLNetModel(XLNetPreTrainedModel):
             None
         """
         sinusoid_inp = ops.einsum("i,d->id", pos_seq, inv_freq)
-        pos_emb = ops.cat([ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)], axis=-1)
+        pos_emb = ops.cat([ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)], dim=-1)
         pos_emb = pos_emb[:, None, :]
 
         if bsz is not None:
@@ -1267,7 +1266,7 @@ class XLNetModel(XLNetPreTrainedModel):
                 fwd_pos_emb = self.positional_embedding(fwd_pos_seq, inv_freq)
                 bwd_pos_emb = self.positional_embedding(bwd_pos_seq, inv_freq)
 
-            pos_emb = ops.cat([fwd_pos_emb, bwd_pos_emb], axis=1)
+            pos_emb = ops.cat([fwd_pos_emb, bwd_pos_emb], dim=1)
         else:
             fwd_pos_seq = ops.arange(beg, end, -1.0, dtype=mindspore.int64).float()
             if self.clamp_len > 0:
@@ -1397,7 +1396,7 @@ class XLNetModel(XLNetPreTrainedModel):
             # all mems can be attended to
             if mlen > 0:
                 mems_mask = ops.zeros((data_mask.shape[0], mlen, bsz)).to(dtype=data_mask.dtype)
-                data_mask = ops.cat([mems_mask, data_mask], axis=1)
+                data_mask = ops.cat([mems_mask, data_mask], dim=1)
             if attn_mask is None:
                 attn_mask = data_mask[:, :, :, None]
             else:
@@ -1410,7 +1409,7 @@ class XLNetModel(XLNetPreTrainedModel):
             non_tgt_mask = -ops.eye(qlen).to(dtype=attn_mask.dtype)
             if mlen > 0:
                 non_tgt_mask = ops.cat([ops.zeros((qlen, mlen)).to(dtype=attn_mask.dtype), non_tgt_mask],
-                                                 axis=-1)
+                                                 dim=-1)
             non_tgt_mask = ((attn_mask + non_tgt_mask[:, :, None, None]) > 0).to(dtype=attn_mask.dtype)
         else:
             non_tgt_mask = None
@@ -1435,7 +1434,7 @@ class XLNetModel(XLNetPreTrainedModel):
             # Convert `token_type_ids` to one-hot `seg_mat`
             if mlen > 0:
                 mem_pad = ops.zeros((mlen, bsz), dtype=mindspore.int64)
-                cat_ids = ops.cat([mem_pad, token_type_ids], axis=0)
+                cat_ids = ops.cat([mem_pad, token_type_ids], dim=0)
             else:
                 cat_ids = token_type_ids
 
@@ -1642,9 +1641,9 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
         offset = 2
 
         if past_key_values:
-            input_ids = ops.cat([input_ids[:, -offset:], dummy_token], axis=1)
+            input_ids = ops.cat([input_ids[:, -offset:], dummy_token], dim=1)
         else:
-            input_ids = ops.cat([input_ids, dummy_token], axis=1)
+            input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         # Build permutation mask so that previous tokens don't see last token
         sequence_length = input_ids.shape[1]
@@ -2569,7 +2568,7 @@ class XLNetForQuestionAnswering(XLNetPreTrainedModel):
         else:
             # during inference, compute the end logits based on beam search
             bsz, slen, hsz = hidden_states.shape
-            start_log_probs = ops.softmax(start_logits, axis=-1)  # shape (bsz, slen)
+            start_log_probs = ops.softmax(start_logits, dim=-1)  # shape (bsz, slen)
 
             start_top_log_probs, start_top_index = ops.topk(
                 start_log_probs, self.start_n_top, dim=-1
@@ -2583,7 +2582,7 @@ class XLNetForQuestionAnswering(XLNetPreTrainedModel):
             )  # shape (bsz, slen, start_n_top, hsz)
             p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
             end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-            end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
+            end_log_probs = ops.softmax(end_logits, dim=1)  # shape (bsz, slen, start_n_top)
 
             end_top_log_probs, end_top_index = ops.topk(
                 end_log_probs, self.end_n_top, dim=1

@@ -17,6 +17,7 @@
 Time series distributional output classes and utilities.
 """
 from typing import Callable, Dict, Optional, Tuple
+import numpy as np
 import mindspore
 from mindspore.nn.probability.distribution import (
     Distribution,
@@ -29,7 +30,6 @@ from mindspore.nn.probability.distribution import (
 )
 from mindspore.nn.probability.bijector import ScalarAffine as AffineTransform
 from mindnlp.core import nn, ops
-import numpy as np
 
 class AffineTransformed(TransformedDistribution):
     '''

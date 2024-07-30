@@ -3103,7 +3103,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
                     _compute_global_attention_mask(input_ids[:, i], self.config.sep_token_id, before_sep_token=False)
                     for i in range(num_choices)
                 ],
-                axis=1,
+                dim=1,
             )
 
         flat_input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None

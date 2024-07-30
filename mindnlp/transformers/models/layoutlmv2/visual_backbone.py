@@ -23,14 +23,12 @@ from typing import Optional
 import yaml
 from addict import Dict
 
+import numpy as np
 import mindspore
 from mindspore import ops as msop
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
-
-
-import numpy as np
 
 
 @dataclass

@@ -19,11 +19,11 @@ import collections
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -72,7 +72,7 @@ class TimesformerPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(config.num_channels, config.hidden_size, kernel_size=patch_size,
-                                    stride=patch_size, pad_mode='valid', bias=True)
+                                    stride=patch_size, bias=True)
 
     def forward(self, pixel_values):
         '''
@@ -187,7 +187,7 @@ class TimesformerEmbeddings(nn.Module):
         embeddings, num_frames, patch_width = self.patch_embeddings(pixel_values)
 
         cls_tokens = self.cls_token.broadcast_to((embeddings.shape[0], -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         # resizing the positional embeddings in case they don't match the input at inference
         if embeddings.shape[1] != self.position_embeddings.shape[1]:
@@ -230,7 +230,7 @@ class TimesformerEmbeddings(nn.Module):
             embeddings = embeddings.view(batch_size, patch_height, num_frames, patch_width).reshape(
                 batch_size, patch_height * num_frames, patch_width
             )
-            embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+            embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         return embeddings
 
@@ -397,7 +397,7 @@ class TimesformerSelfAttention(nn.Module):
         query, key, value = qkv[0], qkv[1], qkv[2]
 
         attention_probs = (query @ key.swapaxes(-2, -1)) * self.scale
-        attention_probs = nn.Softmax(axis=-1)(attention_probs)
+        attention_probs = nn.Softmax(dim=-1)(attention_probs)
         attention_probs = self.attn_drop(attention_probs)
 
         context_layer = (attention_probs @ value).swapaxes(1, 2).reshape(batch_size, hidden_size, num_channels)

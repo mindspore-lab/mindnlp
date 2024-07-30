@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch GPT Neo model."""
-
-import os
+"""MindSpore GPT Neo model."""
 from typing import Optional, Tuple, Union
 
 import mindspore
@@ -286,9 +284,6 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GPTNeoBlock"]
     _skip_keys_device_placement = "past_key_values"
     _supports_flash_attn_2 = True
-
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
 
     def _init_weights(self, module):
         """Initialize the weights."""
@@ -682,7 +677,7 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

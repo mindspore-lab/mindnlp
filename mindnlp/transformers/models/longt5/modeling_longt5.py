@@ -22,7 +22,7 @@ from typing import List, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Constant, Normal
 
 from mindnlp.core import nn, ops
@@ -70,7 +70,7 @@ def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int, pad_value: i
     pad = [(0, 0)] * x.ndim
     pad[dim] = (0, pad_len)
     pad = sum(pad[::-1], ())
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
     return x
 
 def _split_into_blocks(x: mindspore.Tensor, block_len: int, dim: int) -> mindspore.Tensor:
@@ -98,7 +98,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
     pad[block_dim] = (1, 1)
     pad = sum(pad[::-1], ())
     # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
 
     blocks_list: List[mindspore.Tensor] = []
     for i in range(3):
