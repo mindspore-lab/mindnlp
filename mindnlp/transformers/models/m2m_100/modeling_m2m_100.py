@@ -12,16 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch M2M100 model."""
+"""MindSpore M2M100 model."""
 
 import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
+from mindspore.common.api import _no_grad
 from mindspore import Tensor, Parameter
 
-from mindspore.common.initializer import initializer,Normal
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import (
     logging,
 )
@@ -68,7 +70,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -78,8 +80,8 @@ class M2M100ScaledWordEmbedding(nn.Embedding):
     This module overrides nn.Embeddings' forward by multiplying with embeddings scale.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
-        super().__init__(vocab_size, embedding_dim, padding_idx)
+    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
+        super().__init__(num_embeddings, embedding_dim, padding_idx)
         self.embed_scale = embed_scale
 
     def forward(self, input_ids: mindspore.Tensor):
@@ -96,19 +98,16 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
         self.padding_idx = padding_idx
         self.make_weights(num_positions + self.offset, embedding_dim, padding_idx)
 
-    def make_weights(self, vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
-        emb_weights = self.get_embedding(vocab_size, embedding_dim, padding_idx)
-        has_weight = False
+    def make_weights(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
+        emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
         if hasattr(self, "weights"):
-            has_weight = True
-        self.weights = emb_weights
-        if has_weight:
             # in forward put the weights on the correct dtype and device of the param
-            emb_weights = emb_weights.to(dtype=self.weights.dtype)
-            self.weights = emb_weights
+            emb_weights = emb_weights.to(dtype=self.weights.dtype, device=self.weights.device)
+
+        self.register_buffer("weights", emb_weights, persistent=False)
 
     @staticmethod
-    def get_embedding(vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
+    def get_embedding(num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
         """
         Build sinusoidal embeddings.
 
@@ -118,17 +117,17 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
         half_dim = embedding_dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
-        emb = ops.arange(vocab_size, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(vocab_size, -1)
+        emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(vocab_size, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
-        return emb#.to(ops.get_default_dtype())
+        return emb.to(get_default_dtype())
 
-    #@mindspore.no_grad()
+    @_no_grad()
     def forward(
         self, input_ids: mindspore.Tensor = None, inputs_embeds: mindspore.Tensor = None, past_key_values_length: int = 0
     ):
@@ -154,7 +153,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
         Args:
             inputs_embeds: mindspore.Tensor
 
-        Returns: mindspore.Tensor
+        Returns: torch.Tensor
         """
         input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
@@ -163,7 +162,6 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape) + past_key_values_length
-
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->M2M100
 class M2M100Attention(nn.Module):
@@ -242,8 +240,8 @@ class M2M100Attention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -281,7 +279,7 @@ class M2M100Attention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -329,7 +327,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -1121,7 +1119,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
     def __init__(self, config: M2M100Config):
         super().__init__(config)
         self.model = M2M100Model(config)
-        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

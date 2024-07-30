@@ -22,10 +22,11 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...generation.configuration_utils import GenerationConfig
 from ...generation.logits_process import ClassifierFreeGuidanceLogitsProcessor, LogitsProcessorList
@@ -180,10 +181,10 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.cos(emb), ops.sin(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.cos(emb), ops.sin(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         return emb.to(get_default_dtype())
 
     def forward(self, inputs_embeds: mindspore.Tensor, past_key_values_length: int = 0):
@@ -330,8 +331,8 @@ class MusicgenMelodyAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -369,7 +370,7 @@ class MusicgenMelodyAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -751,10 +752,10 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
             if attention_mask is not None:
                 if encoder_attention_mask is None:
                     encoder_attention_mask = ops.ones(encoder_hidden_states.shape[:2])
-                attention_mask = ops.cat([encoder_attention_mask.astype(attention_mask.dtype), attention_mask], axis=1)
+                attention_mask = ops.cat([encoder_attention_mask.astype(attention_mask.dtype), attention_mask], dim=1)
 
             # fuse encoder_hidden_states and inputs_embeds
-            inputs_embeds = ops.cat([encoder_hidden_states, inputs_embeds], axis=1)
+            inputs_embeds = ops.cat([encoder_hidden_states, inputs_embeds], dim=1)
 
         input_shape = inputs_embeds.shape[:-1]
 
@@ -1212,7 +1213,7 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
 
         hidden_states = outputs[0]
 
-        lm_logits = ops.stack([head(hidden_states) for head in self.lm_heads], axis=1)
+        lm_logits = ops.stack([head(hidden_states) for head in self.lm_heads], dim=1)
 
         loss = None
         if labels is not None:
@@ -1292,18 +1293,18 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
         if guidance_scale is not None and guidance_scale > 1:
             # for classifier free guidance we need to replicate the decoder args across the batch dim (we'll split these
             # before sampling)
-            input_ids = input_ids.repeat((2, 1))
+            input_ids = input_ids.tile((2, 1))
             if attention_mask is not None:
-                attention_mask = attention_mask.repeat((2, 1))
+                attention_mask = attention_mask.tile((2, 1))
 
             if encoder_hidden_states is not None:
                 encoder_hidden_states = ops.cat(
-                    [encoder_hidden_states, ops.zeros_like(encoder_hidden_states)], axis=0
+                    [encoder_hidden_states, ops.zeros_like(encoder_hidden_states)], dim=0
                 )
 
             if encoder_attention_mask is not None:
                 encoder_attention_mask = ops.cat(
-                    encoder_attention_mask, ops.zeros_like(encoder_attention_mask), axis=0
+                    encoder_attention_mask, ops.zeros_like(encoder_attention_mask), dim=0
                 )
 
         if past_key_values is not None:
@@ -1379,7 +1380,7 @@ class MusicgenMelodyForCausalLM(MusicgenMelodyPreTrainedModel):
 
         if self.config.audio_channels == 2:
             # for left/right channel we need to duplicate every row of the pattern mask in an interleaved fashion
-            delay_pattern = delay_pattern.repeat_interleave(2, dim=0)
+            delay_pattern = ops.repeat_interleave(delay_pattern, 2, dim=0)
 
         delay_pattern = delay_pattern.astype(mindspore.bool_)
 
@@ -2237,7 +2238,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
                 # pad or truncate to config.chroma_length
                 if audio_hidden_states.shape[1] < self.config.chroma_length:
                     n_repeat = int(math.ceil(self.config.chroma_length / audio_hidden_states.shape[1]))
-                    audio_hidden_states = audio_hidden_states.repeat(1, n_repeat, 1)
+                    audio_hidden_states = audio_hidden_states.tile((1, n_repeat, 1))
                 else:
                     logger.warning(
                         f"The conditional audio signal is of length {audio_hidden_states.shape[1]}, which exceeds"
@@ -2247,7 +2248,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
                 audio_hidden_states = audio_hidden_states[:, : self.config.chroma_length]
 
                 if encoder_hidden_states is not None:
-                    encoder_hidden_states = ops.cat([audio_hidden_states, encoder_hidden_states], axis=1)
+                    encoder_hidden_states = ops.cat([audio_hidden_states, encoder_hidden_states], dim=1)
                 else:
                     encoder_hidden_states = audio_hidden_states
 
@@ -2343,9 +2344,9 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         if guidance_scale is not None and guidance_scale > 1:
             # for classifier free guidance we need to replicate the decoder args across the batch dim (we'll split these
             # before sampling)
-            decoder_input_ids = decoder_input_ids.repeat(2, 1)
+            decoder_input_ids = decoder_input_ids.tile((2, 1))
             if decoder_attention_mask is not None:
-                decoder_attention_mask = decoder_attention_mask.repeat(2, 1)
+                decoder_attention_mask = decoder_attention_mask.tile((2, 1))
 
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -2407,12 +2408,12 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         # user input but doesn't start with decoder_start_token_id -> prepend decoder_start_token_id (and adjust
         # decoder_attention_mask if provided)
         elif (decoder_input_ids[..., 0] != decoder_start_token_id).all().item():
-            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], axis=-1)
+            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], dim=-1)
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 decoder_attention_mask = ops.cat(
                     (ops.ones_like(decoder_attention_mask)[:, :1], decoder_attention_mask),
-                    axis=-1,
+                    dim=-1,
                 )
                 model_kwargs["decoder_attention_mask"] = decoder_attention_mask
 
@@ -2480,11 +2481,11 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
             # for classifier free guidance we need to add a 'null' input to our encoder hidden states
             if guidance_scale is not None and guidance_scale > 1:
                 encoder_hidden_states = ops.cat(
-                    [encoder_hidden_states, ops.zeros_like(encoder_hidden_states)], axis=0
+                    [encoder_hidden_states, ops.zeros_like(encoder_hidden_states)], dim=0
                 )
                 if encoder_attention_mask is not None:
                     encoder_attention_mask = ops.cat(
-                        [encoder_attention_mask, ops.zeros_like(encoder_attention_mask)], axis=0
+                        [encoder_attention_mask, ops.zeros_like(encoder_attention_mask)], dim=0
                     )
             if encoder_attention_mask is not None:
                 encoder_hidden_states = encoder_hidden_states * encoder_attention_mask[..., None]
@@ -2507,7 +2508,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         if audio_hidden_states is not None:
             # for classifier free guidance we need to add a 'null' input to our audio hidden states
             if guidance_scale is not None and guidance_scale > 1:
-                audio_hidden_states = ops.cat([audio_hidden_states, null_audio_hidden_states], axis=0)
+                audio_hidden_states = ops.cat([audio_hidden_states, null_audio_hidden_states], dim=0)
 
             # optionally project audio_hidden_states ->
             # (batch_size, seq_len, num_chroma) -> (batch_size, seq_len, hidden_size)
@@ -2517,11 +2518,11 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
             # pad or truncate to config.chroma_length
             if audio_hidden_states.shape[1] < self.config.chroma_length:
                 n_repeat = int(math.ceil(self.config.chroma_length / audio_hidden_states.shape[1]))
-                audio_hidden_states = audio_hidden_states.repeat(1, n_repeat, 1)
+                audio_hidden_states = audio_hidden_states.tile((1, n_repeat, 1))
             audio_hidden_states = audio_hidden_states[:, : self.config.chroma_length]
 
             if encoder_hidden_states is not None:
-                encoder_hidden_states = ops.cat([audio_hidden_states.type_as(encoder_hidden_states), encoder_hidden_states], axis=1)
+                encoder_hidden_states = ops.cat([audio_hidden_states.type_as(encoder_hidden_states), encoder_hidden_states], dim=1)
             else:
                 encoder_hidden_states = audio_hidden_states
 
@@ -2896,7 +2897,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
             codec_outputs_right = self.audio_encoder.decode(output_ids[:, :, 1::2, :], audio_scales=audio_scales)
             output_values_right = codec_outputs_right.audio_values
 
-            output_values = ops.cat([output_values_left, output_values_right], axis=1)
+            output_values = ops.cat([output_values_left, output_values_right], dim=1)
 
         if generation_config.return_dict_in_generate:
             outputs.sequences = output_values
@@ -2942,14 +2943,14 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         # update token_type_ids with last value
         if "token_type_ids" in model_kwargs:
             token_type_ids = model_kwargs["token_type_ids"]
-            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], axis=-1)
+            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], dim=-1)
 
         # update decoder attention mask
         if "decoder_attention_mask" in model_kwargs:
             decoder_attention_mask = model_kwargs["decoder_attention_mask"]
             model_kwargs["decoder_attention_mask"] = ops.cat(
                 [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
-                axis=-1,
+                dim=-1,
             )
 
         return model_kwargs

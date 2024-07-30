@@ -12,19 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Nystromformer model."""
+"""Testing suite for the MindSpore Nystromformer model."""
 
 import unittest
 
 import numpy as np
 import mindspore
-from mindspore import ops
-import mindspore.nn as nn
-import mindspore.common.dtype as mstype
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindspore.ops import operations as P
-from mindspore.ops import functional as F
 from mindnlp.transformers import AutoTokenizer, NystromformerConfig
 from mindnlp.utils.testing_utils import slow
 
@@ -32,7 +27,7 @@ from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
 # from ...test_pipeline_mixin import PipelineTesterMixin
 
-
+mindspore.set_context(pynative_synchronize=True)
 
 from mindnlp.transformers import (
     NystromformerForMaskedLM,
@@ -194,9 +189,9 @@ class NystromformerModelTester:
         config.num_choices = self.num_choices
         model = NystromformerForMultipleChoice(config=config)
         model.set_train(False)
-        multiple_choice_inputs_ids = input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_input_mask = input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_input_mask = input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         result = model(
             multiple_choice_inputs_ids,
             attention_mask=multiple_choice_input_mask,

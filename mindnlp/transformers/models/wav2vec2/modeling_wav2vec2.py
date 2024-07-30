@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     ModelOutput,
@@ -324,7 +325,6 @@ class Wav2Vec2NoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -389,7 +389,6 @@ class Wav2Vec2LayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -466,7 +465,6 @@ class Wav2Vec2GroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
@@ -537,12 +535,11 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            pad_mode='pad',
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
             bias=True,
         )
 
-        self.conv = weight_norm(self.conv, name='weight', axis=2)
+        self.conv = F.weight_norm(self.conv, name='weight', dim=2)
         self.padding = Wav2Vec2SamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -916,8 +913,8 @@ class Wav2Vec2Attention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -955,7 +952,7 @@ class Wav2Vec2Attention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -1390,7 +1387,7 @@ class Wav2Vec2Encoder(nn.Module):
 
             # extend attention_mask
             attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-            attention_mask = attention_mask * finfo(hidden_states.dtype, 'min')
+            attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
             attention_mask = attention_mask.expand(
                 attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
             )
@@ -1510,7 +1507,7 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Module):
 
             # extend attention_mask
             attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-            attention_mask = attention_mask * finfo(hidden_states.dtype, 'min')
+            attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
             attention_mask = attention_mask.expand(
                 attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
             )
@@ -1659,7 +1656,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
 
             # compute perplexity
             codevector_soft_dist = ops.softmax(
-                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), axis=-1
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist, mask_time_indices)
         else:
@@ -1670,7 +1667,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
             x = hidden_states.new_zeros(hidden_states.shape)    # (364, 320)
             index = codevector_idx.view(-1, 1)
             update = ops.ones_like(index, dtype=hidden_states.dtype)    # fill with onehot
-            codevector_probs = ops.tensor_scatter_elements(x, index, update, axis=-1)
+            codevector_probs = ops.scatter(x, -1, index, update)
             codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1) # (182, 2, 320)
 
             perplexity = self._compute_perplexity(codevector_probs, mask_time_indices)
@@ -1801,7 +1798,6 @@ class Wav2Vec2AdapterLayer(nn.Module):
             config.adapter_kernel_size,
             stride=config.adapter_stride,
             padding=1,
-            pad_mode='pad',
             bias=True,
         )
 
@@ -1820,7 +1816,7 @@ class Wav2Vec2AdapterLayer(nn.Module):
             None.
         """
         hidden_states = self.conv(hidden_states)
-        hidden_states = ops.glu(hidden_states, axis=1)
+        hidden_states = F.glu(hidden_states, dim=1)
         return hidden_states
 
 
@@ -2519,7 +2515,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         Compute logits for contrastive loss based using cosine similarity as the distance measure between
         `[positive_feature, negative_features]` and `[predicted_features]`. Additionally, temperature can be applied.
         """
-        target_features = ops.cat([target_features, negative_features], axis=0)
+        target_features = ops.cat([target_features, negative_features], dim=0)
         logits = ops.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1).type_as(target_features)
         # apply temperature
         logits = logits / temperature
@@ -2580,7 +2576,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
             ...
             >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
-            >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, axis=-1)
+            >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
             ...
             >>> # show that cosine similarity is much higher than random
             >>> cosine_sim[mask_time_indices.to(mindspore.bool_)].mean() > 0.5
@@ -2975,9 +2971,9 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            loss, log_alpha = ops.ctc_loss(
+            loss, log_alpha = F.ctc_loss(
                 log_probs,
                 labels,     # flattened_targets
                 input_lengths,
@@ -3102,8 +3098,8 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -3240,8 +3236,8 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -3541,8 +3537,8 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -3556,7 +3552,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
             #std_features = hidden_states.std(axis=1)   # NOTE: buggy API
-            std_features = ops.std(hidden_states, axis=1, keepdims=True).squeeze(1)
+            std_features = ops.std(hidden_states, dim=1, keepdim=True).squeeze(1)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
@@ -3567,7 +3563,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
                 std_features.append(hidden_states[i, :length].std(axis=0))
             mean_features = ops.stack(mean_features)
             std_features = ops.stack(std_features)
-        statistic_pooling = ops.cat([mean_features, std_features], axis=-1)
+        statistic_pooling = ops.cat([mean_features, std_features], dim=-1)
 
         output_embeddings = self.feature_extractor(statistic_pooling)
         logits = self.classifier(output_embeddings)

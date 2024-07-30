@@ -1,3 +1,4 @@
+"""utils"""
 from mindnlp.configs import DEFAULT_DTYPE
 
 def set_default_dtype(dtype):

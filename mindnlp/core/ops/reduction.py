@@ -124,7 +124,7 @@ def sum(input, dim=None, keepdim=False, *, dtype=None):
 
 # unique
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
-    pass
+    return ops.unique(input)
 
 # unique_consecutive
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):

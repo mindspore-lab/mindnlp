@@ -80,7 +80,7 @@ def load_balancing_loss_func(
 
     if isinstance(router_logits, tuple):
         concatenated_router_logits = ops.cat(
-            [layer_router for layer_router in router_logits], dim=0
+            list(layer_router for layer_router in router_logits), dim=0
         )
 
     routing_weights = F.softmax(concatenated_router_logits, dim=-1)
@@ -176,6 +176,7 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
     """
 
     def __init__(self, config, batch_size, dtype=mindspore.float16):
+        super().__init__()
         self.dtype = dtype
         self.layers_block_type = config.layers_block_type
         self.has_previous_state = False  # only used by mamba
@@ -515,7 +516,6 @@ class JambaSparseMoeBlock(nn.Module):
         self.experts = nn.ModuleList([JambaMLP(config) for _ in range(self.num_experts)])
 
     def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-        """ """
         batch_size, sequence_length, hidden_dim = hidden_states.shape
 
         hidden_states = hidden_states.view(-1, hidden_dim)
@@ -1200,7 +1200,6 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
                 # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
-                sequence_lengths = sequence_lengths
             else:
                 sequence_lengths = -1
 
@@ -1211,7 +1210,7 @@ class JambaForSequenceClassification(JambaPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

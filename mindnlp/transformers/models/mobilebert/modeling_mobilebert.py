@@ -32,7 +32,7 @@ from mindspore import Tensor, Parameter
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
 from mindnlp.utils import ModelOutput
-from .mobilebert_config import MobileBertConfig
+from .configuration_mobilebert import MobileBertConfig
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPooling,
@@ -123,7 +123,7 @@ class MobileBertEmbeddings(nn.Module):
 
         self.LayerNorm = NORM2FN[config.normalization_type](config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.position_ids=ops.BroadcastTo(shape=(1, -1))(ops.arange(config.max_position_embeddings))
+        self.position_ids= ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
     def forward(
         self,
@@ -178,7 +178,7 @@ class MobileBertEmbeddings(nn.Module):
                     inputs_embeds,
                     ops.pad(inputs_embeds[:, :-1], [0, 0, 1, 0, 0, 0]),
                 ],
-                axis=2
+                dim=2
             )
         if self.trigram_input or self.embedding_size != self.hidden_size:
             inputs_embeds = self.embedding_transformation(inputs_embeds)
@@ -271,7 +271,7 @@ class MobileBertSelfAttention(nn.Module):
             # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
             attention_scores = attention_scores + attention_mask
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
@@ -1160,7 +1160,7 @@ class MobileBertLMPredictionHead(nn.Module):
             None.
         """
         hidden_states = self.transform(hidden_states)
-        hidden_states = hidden_states.matmul(ops.cat([self.decoder.weight.t(), self.dense.weight], axis=0))
+        hidden_states = hidden_states.matmul(ops.cat([self.decoder.weight.t(), self.dense.weight], dim=0))
         hidden_states += self.decoder.bias
         return hidden_states
 

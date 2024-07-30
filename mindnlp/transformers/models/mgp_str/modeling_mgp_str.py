@@ -150,7 +150,6 @@ class MgpstrEmbeddings(nn.Module):
             kernel_size=patch_size,
             stride=patch_size,
             bias=True,
-            pad_mode="pad",
         )
 
         self.cls_token = ms.Parameter(ops.zeros(1, 1, config.hidden_size))
@@ -172,8 +171,8 @@ class MgpstrEmbeddings(nn.Module):
             1, 2
         )  # BCHW -> BNC
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        embedding_output = ops.cat((cls_tokens, patch_embeddings), axis=1)
+        cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
+        embedding_output = ops.cat((cls_tokens, patch_embeddings), dim=1)
         embedding_output = embedding_output + self.pos_embed
         embedding_output = self.pos_drop(embedding_output)
 
@@ -187,7 +186,7 @@ class MgpstrMlp(nn.Module):
         super().__init__()
         hidden_features = hidden_features or config.hidden_size
         self.fc1 = nn.Linear(config.hidden_size, hidden_features)
-        self.act = nn.GELU(approximate=False)
+        self.act = nn.GELU()
         self.fc2 = nn.Linear(hidden_features, config.hidden_size)
         self.drop = nn.Dropout(config.drop_rate)
 
@@ -228,7 +227,7 @@ class MgpstrAttention(nn.Module):
         )  # make torchscript happy (cannot use tensor as tuple)
 
         attention_probs = (query @ key.swapaxes(-2, -1)) * self.scale
-        attention_probs = nn.Softmax(axis=-1)(attention_probs)
+        attention_probs = nn.Softmax(dim=-1)(attention_probs)
         attention_probs = self.attn_drop(attention_probs)
 
         context_layer = (
@@ -278,7 +277,7 @@ class MgpstrEncoder(nn.Module):
             for x in ops.linspace(0, config.drop_path_rate, config.num_hidden_layers)
         ]
 
-        self.blocks = nn.SequentialCell(
+        self.blocks = nn.Sequential(
             *[
                 MgpstrLayer(config=config, drop_path=dpr[i])
                 for i in range(config.num_hidden_layers)
@@ -333,15 +332,14 @@ class MgpstrA3Module(nn.Module):
                     "zeros", self.token_norm.bias.shape, self.token_norm.bias.dtype
                 )
             )
-        self.tokenLearner = nn.SequentialCell(
+        self.tokenLearner = nn.Sequential(
             nn.Conv2d(
                 config.hidden_size,
                 config.hidden_size,
                 kernel_size=(1, 1),
                 stride=1,
-                group=8,
+                groups=8,
                 bias=False,
-                pad_mode="pad",
             ),
             nn.Conv2d(
                 config.hidden_size,
@@ -349,7 +347,6 @@ class MgpstrA3Module(nn.Module):
                 kernel_size=(1, 1),
                 stride=1,
                 bias=False,
-                pad_mode="pad",
             ),
         )
         self.feat = nn.Conv2d(
@@ -357,9 +354,8 @@ class MgpstrA3Module(nn.Module):
             config.hidden_size,
             kernel_size=(1, 1),
             stride=1,
-            group=8,
+            groups=8,
             bias=False,
-            pad_mode="pad",
         )
         self.norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
@@ -413,7 +409,7 @@ class MgpstrA3Module(nn.Module):
         hidden_states = hidden_states.swapaxes(1, 2).unsqueeze(-1)
         selected = self.tokenLearner(hidden_states)
         selected = selected.flatten(start_dim=2)
-        attentions = ops.softmax(selected, axis=-1)
+        attentions = ops.softmax(selected, dim=-1)
 
         feat = self.feat(hidden_states)
         feat = feat.flatten(start_dim=2).swapaxes(1, 2)
@@ -479,31 +475,6 @@ class MgpstrPreTrainedModel(PreTrainedModel):
             )
 
 
-MGP_STR_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
-    as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`MgpstrConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-MGP_STR_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`ViTImageProcessor.__call__`]
-            for details.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class MgpstrModel(MgpstrPreTrainedModel):
