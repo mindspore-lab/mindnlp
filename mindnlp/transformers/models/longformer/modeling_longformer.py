@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -447,7 +448,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = ops.cumsum(mask, axis=1).astype(mask.dtype) * mask
+    incremental_indices = ops.cumsum(mask, dim=1).astype(mask.dtype) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -728,13 +729,13 @@ class LongformerSelfAttention(nn.Module):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = ops.cat((global_key_attn_scores, attn_scores), axis=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), dim=-1)
 
             # free memory
             del global_key_attn_scores
 
         attn_probs = ops.softmax(
-            attn_scores, axis=-1, dtype=mindspore.float32
+            attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         if layer_head_mask is not None:
@@ -883,7 +884,7 @@ class LongformerSelfAttention(nn.Module):
 
             chunk_stride = list(hidden_states.stride())
             chunk_stride[1] = chunk_stride[1] // 2
-            return hidden_states.as_strided(size=chunk_size, stride=chunk_stride)
+            return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
         # When exporting to ONNX, use this separate logic
         # have to use slow implementation since as_strided, unfold and 2d-tensor indexing aren't supported (yet) in ONNX export
@@ -1045,7 +1046,7 @@ class LongformerSelfAttention(nn.Module):
             chunked_value_stride[1],
             chunked_value_stride[2],
         )
-        chunked_value = padded_value.as_strided(size=chunked_value_size, stride=chunked_value_stride)
+        chunked_value = ops.as_strided(padded_value, size=chunked_value_size, stride=chunked_value_stride)
 
         chunked_attn_probs = self._pad_and_diagonalize(chunked_attn_probs)
 
@@ -1285,7 +1286,7 @@ class LongformerSelfAttention(nn.Module):
 
         # compute global attn probs
         global_attn_probs_float = ops.softmax(
-            global_attn_scores, axis=-1, dtype=mindspore.float32
+            global_attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         # apply layer head masking
@@ -2261,7 +2262,7 @@ class LongformerModel(LongformerPreTrainedModel):
                     dtype=mindspore.int64,
                 )
                 inputs_embeds_padding = self.embeddings(input_ids_padding)
-                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], axis=-2)
+                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], dim=-2)
 
             attention_mask = ops.pad(
                 attention_mask, (0, padding_len), value=0

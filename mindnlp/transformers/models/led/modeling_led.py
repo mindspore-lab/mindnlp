@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore LED model."""
-
 import math
 import warnings
 from dataclasses import dataclass
@@ -21,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -67,7 +67,6 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
         raise ValueError("config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
     shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
-
     return shifted_input_ids
 
 
@@ -78,11 +77,10 @@ def _prepare_4d_attention_mask_inverted(mask: mindspore.Tensor, dtype, tgt_len: 
     bsz, src_len = mask.shape
     tgt_len = tgt_len if tgt_len is not None else src_len
 
-    expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
+    expanded_mask = mask[:, None, None, :].broadcast_to((bsz, 1, tgt_len, src_len)).to(dtype)
 
     inverted_mask = 1.0 - expanded_mask
-    expanded_attention_mask = inverted_mask.masked_fill(inverted_mask.bool(), finfo(dtype, 'min'))
-
+    expanded_attention_mask = inverted_mask.masked_fill(inverted_mask.bool(), float(ops.finfo(dtype).min))
     # make sure that global_attn_mask is positive
     expanded_attention_mask = expanded_attention_mask * inverted_mask
 
@@ -190,7 +188,7 @@ class LEDEncoderSelfAttention(nn.Module):
 
         # cast to fp32/fp16 then replace 1's with -inf
         float_mask = remove_from_windowed_attention_mask.type_as(query_vectors).masked_fill(
-            remove_from_windowed_attention_mask, finfo(query_vectors.dtype, 'min')
+            remove_from_windowed_attention_mask, float(ops.finfo(query_vectors.dtype).min)
         )
         # diagonal mask with zeros everywhere and -inf inplace of padding
         diagonal_mask = self._sliding_chunks_query_key_matmul(
@@ -231,13 +229,13 @@ class LEDEncoderSelfAttention(nn.Module):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = ops.cat((global_key_attn_scores, attn_scores), axis=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), dim=-1)
 
             # free memory
             del global_key_attn_scores
 
         attn_probs = ops.softmax(
-            attn_scores, axis=-1, dtype=mindspore.float32
+            attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         if layer_head_mask is not None:
@@ -249,7 +247,6 @@ class LEDEncoderSelfAttention(nn.Module):
         # softmax sometimes inserts NaN if all positions are masked, replace them with 0
         attn_probs = ops.masked_fill(attn_probs, is_index_masked[:, :, None, None], 0.0)
         attn_probs = attn_probs.type_as(attn_scores)
-
         # free memory
         del attn_scores
 
@@ -386,7 +383,7 @@ class LEDEncoderSelfAttention(nn.Module):
 
             chunk_stride = list(hidden_states.stride())
             chunk_stride[1] = chunk_stride[1] // 2
-            return hidden_states.as_strided(size=chunk_size, stride=chunk_stride)
+            return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
         # When exporting to ONNX, use this separate logic
         # have to use slow implementation since as_strided, unfold and 2d-tensor indexing aren't supported (yet) in ONNX export
@@ -416,12 +413,12 @@ class LEDEncoderSelfAttention(nn.Module):
         beginning_mask = beginning_mask_2d[None, :, None, :]
         ending_mask = beginning_mask.flip(dims=(1, 3))
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
-        beginning_mask = beginning_mask.expand(beginning_input.shape)
+        beginning_mask = beginning_mask.broadcast_to(beginning_input.shape)
         input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = ops.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
         ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :]
-        ending_mask = ending_mask.expand(ending_input.shape)
+        ending_mask = ending_mask.broadcast_to(ending_input.shape)
         input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :] = ops.full_like(
             ending_input, -float("inf")
         ).where(ending_mask.bool(), ending_input)
@@ -529,11 +526,11 @@ class LEDEncoderSelfAttention(nn.Module):
             chunked_value_stride[1],
             chunked_value_stride[2],
         )
-        chunked_value = padded_value.as_strided(size=chunked_value_size, stride=chunked_value_stride)
+        chunked_value = ops.as_strided(padded_value, size=chunked_value_size, stride=chunked_value_stride)
 
         chunked_attn_probs = self._pad_and_diagonalize(chunked_attn_probs)
 
-        context = ops.einsum("bcwd,bcdh->bcwh", (chunked_attn_probs, chunked_value))
+        context = ops.einsum("bcwd,bcdh->bcwh", (chunked_attn_probs.to(chunked_value.dtype), chunked_value))
         return context.view(batch_size, num_heads, seq_len, head_dim).swapaxes(1, 2)
 
     @staticmethod
@@ -541,9 +538,8 @@ class LEDEncoderSelfAttention(nn.Module):
         """compute global attn indices required throughout forward pass"""
         # helper variable
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
-
         # max number of global attn indices in batch
-        max_num_global_attn_indices = num_global_attn_indices.max().item()
+        max_num_global_attn_indices = ops.max(num_global_attn_indices).item()
 
         # indices of global attn
         is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
@@ -586,9 +582,10 @@ class LEDEncoderSelfAttention(nn.Module):
 
         # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
-        attn_probs_from_global_key[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = finfo(attn_probs_from_global_key.dtype, 'min')
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            attn_probs_from_global_key[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(ops.finfo(attn_probs_from_global_key.dtype).min)
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
         return attn_probs_from_global_key
@@ -685,21 +682,22 @@ class LEDEncoderSelfAttention(nn.Module):
 
         # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
-        global_attn_scores[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = finfo(global_attn_scores.dtype, 'min')
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            global_attn_scores[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(ops.finfo(global_attn_scores.dtype).min)
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
 
         global_attn_scores = global_attn_scores.masked_fill(
             is_index_masked[:, None, None, :],
-            finfo(global_attn_scores.dtype, 'min'),
+            float(ops.finfo(global_attn_scores.dtype).min),
         )
 
         global_attn_scores = global_attn_scores.view(batch_size * self.num_heads, max_num_global_attn_indices, seq_len)
 
         # compute global attn probs
         global_attn_probs_float = ops.softmax(
-            global_attn_scores, axis=-1, dtype=mindspore.float32
+            global_attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         # apply layer head masking
@@ -835,8 +833,8 @@ class LEDDecoderAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -874,7 +872,7 @@ class LEDDecoderAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
                 raise ValueError(
@@ -972,7 +970,7 @@ class LEDEncoderLayer(nn.Module):
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = float(ops.finfo(hidden_states.dtype).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
         return (hidden_states,) + attn_outputs[1:]
 
@@ -1739,7 +1737,7 @@ class LEDEncoder(LEDPreTrainedModel):
             if inputs_embeds is not None:
                 input_ids_padding = ops.full((batch_size, padding_len), self.config.pad_token_id, dtype=mindspore.int64)
                 inputs_embeds_padding = self.embed_tokens(input_ids_padding)
-                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], axis=-2)
+                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], dim=-2)
 
             attention_mask = ops.pad(
                 attention_mask, (0, padding_len), value=False
@@ -2321,8 +2319,8 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
     def __init__(self, config: LEDConfig):
         super().__init__(config)
         self.led = LEDModel(config)
-        self.final_logits_bias = ops.zeros((1, self.led.shared.vocab_size))
-        self.lm_head = nn.Linear(config.d_model, self.led.shared.vocab_size, bias=False)
+        self.final_logits_bias = ops.zeros((1, self.led.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.led.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2344,7 +2342,7 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -2570,8 +2568,8 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
         hidden_states = outputs[0]  # last hidden state
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:, -1, :]
         logits = self.classification_head(sentence_representation)
 

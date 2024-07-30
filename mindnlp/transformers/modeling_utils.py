@@ -159,7 +159,7 @@ class CellUtilMixin:
         """
         if encoder_attention_mask.ndim == 3:
             encoder_extended_attention_mask = encoder_attention_mask[:, None, :, :]
-        if encoder_attention_mask.ndim == 2:
+        elif encoder_attention_mask.ndim == 2:
             encoder_extended_attention_mask = encoder_attention_mask[:, None, None, :]
         else:
             encoder_extended_attention_mask = encoder_attention_mask

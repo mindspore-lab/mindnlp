@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -128,7 +129,7 @@ class LiltTextEmbeddings(nn.Module):
         """
         # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask)) * mask
+        incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask)) * mask
         return incremental_indices.long() + padding_idx
 
     def create_position_ids_from_inputs_embeds(self, inputs_embeds):
@@ -174,12 +175,12 @@ class LiltLayoutEmbeddings(nn.Module):
             padding_idx=self.padding_idx,
         )
         self.box_linear_embeddings = nn.Linear(
-            in_channels=config.hidden_size,
-            out_channels=config.hidden_size // config.channel_shrink_ratio,
+            config.hidden_size,
+            config.hidden_size // config.channel_shrink_ratio,
         )
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size // config.channel_shrink_ratio],
-            epsilon=config.layer_norm_eps,
+            eps=config.layer_norm_eps,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -210,7 +211,7 @@ class LiltLayoutEmbeddings(nn.Module):
                 h_position_embeddings,
                 w_position_embeddings,
             ],
-            axis=-1,
+            dim=-1,
         )
         spatial_position_embeddings = self.box_linear_embeddings(
             spatial_position_embeddings
@@ -350,7 +351,7 @@ class LiltSelfAttention(nn.Module):
             layout_attention_scores = layout_attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        layout_attention_probs = nn.Softmax(axis=-1)(layout_attention_scores)
+        layout_attention_probs = nn.Softmax(dim=-1)(layout_attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -373,7 +374,7 @@ class LiltSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
