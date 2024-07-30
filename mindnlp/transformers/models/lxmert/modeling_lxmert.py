@@ -12,21 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch LXMERT model."""
+"""MindSpore LXMERT model."""
 
 import math
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
-import mindspore as ms
 import numpy as np
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
-from mindspore.nn import CrossEntropyLoss, SmoothL1Loss
+import mindspore
 from mindspore.common.initializer import initializer, Normal
 
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss, SmoothL1Loss
 from ...activations import ACT2FN, gelu
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
@@ -59,41 +56,41 @@ class LxmertModelOutput(ModelOutput):
 
 
     Args:
-        language_output (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        language_output (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the language encoder.
-        vision_output (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        vision_output (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the visual encoder.
-        pooled_output (`ms.Tensor` of shape `(batch_size, hidden_size)`):
+        pooled_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`):
             Last layer hidden-state of the first token of the sequence (classification, CLS, token) further processed
             by a Linear layer and a Tanh activation function. The Linear
-        language_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        language_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        vision_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        vision_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        language_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        language_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        vision_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        vision_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
     """
 
-    language_output: Optional[ms.Tensor] = None
-    vision_output: Optional[ms.Tensor] = None
-    pooled_output: Optional[ms.Tensor] = None
-    language_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    vision_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    language_attentions: Optional[Tuple[ms.Tensor]] = None
-    vision_attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_encoder_attentions: Optional[Tuple[ms.Tensor]] = None
+    language_output: Optional[mindspore.Tensor] = None
+    vision_output: Optional[mindspore.Tensor] = None
+    pooled_output: Optional[mindspore.Tensor] = None
+    language_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    vision_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    language_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    vision_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -102,38 +99,38 @@ class LxmertForQuestionAnsweringOutput(ModelOutput):
     Output type of [`LxmertForQuestionAnswering`].
 
     Args:
-        loss (*optional*, returned when `labels` is provided, `ms.Tensor` of shape `(1,)`):
+        loss (*optional*, returned when `labels` is provided, `mindspore.Tensor` of shape `(1,)`):
             Total loss as the sum of the masked language modeling loss and the next sequence prediction
             (classification) loss.k.
-        question_answering_score (`ms.Tensor` of shape `(batch_size, n_qa_answers)`, *optional*):
+        question_answering_score (`mindspore.Tensor` of shape `(batch_size, n_qa_answers)`, *optional*):
             Prediction scores of question answering objective (classification).
-        language_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        language_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        vision_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        vision_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        language_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        language_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        vision_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        vision_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
     """
 
-    loss: Optional[ms.Tensor] = None
-    question_answering_score: Optional[ms.Tensor] = None
-    language_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    vision_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    language_attentions: Optional[Tuple[ms.Tensor]] = None
-    vision_attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_encoder_attentions: Optional[Tuple[ms.Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    question_answering_score: Optional[mindspore.Tensor] = None
+    language_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    vision_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    language_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    vision_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -142,46 +139,46 @@ class LxmertForPreTrainingOutput(ModelOutput):
     Output type of [`LxmertForPreTraining`].
 
     Args:
-        loss (*optional*, returned when `labels` is provided, `ms.Tensor` of shape `(1,)`):
+        loss (*optional*, returned when `labels` is provided, `mindspore.Tensor` of shape `(1,)`):
             Total loss as the sum of the masked language modeling loss and the next sequence prediction
             (classification) loss.
-        prediction_logits (`ms.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+        prediction_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        cross_relationship_score (`ms.Tensor` of shape `(batch_size, 2)`):
+        cross_relationship_score (`mindspore.Tensor` of shape `(batch_size, 2)`):
             Prediction scores of the textual matching objective (classification) head (scores of True/False
             continuation before SoftMax).
-        question_answering_score (`ms.Tensor` of shape `(batch_size, n_qa_answers)`):
+        question_answering_score (`mindspore.Tensor` of shape `(batch_size, n_qa_answers)`):
             Prediction scores of question answering objective (classification).
-        language_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        language_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        vision_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for input features + one for the output of each cross-modality layer) of
+        vision_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for input features + one for the output of each cross-modality layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
-        language_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        language_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        vision_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        vision_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `ms.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        cross_encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
 
     """
 
-    loss: Optional[ms.Tensor] = None
-    prediction_logits: Optional[ms.Tensor] = None
-    cross_relationship_score: Optional[ms.Tensor] = None
-    question_answering_score: Optional[ms.Tensor] = None
-    language_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    vision_hidden_states: Optional[Tuple[ms.Tensor]] = None
-    language_attentions: Optional[Tuple[ms.Tensor]] = None
-    vision_attentions: Optional[Tuple[ms.Tensor]] = None
-    cross_encoder_attentions: Optional[Tuple[ms.Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    prediction_logits: Optional[mindspore.Tensor] = None
+    cross_relationship_score: Optional[mindspore.Tensor] = None
+    question_answering_score: Optional[mindspore.Tensor] = None
+    language_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    vision_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    language_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    vision_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 class LxmertEmbeddings(nn.Module):
@@ -211,11 +208,11 @@ class LxmertEmbeddings(nn.Module):
             input_shape = inputs_embeds.shape[:-1]
         seq_length = input_shape[1]
 
-        position_ids = ops.arange(seq_length, dtype=ms.int64)
+        position_ids = ops.arange(seq_length, dtype=mindspore.int64)
         position_ids = position_ids.unsqueeze(0).expand(input_shape)
 
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -276,7 +273,7 @@ class LxmertAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -662,7 +659,7 @@ class LxmertLMPredictionHead(nn.Module):
             bias=False,
         )
         self.decoder.weight = lxmert_model_embedding_weights
-        self.bias = ms.Parameter(ops.zeros(lxmert_model_embedding_weights.shape[0]))
+        self.bias = mindspore.Parameter(ops.zeros(lxmert_model_embedding_weights.shape[0]))
 
     def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
@@ -674,7 +671,7 @@ class LxmertVisualAnswerHead(nn.Module):
     def __init__(self, config, num_labels):
         super().__init__()
         hid_dim = config.hidden_size
-        self.logit_fc = nn.SequentialCell(
+        self.logit_fc = nn.Sequential(
             nn.Linear(hid_dim, hid_dim * 2),
             GeLU(),
             nn.LayerNorm([hid_dim * 2], eps=1e-12),
@@ -773,8 +770,8 @@ class LxmertPreTrainedModel(PreTrainedModel):
                     module.weight.dtype,
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize("zeros")
-            module.weight.data.fill(1.0)
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 LXMERT_START_DOCSTRING = r"""
@@ -802,39 +799,39 @@ LXMERT_START_DOCSTRING = r"""
 LXMERT_INPUTS_DOCSTRING = r"""
 
     Args:
-        input_ids (`ms.Tensor` of shape `({0})`):
+        input_ids (`mindspore.Tensor` of shape `({0})`):
             Indices of input sequence tokens in the vocabulary.
 
             Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
             [`PreTrainedTokenizer.__call__`] for details.
 
             [What are input IDs?](../glossary#input-ids)
-        visual_feats (`ms.Tensor` of shape `(batch_size, num_visual_features, visual_feat_dim)`):
+        visual_feats (`mindspore.Tensor` of shape `(batch_size, num_visual_features, visual_feat_dim)`):
             This input represents visual features. They ROI pooled object features from bounding boxes using a
             faster-RCNN model)
 
             These are currently not provided by the transformers library.
-        visual_pos (`ms.Tensor` of shape `(batch_size, num_visual_features, visual_pos_dim)`):
+        visual_pos (`mindspore.Tensor` of shape `(batch_size, num_visual_features, visual_pos_dim)`):
             This input represents spacial features corresponding to their relative (via index) visual features. The
             pre-trained LXMERT model expects these spacial features to be normalized bounding boxes on a scale of 0 to
             1.
 
             These are currently not provided by the transformers library.
-        attention_mask (`ms.Tensor` of shape `({0})`, *optional*):
+        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
-        visual_attention_mask (`ms.Tensor` of shape `({0})`, *optional*):
+        visual_attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
-        token_type_ids (`ms.Tensor` of shape `({0})`, *optional*):
+        token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
             1]`:
 
@@ -842,7 +839,7 @@ LXMERT_INPUTS_DOCSTRING = r"""
             - 1 corresponds to a *sentence B* token.
 
             [What are token type IDs?](../glossary#token-type-ids)
-        inputs_embeds (`ms.Tensor` of shape `({0}, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
             is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
             model's internal embedding lookup matrix.
@@ -874,17 +871,17 @@ class LxmertModel(LxmertPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        visual_feats: Optional[ms.Tensor] = None,
-        visual_pos: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        visual_attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        visual_feats: Optional[mindspore.Tensor] = None,
+        visual_pos: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        visual_attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[LxmertModelOutput, Tuple[ms.Tensor]]:
+    ) -> Union[LxmertModelOutput, Tuple[mindspore.Tensor]]:
         output_attentions = (
             output_attentions
             if output_attentions is not None
@@ -919,7 +916,7 @@ class LxmertModel(LxmertPreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         # We create a 3D attention mask from a 2D tensor mask.
         # Sizes are [batch_size, 1, 1, to_seq_length]
@@ -934,8 +931,8 @@ class LxmertModel(LxmertPreTrainedModel):
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
         extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)
-        extended_attention_mask = (1.0 - extended_attention_mask) * ms.Tensor(
-            np.finfo(ms.dtype_to_nptype(self.dtype)).min
+        extended_attention_mask = (1.0 - extended_attention_mask) * mindspore.Tensor(
+            np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
         )
         # Process the visual attention mask
         if visual_attention_mask is not None:
@@ -947,7 +944,7 @@ class LxmertModel(LxmertPreTrainedModel):
             )
             extended_visual_attention_mask = (
                 1.0 - extended_visual_attention_mask
-            ) * ms.Tensor(np.finfo(ms.dtype_to_nptype(self.dtype)).min)
+            ) * mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
         else:
             extended_visual_attention_mask = None
 
@@ -1149,32 +1146,32 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        visual_feats: Optional[ms.Tensor] = None,
-        visual_pos: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        visual_attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
-        obj_labels: Optional[Dict[str, Tuple[ms.Tensor, ms.Tensor]]] = None,
-        matched_label: Optional[ms.Tensor] = None,
-        ans: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        visual_feats: Optional[mindspore.Tensor] = None,
+        visual_pos: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        visual_attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        obj_labels: Optional[Dict[str, Tuple[mindspore.Tensor, mindspore.Tensor]]] = None,
+        matched_label: Optional[mindspore.Tensor] = None,
+        ans: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         **kwargs,
-    ) -> Union[LxmertForPreTrainingOutput, Tuple[ms.Tensor]]:
+    ) -> Union[LxmertForPreTrainingOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-        obj_labels (`Dict[Str: Tuple[ms.Tensor, ms.Tensor]]`, *optional*):
+        obj_labels (`Dict[Str: Tuple[mindspore.Tensor, mindspore.Tensor]]`, *optional*):
             each key is named after each one of the visual losses and each element of the tuple is of the shape
             `(batch_size, num_features)` and `(batch_size, num_features, visual_feature_dim)` for each the label id and
             the label score respectively
-        matched_label (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        matched_label (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the whether or not the text input matches the image (classification) loss. Input
             should be a sequence pair (see `input_ids` docstring) Indices should be in `[0, 1]`:
 
@@ -1232,22 +1229,22 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
                 and obj_labels is None
                 and ans is None
             )
-            else ms.tensor(0.0)
+            else mindspore.tensor(0.0)
         )
         if labels is not None and self.task_mask_lm:
             masked_lm_loss = self.loss_fcts["ce"](
                 lang_prediction_scores.view(-1, self.config.vocab_size),
-                labels.view(-1).astype(ms.int32),
+                labels.view(-1).astype(mindspore.int32),
             )
             total_loss += masked_lm_loss
         if matched_label is not None and self.task_matched:
             matched_loss = self.loss_fcts["ce"](
                 cross_relationship_score.view(-1, 2),
-                matched_label.view(-1).astype(ms.int32),
+                matched_label.view(-1).astype(mindspore.int32),
             )
             total_loss += matched_loss
         if obj_labels is not None and self.task_obj_predict:
-            total_visual_loss = ms.tensor(0.0)
+            total_visual_loss = mindspore.tensor(0.0)
             visual_prediction_scores_dict = self.obj_predict_head(visual_output)
             for key, key_info in self.visual_losses.items():
                 label, mask_conf = obj_labels[key]
@@ -1260,14 +1257,14 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
                 if loss_fct_name != "visual_ce":
                     visual_loss = visual_loss_fct(
                         visual_prediction_scores.view(-1, output_dim),
-                        label.view(label_shape).astype(ms.float32),
+                        label.view(label_shape).astype(mindspore.float32),
                     )
                 else:
                     visual_loss = visual_loss_fct(
                         visual_prediction_scores.view(-1, output_dim),
-                        label.view(label_shape).astype(ms.int32),
+                        label.view(label_shape).astype(mindspore.int32),
                     )
-                # visual_loss = visual_loss.astype(ms.float32)
+                # visual_loss = visual_loss.astype(mindspore.float32)
                 if visual_loss.dim() > 1:  # Regression Losses
                     visual_loss = visual_loss.mean(1)
                 visual_loss = (visual_loss * mask_conf.view(-1)).mean() * weight
@@ -1276,7 +1273,7 @@ class LxmertForPreTraining(LxmertPreTrainedModel):
         if ans is not None and self.task_qa:
             answer_loss = self.loss_fcts["ce"](
                 answer_score.view(-1, self.num_qa_labels),
-                ans.view(-1).astype(ms.int32),
+                ans.view(-1).astype(mindspore.int32),
             )
             total_loss += answer_loss
 
@@ -1399,18 +1396,18 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        visual_feats: Optional[ms.Tensor] = None,
-        visual_pos: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        visual_attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        visual_feats: Optional[mindspore.Tensor] = None,
+        visual_pos: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        visual_attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[LxmertForQuestionAnsweringOutput, Tuple[ms.Tensor]]:
+    ) -> Union[LxmertForQuestionAnsweringOutput, Tuple[mindspore.Tensor]]:
         r"""
         labels (`Torch.Tensor` of shape `(batch_size)`, *optional*):
             A one-hot representation of the correct answer
@@ -1438,7 +1435,7 @@ class LxmertForQuestionAnswering(LxmertPreTrainedModel):
         if labels is not None:
             loss = self.loss(
                 answer_score.view(-1, self.num_qa_labels),
-                labels.view(-1).astype(ms.int32),
+                labels.view(-1).astype(mindspore.int32),
             )
 
         if not return_dict:

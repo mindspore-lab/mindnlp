@@ -6,6 +6,23 @@ from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import USE_PYBOOST
 
+def as_strided(self, size, stride, storage_offset=None):
+    if len(size) != len(stride):
+        raise RuntimeError("mismatch in length of strides and shape.")
+    index = np.arange(0, size[0]*stride[0], stride[0])
+    for i in np.arange(1, len(size)):
+        tmp = np.arange(0, size[i]*stride[i], stride[i])
+        index = np.expand_dims(index, -1)
+        index = index + tmp
+    if storage_offset is not None:
+        index = index + storage_offset
+    if index.size == 0:
+        input_indices = mindspore.numpy.empty(index.shape, dtype=mindspore.int32)
+    else:
+        input_indices = mindspore.Tensor(index)
+    out = ops.gather(self.reshape(-1), input_indices, 0)
+    return out
+
 # from_numpy
 def from_numpy(ndarray):
     return mindspore.Tensor(ndarray)

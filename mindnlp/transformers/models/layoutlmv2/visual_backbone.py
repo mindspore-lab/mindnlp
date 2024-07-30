@@ -23,8 +23,11 @@ from typing import Optional
 import yaml
 from addict import Dict
 
-import mindspore as ms
-from mindnlp.core import nn, ops
+import mindspore
+from mindspore import ops as msop
+from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 
 
 import numpy as np
@@ -150,11 +153,10 @@ class BasicStem(nn.Module):
             stride=2,
             padding=3,
             bias=False,
-            pad_mode='pad',
             norm=bn1
         )
         self.relu = nn.ReLU()
-        self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, pad_mode="pad")
+        self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, x):
         """
@@ -202,7 +204,6 @@ class BasicBlock(nn.Module):
                 stride=stride,
                 bias=False,
                 norm=nn.BatchNorm2d(out_channels),
-                pad_mode='valid'
             )
         else:
             self.shortcut = None
@@ -213,7 +214,6 @@ class BasicBlock(nn.Module):
             kernel_size=3,
             stride=stride,
             padding=1,
-            pad_mode='pad',
             bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
@@ -224,7 +224,6 @@ class BasicBlock(nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode='pad',
             bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
@@ -301,7 +300,6 @@ class BottleneckBlock(nn.Module):
                 stride=stride,
                 bias=False,
                 norm=norm(out_channels),
-                pad_mode='valid'
             )
         else:
             self.shortcut = None
@@ -317,7 +315,6 @@ class BottleneckBlock(nn.Module):
             stride=stride_1x1,
             bias=False,
             norm=nn.BatchNorm2d(bottleneck_channels),
-            pad_mode='valid'
         )
 
         self.conv2 = Conv2d(
@@ -327,9 +324,8 @@ class BottleneckBlock(nn.Module):
             stride=stride_3x3,
             padding=1 * dilation,
             bias=False,
-            group=num_groups,
+            groups=num_groups,
             dilation=dilation,
-            pad_mode='pad',
             norm=norm(bottleneck_channels)
         )
         self.conv3 = Conv2d(
@@ -337,7 +333,6 @@ class BottleneckBlock(nn.Module):
             out_channels,
             kernel_size=1,
             bias=False,
-            pad_mode='valid',
             norm=norm(out_channels)
         )
         self.relu = nn.ReLU()
@@ -414,9 +409,9 @@ class ResNet(nn.Module):
                 assert isinstance(block, nn.Module), block
 
             name = "res" + str(i + 2)
-            stage = nn.SequentialCell(*blocks)
+            stage = nn.Sequential(*blocks)
 
-            self.insert_child_to_cell(name, stage)
+            self.add_module(name, stage)
             self.stage_names.append(name)
             self.stages.append(stage)
 
@@ -786,7 +781,7 @@ class LastLevelMaxPool(nn.Module):
         Raises:
             None
         """
-        return [ops.max_pool2d(x, kernel_size=1, stride=2, padding=0)]
+        return [F.max_pool2d(x, kernel_size=1, stride=2, padding=0)]
 
 
 class FPN(nn.Module):
@@ -872,8 +867,8 @@ class FPN(nn.Module):
         output_convs = []
 
         for idx, in_channels in enumerate(in_channels_per_feature):
-            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=True, pad_mode='valid')
-            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=True, pad_mode='pad')
+            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=True)
+            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=True)
             stage = int(math.log2(strides[idx]))
 
             setattr(self, "fpn_lateral{}".format(stage), lateral_conv)
@@ -984,7 +979,7 @@ class FPN(nn.Module):
 
             a. Checks if the 'top_block.in_feature' is present in 'bottom_up_features'.
             b. If present, retrieves the corresponding feature; otherwise, retrieves it from 'results' using the index.
-            c. Applies the 'top_block' to the 'top_block_in_feature' after converting it to 'ms.float16' datatype.
+            c. Applies the 'top_block' to the 'top_block_in_feature' after converting it to 'mindspore.float16' datatype.
             d. Extends 'results' with the output of the 'top_block'.
         7. Asserts that the length of 'self._out_features' is equal to the length of 'results'.
         8. Returns a tuple containing the 'self._out_features' and the corresponding outputs from 'results'.
@@ -1002,7 +997,7 @@ class FPN(nn.Module):
                 features = bottom_up_features[features]
                 old_shape = list(prev_features.shape)[2:]
                 new_size = tuple(2 * i for i in old_shape)
-                top_down_features = ops.ResizeNearestNeighbor(size=new_size)(prev_features)
+                top_down_features = _get_cache_prim(msop.ResizeNearestNeighbor)(size=new_size)(prev_features)
                 lateral_features = lateral_conv(features)
                 prev_features = lateral_features + top_down_features
                 if self._fuse_type == "avg":
@@ -1013,7 +1008,7 @@ class FPN(nn.Module):
                 top_block_in_feature = bottom_up_features[self.top_block.in_feature]
             else:
                 top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
-            results.extend(self.top_block(top_block_in_feature.astype(ms.float16)))
+            results.extend(self.top_block(top_block_in_feature.astype(mindspore.float16)))
 
         assert len(self._out_features) == len(results)
 
