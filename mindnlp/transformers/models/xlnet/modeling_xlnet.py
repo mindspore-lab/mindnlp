@@ -33,8 +33,9 @@ from mindnlp. transformers. ms_utils import apply_chunking_to_forward
 from mindnlp. transformers. activations import ACT2FN
 from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
 from mindnlp.utils import (ModelOutput, logging)
-from .configuration_xlnet import XLNetConfig
 from mindnlp.core import nn,ops#-----------------do not use the mindnlp version of ops
+from .configuration_xlnet import XLNetConfig
+
 
 logger = logging.get_logger(__name__)
 
