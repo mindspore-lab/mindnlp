@@ -200,7 +200,7 @@ class RealmModelTester:
         choice_labels,
     ):
         model = RealmEmbedder(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         self.parent.assertEqual(result.projected_score.shape, (self.batch_size, self.retriever_proj_size))
 
@@ -217,7 +217,7 @@ class RealmModelTester:
         choice_labels,
     ):
         model = RealmKnowledgeAugEncoder(config=config)
-        model.set_train(False)
+        model.eval()
         relevance_score = floats_tensor([self.batch_size, self.num_candidates])
         result = model(
             scorer_encoder_inputs[0],
@@ -243,7 +243,7 @@ class RealmModelTester:
         choice_labels,
     ):
         model = RealmReader(config=config)
-        model.set_train(False)
+        model.eval()
         relevance_score = floats_tensor([self.reader_beam_size])
         result = model(
             reader_inputs[0],
@@ -269,7 +269,7 @@ class RealmModelTester:
         choice_labels,
     ):
         model = RealmScorer(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -360,7 +360,7 @@ class RealmModelTest(ModelTesterMixin, unittest.TestCase):
 
         # RealmKnowledgeAugEncoder training
         model = RealmKnowledgeAugEncoder(config)
-        model.set_train()
+        model.train()
 
         inputs_dict = {
             "input_ids": scorer_encoder_inputs[0],
@@ -393,7 +393,7 @@ class RealmModelTest(ModelTesterMixin, unittest.TestCase):
         )
         retriever = RealmRetriever(block_records, tokenizer)
         model = RealmForOpenQA(openqa_config, retriever)
-        model.set_train()
+        model.train()
 
         inputs_dict = {
             "input_ids": input_ids[:1],

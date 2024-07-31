@@ -20,7 +20,6 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -181,7 +180,7 @@ class RealmSelfAttention(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         if self.position_embedding_type in ( "relative_key" , "relative_key_query"):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
@@ -780,39 +779,18 @@ class RealmPreTrainedModel(PreTrainedModel):
     config_class = RealmConfig
     base_model_prefix = "realm"
 
-    # def _init_weights(self, module):
-    #     """Initialize the weights"""
-    #     if isinstance(module, nn.Linear):
-    #         # Slightly different from the TF version which uses truncated_normal for initialization
-    #         # cf https://github.com/pytorch/pytorch/pull/5617
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.bias is not None:
-    #             module.bias.data.zero_()
-    #     elif isinstance(module, nn.Embedding):
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.padding_idx is not None:
-    #             module.weight.data[module.padding_idx].zero_()
-    #     elif isinstance(module, nn.LayerNorm):
-    #         module.bias.data.zero_()
-    #         module.weight.data.fill_(1.0)
-    def _init_weights(self, cell):
-        """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
     def _flatten_inputs(self, *inputs):
         """Flatten inputs' shape to (-1, input_shape[-1])"""
