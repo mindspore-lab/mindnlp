@@ -24,11 +24,8 @@ import numpy as np
 from mindspore.common.initializer import initializer, Normal
 
 import mindspore
-from mindnlp.core import nn,ops#-----------------do not use the mindnlp version of ops
-#from mindspore import ops#--------------------modify
 
 from mindspore import Tensor, Parameter
-
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import mindnlp.core.nn.functional
 from mindnlp. transformers. ms_utils import apply_chunking_to_forward
@@ -36,6 +33,7 @@ from mindnlp. transformers. activations import ACT2FN
 from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
 from mindnlp.utils import (ModelOutput, logging)
 from .configuration_xlnet import XLNetConfig
+from mindnlp.core import nn,ops#-----------------do not use the mindnlp version of ops
 
 logger = logging.get_logger(__name__)
 
@@ -406,17 +404,15 @@ class XLNetRelativeAttention(nn.Module):
                 cat = ops.cat([mems, h], 0)
             else:
                 cat = h
-            #--r1 h[0,0,:2] 
             # content heads
             q_head_h = ops.einsum("ibh,hnd->ibnd", h, self.q)
             k_head_h = ops.einsum("ibh,hnd->ibnd", cat, self.k)
             v_head_h = ops.einsum("ibh,hnd->ibnd", cat, self.v)
-            #--r1 self.q[0,0,:2]   
-            #--r1 q_head_h[0,0,0,:2] 
+
             # positional heads
             # type casting for fp16 support
             k_head_r = ops.einsum("ibh,hnd->ibnd", r.type(self.r.dtype), self.r)
-            #-----r1 k_head_h[0,0,0,:3]=
+
             # core attention ops
             attn_vec = self.rel_attn_core(
                 q_head_h,
@@ -428,14 +424,14 @@ class XLNetRelativeAttention(nn.Module):
                 head_mask=head_mask,
                 output_attentions=output_attentions,
             )
-            #----r1 attn_vec[0,0,0,:3]
+
             if output_attentions:
                 attn_vec, attn_prob = attn_vec
 
             # post processing
             output_h = self.post_attention(h, attn_vec)
             output_g = None
-        #----r1 output_h[0,0,:3] 
+
         outputs = (output_h, output_g)
         if output_attentions:
             outputs = outputs + (attn_prob,)
