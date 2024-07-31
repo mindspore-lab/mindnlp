@@ -108,6 +108,7 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    idefics,
     jamba,
     jetmoe,
     kosmos2,
@@ -313,6 +314,7 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .ibert import *
+from .idefics import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
@@ -523,6 +525,7 @@ __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(idefics.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(instructblip.__all__)
 __all__.extend(jamba.__all__)

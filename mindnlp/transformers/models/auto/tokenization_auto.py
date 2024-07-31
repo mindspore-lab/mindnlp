@@ -370,7 +370,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ),
         ("hubert", ("Wav2Vec2CTCTokenizer", None)),
         # ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
-        # ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
+        ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         (
             "instructblip",
             (
