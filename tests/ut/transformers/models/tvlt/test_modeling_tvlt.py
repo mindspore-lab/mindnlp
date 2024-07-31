@@ -203,7 +203,7 @@ class TvltModelTester:
 
     def create_and_check_model(self, config, pixel_values, audio_values, pixel_mask, audio_mask):
         model = TvltModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, audio_values, pixel_mask=pixel_mask, audio_mask=audio_mask)
         result = model(pixel_values, audio_values)
         self.parent.assertEqual(
@@ -214,7 +214,7 @@ class TvltModelTester:
         self, config, pixel_values, audio_values, pixel_mask, audio_mask
     ):
         model = TvltForAudioVisualClassification(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, audio_values, pixel_mask=pixel_mask, audio_mask=audio_mask)
         result = model(pixel_values, audio_values)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
@@ -261,7 +261,7 @@ class TvltModelTester:
         labels,
     ):
         model = TvltForPreTraining(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             pixel_values,
             audio_values,
@@ -447,7 +447,7 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
                 inputs_dict["output_hidden_states"] = False
                 config.return_dict = True
                 model = model_class(config)
-                model.set_train(False)
+                model.eval()
                 with mindspore._no_grad():
                     outputs = model(**self._prepare_for_class(inputs_dict, model_class))
                 attentions = outputs.attentions
@@ -458,7 +458,7 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
                 del inputs_dict["output_attentions"]
                 config.output_attentions = True
                 model = model_class(config)
-                model.set_train(False)
+                model.eval()
                 with mindspore._no_grad():
                     outputs = model(**self._prepare_for_class(inputs_dict, model_class))
                 attentions = outputs.attentions
@@ -474,7 +474,7 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
                 inputs_dict["output_attentions"] = True
                 inputs_dict["output_hidden_states"] = True
                 model = model_class(config)
-                model.set_train(False)
+                model.eval()
                 with mindspore._no_grad():
                     outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -491,7 +491,7 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             with mindspore._no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))

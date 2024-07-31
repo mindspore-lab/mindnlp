@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -178,8 +177,8 @@ def random_masking(sequence, noise, len_keep, attention_masks=None):
     batch_size, seq_len, hidden_dim = sequence.shape
 
     # sort noise for each sample
-    ids_shuffle = mindspore.ops.argsort(noise, axis=1)  # ascend: small is keep, large is remove
-    ids_restore = mindspore.ops.argsort(ids_shuffle, axis=1)
+    ids_shuffle = ops.argsort(noise, dim=1)  # ascend: small is keep, large is remove
+    ids_restore = ops.argsort(ids_shuffle, dim=1)
 
     # keep the first subset
     ids_keep = ids_shuffle[:, :len_keep]
@@ -292,7 +291,7 @@ class TvltPixelPatchEmbeddings(nn.Module):
             )
 
         pixel_values = pixel_values.reshape(batch_size * num_frames, num_channels, height, width)
-        embeddings = self.projection(pixel_values).flatten(start_dim = 2).swapaxes(1, 2)
+        embeddings = ops.transpose(self.projection(pixel_values).flatten(start_dim = 2), 1, 2)
         embeddings = embeddings.reshape(batch_size, num_frames * self.num_patches_per_image, self.hidden_size)
 
         return embeddings
@@ -337,7 +336,7 @@ class TvltAudioPatchEmbeddings(nn.Module):
                 f"Input audio size ({height}*{width}) doesn't match model"
                 f" ({self.spectrogram_size[0]}*{self.spectrogram_size[1]})."
             )
-        embeddings = self.projection(audio_values).flatten(start_dim = 2).swapaxes(1, 2)
+        embeddings = ops.transpose(self.projection(audio_values).flatten(start_dim = 2), 1, 2)
 
         return embeddings
 
@@ -374,7 +373,7 @@ class TvltSelfAttention(nn.Module):
         query_layer = self.swapaxes_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
             # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
@@ -587,15 +586,15 @@ class TvltPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class TvltModel(TvltPreTrainedModel):
