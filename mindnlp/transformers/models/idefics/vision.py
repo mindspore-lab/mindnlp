@@ -20,11 +20,11 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 from mindspore.dataset.vision import Inter, Resize
+import numpy as np
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 
-import numpy as np
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from .configuration_idefics import IdeficsVisionConfig
