@@ -856,8 +856,8 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    # if USE_PYBOOST:
-    #     return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
