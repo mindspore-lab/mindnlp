@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """RAG model implementation."""
+# pylint: disable=unexpected-keyword-arg, not-callable, consider-using-generator
 
 import copy
 from dataclasses import dataclass
