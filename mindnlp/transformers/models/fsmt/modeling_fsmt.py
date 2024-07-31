@@ -32,7 +32,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -238,19 +237,17 @@ class PretrainedFSMTModel(PreTrainedModel):
     config_class = FSMTConfig
     base_model_prefix = "model"
 
-    def _init_weights(self, cell):
-        std = self.config.init_std
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, SinusoidalPositionalEmbedding):
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.init_std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, SinusoidalPositionalEmbedding):
             pass
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.init_std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
     @property
     def dummy_inputs(self):
@@ -429,7 +426,7 @@ class FSMTEncoder(nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
 
         # B x T x C -> T x B x C
-        x = x.swapaxes(0, 1)
+        x = ops.transpose(x, 0, 1)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -440,9 +437,9 @@ class FSMTEncoder(nn.Module):
             ), f"The head_mask should be specified for {len(self.layers)} layers, but it is for {head_mask.shape[0]}."
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
-                x = x.swapaxes(0, 1)  # T x B x C -> B x T x C
+                x = ops.transpose(x, 0, 1)  # T x B x C -> B x T x C
                 encoder_states += (x,)
-                x = x.swapaxes(0, 1)  # B x T x C -> T x B x C
+                x = ops.transpose(x, 0, 1)  # B x T x C -> T x B x C
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
             if self.training and (dropout_probability < self.layerdrop):  # skip the layer
@@ -459,7 +456,7 @@ class FSMTEncoder(nn.Module):
                 all_attentions = all_attentions + (attn,)
 
         # T x B x C -> B x T x C
-        x = x.swapaxes(0, 1)
+        x = ops.transpose(x, 0, 1)
 
         if output_hidden_states:
             encoder_states += (x,)
@@ -669,8 +666,8 @@ class FSMTDecoder(nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
 
         # Convert to FSMT output format: (BS, seq_len, model_dim) -> (seq_len, BS, model_dim)
-        x = x.swapaxes(0, 1)
-        encoder_hidden_states = encoder_hidden_states.swapaxes(0, 1)
+        x = ops.transpose(x, 0, 1)
+        encoder_hidden_states = ops.transpose(encoder_hidden_states, 0, 1)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -688,9 +685,9 @@ class FSMTDecoder(nn.Module):
         for idx, decoder_layer in enumerate(self.layers):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             if output_hidden_states:
-                x = x.swapaxes(0, 1)
+                x = ops.transpose(x, 0, 1)
                 all_hidden_states += (x,)
-                x = x.swapaxes(0, 1)
+                x = ops.transpose(x, 0, 1)
             if self.training:
                 dropout_probability = ops.rand([])
                 if dropout_probability < self.layerdrop:
@@ -719,13 +716,13 @@ class FSMTDecoder(nn.Module):
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
-            x = x.swapaxes(0, 1)
+            x = ops.transpose(x, 0, 1)
             all_hidden_states += (x,)
-            x = x.swapaxes(0, 1)
+            x = ops.transpose(x, 0, 1)
 
         # Convert to standard output format: (seq_len, BS, model_dim) -> (BS, seq_len, model_dim)
-        x = x.swapaxes(0, 1)
-        encoder_hidden_states = encoder_hidden_states.swapaxes(0, 1)
+        x = ops.transpose(x, 0, 1)
+        encoder_hidden_states = ops.transpose(encoder_hidden_states, 0, 1)
 
         x = self.output_projection(x)
 
@@ -778,7 +775,7 @@ class Attention(nn.Module):
         self.cache_key = "encoder_decoder" if self.encoder_decoder_attention else "self"
 
     def _shape(self, tensor, seq_len, bsz):
-        return tensor.view(seq_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        return ops.transpose(tensor.view(seq_len, bsz * self.num_heads, self.head_dim), 0, 1)
 
     def forward(
         self,
@@ -834,7 +831,7 @@ class Attention(nn.Module):
 
         assert k is not None
         src_len = k.shape[1]
-        attn_weights = ops.bmm(q, k.swapaxes(1, 2))
+        attn_weights = ops.bmm(q, ops.transpose(k, 1, 2))
         assert attn_weights.shape == (bsz * self.num_heads, tgt_len, src_len)
 
         if attn_mask is not None:
@@ -880,7 +877,7 @@ class Attention(nn.Module):
         assert v is not None
         attn_output = ops.bmm(attn_probs, v)
         assert attn_output.shape == (bsz * self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(0, 1).view(tgt_len, bsz, embed_dim)
+        attn_output = ops.transpose(attn_output, 0, 1).view(tgt_len, bsz, embed_dim)
         attn_output = self.out_proj(attn_output)
 
         return attn_output, attn_weights_reshaped

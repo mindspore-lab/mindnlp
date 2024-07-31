@@ -210,7 +210,7 @@ class FSMTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     def test_initialization_more(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs()
         model = FSMTModel(config)
-        model.set_train(False)
+        model.eval()
         # test init
         # self.assertTrue((model.encoder.embed_tokens.weight == model.shared.weight).all().item())
 
@@ -231,7 +231,7 @@ class FSMTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         decoder_input_ids, decoder_attn_mask, causal_mask = _prepare_fsmt_decoder_inputs(
             config, inputs_dict["input_ids"]
         )
-        model = FSMTModel(config).set_train(False)
+        model = FSMTModel(config).eval()
 
         decoder_features_with_created_mask = model(**inputs_dict)[0]
         decoder_features_with_passed_mask = model(
@@ -393,7 +393,7 @@ class FSMTHeadTests(unittest.TestCase):
         input_ids = mindspore.tensor([[71, 82, 2], [68, 34, 2]], dtype=mindspore.int64)
         config = self._get_config()
         lm_model = FSMTForConditionalGeneration(config)
-        lm_model.set_train(False)
+        lm_model.eval()
 
         max_length = 5
         new_input_ids = lm_model.generate(
@@ -419,14 +419,14 @@ class FSMTHeadTests(unittest.TestCase):
     def test_generate_fp16(self):
         config, input_ids, batch_size = self._get_config_and_data()
         attention_mask = input_ids.ne(1)
-        model = FSMTForConditionalGeneration(config).set_train(False)
+        model = FSMTForConditionalGeneration(config).eval()
         model.half()
         model.generate(input_ids, attention_mask=attention_mask)
         model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
 
     def test_dummy_inputs(self):
         config, *_ = self._get_config_and_data()
-        model = FSMTForConditionalGeneration(config).set_train(False)
+        model = FSMTForConditionalGeneration(config).eval()
         model(**model.dummy_inputs)
 
     def test_prepare_fsmt_decoder_inputs(self):
