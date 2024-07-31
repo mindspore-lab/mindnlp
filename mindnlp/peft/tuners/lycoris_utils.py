@@ -21,11 +21,10 @@ from typing import Any, Optional, Union
 
 import warnings
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
 
 from tqdm import tqdm
 
+from mindnlp.core import nn, ops
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import (
     ModulesToSaveWrapper,

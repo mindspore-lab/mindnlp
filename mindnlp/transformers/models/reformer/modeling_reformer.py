@@ -25,11 +25,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -85,9 +85,9 @@ def _stable_argsort(vector, dim):
     # this function scales the vector so that ops.argsort is stable.
     # ops.argsort is not stable on its own
     scale_offset = ops.arange(vector.shape[dim]).view(1, 1, -1)
-    scale_offset = scale_offset.expand(vector.shape)
+    scale_offset = scale_offset.broadcast_to(vector.shape)
     scaled_vector = vector.shape[dim] * vector + (scale_offset % vector.shape[dim])
-    return ops.argsort(scaled_vector, axis=dim)
+    return ops.argsort(scaled_vector, dim=dim)
 
 
 def _get_least_common_mult_chunk_len(config):
@@ -160,33 +160,15 @@ class AxialPositionEmbeddings(nn.Module):
     """
     Constructs axial position embeddings. Useful for very long input sequences to save memory and time.
     """
+
     def __init__(self, config):
-        """
-        This method initializes an instance of the AxialPositionEmbeddings class.
-
-        Args:
-            self: The instance of the AxialPositionEmbeddings class.
-            config:
-                An object containing configuration parameters for the axial position embeddings.
-
-                - axial_pos_shape: A list of integers representing the shape of the axial positions.
-                - axial_pos_embds_dim: A list of integers representing the dimensions of the axial position embeddings.
-                - hidden_dropout_prob: A float value representing the dropout probability.
-                - hidden_size: An integer representing the hidden size of the model.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the sum of axial_pos_embds_dim does not match the hidden_size specified in the configuration.
-        """
         super().__init__()
         self.axial_pos_shape = config.axial_pos_shape
         self.axial_pos_embds_dim = config.axial_pos_embds_dim
         self.dropout = config.hidden_dropout_prob
 
         self.least_common_mult_chunk_length = _get_least_common_mult_chunk_len(config)
-        self.weights = []
+        self.weights = nn.ParameterList()
 
         if sum(self.axial_pos_embds_dim) != config.hidden_size:
             raise ValueError(
@@ -202,37 +184,15 @@ class AxialPositionEmbeddings(nn.Module):
             ax_shape = tuple(ax_shape) + (axial_pos_embd_dim,)
 
             # create tensor and init
-            self.weights.append(Parameter(ops.ones(ax_shape, dtype=mindspore.float32), name=f'weights.{axis}'))
-
-        self.weights = ParameterTuple(self.weights)
+            self.weights.append(nn.Parameter(ops.ones(ax_shape, dtype=mindspore.float32)))
 
     def forward(self, position_ids):
-        """
-        This method forwards position encodings based on the given position IDs and axial position weights.
-
-        Args:
-            self: The instance of the AxialPositionEmbeddings class.
-            position_ids (torch.Tensor): A 2D tensor representing the position IDs of the input sequences.
-              It has a shape of (batch_size, sequence_length).
-
-        Returns:
-            None: This method does not return any value.
-
-        Raises:
-            ValueError:
-                Raised if the following conditions are met:
-
-                1. During training, if the product of the axial_pos_shape factors does not match the sequence length.
-                2. During training and dropout is enabled, if the operation cannot be performed.
-                3. During inference, if the product of the axial_pos_shape factors is less than the sequence length.
-                4. During inference, if the required position encodings columns exceed the available columns.
-        """
         # broadcast weights to correct shape
         batch_size = position_ids.shape[0]
         sequence_length = position_ids.shape[1]
 
         broadcasted_weights = [
-            weight.expand((batch_size,) + self.axial_pos_shape + weight.shape[-1:]) for weight in self.weights
+            weight.broadcast_to((batch_size,) + self.axial_pos_shape + weight.shape[-1:]) for weight in self.weights
         ]
 
         if self.training is True:
@@ -245,11 +205,11 @@ class AxialPositionEmbeddings(nn.Module):
                 )
 
             if self.dropout > 0:
-                weights = ops.cat(broadcasted_weights, axis=-1)
+                weights = ops.cat(broadcasted_weights, dim=-1)
                 # permute weights so that 2D correctly drops dims 1 and 2
-                transposed_weights = weights.swapaxes(2, 1)
+                transposed_weights = weights.transpose(2, 1)
                 # drop entire matrix of last two dims (prev dims 1 and 2)
-                dropped_transposed_weights = F.dropout2d(
+                dropped_transposed_weights = nn.functional.dropout2d(
                     transposed_weights, p=self.dropout, training=self.training
                 )
                 dropped_weights = dropped_transposed_weights.swapaxes(2, 1)
@@ -259,7 +219,7 @@ class AxialPositionEmbeddings(nn.Module):
             else:
                 position_encodings = ops.cat(
                     [ops.reshape(weight, (batch_size, sequence_length, -1)) for weight in broadcasted_weights],
-                    axis=-1,
+                    dim=-1,
                 )
 
         else:
@@ -276,7 +236,7 @@ class AxialPositionEmbeddings(nn.Module):
 
             # cut to columns that are needed
             position_encodings = ops.cat(
-                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], axis=-1
+                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], dim=-1
             )
             position_encodings = ops.reshape(position_encodings, (batch_size, -1, position_encodings.shape[-1]))
 
@@ -286,7 +246,7 @@ class AxialPositionEmbeddings(nn.Module):
                     ops.index_select(position_encodings[i], 0, position_ids[i]).unsqueeze(0)
                     for i in range(batch_size)
                 ],
-                axis=0,
+                dim=0,
             )
 
         return position_encodings
@@ -404,7 +364,7 @@ class ReformerEmbeddings(nn.Module):
             position_ids = ops.arange(
                 start_idx_pos_encodings, start_idx_pos_encodings + seq_length, dtype=mindspore.int64
             )
-            position_ids = position_ids.unsqueeze(0).expand(input_shape)
+            position_ids = position_ids.unsqueeze(0).broadcast_to(input_shape)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -448,8 +408,8 @@ class EfficientAttentionMixin:
             if i == 0:
                 slices.append(vectors)
             else:
-                slices.append(ops.cat([vectors[:, :, i:, ...], vectors[:, :, :i, ...]], axis=2))
-        return ops.cat(slices, axis=3)
+                slices.append(ops.cat([vectors[:, :, i:, ...], vectors[:, :, :i, ...]], dim=2))
+        return ops.cat(slices, dim=3)
 
     def _split_hidden_size_dim(self, x, num_attn_heads, attn_head_size):
         """
@@ -670,9 +630,9 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
                     self.attention_head_size,
                 )
                 # repeat query vectors across hash dimension
-                query_vectors = query_vectors.unsqueeze(2).repeat(1, 1, num_hashes, 1, 1)
+                query_vectors = query_vectors.unsqueeze(2).tile((1, 1, num_hashes, 1, 1))
             else:
-                key_value_hidden_states = ops.cat([past_states, hidden_states], axis=1)
+                key_value_hidden_states = ops.cat([past_states, hidden_states], dim=1)
 
                 query_key_vectors = self.query_key(key_value_hidden_states)
                 value_vectors = self.value(key_value_hidden_states)
@@ -762,8 +722,8 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             sorted_bucket_idx_per_hash = sorted_bucket_idx
         else:
             # get sequence length indices
-            sorted_bucket_idx_per_hash = ops.arange(sequence_length).repeat(
-                batch_size, self.num_attention_heads, 1
+            sorted_bucket_idx_per_hash = ops.arange(sequence_length).tile(
+                (batch_size, self.num_attention_heads, 1)
             )
 
         # scale key vectors
@@ -814,7 +774,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
                     self.attention_head_size,
                 ).unsqueeze(-1)
 
-                probs_vectors = ops.exp(logits - ops.logsumexp(logits, axis=2, keep_dims=True))
+                probs_vectors = ops.exp(logits - ops.logsumexp(logits, dim=2, keepdim=True))
                 out_vectors = ops.sum(out_vectors * probs_vectors, dim=2)
                 # free memory
                 del probs_vectors
@@ -946,7 +906,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         rotated_vectors = ops.einsum("bmtd,mdhr->bmhtr", vectors, random_rotations)
 
         if isinstance(self.num_buckets, int) or len(self.num_buckets) == 1:
-            rotated_vectors = ops.cat([rotated_vectors, -rotated_vectors], axis=-1)
+            rotated_vectors = ops.cat([rotated_vectors, -rotated_vectors], dim=-1)
             buckets = ops.argmax(rotated_vectors, dim=-1)
         else:
             # Get the buckets for them and combine.
@@ -954,7 +914,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             for bucket_factor in self.num_buckets:
                 rotated_vectors_factor = rotated_vectors[..., cur_sum : cur_sum + (bucket_factor // 2)]
                 cur_sum = cur_sum + bucket_factor // 2
-                rotated_vectors_factor = ops.cat([rotated_vectors_factor, -rotated_vectors_factor], axis=-1)
+                rotated_vectors_factor = ops.cat([rotated_vectors_factor, -rotated_vectors_factor], dim=-1)
                 if buckets is None:
                     buckets = ops.argmax(rotated_vectors_factor, dim=-1)
                 else:
@@ -966,7 +926,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             # add an extra bucket for padding tokens only
             num_buckets = num_buckets + 1
             # assign padding tokens extra bucket
-            buckets_mask = attention_mask.to(mindspore.bool_)[:, None, None, :].expand(buckets.shape)
+            buckets_mask = attention_mask.to(mindspore.bool_)[:, None, None, :].broadcast_to(buckets.shape)
             buckets = ops.where(
                 buckets_mask, buckets, mindspore.tensor(num_buckets - 1, dtype=mindspore.int64)
             )
@@ -979,7 +939,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         offsets = (offsets * num_buckets).view((1, 1, -1, 1))
 
         # expand to batch size and num attention heads
-        offsets = offsets.expand((batch_size, self.num_attention_heads) + offsets.shape[-2:])
+        offsets = offsets.broadcast_to((batch_size, self.num_attention_heads) + offsets.shape[-2:])
         offset_buckets = (buckets + offsets).flatten(start_dim=2, end_dim=3)
 
         return offset_buckets
@@ -1009,7 +969,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         indices = (
             ops.arange(sorted_bucket_idx.shape[-1])
             .view(1, 1, -1)
-            .expand(sorted_bucket_idx.shape)
+            .broadcast_to(sorted_bucket_idx.shape)
         )
 
         # get undo sort
@@ -1112,7 +1072,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             query_bucket_idx = (query_key_dots.shape[-1] - 1) * ops.ones_like(query_key_dots)[:, :, :, -1]
             key_value_bucket_idx = ops.arange(
                 query_key_dots.shape[-1], dtype=mindspore.int64
-            )[None, None, :].expand(query_bucket_idx.shape[:2] + (-1,))
+            )[None, None, :].broadcast_to(query_bucket_idx.shape[:2] + (-1,))
         else:
             query_bucket_idx = key_value_bucket_idx = sorted_bucket_idx_per_hash
 
@@ -1157,7 +1117,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         # free memory
         del self_mask
 
-        logits = ops.logsumexp(query_key_dots, axis=-1, keep_dims=True)
+        logits = ops.logsumexp(query_key_dots, dim=-1, keepdim=True)
         # dots shape is `[batch_size, num_attn_heads, num_hashes * seq_len // chunk_length, chunk_length, chunk_length * (1 + num_chunks_before + num_chunks_after)]`
         attention_probs = ops.exp(query_key_dots - logits)
 
@@ -1215,11 +1175,11 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             if not do_standard_self_attention:
                 # expand attn_mask to fit with key_value_bucket_idx shape
                 attention_mask = attention_mask[:, None, :]
-                attention_mask = attention_mask.expand(query_indices.shape[:-1] + (-1,))
+                attention_mask = attention_mask.broadcast_to(query_indices.shape[:-1] + (-1,))
                 # extract attention mask from LSH sorted key_indices
-                attention_mask = ops.gather_elements(attention_mask, -1, key_indices)
+                attention_mask = ops.gather(attention_mask, -1, key_indices)
 
-            attention_mask = attention_mask.unsqueeze(-2).expand(query_key_dot_shape)
+            attention_mask = attention_mask.unsqueeze(-2).broadcast_to(query_key_dot_shape)
 
         # Causal mask
         if self.is_decoder is True:
@@ -1227,7 +1187,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
 
             # add attention mask if not None
             if attention_mask is not None:
-                attention_mask = causal_mask & attention_mask
+                attention_mask = (causal_mask.int() & attention_mask.int()).bool()
             else:
                 attention_mask = causal_mask
 
@@ -1263,7 +1223,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             IndexError: If there is an index error during the computation.
         """
         # concat hidden states
-        hidden_states = ops.cat([past_states, hidden_states], axis=1)
+        hidden_states = ops.cat([past_states, hidden_states], dim=1)
 
         # batch_size hidden
         batch_size = hidden_states.shape[0]
@@ -1281,7 +1241,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         )
 
         # concat buckets
-        concat_buckets = ops.cat([past_buckets, query_buckets.unsqueeze(-1)], axis=-1)
+        concat_buckets = ops.cat([past_buckets, query_buckets.unsqueeze(-1)], dim=-1)
 
         # hash-based sort
         bucket_idx = _stable_argsort(concat_buckets, dim=-1)
@@ -1385,16 +1345,16 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         total_chunk_size = self.chunk_length * (1 + self.num_chunks_before + self.num_chunks_after)
 
         # expand start indices and add correct chunk offset via arange
-        expanded_start_indices = start_indices_chunk.unsqueeze(-1).expand(indices.shape[0], total_chunk_size)
+        expanded_start_indices = start_indices_chunk.unsqueeze(-1).broadcast_to((indices.shape[0], total_chunk_size))
         chunk_sequence_indices = expanded_start_indices + ops.arange(
             total_chunk_size, dtype=mindspore.int64
-        ).unsqueeze(0).expand(indices.shape[0], total_chunk_size)
+        ).unsqueeze(0).broadcast_to((indices.shape[0], total_chunk_size))
 
         # make sure that circular logic holds via % seq len
         chunk_sequence_indices = chunk_sequence_indices.flatten() % sequence_length
 
         # expand indices and set indices correctly
-        indices = indices.unsqueeze(1).expand((indices.shape[0], total_chunk_size, -1)).flatten(start_dim=0, end_dim=1).copy()
+        indices = indices.unsqueeze(1).broadcast_to((indices.shape[0], total_chunk_size, -1)).flatten(start_dim=0, end_dim=1).copy()
         indices[:, -1] = chunk_sequence_indices
 
         return indices
@@ -1411,17 +1371,17 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         """
         length normalization
         """
-        variance = ops.mean(x**2, -1, keep_dims=True)
-        norm_x = x * ops.rsqrt(variance + epsilon)
+        variance = ops.mean(x**2, -1, keepdim=True)
+        norm_x = x * ops.rsqrt(variance + eps)
         return norm_x
 
     def _gather_by_expansion(self, vectors, idxs, num_hashes):
         """
         expand dims of idxs and vectors for all hashes and gather
         """
-        expanded_idxs = idxs.unsqueeze(-1).expand(-1, -1, -1, self.attention_head_size)
-        vectors = vectors.repeat(1, 1, num_hashes, 1)
-        return ops.gather_elements(vectors, 2, expanded_idxs)
+        expanded_idxs = idxs.unsqueeze(-1).broadcast_to((-1, -1, -1, self.attention_head_size))
+        vectors = vectors.tile((1, 1, num_hashes, 1))
+        return ops.gather(vectors, 2, expanded_idxs)
 
 
 class ReverseSort(nn.Module):
@@ -1452,9 +1412,9 @@ class ReverseSort(nn.Module):
         self.sorted_bucket_idx = sorted_bucket_idx
 
         # undo sort to have correct order for next layer
-        expanded_undo_sort_indices = undo_sorted_bucket_idx.unsqueeze(-1).expand(out_vectors.shape)
-        out_vectors = ops.gather_elements(out_vectors, 2, expanded_undo_sort_indices)
-        logits = ops.gather_elements(logits, 2, undo_sorted_bucket_idx)
+        expanded_undo_sort_indices = undo_sorted_bucket_idx.unsqueeze(-1).broadcast_to(out_vectors.shape)
+        out_vectors = ops.gather(out_vectors, 2, expanded_undo_sort_indices)
+        logits = ops.gather(logits, 2, undo_sorted_bucket_idx)
         return out_vectors, logits
 
     def bprop(self, out_vectors, logits, sorted_bucket_idx, undo_sorted_bucket_idx, outputs, grads):
@@ -1482,10 +1442,10 @@ class ReverseSort(nn.Module):
         # get parameters saved in ctx
         sorted_bucket_idx = self.sorted_bucket_idx
 
-        expanded_sort_indices = sorted_bucket_idx.unsqueeze(-1).expand(grad_out_vectors.shape)
+        expanded_sort_indices = sorted_bucket_idx.unsqueeze(-1).broadcast_to(grad_out_vectors.shape)
         # reverse sort of forward
-        grad_out_vectors = ops.gather_elements(grad_out_vectors, 2, expanded_sort_indices)
-        grad_logits = ops.gather_elements(grad_logits, 2, sorted_bucket_idx)
+        grad_out_vectors = ops.gather(grad_out_vectors, 2, expanded_sort_indices)
+        grad_logits = ops.gather(grad_logits, 2, sorted_bucket_idx)
 
         # return grad and `None` fillers for last 2 forward args
         return grad_out_vectors, grad_logits, None, None
@@ -1617,7 +1577,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
             key_value_hidden_states = self._retrieve_relevant_hidden_states(
                 past_buckets_states[1], self.chunk_length, self.num_chunks_before
             )
-            key_value_hidden_states = ops.cat([key_value_hidden_states, hidden_states], axis=1)
+            key_value_hidden_states = ops.cat([key_value_hidden_states, hidden_states], dim=1)
 
             # only query vector for last token
             query_vectors = self.query(hidden_states)
@@ -1658,8 +1618,8 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         key_vectors = key_vectors / np.sqrt(self.attention_head_size)
 
         # get sequence length indices
-        indices = ops.arange(sequence_length).repeat(
-            batch_size, self.num_attention_heads, 1
+        indices = ops.arange(sequence_length).tile(
+            (batch_size, self.num_attention_heads, 1)
         )
 
         # if one should do normal n^2 self-attention
@@ -1725,7 +1685,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         del mask
 
         # softmax
-        logits = ops.logsumexp(query_key_dots, axis=-1, keep_dims=True)
+        logits = ops.logsumexp(query_key_dots, dim=-1, keepdim=True)
         attention_probs = ops.exp(query_key_dots - logits)
 
         # free memory
@@ -1794,7 +1754,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
                 attention_mask = self._split_seq_length_dim_to(attention_mask, -1, self.chunk_length, 1)
                 attention_mask = self._look_adjacent(attention_mask, self.num_chunks_before, self.num_chunks_after)
             # create attn_mask
-            attention_mask = attention_mask.unsqueeze(-2).expand(query_key_dots_shape)
+            attention_mask = attention_mask.unsqueeze(-2).broadcast_to(query_key_dots_shape)
 
         # Causal mask
         if self.is_decoder is True:
@@ -1802,7 +1762,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
 
             # add attention mask if not None
             if attention_mask is not None:
-                attention_mask = causal_mask & attention_mask
+                attention_mask = (causal_mask.int() & attention_mask.int()).bool()
             else:
                 attention_mask = causal_mask
 
@@ -2059,13 +2019,13 @@ class ReformerAttention(nn.Module):
                     else buckets
                 )
             else:
-                past_buckets = ops.cat([past_buckets_states[self.layer_id][0], buckets], axis=-1)
+                past_buckets = ops.cat([past_buckets_states[self.layer_id][0], buckets], dim=-1)
 
             if past_buckets_states[self.layer_id][1] is None:
                 # padded input should not be cached
                 past_states = hidden_states[:, :orig_sequence_length]
             else:
-                past_states = ops.cat([past_buckets_states[self.layer_id][1], hidden_states], axis=1)
+                past_states = ops.cat([past_buckets_states[self.layer_id][1], hidden_states], dim=1)
 
             past_buckets_states[self.layer_id] = (past_buckets, past_states)
         # compute attention feed forward output
@@ -2601,7 +2561,7 @@ class _ReversibleFunction(nn.Module):
         all_buckets = ()
 
         # split duplicated tensor
-        hidden_states, attn_output = ops.chunk(hidden_states, 2, axis=-1)
+        hidden_states, attn_output = ops.chunk(hidden_states, 2, dim=-1)
 
         for layer_id, (layer, layer_head_mask) in enumerate(zip(layers, head_mask)):
             if output_hidden_states is True:
@@ -2638,7 +2598,7 @@ class _ReversibleFunction(nn.Module):
         # ctx.attention_mask = attention_mask
 
         # Concatenate 2 RevNet outputs
-        return ops.cat([attn_output, hidden_states], axis=-1)
+        return ops.cat([attn_output, hidden_states], dim=-1)
 
     # @staticmethod
     # def backward(ctx, grad_hidden_states):
@@ -2680,7 +2640,7 @@ class _ReversibleFunction(nn.Module):
     #         )
 
     #     assert all_buckets == (), "buckets have to be empty after backpropagation"
-    #     grad_hidden_states = ops.cat([output.grad_attn_output, output.grad_hidden_states], axis=-1)
+    #     grad_hidden_states = ops.cat([output.grad_attn_output, output.grad_hidden_states], dim=-1)
 
     #     # num of return vars has to match num of forward() args
     #     # return gradient for hidden_states arg and None for other args
@@ -2796,7 +2756,7 @@ class ReformerEncoder(nn.Module):
             past_buckets_states = [((None), (None)) for i in range(len(self.layers))]
 
         # concat same tensor for reversible ResNet
-        hidden_states = ops.cat([hidden_states, hidden_states], axis=-1)
+        hidden_states = ops.cat([hidden_states, hidden_states], dim=-1)
         hidden_states = _ReversibleFunction()(
             hidden_states,
             self.layers,
@@ -3358,31 +3318,31 @@ class ReformerModel(ReformerPreTrainedModel):
         if attention_mask is not None:
             pad_attention_mask = ops.zeros(input_shape[0], padding_length, dtype=attention_mask.dtype)
 
-            attention_mask = ops.cat([attention_mask, pad_attention_mask], axis=-1)
+            attention_mask = ops.cat([attention_mask, pad_attention_mask], dim=-1)
         else:
             attention_mask = ops.cat(
                 [
                     ops.ones(input_shape, dtype=mindspore.bool_),
                     ops.zeros((input_shape[0], padding_length), dtype=mindspore.bool_),
                 ],
-                axis=-1,
+                dim=-1,
             )
 
         # Extend `input_ids` with padding to match least common multiple chunk_length
         if input_ids is not None:
-            input_ids = ops.cat([input_ids, padded_input_ids], axis=-1)
+            input_ids = ops.cat([input_ids, padded_input_ids], dim=-1)
             input_shape = input_ids.shape
 
             # Pad position ids if given
             if position_ids is not None:
                 padded_position_ids = ops.arange(input_shape[-1], padded_seq_length, dtype=mindspore.int64)
-                padded_position_ids = position_ids.unsqueeze(0).expand(input_shape[0], padding_length)
-                position_ids = ops.cat([position_ids, padded_position_ids], axis=-1)
+                padded_position_ids = position_ids.unsqueeze(0).broadcast_to((input_shape[0], padding_length))
+                position_ids = ops.cat([position_ids, padded_position_ids], dim=-1)
 
         # Extend `inputs_embeds` with padding to match least common multiple chunk_length
         if inputs_embeds is not None:
             padded_inputs_embeds = self.embeddings(padded_input_ids, position_ids)
-            inputs_embeds = ops.cat([inputs_embeds, padded_inputs_embeds], axis=-2)
+            inputs_embeds = ops.cat([inputs_embeds, padded_inputs_embeds], dim=-2)
             input_shape = inputs_embeds.shape
         return input_ids, inputs_embeds, attention_mask, position_ids, input_shape
 
@@ -3819,7 +3779,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
             >>> # retrieve index of [MASK]
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
             ...
-            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
             >>> predicted_token = tokenizer.decode(predicted_token_id)
             ```
 
@@ -3937,7 +3897,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         ...
         >>> outputs = model.forward(**inputs)
         >>> logits = outputs.logits
-        >>> predicted_class_id = logits.argmax(axis=1).item()
+        >>> predicted_class_id = logits.argmax(dim=1).item()
         >>> label = model.config.id2label[predicted_class_id]
         >>> ```
         >>> To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to the `ReformerForSequenceClassification` forwardor:

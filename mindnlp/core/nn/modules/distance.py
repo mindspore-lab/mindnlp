@@ -1,7 +1,9 @@
+"""distance"""
+from mindspore import Tensor
+
 from .module import Module
 from .. import functional as F
 
-from mindspore import Tensor
 
 __all__ = ['CosineSimilarity']
 

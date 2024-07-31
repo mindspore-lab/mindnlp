@@ -19,9 +19,10 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -296,8 +297,8 @@ class RoCBertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -362,7 +363,7 @@ class RoCBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1189,12 +1190,12 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
                 labels_pooled_output = labels_output[1]
                 attack_pooled_output = attack_output[1]
 
-                pooled_output_norm = ops.norm(pooled_output, dim=-1, keepdim=True)
+                pooled_output_norm = ops.norm(pooled_output, p=2, dim=-1, keepdim=True)
                 labels_pooled_output_norm = ops.norm(
-                    labels_pooled_output, dim=-1, keepdim=True
+                    labels_pooled_output, p=2, dim=-1, keepdim=True
                 )
                 attack_pooled_output_norm = ops.norm(
-                    attack_pooled_output, dim=-1, keepdim=True
+                    attack_pooled_output, p=2, dim=-1, keepdim=True
                 )
 
                 sim_matrix = ops.matmul(
@@ -1302,7 +1303,7 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
             >>> # retrieve index of {mask}
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
             ...
-            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
             >>> tokenizer.decode(predicted_token_id)
             '.'
             ```
@@ -1366,17 +1367,17 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
 
         attention_mask = ops.cat(
             [attention_mask, attention_mask.new_zeros(attention_mask.shape[0], 1)],
-            axis=-1,
+            dim=-1,
         )
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
         if input_shape_ids is not None:
-            input_shape_ids = ops.cat([input_shape_ids, dummy_token], axis=1)
+            input_shape_ids = ops.cat([input_shape_ids, dummy_token], dim=1)
         if input_pronunciation_ids is not None:
             input_pronunciation_ids = ops.cat(
-                [input_pronunciation_ids, dummy_token], axis=1
+                [input_pronunciation_ids, dummy_token], dim=1
             )
 
         return {

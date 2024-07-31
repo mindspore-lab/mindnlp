@@ -15,9 +15,9 @@
 """Losses"""
 import numpy as np
 import mindspore
+from mindspore import Tensor
 from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-from mindnlp._legacy.functional import softmax, kl_div, masked_select
+from mindnlp.core.nn import functional as F
 
 def _inner_log_softmax(inputs, axis):
     """inner implementation of log_softmax, since the LogSoftmaxGrad op do not support inputs > 2d"""
@@ -94,17 +94,17 @@ class RDropLoss(nn.Module):
             >>> print(loss)
             0.100136
         """
-        p_loss = kl_div(_inner_log_softmax(p, axis=-1),
-                        softmax(q, axis=-1),
+        p_loss = F.kl_div(_inner_log_softmax(p, axis=-1),
+                        F.softmax(q, dim=-1),
                         reduction=self.reduction)
-        q_loss = kl_div(_inner_log_softmax(q, axis=-1),
-                        softmax(p, axis=-1),
+        q_loss = F.kl_div(_inner_log_softmax(q, axis=-1),
+                        F.softmax(p, dim=-1),
                         reduction=self.reduction)
 
         # pad_mask is for seq-level tasks
         if pad_mask is not None:
-            p_loss = masked_select(p_loss, pad_mask)
-            q_loss = masked_select(q_loss, pad_mask)
+            p_loss = ops.masked_select(p_loss, pad_mask)
+            q_loss = ops.masked_select(q_loss, pad_mask)
 
         # You can choose whether to use function "sum" and "mean" depending on your task
         p_loss = p_loss.sum()
@@ -189,8 +189,8 @@ class CMRC2018Loss(nn.Module):
         pred_start = pred_start.masked_fill(mask, -1e10)
         pred_end = pred_end.masked_fill(mask, -1e10)
 
-        start_loss = ops.cross_entropy(pred_start, target_start, reduction='sum')
-        end_loss = ops.cross_entropy(pred_end, target_end, reduction='sum')
+        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
+        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
 
         loss = start_loss + end_loss
 

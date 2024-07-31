@@ -406,7 +406,6 @@ class AutoImageProcessor:
                     "`AutoFeatureExtractor`. This warning will be removed in v4.40."
                 )
 
-        print(image_processor_class)
         # If we don't find the image processor class in the image processor config, let's try the model config.
         if image_processor_class is None and image_processor_auto_map is None:
             if not isinstance(config, PretrainedConfig):

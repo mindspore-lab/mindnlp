@@ -20,9 +20,9 @@ import mindspore
 import numpy as np
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
-from mindnlp.utils import get_default_dtype, logging
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast

@@ -1375,7 +1375,7 @@ class YolosImageProcessor(BaseImageProcessor):
         boxes = center_to_corners_format(out_bbox)
         # and from relative [0, 1] to absolute [0, height] coordinates
         img_h, img_w = target_sizes.unbind(1)
-        scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1)
+        scale_fct = ops.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = boxes * scale_fct[:, None, :]
 
         results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
@@ -1423,7 +1423,7 @@ class YolosImageProcessor(BaseImageProcessor):
             else:
                 img_h, img_w = target_sizes.unbind(1)
 
-            scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1)
+            scale_fct = ops.stack([img_w, img_h, img_w, img_h], dim=1)
             boxes = boxes * scale_fct[:, None, :]
 
         results = []

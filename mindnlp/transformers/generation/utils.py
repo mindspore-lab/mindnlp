@@ -2367,7 +2367,6 @@ class GenerationMixin:
                 # compute the candidate tokens by the language model and collect their hidden_states
                 # assembles top_k_ids into batch of size k
                 next_model_inputs = self.prepare_inputs_for_generation(top_k_ids.view(-1, 1), **model_kwargs)
-
                 outputs = self(
                     **next_model_inputs,
                     return_dict=True,
@@ -2383,8 +2382,7 @@ class GenerationMixin:
                     full_hidden_states = outputs.hidden_states
 
                 logits = outputs.logits[:, -1, :]
-
-            context_hidden = last_hidden_states.repeat_interleave(top_k, dim=0)
+            context_hidden = ops.repeat_interleave(last_hidden_states, top_k, dim=0)
 
             # compute the degeneration penalty and re-rank the candidates based on the degeneration penalty and the
             # model confidence. Keeping `selected_idx` on CPU enables multi-device contrastive search and doesn't

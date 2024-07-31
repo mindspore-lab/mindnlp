@@ -137,7 +137,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
         # Add padding to the input array
         if pad_height > 0 or pad_width > 0:
             input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
-        
+
         pad_mode = "SAME" if ceil_mode else "VALID"
         _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
         output = _avgpool2d(input)
@@ -149,6 +149,9 @@ def dropout(input, p=0.5, training=True):
     if USE_PYBOOST:
         return mindspore.mint.dropout(input, p, training)
     return ops.dropout(input, p, training)
+
+def dropout2d(input, p=0.5, training=False):
+    return ops.dropout2d(input, p, training)
 
 def drop_and_mask(keep_prob, seed=None):
     seed0, seed1 = _get_seed(seed, "dropout")
@@ -213,7 +216,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
 def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
     return ops.interpolate(input, size, scale_factor, mode, align_corners, recompute_scale_factor)
 
-def normalize(input, p=2.0, dim=1):
+def normalize(input, p=2.0, dim=1, eps=1e-6):
     r"""
     Normalize a tensor along a specified dimension.
     
@@ -715,19 +718,19 @@ def multi_head_attention_forward(
         k = k.view(k.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
     else:
         # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-        assert static_k.size(0) == bsz * num_heads, \
-            f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.size(0)}"
-        assert static_k.size(2) == head_dim, \
-            f"expecting static_k.size(2) of {head_dim}, but got {static_k.size(2)}"
+        assert static_k.shape[0] == bsz * num_heads, \
+            f"expecting static_k.shape[0] of {bsz * num_heads}, but got {static_k.shape[0]}"
+        assert static_k.shape[2] == head_dim, \
+            f"expecting static_k.shape[2] of {head_dim}, but got {static_k.shape[2]}"
         k = static_k
     if static_v is None:
         v = v.view(v.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
     else:
         # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-        assert static_v.size(0) == bsz * num_heads, \
-            f"expecting static_v.size(0) of {bsz * num_heads}, but got {static_v.size(0)}"
-        assert static_v.size(2) == head_dim, \
-            f"expecting static_v.size(2) of {head_dim}, but got {static_v.size(2)}"
+        assert static_v.shape[0] == bsz * num_heads, \
+            f"expecting static_v.shape[0] of {bsz * num_heads}, but got {static_v.shape[0]}"
+        assert static_v.shape[2] == head_dim, \
+            f"expecting static_v.shape[2] of {head_dim}, but got {static_v.shape[2]}"
         v = static_v
 
     # add zero attention along batch dimension (now first)
@@ -780,12 +783,12 @@ def multi_head_attention_forward(
 
         attn_output = attn_output.swapaxes(0, 1).view(tgt_len * bsz, embed_dim)
         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
-        attn_output = attn_output.view(tgt_len, bsz, attn_output.size(1))
+        attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
 
         # optionally average attention weights over heads
         attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
         if average_attn_weights:
-            attn_output_weights = attn_output_weights.mean(dim=1)
+            attn_output_weights = attn_output_weights.mean(axis=1)
 
         if not is_batched:
             # squeeze the output if input was unbatched
@@ -797,7 +800,7 @@ def multi_head_attention_forward(
         # if attn_mask's shape is (1, L, S) we need to unsqueeze to (1, 1, L, S)
         # in order to match the input for SDPA of (N, num_heads, L, S)
         if attn_mask is not None:
-            if attn_mask.size(0) == 1 and attn_mask.ndim == 3:
+            if attn_mask.shape[0] == 1 and attn_mask.ndim == 3:
                 attn_mask = attn_mask.unsqueeze(0)
             else:
                 attn_mask = attn_mask.view(bsz, num_heads, -1, src_len)
@@ -853,8 +856,8 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    # if USE_PYBOOST:
-    #     return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
+    if USE_PYBOOST:
+        return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
@@ -915,3 +918,54 @@ def cosine_similarity(x1, x2, dim=1, eps=1e-8):
 
 # def pairwise_distance():
 #     return ops.pairwise_distance
+
+def make_attention_mask(
+    query_input: Tensor,
+    key_input: Tensor,
+    dtype=mindspore.float32,
+):
+    """Mask-making helper for attention weights.
+
+    In case of 1d inputs (i.e., `[batch..., len_q]`, `[batch..., len_kv]`, the
+    attention weights will be `[batch..., heads, len_q, len_kv]` and this
+    function will produce `[batch..., 1, len_q, len_kv]`.
+
+    Args:
+      query_input: a batched, flat input of query_length size
+      key_input: a batched, flat input of key_length size
+      dtype: mask return dtype
+
+    Returns:
+      A `[batch..., 1, len_q, len_kv]` shaped mask for 1d attention.
+    """
+    mask = ops.greater_equal(
+        ops.expand_dims(query_input, axis=-1), ops.expand_dims(key_input, axis=-2)
+    )
+    mask = ops.expand_dims(mask, axis=-3)
+    return mask.astype(dtype)
+
+
+def make_causal_mask(
+    x: Tensor, dtype=mindspore.float32
+) -> Tensor:
+    """Make a causal mask for self-attention.
+
+    In case of 1d inputs (i.e., `[batch..., len]`, the self-attention weights
+    will be `[batch..., heads, len, len]` and this function will produce a
+    causal mask of shape `[batch..., 1, len, len]`.
+
+    Args:
+      x: input array of shape `[batch..., len]`
+      extra_batch_dims: number of batch dims to add singleton axes for, none by
+        default
+      dtype: mask return dtype
+
+    Returns:
+      A `[batch..., 1, len, len]` shaped causal mask for 1d attention.
+    """
+    idxs = ops.broadcast_to(ops.arange(x.shape[-1], dtype=mindspore.int32), x.shape)
+    return make_attention_mask(
+        idxs,
+        idxs,
+        dtype=dtype,
+    )

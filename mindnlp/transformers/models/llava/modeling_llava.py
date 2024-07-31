@@ -18,12 +18,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 from functools import reduce
 
-import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...cache_utils import Cache
@@ -178,40 +176,7 @@ class LlavaPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["LlavaVisionAttention"]
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
-        """
-        Initializes the weights of a given cell in the LlavaPreTrainedModel.
-
-        Args:
-            self (LlavaPreTrainedModel): The instance of the LlavaPreTrainedModel class.
-            cell: The cell whose weights need to be initialized.
-
-        Returns:
-            None: This method modifies the weights of the given cell in-place.
-
-        Raises:
-            None.
-
-        This method initializes the weights of the provided cell based on the configuration settings of the LlavaPreTrainedModel.
-        If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise,
-        it falls back to the 'initializer_range' value in the 'text_config' attribute of the configuration.
-
-        If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the
-        calculated standard deviation.
-
-        If the cell is an instance of nn.Linear or nn.Conv2d, both the weight and bias are initialized using a normal
-        distribution with the calculated standard deviation. If the cell has no bias, it remains unchanged.
-
-        If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with
-        the calculated standard deviation. If a 'padding_idx' is specified, the corresponding weight value is set to 0.
-
-        Note:
-            - The weight initialization is done in-place and modifies the original cell.
-            - The 'initializer_range' attribute must be present either in the configuration or the 'text_config'
-            attribute of the configuration.
-            - The 'padding_idx' attribute is optional for nn.Embedding cells.
-            - The method does not return any value.
-        """
+    def _init_weights(self, module):
         # important: this ported version of Llava isn't meant for training from scratch - only
         # inference and fine-tuning - so the proper init weights code has been removed - the original codebase
         # https://github.com/haotian-liu/LLaVA/tree/main/llava should serve for that purpose
@@ -221,20 +186,17 @@ class LlavaPreTrainedModel(PreTrainedModel):
             else self.config.text_config.initializer_range
         )
 
-        if hasattr(cell, "class_embedding"):
-            cell.class_embedding.initialize(Normal(std))
+        if hasattr(module, "class_embedding"):
+            nn.init.normal_(module.class_embedding, mean=0.0, std=std)
 
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.data.initialize(Normal(std))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
-
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
@@ -428,8 +390,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         """
         model_embeds = self.language_model.resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         # update vocab size
-        self.config.text_config.vocab_size = model_embeds.vocab_size
-        self.vocab_size = model_embeds.vocab_size
+        self.config.text_config.vocab_size = model_embeds.num_embeddings
+        self.vocab_size = model_embeds.num_embeddings
         return model_embeds
 
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
@@ -462,7 +424,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         # Compute the maximum embed dimension
         max_embed_dim = (num_special_image_tokens.max() * (num_image_patches - 1)).item() + sequence_length
         nonzero = ops.nonzero(input_ids != self.config.image_token_index)
-        batch_indices, non_image_indices = ops.tensor_split(nonzero, 2, -1)
+        batch_indices, non_image_indices = ops.chunk(nonzero, 2, -1)
 
         # 2. Compute the positions where text should be written
         # Calculate new positions for text tokens in merged image-text sequence.
@@ -495,8 +457,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             final_labels[batch_indices, text_to_overwrite] = labels[batch_indices, non_image_indices]
 
         # 5. Fill the embeddings corresponding to the images. Anything that is still zeros needs filling
-        image_to_overwrite = ops.all(final_embedding == 0, axis=-1)
-        image_to_overwrite &= image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]
+        image_to_overwrite = ops.all(final_embedding == 0, dim=-1)
+        image_to_overwrite = (image_to_overwrite.int() & (image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]).int()).bool()
 
         if image_to_overwrite.sum() != reduce(lambda x, y: x * y, image_features.shape[:-1]):
             raise ValueError(
@@ -505,15 +467,14 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             )
 
         final_embedding[image_to_overwrite] = image_features.reshape(-1, embed_dim)
-        final_attention_mask |= image_to_overwrite
+        final_attention_mask = (final_attention_mask.int() | image_to_overwrite.int()).bool()
         position_ids = (final_attention_mask.cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
 
         # 6. Mask out the embedding at padding positions, as we later use the past_key_value value to determine the non-attended tokens.
-        nonzero = ops.nonzero(input_ids == self.pad_token_id)
-        batch_indices, pad_indices = ops.tensor_split(nonzero, 2, -1)
-        indices_to_mask = new_token_positions[batch_indices, pad_indices]
-
-        final_embedding[batch_indices, indices_to_mask] = 0
+        batch_indices, pad_indices = ops.nonzero(input_ids == self.pad_token_id, as_tuple=True)
+        if 0 not in batch_indices.shape:
+            indices_to_mask = new_token_positions[batch_indices, pad_indices]
+            final_embedding[batch_indices, indices_to_mask] = 0
 
         if labels is None:
             final_labels = None
@@ -614,7 +575,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
                 # Sum all dimensions of head_dim (-2) to avoid random errors such as: https://github.com/huggingface/transformers/pull/28032#issuecomment-1863691941
                 nonzero = ops.nonzero(first_layer_past_key_value.float().sum(-2) == 0)
-                batch_index, non_attended_tokens = ops.tensor_split(nonzero, 2, -1)
+                batch_index, non_attended_tokens = ops.chunk(nonzero, 2, -1)
 
                 # Get the target length
                 target_length = input_ids.shape[1]
@@ -635,7 +596,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
                 # Zero-out the places where we don't need to attend
                 extended_attention_mask[new_batch_index, new_non_attended_tokens] = 0
 
-                attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), axis=1)
+                attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                 position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
 
         outputs = self.language_model(

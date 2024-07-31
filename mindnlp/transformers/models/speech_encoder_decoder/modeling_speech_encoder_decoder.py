@@ -16,15 +16,10 @@
 
 from typing import Optional, Tuple, Union
 
-# import torch
-# from torch import nn
-# from torch.nn import CrossEntropyLoss
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel

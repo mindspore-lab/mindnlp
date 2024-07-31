@@ -42,7 +42,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops, nn
+    from mindnlp.core import ops, nn
 
     from mindnlp.transformers import (
         Owlv2ForObjectDetection,

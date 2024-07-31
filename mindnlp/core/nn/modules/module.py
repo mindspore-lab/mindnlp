@@ -6,7 +6,6 @@ import itertools
 from collections import OrderedDict, namedtuple
 
 import mindspore
-from mindspore import ops
 from mindspore import Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 
@@ -988,18 +987,6 @@ class Module:
         for name, param in self.named_parameters(recurse=recurse, remove_duplicate=False):
             param_dict[name] = param
         return param_dict
-
-    def half(self: T) -> T:
-        r"""Casts all floating point parameters and buffers to ``half`` datatype.
-
-        .. note::
-            This method modifies the module in-place.
-
-        Returns:
-            Module: self
-        """
-        return self._apply(lambda t: t.half() if ops.is_floating_point(t) else t)
-
 
     def register_forward_pre_hook(
         self,

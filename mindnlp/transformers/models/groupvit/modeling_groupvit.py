@@ -22,7 +22,7 @@ from typing import Any, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore.common.initializer import initializer, Normal
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F

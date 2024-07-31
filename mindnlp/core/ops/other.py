@@ -8,6 +8,8 @@ from mindspore.common.initializer import initializer
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
+from .pointwise import div
+from .creation import arange
 
 # atleast_2d
 
@@ -615,6 +617,9 @@ def masked_fill(input, mask, value):
 def finfo(dtype):
     return np.finfo(mindspore.dtype_to_nptype(dtype))
 
+def iinfo(dtype):
+    return np.iinfo(mindspore.dtype_to_nptype(dtype))
+
 def contains(self, key):
     r"""
     Args:
@@ -659,3 +664,22 @@ def initialize(self, init_method):
 _stop_gradient = ops.StopGradient()
 def stop_gradient(input):
     return _stop_gradient(input)
+
+def unfold(input, dimension, size, step):
+    """Custom torch.Tensor.unfold implementation to enable the export to ONNX."""
+    shape = input.shape
+    rank = len(shape)
+    sizedim = shape[dimension]
+
+    low_indices = arange(0, sizedim, step)
+    min_length = div(sizedim - size, step, rounding_mode="floor") + 1
+    indices = arange(size) + low_indices[:min_length][:, None]
+
+    s = [slice(None)] * rank
+    s[dimension] = indices
+    sliced = input[s]
+
+    perm = list(range(0, rank + 1))
+    perm.append(perm.pop(dimension + 1))
+
+    return sliced.permute(perm)

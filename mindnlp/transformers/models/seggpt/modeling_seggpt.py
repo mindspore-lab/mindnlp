@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import ModelOutput
@@ -115,7 +115,7 @@ class SegGptPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(
-            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True, pad_mode='pad', padding=0)
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True, padding=0)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -220,7 +220,7 @@ class SegGptEmbeddings(nn.Module):
         input_embeddings = input_embeddings + type_embedding
         prompt_embeddings = prompt_embeddings + type_embedding
 
-        embeddings = ops.cat((input_embeddings, prompt_embeddings), axis=0)
+        embeddings = ops.cat((input_embeddings, prompt_embeddings), dim=0)
 
         return embeddings
 
@@ -366,7 +366,7 @@ class SegGptAttention(nn.Module):
             )
 
         attn_weights = ops.softmax(
-            attn_weights, dtype=ms.float32, axis=-1).astype(query.dtype)
+            attn_weights, dtype=ms.float32, dim=-1).astype(query.dtype)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -480,7 +480,7 @@ class SegGptLayer(nn.Module):
                 inputs = inputs.reshape(*prompt.shape)
             else:
                 inputs = inputs.mean(axis=0, keep_dims=True).expand_as(inputs)
-            attention_output = ops.cat([prompt, inputs], axis=1)
+            attention_output = ops.cat([prompt, inputs], dim=1)
 
         # first residual connection
         hidden_states = self.drop_path(attention_output) + hidden_states
@@ -611,7 +611,6 @@ class SegGptDecoderHead(nn.Module):
             config.decoder_hidden_size,
             config.decoder_hidden_size,
             kernel_size=3,
-            pad_mode='pad',
             padding=1,
             bias=True
         )
@@ -620,7 +619,7 @@ class SegGptDecoderHead(nn.Module):
         )
         self.act_fct = ACT2FN[config.hidden_act]
         self.head = nn.Conv2d(config.decoder_hidden_size, 3,
-                              kernel_size=1, bias=True, pad_mode='pad', padding=0)  # decoder to patch
+                              kernel_size=1, bias=True, padding=0)  # decoder to patch
 
     def forward(self, hidden_states: ms.Tensor):
         hidden_states = self.conv(hidden_states)
@@ -782,11 +781,11 @@ class SegGptModel(SegGptPreTrainedModel):
         prompt_pixel_values = prompt_pixel_values.astype(expected_dtype)
 
         # Prepare inputs
-        pixel_values = ops.cat((prompt_pixel_values, pixel_values), axis=2)
+        pixel_values = ops.cat((prompt_pixel_values, pixel_values), dim=2)
         prompt_pixel_values = (
-            ops.cat((prompt_masks, prompt_masks), axis=2)
+            ops.cat((prompt_masks, prompt_masks), dim=2)
             if labels is None
-            else ops.cat((prompt_masks, labels), axis=2)
+            else ops.cat((prompt_masks, labels), dim=2)
         )
         prompt_pixel_values = prompt_pixel_values.astype(expected_dtype)
 
@@ -882,7 +881,7 @@ class SegGptLoss(nn.Module):
         Returns:
             `ms.Tensor`: The mean L1 loss between the predicted masks and the ground truth masks.
         """
-        ground_truth = ops.cat((prompt_masks, labels), axis=2)
+        ground_truth = ops.cat((prompt_masks, labels), dim=2)
 
         mask = bool_masked_pos[:, :, None].repeat(1, 1, self.patch_size**2 * 3)
         mask = unpatchify(
@@ -979,7 +978,7 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
 
         intermediate_hidden_states = outputs.intermediate_hidden_states if return_dict else outputs[-1]
         intermediate_hidden_states = ops.cat(
-            intermediate_hidden_states, axis=-1)
+            intermediate_hidden_states, dim=-1)
         pred_masks = self.decoder(intermediate_hidden_states)
 
         loss = None

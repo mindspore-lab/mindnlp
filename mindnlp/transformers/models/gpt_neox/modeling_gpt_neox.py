@@ -19,9 +19,9 @@ from functools import partial
 import numpy as np
 import mindspore
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging, get_default_dtype
+from mindnlp.utils import logging
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPast,

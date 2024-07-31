@@ -249,14 +249,13 @@ class DeiTSdpaSelfAttention(DeiTSelfAttention):
         value_layer = self.transpose_for_scores(self.value(hidden_states))
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
-        context_layer = _scaled_dot_product_attention(
+        context_layer = F.scaled_dot_product_attention(
             query_layer,
             key_layer,
             value_layer,
             head_mask,
             self.attention_probs_dropout_prob if self.training else 0.0,
             is_causal=False,
-            is_training=self.training
         )
 
         context_layer = context_layer.permute(0, 2, 1, 3)
@@ -678,7 +677,7 @@ class DeiTForMaskedImageModeling(DeiTPreTrainedModel):
             size = self.config.image_size // self.config.patch_size
             bool_masked_pos = bool_masked_pos.reshape(-1, size, size)
             mask = (
-                ops.repeat_interleave(ops.repeat_interleave(bool_masked_pos, self.config.patch_size, 1), 
+                ops.repeat_interleave(ops.repeat_interleave(bool_masked_pos, self.config.patch_size, 1),
                 self.config.patch_size, 2)
                 .unsqueeze(1)
             )

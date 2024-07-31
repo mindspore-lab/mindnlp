@@ -13,8 +13,8 @@
 # limitations under the License.
 """Utility functions for adaption prompt tuners."""
 import inspect
+from mindspore import Tensor
 from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
 
 
 def llama_rotate_half(x: Tensor) -> Tensor:
@@ -64,10 +64,10 @@ def llama_compute_query_states(model: nn.Module, **kwargs) -> Tensor:
     position_ids = kwargs.get("position_ids")
     past_key_value = kwargs.get("past_key_value")
     bsz, q_len, _ = hidden_states.shape
-    query_states = ops.transpose(model.q_proj(hidden_states).reshape(bsz, q_len, model.num_heads, model.head_dim), (0, 2, 1, 3))
+    query_states = ops.permute(model.q_proj(hidden_states).reshape(bsz, q_len, model.num_heads, model.head_dim), (0, 2, 1, 3))
 
     factor = model.k_proj.in_channels // model.k_proj.out_channels
-    value_states = ops.transpose(model.v_proj(hidden_states).reshape(bsz, q_len, (model.num_heads // factor), model.head_dim), (0, 2, 1, 3))
+    value_states = ops.permute(model.v_proj(hidden_states).reshape(bsz, q_len, (model.num_heads // factor), model.head_dim), (0, 2, 1, 3))
 
     seq_len = q_len
     if past_key_value is not None:
