@@ -651,8 +651,7 @@ class PersimmonModel(PersimmonPreTrainedModel):
                 return None
 
         dtype = input_tensor.dtype
-        # min_dtype = torch.finfo(dtype).min
-        min_dtype = ops.finfo(dtype).min
+        min_dtype = float(ops.finfo(dtype).min)
         sequence_length = input_tensor.shape[1]
         if using_static_cache:
             target_length = past_key_values.get_max_length()
