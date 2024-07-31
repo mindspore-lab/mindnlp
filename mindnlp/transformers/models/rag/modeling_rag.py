@@ -367,7 +367,8 @@ class RagPreTrainedModel(PreTrainedModel):
                 question_encoder.config, generator.config, **kwargs
             )
 
-        return cls(question_encoder=question_encoder, generator=generator, config=config, retriever=retriever)
+        return cls(question_encoder=question_encoder, generator=generator, config=config,
+                   retriever=retriever)  # pylint: disable=unexpected-keyword-arg
 
 
 class RagModel(RagPreTrainedModel):
@@ -805,8 +806,9 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         ), " At least one of input_ids or context_input_ids must be given"
 
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
-            context_input_ids = self.retriever(
+            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[
+                0]  # pylint: disable=not-callable
+            context_input_ids = self.retriever(  # pylint: disable=not-callable
                 input_ids,
                 question_hidden_states.to(mindspore.float32).numpy(),
                 prefix=self.generator.config.prefix,
@@ -969,6 +971,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         # )
         new_fill = mindspore.Tensor(
             np.full((sum([t.shape[0] for t in tensors]), max([t.shape[1] for t in tensors])), pad_token_id),
+            # pylint: disable=consider-using-generator
             dtype=tensors[0].dtype)
         output = (
             new_fill
@@ -1345,8 +1348,9 @@ class RagTokenForGeneration(RagPreTrainedModel):
 
         # retrieve docs
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
-            out = self.retriever(
+            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[
+                0]  # pylint: disable=not-callable
+            out = self.retriever(  # pylint: disable=not-callable
                 input_ids,
                 question_hidden_states.to(mindspore.float32).numpy(),
                 prefix=self.generator.config.prefix,

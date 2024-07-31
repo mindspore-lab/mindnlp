@@ -38,7 +38,7 @@ def is_datasets_available():
 
 def is_faiss_available():
     try:
-        import datasets
+        import faiss
         return True
     except ImportError:
         raise ImportError("faiss has not been installed. Please install faiss first.")
