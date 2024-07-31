@@ -16,13 +16,9 @@
 
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
-
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...modeling_outputs import CausalLMOutputWithPast
@@ -40,17 +36,15 @@ class FuyuPreTrainedModel(PreTrainedModel):
     _no_split_modules = []
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
-        std = self.config.initializer_range
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 class FuyuForCausalLM(FuyuPreTrainedModel):
     def __init__(self, config: FuyuConfig):
@@ -134,8 +128,8 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
             # First, find the positions of all the non-negative values in image_patch_input_indices, those are the
             # positions in word_embeddings that we want to replace with content from continuous_embeddings.
 
-            # dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0, as_tuple=True)[0]
-            dst_indices = mindspore.ops.nonzero(image_patch_input_indices[batch_idx] >= 0).reshape(-1)
+            dst_indices = ops.nonzero(image_patch_input_indices[batch_idx] >= 0, as_tuple=True)[0]
+            # dst_indices = mindspore.ops.nonzero(image_patch_input_indices[batch_idx] >= 0).reshape(-1)
 
             # Next look up those indices in image_patch_input_indices to find the indices in continuous_embeddings that we
             # want to use to replace the values in word_embeddings.

@@ -20,7 +20,7 @@ import unittest
 import requests
 
 from mindnlp.transformers import FuyuConfig
-from mindnlp.utils.testing_utils import require_mindspore, slow, require_mindspore_gpu
+from mindnlp.utils.testing_utils import require_mindspore, slow
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -41,7 +41,7 @@ if is_mindspore_available():
 
     from mindnlp.transformers import FuyuForCausalLM
 
-mindspore.set_context(device_target="CPU")
+# mindspore.set_context(device_target="CPU")
 # mindspore.set_context(pynative_synchronize=True)
 
 class FuyuModelTester:
@@ -142,7 +142,7 @@ class FuyuModelTester:
         token_labels,
     ):
         model = FuyuForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
@@ -159,7 +159,7 @@ class FuyuModelTester:
     ):
         config.add_cross_attention = True
         model = FuyuForCausalLM(config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -185,7 +185,7 @@ class FuyuModelTester:
         encoder_attention_mask,
     ):
         model = FuyuForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -202,7 +202,7 @@ class FuyuModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = FuyuForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(

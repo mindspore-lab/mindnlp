@@ -592,11 +592,8 @@ class FuyuImageProcessor(BaseImageProcessor):
         # torch implementation is faster but does not handle non-squares
 
         batch_size, channels, _, _ = image.shape
-        # unfolded_along_height = image.unfold(2, patch_height, patch_height)
-        unfolded_along_height = ops.stack(image.split(30, axis=2),dim=2).permute(0,1,2,4,3)
-        # patches = unfolded_along_height.unfold(3, patch_width, patch_width)
-        patches = ops.stack(unfolded_along_height.split(30, axis=3),dim=3).permute(0,1,2,3,5,4)
-        # patches = patches.contiguous()
+        unfolded_along_height = ops.unfold(image, 2, mindspore.Tensor(patch_height), patch_height)
+        patches = ops.unfold(unfolded_along_height, 3, mindspore.Tensor(patch_width), patch_width)
         patches = patches.view(batch_size, channels, -1, patch_height, patch_width)
         patches = patches.permute(0, 2, 3, 4, 1)
         patches = patches.reshape(batch_size, -1, channels * patch_height * patch_width)
@@ -711,8 +708,8 @@ class FuyuImageProcessor(BaseImageProcessor):
                 # Place those indices in the image input ids token stream, with -1 representing non-index tokens.
                 indices_in_stream_per_batch = ops.full_like(subseq_image_input_ids, -1)
                 indices_in_stream_per_subsequence = ops.full_like(subseq_image_input_ids, -1)
-                # patches_inds = ops.nonzero(patches_mask, as_tuple=True)[0]
-                patches_inds = mindspore.ops.nonzero(patches_mask.to(mindspore.int64)).reshape(-1)
+                patches_inds = ops.nonzero(patches_mask.to(mindspore.int64), as_tuple=True)[0]
+                # patches_inds = mindspore.ops.nonzero(patches_mask.to(mindspore.int64)).reshape(-1)
 
                 indices_in_stream_per_batch[patches_inds] = indices + index_offset
                 indices_in_stream_per_subsequence[patches_inds] = indices
