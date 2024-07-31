@@ -912,7 +912,7 @@ class CpmBeeBucketPositionBias(nn.Module):
             relative_postion_if_large,
             ops.full_like(relative_postion_if_large, num_buckets - 1),
         )
-        relative_buckets += ops.where(is_small, relative_position.to(mindspore.int32), relative_postion_if_large)
+        relative_buckets += ops.where(is_small, relative_position, relative_postion_if_large)
         return relative_buckets
 
 

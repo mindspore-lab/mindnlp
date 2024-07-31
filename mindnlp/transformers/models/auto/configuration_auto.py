@@ -84,6 +84,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("efficientformer", "EfficientFormerConfig"),
         ("electra", "ElectraConfig"),
         ("encodec", "EncodecConfig"),
+        ("ernie", "ErnieConfig"),
+        ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),

@@ -16,7 +16,6 @@
 
 import unittest
 
-from mindspore import ops
 import numpy as np
 
 from mindnlp.transformers import Data2VecTextConfig
@@ -38,6 +37,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         Data2VecTextForCausalLM,
@@ -315,8 +315,8 @@ class Data2VecTextModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,

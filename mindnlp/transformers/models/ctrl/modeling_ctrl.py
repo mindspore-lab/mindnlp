@@ -17,22 +17,17 @@
 
 from typing import Optional, Tuple, Union
 
+import math
 import mindspore
-import numpy as np
-from mindspore.common.initializer import Normal, initializer
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
-    SequenceClassifierOutput,
-)
+from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import Conv1D, find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import logging
 from .configuration_ctrl import CTRLConfig
+
 
 logger = logging.get_logger(__name__)
 
@@ -51,8 +46,10 @@ def positional_encoding(position, d_model_size, dtype):
         ops.arange(d_model_size, dtype=mindspore.int64).to(dtype).unsqueeze(0),
         d_model_size,
     )
-    sines = ops.sin(angle_rads[:, 0::2])
-    cosines = ops.cos(angle_rads[:, 1::2])
+
+    # use index_select instead of angle_rads[..., 0::2] to avoid lag
+    sines = ops.sin(ops.index_select(angle_rads, -1, ops.arange(0, angle_rads.shape[-1], 2)))
+    cosines = ops.cos(ops.index_select(angle_rads, -1, ops.arange(1, angle_rads.shape[-1], 2)))
 
     pos_encoding = ops.cat([sines, cosines], dim=-1)
     return pos_encoding
@@ -60,10 +57,10 @@ def positional_encoding(position, d_model_size, dtype):
 
 def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=None):
     # calculate attention
-    matmul_qk = ops.matmul(q, k.permute(0, 1, 3, 2))
+    matmul_qk = ops.bmm(q, k.permute(0, 1, 3, 2)) # fix ms 2.2 segment fault
 
     dk = k.shape[-1]
-    scaled_attention_logits = matmul_qk / np.sqrt(dk)
+    scaled_attention_logits = matmul_qk / math.sqrt(dk)
 
     if mask is not None:
         nd, ns = scaled_attention_logits.shape[-2], scaled_attention_logits.shape[-1]
@@ -103,9 +100,7 @@ class MultiHeadAttention(nn.Module):
         attention_head_size = self.d_model_size // self.num_heads
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(
-            heads, self.num_heads, attention_head_size, self.pruned_heads
-        )
+        heads, index = find_pruneable_heads_and_indices(heads, self.num_heads, attention_head_size, self.pruned_heads)
 
         # Prune linear layers
         self.Wq = prune_linear_layer(self.Wq, index)
@@ -119,7 +114,7 @@ class MultiHeadAttention(nn.Module):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def split_into_heads(self, x, batch_size):
-        x = x.reshape((batch_size, -1, self.num_heads, self.depth))
+        x = x.reshape(batch_size, -1, self.num_heads, self.depth)
         return x.permute([0, 2, 1, 3])
 
     def forward(
@@ -156,9 +151,7 @@ class MultiHeadAttention(nn.Module):
         output = scaled_dot_product_attention(q, k, v, mask, attention_mask, head_mask)
         scaled_attention = output[0].permute([0, 2, 1, 3])
         attn = output[1]
-        original_size_attention = scaled_attention.reshape(
-            (batch_size, -1, self.d_model_size)
-        )
+        original_size_attention = scaled_attention.reshape(batch_size, -1, self.d_model_size)
         output = self.dense(original_size_attention)
 
         outputs = (output, present)
@@ -168,9 +161,7 @@ class MultiHeadAttention(nn.Module):
 
 
 def point_wise_feed_forward_network(d_model_size, dff):
-    return nn.Sequential(
-        nn.Linear(d_model_size, dff), nn.ReLU(), nn.Linear(dff, d_model_size)
-    )
+    return nn.Sequential(nn.Linear(d_model_size, dff), nn.ReLU(), nn.Linear(dff, d_model_size))
 
 
 class EncoderLayer(nn.Module):
@@ -180,21 +171,14 @@ class EncoderLayer(nn.Module):
         self.multi_head_attention = MultiHeadAttention(d_model_size, num_heads)
         self.ffn = point_wise_feed_forward_network(d_model_size, dff)
 
-        self.layernorm1 = nn.LayerNorm([d_model_size], eps=1e-6)
-        self.layernorm2 = nn.LayerNorm([d_model_size], eps=1e-6)
+        self.layernorm1 = nn.LayerNorm(d_model_size, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(d_model_size, eps=1e-6)
 
-        self.dropout1 = nn.Dropout(p=rate)
-        self.dropout2 = nn.Dropout(p=rate)
+        self.dropout1 = nn.Dropout(rate)
+        self.dropout2 = nn.Dropout(rate)
 
     def forward(
-        self,
-        x,
-        mask,
-        layer_past=None,
-        attention_mask=None,
-        head_mask=None,
-        use_cache=False,
-        output_attentions=False,
+        self, x, mask, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False
     ):
         normed = self.layernorm1(x)
         attn_outputs = self.multi_head_attention(
@@ -230,34 +214,21 @@ class CTRLPreTrainedModel(PreTrainedModel):
     config_class = CTRLConfig
     base_model_prefix = "transformer"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Linear, Conv1D)):
+        if isinstance(module, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(
-                0.0, self.config.initializer_range, cell.weight.shape
-            )
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class CTRLModel(CTRLPreTrainedModel):
@@ -267,24 +238,15 @@ class CTRLModel(CTRLPreTrainedModel):
         self.d_model_size = config.n_embd
         self.num_layers = config.n_layer
 
-        self.pos_encoding = positional_encoding(
-            config.n_positions, self.d_model_size, mindspore.float32
-        )
+        self.pos_encoding = positional_encoding(config.n_positions, self.d_model_size, mindspore.float32)
 
         self.w = nn.Embedding(config.vocab_size, config.n_embd)
 
-        self.dropout = nn.Dropout(p=config.embd_pdrop)
+        self.dropout = nn.Dropout(config.embd_pdrop)
         self.h = nn.ModuleList(
-            [
-                EncoderLayer(
-                    config.n_embd, config.n_head, config.dff, config.resid_pdrop
-                )
-                for _ in range(config.n_layer)
-            ]
+            [EncoderLayer(config.n_embd, config.n_head, config.dff, config.resid_pdrop) for _ in range(config.n_layer)]
         )
-        self.layernorm = nn.LayerNorm(
-            [config.n_embd], eps=config.layer_norm_epsilon
-        )
+        self.layernorm = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -317,48 +279,36 @@ class CTRLModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]:
         r"""
-
         Returns:
-            `Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]`
 
         Example:
-            ```python
-            >>> from transformers import AutoTokenizer, CTRLModel
-            >>> import torch
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-            >>> model = CTRLModel.from_pretrained("Salesforce/ctrl")
-            ...
-            >>> # CTRL was trained with control codes as the first token
-            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-            ...
-            >>> outputs = model(**inputs)
-            ...
-            >>> last_hidden_states = outputs.last_hidden_state
-            >>> list(last_hidden_states.shape)
-            [1, 5, 1280]
-            ```
-        """
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+
+        ```python
+        >>> from transformers import AutoTokenizer, CTRLModel
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+        >>> model = CTRLModel.from_pretrained("Salesforce/ctrl")
+
+        >>> # CTRL was trained with control codes as the first token
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+
+        >>> outputs = model(**inputs)
+
+        >>> last_hidden_states = outputs.last_hidden_state
+        >>> list(last_hidden_states.shape)
+        [1, 5, 1280]
+        ```"""
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time"
-            )
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
@@ -376,9 +326,7 @@ class CTRLModel(CTRLPreTrainedModel):
         else:
             past_length = past_key_values[0][0].shape[-2]
         if position_ids is None:
-            position_ids = ops.arange(
-                past_length, input_shape[-1] + past_length, dtype=mindspore.int64
-            )
+            position_ids = ops.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)
 
         # Attention mask.
@@ -399,9 +347,7 @@ class CTRLModel(CTRLPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * mindspore.Tensor(
-                np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
-            )
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
@@ -409,7 +355,7 @@ class CTRLModel(CTRLPreTrainedModel):
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
             token_type_embeds = self.w(token_type_ids)
-            token_type_embeds *= np.sqrt(self.d_model_size)
+            token_type_embeds *= math.sqrt(self.d_model_size)
         else:
             token_type_embeds = 0
 
@@ -419,7 +365,7 @@ class CTRLModel(CTRLPreTrainedModel):
         seq_len = input_shape[-1]
         mask = ops.triu(ops.ones(seq_len + past_length, seq_len + past_length), 1)
 
-        inputs_embeds *= np.sqrt(self.d_model_size)
+        inputs_embeds *= math.sqrt(self.d_model_size)
 
         # `self.pos_encoding` won't be sent to the correct device along the model, so we do it manually.
         pos_embeds = self.pos_encoding[position_ids, :]
@@ -455,11 +401,7 @@ class CTRLModel(CTRLPreTrainedModel):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(
-                v
-                for v in [hidden_states, presents, all_hidden_states, all_attentions]
-                if v is not None
-            )
+            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_attentions] if v is not None)
 
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
@@ -486,9 +428,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, use_cache=None, **kwargs
-    ):
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, use_cache=None, **kwargs):
         # only last tokens for inputs_ids if past is defined in kwargs
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -502,11 +442,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
 
             input_ids = input_ids[:, remove_prefix_length:]
 
-        return {
-            "input_ids": input_ids,
-            "past_key_values": past_key_values,
-            "use_cache": use_cache,
-        }
+        return {"input_ids": input_ids, "past_key_values": past_key_values, "use_cache": use_cache}
 
     def forward(
         self,
@@ -524,41 +460,39 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
         r"""
-        Args:
-            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]`
 
         Example:
-            ```python
-            >>> import torch
-            >>> from transformers import AutoTokenizer, CTRLLMHeadModel
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-            >>> model = CTRLLMHeadModel.from_pretrained("Salesforce/ctrl")
-            ...
-            >>> # CTRL was trained with control codes as the first token
-            >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="pt")
-            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-            ...
-            >>> sequence_ids = model.generate(inputs["input_ids"])
-            >>> sequences = tokenizer.batch_decode(sequence_ids)
-            >>> sequences
-            ['Wikipedia The llama is a member of the family Bovidae. It is native to the Andes of Peru,']
-            >>> outputs = model(**inputs, labels=inputs["input_ids"])
-            >>> round(outputs.loss.item(), 2)
-            9.21
-            >>> list(outputs.logits.shape)
-            [1, 5, 246534]
-            ```
-        """
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+
+        ```python
+        >>> import torch
+        >>> from transformers import AutoTokenizer, CTRLLMHeadModel
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+        >>> model = CTRLLMHeadModel.from_pretrained("Salesforce/ctrl")
+
+        >>> # CTRL was trained with control codes as the first token
+        >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="pt")
+        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+
+        >>> sequence_ids = model.generate(inputs["input_ids"])
+        >>> sequences = tokenizer.batch_decode(sequence_ids)
+        >>> sequences
+        ['Wikipedia The llama is a member of the family Bovidae. It is native to the Andes of Peru,']
+
+        >>> outputs = model(**inputs, labels=inputs["input_ids"])
+        >>> round(outputs.loss.item(), 2)
+        9.21
+
+        >>> list(outputs.logits.shape)
+        [1, 5, 246534]
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -584,9 +518,8 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = F.cross_entropy(
-                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1)
-            )
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -615,6 +548,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         )
 
 
+
 class CTRLForSequenceClassification(CTRLPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -641,88 +575,85 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        Args:
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`
 
         Example of single-label classification:
-            ```python
-            >>> import torch
-            >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl")
-            ...
-            >>> # CTRL was trained with control codes as the first token
-            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-            ...
-            >>> with torch.no_grad():
-            ...     logits = model(**inputs).logits
-            ...
-            >>> predicted_class_id = logits.argmax().item()
-            >>> model.config.id2label[predicted_class_id]
-            'LABEL_0'
-            ```
 
-            ```python
-            >>> import torch
-            ...
-            >>> torch.manual_seed(42)  # doctest: +IGNORE_RESULT
-            >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
-            >>> num_labels = len(model.config.id2label)
-            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
-            ...
-            >>> labels = torch.tensor(1)
-            >>> loss = model(**inputs, labels=labels).loss
-            >>> round(loss.item(), 2)
-            0.93
-            ```
+        ```python
+        >>> import torch
+        >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
 
-        Example:
-            ```python
-            >>> import torch
-            >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
-            >>> model = CTRLForSequenceClassification.from_pretrained(
-            ...     "Salesforce/ctrl", problem_type="multi_label_classification"
-            ... )
-            ...
-            >>> # CTRL was trained with control codes as the first token
-            >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
-            >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
-            ...
-            >>> with torch.no_grad():
-            ...     logits = model(**inputs).logits
-            ...
-            >>> predicted_class_id = logits.argmax().item()
-            >>> model.config.id2label[predicted_class_id]
-            'LABEL_0'
-            ```
+        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl")
 
-            ```python
-            >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
-            >>> num_labels = len(model.config.id2label)
-            >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
-            ...
-            >>> num_labels = len(model.config.id2label)
-            >>> labels = torch.nn.functional.one_hot(torch.tensor([predicted_class_id]), num_classes=num_labels).to(
-            ...     torch.float
-            ... )
-            >>> loss = model(**inputs, labels=labels).loss
-            >>> loss.backward()  # doctest: +IGNORE_RESULT
-            ```
-        """
+        >>> # CTRL was trained with control codes as the first token
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
 
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        >>> with torch.no_grad():
+        ...     logits = model(**inputs).logits
+
+        >>> predicted_class_id = logits.argmax().item()
+        >>> model.config.id2label[predicted_class_id]
+        'LABEL_0'
+        ```
+
+        ```python
+        >>> import torch
+
+        >>> torch.manual_seed(42)  # doctest: +IGNORE_RESULT
+        >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
+        >>> num_labels = len(model.config.id2label)
+        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
+
+        >>> labels = torch.tensor(1)
+        >>> loss = model(**inputs, labels=labels).loss
+        >>> round(loss.item(), 2)
+        0.93
+        ```
+
+        Example of multi-label classification:
+
+        ```python
+        >>> import torch
+        >>> from transformers import AutoTokenizer, CTRLForSequenceClassification
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/ctrl")
+        >>> model = CTRLForSequenceClassification.from_pretrained(
+        ...     "Salesforce/ctrl", problem_type="multi_label_classification"
+        ... )
+
+        >>> # CTRL was trained with control codes as the first token
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
+
+        >>> with torch.no_grad():
+        ...     logits = model(**inputs).logits
+
+        >>> predicted_class_id = logits.argmax().item()
+        >>> model.config.id2label[predicted_class_id]
+        'LABEL_0'
+        ```
+
+        ```python
+        >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
+        >>> num_labels = len(model.config.id2label)
+        >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl", num_labels=num_labels)
+
+        >>> num_labels = len(model.config.id2label)
+        >>> labels = torch.nn.functional.one_hot(torch.tensor([predicted_class_id]), num_classes=num_labels).to(
+        ...     mindspore.float32
+        ... )
+        >>> loss = model(**inputs, labels=labels).loss
+        >>> loss.backward()  # doctest: +IGNORE_RESULT
+        ```"""
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -747,51 +678,46 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
             batch_size, sequence_length = inputs_embeds.shape[:2]
 
         if self.config.pad_token_id is None and batch_size != 1:
-            raise ValueError(
-                "Cannot handle batch sizes > 1 if no padding token is defined."
-            )
+            raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
 
         if self.config.pad_token_id is None:
             sequence_lengths = -1
         else:
             if input_ids is not None:
                 # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
-                sequence_lengths = (
-                    ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
-                )
+                sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
             else:
                 sequence_lengths = -1
-                logger.warning(
+                logger.warning_once(
                     f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        pooled_logits = logits[tuple(range(batch_size)), sequence_lengths]
 
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (
-                    labels.dtype in (mindspore.int32, mindspore.int64)
-                ):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(pooled_logits, labels)
+                    loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(
-                    pooled_logits.view(-1, self.num_labels), labels.view(-1)
-                )
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -802,7 +728,6 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
-
 
 __all__ = [
     "CTRLForSequenceClassification",

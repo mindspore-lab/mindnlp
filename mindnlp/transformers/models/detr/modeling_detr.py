@@ -1664,7 +1664,7 @@ class DetrForSegmentation(DetrPreTrainedModel):
 
 
 def _expand(tensor, length: int):
-    return ops.flatten(ops.tile(tensor.unsqueeze(1), (int(length), 1, 1, 1)), 0, 1)
+    return ops.flatten(ops.tile(tensor.unsqueeze(1), (1, int(length), 1, 1, 1)), 0, 1)
 
 
 # taken from https://github.com/facebookresearch/detr/blob/master/models/segmentation.py
@@ -2224,7 +2224,7 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         batch_shape = [len(tensor_list)] + max_size
         batch_size, num_channels, height, width = batch_shape
         dtype = tensor_list[0].dtype
-        tensor = ops.zeros(batch_shape, dtype=dtype)
+        tensor = ops.zeros(tuple(batch_shape), dtype=dtype)
         mask = ops.ones((batch_size, height, width), dtype=mindspore.bool_)
         for img, pad_img, m in zip(tensor_list, tensor, mask):
             pad_img[: img.shape[0], : img.shape[1], : img.shape[2]] = img.copy()

@@ -124,7 +124,7 @@ def uniform_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
-    tensor.set_data(initializer(Uniform(a, b), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Uniform(a, b), tensor.shape, tensor.dtype))
     return tensor
 
 def normal_(
@@ -145,7 +145,7 @@ def normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.normal_(w)
     """
-    tensor.set_data(initializer(Normal(std, mean), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Normal(std, mean), tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -175,7 +175,7 @@ def trunc_normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.trunc_normal_(w)
     """
-    tensor.set_data(initializer(TruncatedNormal(std, mean, a, b), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(TruncatedNormal(std, mean, a, b), tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -190,7 +190,7 @@ def constant_(tensor: Tensor, val: float) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.constant_(w, 0.3)
     """
-    tensor.set_data(initializer(Constant(val), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Constant(val), tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -204,7 +204,7 @@ def ones_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.ones_(w)
     """
-    tensor.set_data(initializer('ones', tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer('ones', tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -218,7 +218,7 @@ def zeros_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.zeros_(w)
     """
-    tensor.set_data(initializer('zeros', tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer('zeros', tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -238,7 +238,7 @@ def dirac_(tensor, groups=1):
         >>> w = torch.empty(3, 24, 5, 5)
         >>> nn.init.dirac_(w, 3)
     """
-    tensor.set_data(initializer(Dirac(groups), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Dirac(groups), tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -475,7 +475,7 @@ def orthogonal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.orthogonal_(w)
     """
-    tensor.set_data(initializer(Orthogonal(gain), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Orthogonal(gain), tensor.shape, tensor.dtype))
     return tensor
 
 
@@ -501,7 +501,7 @@ def sparse_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.sparse_(w, sparsity=0.1)
     """
-    tensor.set_data(initializer(Sparse(sparsity, std), tensor.shape, tensor.dtype))
+    tensor.assign_value(initializer(Sparse(sparsity, std), tensor.shape, tensor.dtype))
     return tensor
 
 
