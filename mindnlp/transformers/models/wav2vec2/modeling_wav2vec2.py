@@ -3404,7 +3404,7 @@ class TDNNLayer(nn.Module):
             ValueError: If the input hidden_states does not have the expected shape or dimensions.
         '''
         hidden_states = hidden_states.unsqueeze(1)
-        hidden_states = ops.unfold(
+        hidden_states = F.unfold(
             hidden_states,
             (self.kernel_size, self.in_conv_dim),
             stride=(1, self.in_conv_dim),
