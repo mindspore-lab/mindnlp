@@ -129,7 +129,7 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
         bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
         return super().forward(positions + self.offset)
 

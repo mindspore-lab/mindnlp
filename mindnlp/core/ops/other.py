@@ -43,7 +43,7 @@ def broadcast_to(input, shape):
 
 # cdist
 def cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
-    return ops.cdist(x1, x2, p)
+    return ops.cdist(x1, x2, float(p))
 
 # clone
 def clone(input):

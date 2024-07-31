@@ -18,8 +18,9 @@ import inspect
 from typing import Union, Optional, List, Tuple
 
 import mindspore
-from mindspore import ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import ops
 
 from mindnlp.core import nn
 
@@ -214,7 +215,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         # apply forward fn to every tuple
         output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension
-        return ops.cat(output_chunks, axis=chunk_axis)
+        return ops.cat(output_chunks, dim=chunk_axis)
 
     return forward_fn(*input_tensors)
 
@@ -241,4 +242,4 @@ def meshgrid(
 
     Reference: https://pytorch.org/docs/1.13/generated/torch.meshgrid.html
     """
-    return ops.meshgrid(*list(*tensors), indexing=indexing)
+    return ops.meshgrid(*tensors, indexing=indexing)

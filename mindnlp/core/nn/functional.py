@@ -251,6 +251,16 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
             momentum,
             eps
         )
+
+    if running_mean is None:
+        running_mean = ops.ones(input.shape[1])
+    if running_var is None:
+        running_var = ops.zeros(input.shape[1])
+    if weight is None:
+        weight = ops.ones(input.shape[1])
+    if bias is None:
+        bias = ops.zeros(input.shape[1])
+
     return ops.batch_norm(
         input,
         running_mean,
