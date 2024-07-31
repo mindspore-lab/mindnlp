@@ -599,7 +599,7 @@ class IdeficsAttention(nn.Module):
             self.k_layer_norm = IdeficsRMSNorm(self.head_dim, eps=config.rms_norm_eps)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
             self,
@@ -616,15 +616,17 @@ class IdeficsAttention(nn.Module):
 
         bsz, q_len, _ = hidden_states.shape
 
-        query_states = self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        query_states = ops.transpose(self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim), 1, 2)
         if not is_cross_attention:
-            key_states = self.k_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-            value_states = self.v_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+            key_states = ops.transpose(self.k_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim), 1, 2)
+            value_states = ops.transpose(self.v_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim), 1,
+                                         2)
         else:
             _, kv_len, _ = key_value_states.shape  # Note that, in this case, `kv_len` == `kv_seq_len`
-            key_states = self.k_proj(key_value_states).view(bsz, kv_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+            key_states = ops.transpose(self.k_proj(key_value_states).view(bsz, kv_len, self.num_heads, self.head_dim),
+                                       1, 2)
             value_states = (
-                self.v_proj(key_value_states).view(bsz, kv_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+                ops.transpose(self.v_proj(key_value_states).view(bsz, kv_len, self.num_heads, self.head_dim), 1, 2)
             )
 
         kv_seq_len = key_states.shape[-2]
@@ -675,7 +677,7 @@ class IdeficsAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
@@ -938,19 +940,13 @@ class IdeficsPreTrainedModel(PreTrainedModel):
         # base should be used for training from scratch and it contains the correct code.
         std = self.config.initializer_range
         if isinstance(module, nn.Linear):
-            module.weight.set_data(initializer(Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
-            # module.weight.data.normal_(mean=0.0, std=std)
-            # if module.bias is not None:
-            #     module.bias.data.zero_()
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(initializer(Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx:
-                module.weight[module.padding_idx] = 0
-            # module.weight.data.normal_(mean=0.0, std=std)
-            # if module.padding_idx is not None:
-            #     module.weight.data[module.padding_idx].zero_()
+                module.weight.data[module.padding_idx] = 0
 
     # Adapted from transformers.modeling_utils.PreTrainedModel._check_and_enable_sdpa
     @classmethod

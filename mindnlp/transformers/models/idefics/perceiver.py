@@ -154,7 +154,7 @@ class IdeficsPerceiverAttention(nn.Module):
         # Multiheaded Self-Attention w/ stable softmax (subtract per-row max -- `amax` -- before softmax call)
         #   =>> `attn` should be a 2D matrix of shape [n_latents x (context + n_latents)]
         # einsum.rearrange(x, "bsz seq (heads embed) -> bsz heads seq embed", heads=self.n_heads)
-        q, k, v = [x.reshape(batch_size, x.shape[1], self.n_heads, self.head_dim).swapaxes(1, 2) for x in (q, k, v)]
+        q, k, v = [ops.transpose(x.reshape(batch_size, x.shape[1], self.n_heads, self.head_dim),1, 2) for x in (q, k, v)]
 
         if self.qk_layer_norms:
             q = self.q_layer_norm(q)
@@ -167,7 +167,7 @@ class IdeficsPerceiverAttention(nn.Module):
         # Attend & project back to output...
         resampled = ops.einsum("... i j, ... j d -> ... i d", attn, v)
         # einsum.rearrange(resampled, "bsz heads seq embed -> bsz seq (heads embed)", heads=self.n_heads)
-        return self.output_proj(resampled.swapaxes(1, 2).flatten(-2))
+        return self.output_proj(ops.transpose(resampled,1, 2).flatten(-2))
 
 
 class IdeficsMLP(nn.Module):
