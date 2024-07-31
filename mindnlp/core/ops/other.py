@@ -4,6 +4,7 @@ import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore.common.initializer import initializer
+from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
@@ -616,7 +617,8 @@ def unflatten(x, dim, sizes):
 # resolve_neg
 
 def masked_fill(input, mask, value):
-    return ops.masked_fill(input, mask, value)
+    masked_fill_ = _get_cache_prim(ops.MaskedFill)()
+    return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
 
 def finfo(dtype):
     return np.finfo(mindspore.dtype_to_nptype(dtype))
