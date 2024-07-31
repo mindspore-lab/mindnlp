@@ -80,6 +80,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("deta", "DetaModel"),
         ("detr", "DetrModel"),
         ("dinov2", "Dinov2Model"),
+        ("dpr", "DPRQuestionEncoder"),
         ("dpt", "DPTModel"),
         ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
