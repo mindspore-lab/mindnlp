@@ -108,6 +108,7 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    jamba,
     jetmoe,
     kosmos2,
     layoutlm,
@@ -316,6 +317,7 @@ from .ibert import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
+from .jamba import *
 from .jetmoe import *
 from .kosmos2 import *
 from .layoutlm import *
@@ -521,10 +523,11 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
-__all__.extend(ibert.__all__)
-__all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(ibert.__all__)
 __all__.extend(imagegpt.__all__)
+__all__.extend(instructblip.__all__)
+__all__.extend(jamba.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)

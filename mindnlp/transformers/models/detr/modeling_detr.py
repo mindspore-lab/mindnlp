@@ -355,7 +355,6 @@ class DetrConvEncoder(nn.Module):
                     **kwargs,
                 )
             else:
-                # FIXME: so far MindNLP does not depend on timm, try fallback to AutoBackbone
                 from ..auto import CONFIG_MAPPING
                 # Backwards compatibility (copy from DetrConfig)
                 backbone_config = config.backbone_config
@@ -1593,7 +1592,6 @@ class DetrForSegmentation(DetrPreTrainedModel):
         memory = encoder_outputs[0].permute(0, 2, 1).view(batch_size, self.config.d_model, height, width)
         mask = flattened_mask.view(batch_size, height, width)
 
-        # FIXME h_boxes takes the last one computed, keep this in mind
         # important: we need to reverse the mask, since in the original implementation the mask works reversed
         # bbox_mask is of shape (batch_size, num_queries, number_of_attention_heads in bbox_attention, height/32, width/32)
         bbox_mask = self.bbox_attention(sequence_output, memory, mask=~mask)

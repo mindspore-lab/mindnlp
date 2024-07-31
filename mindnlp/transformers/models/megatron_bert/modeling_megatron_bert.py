@@ -23,10 +23,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from mindnlp.utils import (
     ModelOutput,
@@ -303,8 +304,8 @@ class MegatronBertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -353,7 +354,7 @@ class MegatronBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -2362,10 +2363,10 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         #  add a dummy token
         if self.config.pad_token_id is None:
             raise ValueError("The PAD token should be defined for generation")
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
+        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], dim=-1)
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64)
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 

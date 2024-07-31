@@ -20,10 +20,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...generation.logits_process import WhisperTimeStampLogitsProcessor
@@ -83,7 +84,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = mindspore.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -100,7 +101,7 @@ def sinusoids(length: int, channels: int, max_timescale: float = 10000) -> minds
     log_timescale_increment = math.log(max_timescale) / (channels // 2 - 1)
     inv_timescales = ops.exp(-log_timescale_increment * ops.arange(channels // 2))
     scaled_time = ops.arange(length).view(-1, 1) * inv_timescales.view(1, -1)
-    return ops.cat([scaled_time.sin(), scaled_time.cos()], axis=1)
+    return ops.cat([scaled_time.sin(), scaled_time.cos()], dim=1)
 
 
 # Copied from transformers.models.bart.modeling_bart.shift_tokens_right
@@ -493,8 +494,8 @@ class WhisperAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -531,7 +532,7 @@ class WhisperAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -975,8 +976,8 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.max_source_positions = config.max_source_positions
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
 
-        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, pad_mode='pad', bias=True)
-        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad', bias=True)
+        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, bias=True)
+        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, bias=True)
 
         self.embed_positions = nn.Embedding(self.max_source_positions, embed_dim)
         self.embed_positions.weight.requires_grad = False
@@ -2291,7 +2292,7 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
         # (batch size, attention_heads, output length, input length).
         cross_attentions = []
         for i in range(self.config.decoder_layers):
-            cross_attentions.append(ops.cat([x[i] for x in generate_outputs.cross_attentions], axis=2))
+            cross_attentions.append(ops.cat([x[i] for x in generate_outputs.cross_attentions], dim=2))
 
         # Select specific cross-attention layers and heads. This is a tensor
         # of shape (batch size, num selected, output length, input length).
@@ -2301,7 +2302,7 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
             weights = weights[..., : num_frames // 2]
 
         # Normalize and smoothen the weights.
-        std, mean = ops.std_mean(weights, axis=-2, keepdims=True)
+        std, mean = ops.std_mean(weights, dim=-2, keepdim=True)
         weights = (weights - mean) / std
         weights = _median_filter(weights, self.config.median_filter_width)
 
@@ -2986,8 +2987,8 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
             )
 
         if self.config.use_weighted_layer_sum:
-            hidden_states = ops.stack(encoder_outputs, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(encoder_outputs, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = encoder_outputs[0]

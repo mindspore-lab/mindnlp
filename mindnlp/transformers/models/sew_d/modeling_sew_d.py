@@ -19,13 +19,12 @@ import warnings
 from collections.abc import Sequence
 from typing import Optional, Tuple, Union
 import numpy as np
-
-
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from .configuration_sew_d import SEWDConfig
 from ...modeling_outputs import (
@@ -289,7 +288,6 @@ class SEWDNoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -312,7 +310,6 @@ class SEWDLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -341,7 +338,6 @@ class SEWDGroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -365,12 +361,11 @@ class SEWDPositionalConvEmbedding(nn.Module):
             out_channels=config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
             stride=config.squeeze_factor,
-            pad_mode="pad",
             bias=True,
         )
-        self.conv = weight_norm(self.conv, dim=2)
+        self.conv = nn.utils.weight_norm(self.conv, dim=2)
 
         self.padding = SEWDSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -531,7 +526,7 @@ class XSoftmax(nn.Module):
             - RuntimeError: If an error occurs during the softmax operation or masking process.
         """
         rmask = ~(mask.to(mindspore.bool_))
-        output = input.masked_fill(rmask, mindspore.tensor(finfo(input.dtype, "min")))
+        output = input.masked_fill(rmask, float(ops.finfo(input.dtype).min))
         output = ops.softmax(output, self.dim)
         output = output.masked_fill(rmask, 0)
         return output
@@ -1033,8 +1028,7 @@ class ConvLayer(nn.Module):
             config.hidden_size,
             kernel_size,
             padding=(kernel_size - 1) // 2,
-            group=groups,
-            pad_mode="pad",
+            groups=groups,
             bias=True,
         )
         self.LayerNorm = nn.LayerNorm(
@@ -1682,9 +1676,9 @@ class SEWDForCTC(SEWDPreTrainedModel):
             target_lengths = labels_mask.sum(-1)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 labels,
                 input_lengths,
@@ -1787,9 +1781,9 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
+            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
         else:
             hidden_states = outputs[0]
 

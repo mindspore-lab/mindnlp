@@ -39,26 +39,6 @@ logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "Salesforce/blip-vqa-base"
 
-def normalize(input, p=2.0, dim=1):
-    """
-    Normalize the input along a specified dimension using the specified p-norm.
-    
-    Args:
-        input (Tensor): The input tensor to be normalized.
-        p (float, optional): The p-norm to be used for normalization. Default is 2.0.
-        dim (int, optional): The dimension along which the input tensor will be normalized. Default is 1.
-    
-    Returns:
-        None
-    
-    Raises:
-        TypeError: If input is not a tensor.
-        ValueError: If p is not a positive float.
-        ValueError: If dim is not a valid dimension for the input tensor.
-    """
-    return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
-
-
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     """
@@ -1866,8 +1846,8 @@ class BlipForImageTextRetrieval(BlipPreTrainedModel):
             )
             question_embeds = question_embeds[0] if not return_dict else question_embeds.last_hidden_state
 
-            image_feat = normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
-            text_feat = normalize(self.text_proj(question_embeds[:, 0, :]), dim=-1)
+            image_feat = F.normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
+            text_feat = F.normalize(self.text_proj(question_embeds[:, 0, :]), dim=-1)
 
             output = image_feat @ text_feat.t()
 

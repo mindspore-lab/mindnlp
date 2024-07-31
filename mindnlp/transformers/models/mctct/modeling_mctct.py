@@ -18,10 +18,11 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 # from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
@@ -90,7 +91,6 @@ class MCTCTConv1dSubsampler(nn.Module):
                 self.mid_channels[i] if i < self.num_layers - 1 else self.out_channels,
                 kernel_size=k,
                 stride=self.stride[i],
-                pad_mode="valid",
             )
             for i, k in enumerate(self.kernel_size)
         ])
@@ -104,7 +104,7 @@ class MCTCTConv1dSubsampler(nn.Module):
         hidden_states = input_features.swapaxes(1, 2)  # -> Batch x Frame x Time
         for conv in self.conv_layers:
             hidden_states = conv(hidden_states)
-            hidden_states = ops.glu(hidden_states, axis=self.glu_dim)
+            hidden_states = F.glu(hidden_states, dim=self.glu_dim)
             hidden_states = self.dropout(hidden_states)
 
         hidden_states = hidden_states.swapaxes(1, 2)  # -> Batch x Time x Frame
@@ -218,7 +218,7 @@ class MCTCTSelfAttention(nn.Module):
         batch, hidden_state, seq_len, heads = scores.shape
 
         # e.g. [10, 1853, 14, 4]
-        scores = ops.cat((scores, ops.zeros((batch, seq_len, seq_len, heads))), axis=1)
+        scores = ops.cat((scores, ops.zeros((batch, seq_len, seq_len, heads))), dim=1)
 
         # e.g. [10, 25942, 1, 4]
         scores = self.reshape_fortran(scores, [batch, (hidden_state + seq_len) * seq_len, 1, heads])
@@ -264,7 +264,7 @@ class MCTCTSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -495,7 +495,7 @@ class MCTCTPreTrainedModel(PreTrainedModel):
         # these two operations makes sure that all values
         # before the output lengths indices are attended to
         attention_mask[(ops.arange(bsz), subsampled_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1])
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1])
         return attention_mask
 
 
@@ -759,9 +759,9 @@ class MCTCTForCTC(MCTCTPreTrainedModel):
             # flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 # flattened_targets,
                 labels,

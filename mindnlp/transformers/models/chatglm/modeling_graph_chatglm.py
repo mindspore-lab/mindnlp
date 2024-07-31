@@ -21,11 +21,11 @@ from typing import Optional, Tuple, List, Callable, Dict, Any
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from ...generation.logits_process import LogitsProcessor
 from ...generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
@@ -173,14 +173,14 @@ class RotaryEmbedding(nn.Module):
 def rotate_half(x):
     """rotate half tensor."""
     x1, x2 = x.chunk(2, x.ndim - 1)
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
     """apply rotary pos"""
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
 
     q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
     return q, k
@@ -274,7 +274,7 @@ class SelfAttention(nn.Module):
         last_dim = tensor.ndim - 1
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
-        tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+        tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
 
         return tensor_list
@@ -316,8 +316,8 @@ class SelfAttention(nn.Module):
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
 
-            query_layer = ops.concat([q1, q2], axis=3)
-            key_layer = ops.concat([k1, k2], axis=3)
+            query_layer = ops.concat([q1, q2], dim=3)
+            key_layer = ops.concat([k1, k2], dim=3)
         else:
             position_ids = position_ids.swapaxes(0, 1)
             cos, sin = self.rotary_emb(position_ids.max() + 1)
@@ -362,8 +362,8 @@ class SelfAttention(nn.Module):
         if layer_past is not None and seq_len == 1:
             # layer_past = layer_past.chunk(2, 0)
             past_key, past_value = layer_past[0], layer_past[1]
-            key_layer = ops.cat((past_key, key_layer), axis=0)
-            value_layer = ops.cat((past_value, value_layer), axis=0)
+            key_layer = ops.cat((past_key, key_layer), dim=0)
+            value_layer = ops.cat((past_value, value_layer), dim=0)
 
         # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
         hidden_size = key_layer.shape[-1]
@@ -409,7 +409,7 @@ class SelfAttention(nn.Module):
         attention_scores = attention_scores.float()
         attention_scores = attention_scores * query_key_layer_scaling_coeff
 
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         attention_probs = attention_probs.astype(dtype)
 
@@ -731,8 +731,8 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
                 ops.zeros(context_length, dtype=mindspore.int64),
                 ops.arange(seq_length - context_length, dtype=mindspore.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = ops.stack(block_position_ids, dim=0)
+            position_ids = ops.stack((position_ids, block_position_ids), dim=1)
         else:
             position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
             for i, context_length in enumerate(context_lengths):
@@ -967,7 +967,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=3)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=3)
 
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
@@ -1124,11 +1124,11 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], axis=3)
+                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, new_attention_mask], axis=2
+                    [attention_mask, new_attention_mask], dim=2
                 )
 
         # update position ids
@@ -1137,7 +1137,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         return model_kwargs
@@ -1466,14 +1466,14 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

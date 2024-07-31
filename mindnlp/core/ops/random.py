@@ -1,19 +1,20 @@
 """random op"""
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
 
 # bernoulli
-def bernoulli(input):
+def bernoulli(input, p=0.5):
     if DEVICE_TARGET == 'Ascend':
-        random_numbers = rand(input.shape, dtype=input.dtype)
-        samples = random_numbers < input
+        random_numbers = rand(*input.shape, dtype=input.dtype)
+        samples = random_numbers < p
         samples = samples.int()
         return samples
-    return ops.bernoulli(input)
+    return ops.bernoulli(input, p)
 
 # multinomial
 def multinomial(input, num_samples, replacement=False):
@@ -81,3 +82,10 @@ def randn_like(input, *, dtype):
     return ops.randn_like(input, dtype=dtype)
 
 # randperm
+def randperm(n, seed=0, offset=0, dtype=mindspore.int64):
+    """randperm"""
+    if DEVICE_TARGET == 'CPU':
+        randperm_v2_op = _get_cache_prim(ops.RandpermV2)(seed, offset, dtype)
+        return randperm_v2_op(n)
+    randperm_op = _get_cache_prim(ops.Randperm)(max_length=n, dtype=dtype)
+    return randperm_op(mindspore.tensor([n]))

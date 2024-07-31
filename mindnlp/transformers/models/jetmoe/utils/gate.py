@@ -16,6 +16,7 @@
 JetMoE Gate.
 """
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 class top_k_gating(nn.Module):
 
@@ -83,7 +84,7 @@ provides a method for returning an extra representation string for the module.
         freq = (gates > 0).float().sum(0)
         lsesq = (ops.log(ops.exp(logits).sum(axis=-1)) ** 2).sum()
 
-        switchloss = self.num_experts * (normalize(probs, p=1, dim=0) * normalize(freq, p=1, dim=0)).sum()
+        switchloss = self.num_experts * (F.normalize(probs, p=1, dim=0) * F.normalize(freq, p=1, dim=0)).sum()
         zloss = lsesq / count
         loss = switchloss + 0.1 * zloss
 
@@ -111,10 +112,10 @@ provides a method for returning an extra representation string for the module.
         """
         logits = self.layer(x).float()
         top_k_logits, top_k_indices = ops.topk(logits, self.top_k, dim=1)
-        top_k_gates = ops.softmax(top_k_logits, axis=1).type_as(x)
+        top_k_gates = ops.softmax(top_k_logits, dim=1).type_as(x)
 
         if self.training:
-            probs = ops.softmax(logits, axis=1)
+            probs = ops.softmax(logits, dim=1)
             zeros = ops.zeros_like(probs)
             zeros = zeros.to(top_k_gates.dtype)  # Convert zeros to match top_k_gates dtype
             gates = zeros.scatter(1, top_k_indices, top_k_gates)

@@ -38,7 +38,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
-    import mindspore as ms
+    import mindspore
     from mindspore import ops
 
 if is_vision_available():
@@ -396,7 +396,7 @@ class LlavaForConditionalGenerationIntegrationTest(unittest.TestCase):
         raw_image = Image.open(requests.get(image_file, stream=True).raw)
         inputs = self.processor(prompt, raw_image, return_tensors="ms")
 
-        EXPECTED_INPUT_IDS = ms.Tensor([[1, 32000, 28705, 13, 11123, 28747, 1824, 460, 272, 1722, 315, 1023,
+        EXPECTED_INPUT_IDS = mindspore.Tensor([[1, 32000, 28705, 13, 11123, 28747, 1824, 460, 272, 1722, 315, 1023,
                                        347, 13831, 925, 684, 739, 315, 3251, 456, 1633, 28804, 13, 4816, 8048, 12738, 28747]])  # fmt: skip
         self.assertTrue(ops.equal(inputs["input_ids"], EXPECTED_INPUT_IDS))
 
@@ -421,7 +421,7 @@ class LlavaForConditionalGenerationIntegrationTest(unittest.TestCase):
         image_file = "https://llava-vl.github.io/static/images/view.jpg"
         raw_image = Image.open(requests.get(image_file, stream=True).raw)
         inputs = processor(prompt, raw_image,
-                           return_tensors="ms").astype(ms.float16)
+                           return_tensors="ms").astype(mindspore.float16)
 
         output = model.generate(**inputs, max_new_tokens=900, do_sample=False)
         EXPECTED_DECODED_TEXT = "USER:  \nWhat are the things I should be cautious about when I visit this place? ASSISTANT: When visiting this place, which is a pier or dock extending over a body of water, there are a few things to be cautious about. First, be aware of the weather conditions, as sudden changes in weather can make the pier unsafe to walk on. Second, be mindful of the water depth and any potential hazards, such as submerged rocks or debris, that could cause accidents or injuries. Additionally, be cautious of the tides and currents, as they can change rapidly and pose a risk to swimmers or those who venture too close to the edge of the pier. Finally, be respectful of the environment and other visitors, and follow any posted rules or guidelines for the area."  # fmt: skip
@@ -571,7 +571,7 @@ class LlavaForConditionalGenerationIntegrationTest(unittest.TestCase):
 
         raw_image = Image.open(requests.get(image_file, stream=True).raw)
         inputs = processor(prompt, raw_image,
-                           return_tensors="ms").astype(ms.float16)
+                           return_tensors="ms").astype(mindspore.float16)
 
         # Make sure that `generate` works
         _ = model.generate(**inputs, max_new_tokens=20)
@@ -587,18 +587,18 @@ class LlavaForConditionalGenerationIntegrationTest(unittest.TestCase):
         # Simulate some user inputs
         pixel_values = ops.randn(
             (2, 3, 336, 336),
-            dtype=ms.float32,
+            dtype=mindspore.float32,
         )
-        input_ids = ms.Tensor(
+        input_ids = mindspore.Tensor(
             [
                 [32001, 32001, 1, 15043, 7084, 32000, 29871, 13, 7900],
                 [1, 15043, 7084, 29901, 29871, 32000, 29871, 13, 7900],
             ],
-            dtype=ms.int64,
+            dtype=mindspore.int64,
         )
-        attention_mask = ms.Tensor(
+        attention_mask = mindspore.Tensor(
             [[0, 0, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1]],
-            dtype=ms.int64,
+            dtype=mindspore.int64,
         )
 
         # Make sure that the loss is properly computed

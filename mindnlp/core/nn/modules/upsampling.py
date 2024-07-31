@@ -1,3 +1,4 @@
+"""upsample"""
 from typing import Optional
 from mindspore import Tensor
 

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Qwen2 model. """
+""" Testing suite for the MindSpore Qwen2 model. """
 
 
 import gc
@@ -38,7 +38,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         Qwen2ForCausalLM,

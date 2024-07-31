@@ -379,6 +379,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         (
+            "jamba",
+            (
+                "LlamaTokenizer" if is_sentencepiece_available() else None,
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
+        (
             "jetmoe",
             (
                 "LlamaTokenizer" if is_sentencepiece_available() else None,

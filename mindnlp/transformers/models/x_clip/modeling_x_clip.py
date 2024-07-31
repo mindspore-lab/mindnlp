@@ -19,9 +19,10 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask, _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
@@ -126,7 +127,7 @@ class XCLIPVisionEmbeddings(nn.Module):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -243,7 +244,7 @@ class XCLIPAttention(nn.Module):
             attn_weights = attn_weights.view(
                 bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -443,7 +444,7 @@ class XCLIPVisionEncoderLayer(nn.Module):
         # add dummy sequence dimension
         msg_token = msg_token.view(-1, 1, hidden_size)
 
-        hidden_states = ops.cat([hidden_states, msg_token], axis=1)
+        hidden_states = ops.cat([hidden_states, msg_token], dim=1)
 
         residual = hidden_states
 
@@ -1134,7 +1135,7 @@ class XCLIPCrossAttention(nn.Module):
         )
 
         attn = (queries @ keys.swapaxes(-2, -1)) * self.scale
-        attn = ops.softmax(attn, axis=-1)
+        attn = ops.softmax(attn, dim=-1)
         attn = self.attn_drop(attn)
 
         x = (attn @ values).swapaxes(1, 2).reshape(batch_size,

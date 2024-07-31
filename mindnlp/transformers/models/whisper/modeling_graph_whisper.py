@@ -23,9 +23,8 @@ import sys
 import numpy as np
 import mindspore as ms
 
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-, load_param_into_net
+from mindspore import nn, ops
+from mindspore import Tensor, Parameter, load_param_into_net
 from mindspore.ops.primitive import constexpr
 from mindnlp.utils.serialization import load
 
@@ -772,10 +771,10 @@ class WhisperGraphModel(nn.Module):
         self.expand = ops.ExpandDims()
         self.multiply = ops.Mul()
         self.conv1 = nn.Conv1d(config.seq_length, config.hidden_size, kernel_size=3, padding=1, pad_mode='pad',
-                               bias=True).to_float(config.compute_type)
+                               has_bias=True).to_float(config.compute_type)
         self.conv2 = nn.Conv1d(config.hidden_size, config.hidden_size, kernel_size=3, stride=2, padding=1,
                                pad_mode='pad',
-                               bias=True).to_float(config.compute_type)
+                               has_bias=True).to_float(config.compute_type)
         self._create_attention_mask_from_input_mask = CreateAttentionMaskFromInputMask()
 
     def forward(self, source_ids, source_mask, target_ids=None, target_mask=None):

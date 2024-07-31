@@ -23,9 +23,8 @@ from mindspore.common.initializer import initializer, Normal, Uniform
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindnlp.utils import ModelOutput, logging
 from mindnlp.core.nn.utils import weight_norm
-from mindnlp.core.nn import functional as F
+from mindnlp.utils import ModelOutput, logging
 from ...modeling_utils import PreTrainedModel
 from .configuration_encodec import EncodecConfig
 

@@ -21,11 +21,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import get_activation
 from ...configuration_utils import PretrainedConfig

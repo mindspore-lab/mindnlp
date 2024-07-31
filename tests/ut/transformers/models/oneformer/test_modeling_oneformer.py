@@ -20,7 +20,8 @@ import unittest
 
 import numpy as np
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import Tensor
+from mindnlp.core import ops
 from mindnlp.transformers import OneFormerConfig, OneFormerForUniversalSegmentation, OneFormerModel
 from mindnlp.utils import is_vision_available, is_mindspore_available
 from mindnlp.utils.testing_utils import(
@@ -87,9 +88,9 @@ class OneFormerModelTester:
             ).long()
         )
         mask_labels = (
-            ops.rand([self.batch_size, self.num_labels, self.min_size, self.max_size]) > 0.5
+            ops.rand(self.batch_size, self.num_labels, self.min_size, self.max_size) > 0.5
         ).float()
-        class_labels = (ops.rand((self.batch_size, self.num_labels)) > 0.5).long()
+        class_labels = (ops.rand(self.batch_size, self.num_labels) > 0.5).long()
 
         config = self.get_config()
         return config, pixel_values, task_inputs, text_inputs, pixel_mask, mask_labels, class_labels
@@ -242,7 +243,7 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_model_main_input_name(self):
         for model_class in self.all_model_classes:
-            model_signature = inspect.signature(getattr(model_class, "construct"))
+            model_signature = inspect.signature(getattr(model_class, "forward"))
             # The main input is the name of the argument after `self`
             observed_main_input_name = list(model_signature.parameters.keys())[1:3]
             self.assertEqual(model_class.main_input_name, observed_main_input_name)

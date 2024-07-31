@@ -23,11 +23,11 @@ from typing import Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal, XavierUniform
 
+
+from mindnlp.core import nn, ops
 from mindnlp.utils import (
     ModelOutput,
     logging
@@ -239,17 +239,17 @@ class ViTMAEEmbeddings(nn.Module):
             noise = ops.rand(batch_size, seq_length)  # noise in [0, 1]
 
         # sort noise for each sample
-        ids_shuffle = ops.argsort(noise, axis=1)  # ascend: small is keep, large is remove
-        ids_restore = ops.argsort(ids_shuffle, axis=1)
+        ids_shuffle = ops.argsort(noise, dim=1)  # ascend: small is keep, large is remove
+        ids_restore = ops.argsort(ids_shuffle, dim=1)
 
         # keep the first subset
         ids_keep = ids_shuffle[:, :len_keep]
-        sequence_unmasked = ops.gather_elements(sequence, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, dim))
+        sequence_unmasked = ops.gather(sequence, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, dim))
         # generate the binary mask: 0 is keep, 1 is remove
         mask = ops.ones([batch_size, seq_length])
         mask[:, :len_keep] = 0
         # unshuffle to get the binary mask
-        mask = ops.gather_elements(mask, dim=1, index=ids_restore)
+        mask = ops.gather(mask, dim=1, index=ids_restore)
 
         return sequence_unmasked, mask, ids_restore
 
@@ -266,7 +266,7 @@ class ViTMAEEmbeddings(nn.Module):
         # append cls token
         cls_token = self.cls_token + self.position_embeddings[:, :1, :]
         cls_tokens = cls_token.broadcast_to((embeddings.shape[0], -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         return embeddings, mask, ids_restore
 
@@ -290,7 +290,7 @@ class ViTMAEPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -346,7 +346,7 @@ class ViTMAESelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -721,9 +721,9 @@ class ViTMAEDecoder(nn.Module):
 
         # append mask tokens to sequence
         mask_tokens = self.mask_token.repeat(x.shape[0], ids_restore.shape[1] + 1 - x.shape[1], 1)
-        x_ = ops.cat([x[:, 1:, :], mask_tokens], axis=1)  # no cls token
-        x_ = ops.gather_elements(x_, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, x.shape[2]))  # unshuffle
-        x = ops.cat([x[:, :1, :], x_], axis=1)  # append cls token
+        x_ = ops.cat([x[:, 1:, :], mask_tokens], dim=1)  # no cls token
+        x_ = ops.gather(x_, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, x.shape[2]))  # unshuffle
+        x = ops.cat([x[:, :1, :], x_], dim=1)  # append cls token
 
         # add pos embed
         hidden_states = x + self.decoder_pos_embed

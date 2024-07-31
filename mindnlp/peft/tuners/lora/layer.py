@@ -19,10 +19,10 @@ import warnings
 from typing import Any, Optional, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import ParameterDict
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import HeUniform, Normal
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from ...utils.other import transpose
@@ -267,7 +267,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         # calculate L2 norm of weight matrix, column-wise
         weight = transpose(weight, self.fan_in_fan_out)
         weight = weight + scaling * lora_weight
-        weight_norm = normalize(weight, dim=1).to(weight.dtype)
+        weight_norm = F.normalize(weight, dim=1).to(weight.dtype)
         return weight_norm
 
     def _cache_store(self, key: str, value: Any) -> None:
@@ -944,14 +944,14 @@ adaptation and specialization.
         Raises:
             None
         """
-        # base_layer = self.get_base_layer()
-        return embedding(
+        base_layer = self.get_base_layer()
+        return F.embedding(
             input,
             weight,
-            # padding_idx=base_layer.padding_idx,
-            # max_norm=base_layer.max_norm,
-            # norm_type=base_layer.norm_type,
-            # scale_grad_by_freq=base_layer.scale_grad_by_freq,
+            padding_idx=base_layer.padding_idx,
+            max_norm=base_layer.max_norm,
+            norm_type=base_layer.norm_type,
+            scale_grad_by_freq=base_layer.scale_grad_by_freq,
             # sparse=base_layer.sparse,
         )
 

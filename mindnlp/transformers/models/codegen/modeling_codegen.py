@@ -22,9 +22,9 @@ import mindspore
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging, get_default_dtype
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel

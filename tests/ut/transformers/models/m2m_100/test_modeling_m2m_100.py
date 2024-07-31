@@ -19,7 +19,6 @@ import tempfile
 import unittest
 import numpy as np
 import pytest
-from mindspore import ops
 from mindnlp.utils import is_mindspore_available
 from mindnlp.transformers import M2M100Config
 from mindnlp.utils.testing_utils import (
@@ -37,6 +36,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import ops
     from mindnlp.transformers import M2M100ForConditionalGeneration, M2M100Model, M2M100Tokenizer
     from mindnlp.transformers.models.m2m_100.modeling_m2m_100 import M2M100Decoder, M2M100Encoder
 
@@ -174,8 +174,8 @@ class M2M100ModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask.to(next_attn_mask.dtype), next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask.to(next_attn_mask.dtype), next_attn_mask], dim=-1)
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
             "last_hidden_state"

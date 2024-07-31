@@ -18,11 +18,11 @@ import math
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPastAndCrossAttentions, CausalLMOutputWithCrossAttentions

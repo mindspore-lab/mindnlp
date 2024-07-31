@@ -26,7 +26,6 @@ from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, HeNormal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ContextManagers,
     is_scipy_available,
