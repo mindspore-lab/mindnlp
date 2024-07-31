@@ -364,7 +364,7 @@ class MSConvBertSelfAttention(nn.Module):
             conv_out_layer, [batch_size, -1, self.all_head_size]
         )
         conv_out_layer = conv_out_layer.swapaxes(1, 2).unsqueeze(-1)
-        conv_out_layer = ops.unfold(
+        conv_out_layer = F.unfold(
             conv_out_layer,
             kernel_size=[self.conv_kernel_size, 1],
             dilation=1,
