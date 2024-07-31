@@ -22,7 +22,6 @@
 from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -74,20 +73,20 @@ class IdeficsVisionConfig(PretrainedConfig):
     }
 
     def __init__(
-        self,
-        embed_dim=768,
-        image_size=224,
-        intermediate_size=5120,
-        patch_size=14,
-        num_hidden_layers=32,
-        num_attention_heads=16,
-        num_channels=3,
-        hidden_act="gelu",
-        layer_norm_eps=1e-5,
-        attention_dropout=0.0,
-        initializer_range=0.02,
-        initializer_factor=1.0,
-        **kwargs,
+            self,
+            embed_dim=768,
+            image_size=224,
+            intermediate_size=5120,
+            patch_size=14,
+            num_hidden_layers=32,
+            num_attention_heads=16,
+            num_channels=3,
+            hidden_act="gelu",
+            layer_norm_eps=1e-5,
+            attention_dropout=0.0,
+            initializer_range=0.02,
+            initializer_factor=1.0,
+            **kwargs,
     ):
         self.embed_dim = embed_dim
         self.image_size = image_size
@@ -134,14 +133,14 @@ class IdeficsPerceiverConfig(PretrainedConfig):
     model_type = "idefics"
 
     def __init__(
-        self,
-        use_resampler=False,
-        resampler_n_latents=64,
-        resampler_depth=6,
-        resampler_n_heads=16,
-        resampler_head_dim=96,
-        qk_layer_norms_perceiver=False,
-        **kwargs,
+            self,
+            use_resampler=False,
+            resampler_n_latents=64,
+            resampler_depth=6,
+            resampler_n_heads=16,
+            resampler_head_dim=96,
+            qk_layer_norms_perceiver=False,
+            **kwargs,
     ):
         self.use_resampler = use_resampler
         self.resampler_n_latents = resampler_n_latents
@@ -225,36 +224,36 @@ class IdeficsConfig(PretrainedConfig):
     is_composition = False
 
     def __init__(
-        self,
-        vocab_size=32000,
-        additional_vocab_size=0,
-        hidden_size=4096,
-        intermediate_size=11008,
-        num_hidden_layers=32,
-        num_attention_heads=32,
-        dropout=0.0,
-        hidden_act="silu",
-        initializer_range=0.02,
-        alpha_initializer="zeros",
-        alphas_initializer_range=0.0,
-        alpha_type="float",
-        rms_norm_eps=1e-6,
-        use_cache=True,
-        pad_token_id=0,
-        bos_token_id=1,
-        eos_token_id=2,
-        tie_word_embeddings=False,
-        cross_layer_interval=1,
-        qk_layer_norms=False,
-        freeze_text_layers=True,
-        freeze_text_module_exceptions=[],
-        freeze_lm_head=False,
-        freeze_vision_layers=True,
-        freeze_vision_module_exceptions=[],
-        use_resampler=False,
-        vision_config=None,
-        perceiver_config=None,
-        **kwargs,
+            self,
+            vocab_size=32000,
+            additional_vocab_size=0,
+            hidden_size=4096,
+            intermediate_size=11008,
+            num_hidden_layers=32,
+            num_attention_heads=32,
+            dropout=0.0,
+            hidden_act="silu",
+            initializer_range=0.02,
+            alpha_initializer="zeros",
+            alphas_initializer_range=0.0,
+            alpha_type="float",
+            rms_norm_eps=1e-6,
+            use_cache=True,
+            pad_token_id=0,
+            bos_token_id=1,
+            eos_token_id=2,
+            tie_word_embeddings=False,
+            cross_layer_interval=1,
+            qk_layer_norms=False,
+            freeze_text_layers=True,
+            freeze_text_module_exceptions=[],
+            freeze_lm_head=False,
+            freeze_vision_layers=True,
+            freeze_vision_module_exceptions=[],
+            use_resampler=False,
+            vision_config=None,
+            perceiver_config=None,
+            **kwargs,
     ):
         self.vocab_size = vocab_size
         self.additional_vocab_size = additional_vocab_size
@@ -309,6 +308,7 @@ class IdeficsConfig(PretrainedConfig):
         # updates the config object with `kwargs` from from_pretrained, so during the instantiation
         # of this object many attributes have default values and haven't yet been overridden.
         # Do any required checks inside `from_pretrained` once the superclass' `from_pretrained` was run.
+
 
 __all__ = [
     "IdeficsConfig",

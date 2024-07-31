@@ -40,14 +40,14 @@ References:
 from typing import Optional, Tuple
 
 import mindspore
-from mindnlp.core import nn,ops
+from mindnlp.core import nn, ops
 
 from .configuration_idefics import IdeficsConfig
 
 
 class IdeficsPerceiverResampler(nn.Module):
     def __init__(
-        self, config: IdeficsConfig, embed_dim: int, depth: int, n_heads: int, head_dim: int, n_latents: int
+            self, config: IdeficsConfig, embed_dim: int, depth: int, n_heads: int, head_dim: int, n_latents: int
     ) -> None:
         """
         Instantiates a Perceiver Resampler that operates over a sequence of embeddings (say from a ResNet or ViT or
@@ -96,7 +96,7 @@ class IdeficsPerceiverResampler(nn.Module):
         """Resample arbitrary length context & *compress* down to self.n_latents latent embeddings"""
         # einsum.repeat(self.latents, "seq embed -> bsz seq embed", bsz=context.shape[0])
         # latents = self.latents.repeat((context.shape[0], 1, 1))
-        latents = ops.tile(self.latents,(context.shape[0], 1, 1))
+        latents = ops.tile(self.latents, (context.shape[0], 1, 1))
         # Feed through Perceiver Attention blocks...
         for attn, ff in self.blocks:
             latents = attn(context, latents) + latents
@@ -118,7 +118,7 @@ class IdeficsPerceiverAttention(nn.Module):
             self.q_layer_norm = nn.LayerNorm(self.head_dim)
             self.k_layer_norm = nn.LayerNorm(self.head_dim)
 
-        self.qk_scale = self.head_dim**-0.5
+        self.qk_scale = self.head_dim ** -0.5
 
         # Q, K, V Projection (no bias -- detail from Perceiver/Flamingo Papers).
         self.q_proj = nn.Linear(self.embed_dim, self.n_heads * self.head_dim, bias=False)
@@ -187,6 +187,7 @@ class IdeficsMLP(nn.Module):
         hidden_states = self.c_proj(hidden_states)
 
         return hidden_states
+
 
 __all__ = [
     "IdeficsPerceiverResampler",

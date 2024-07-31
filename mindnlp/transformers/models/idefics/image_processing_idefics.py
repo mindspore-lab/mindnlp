@@ -30,7 +30,6 @@ from ...image_utils import (
 )
 from mindnlp.utils import TensorType, is_mindspore_available
 
-
 IDEFICS_STANDARD_MEAN = [0.48145466, 0.4578275, 0.40821073]
 IDEFICS_STANDARD_STD = [0.26862954, 0.26130258, 0.27577711]
 
@@ -70,12 +69,12 @@ class IdeficsImageProcessor(BaseImageProcessor):
     model_input_names = ["pixel_values"]
 
     def __init__(
-        self,
-        image_size: int = 224,
-        image_mean: Optional[Union[float, List[float]]] = None,
-        image_std: Optional[Union[float, List[float]]] = None,
-        image_num_channels: Optional[int] = 3,
-        **kwargs,
+            self,
+            image_size: int = 224,
+            image_mean: Optional[Union[float, List[float]]] = None,
+            image_std: Optional[Union[float, List[float]]] = None,
+            image_num_channels: Optional[int] = 3,
+            **kwargs,
     ) -> None:
         super().__init__(**kwargs)
 
@@ -85,15 +84,15 @@ class IdeficsImageProcessor(BaseImageProcessor):
         self.image_std = image_std
 
     def preprocess(
-        self,
-        images: ImageInput,
-        image_num_channels: Optional[int] = 3,
-        image_size: Optional[Dict[str, int]] = None,
-        image_mean: Optional[Union[float, List[float]]] = None,
-        image_std: Optional[Union[float, List[float]]] = None,
-        transform: Callable = None,
-        return_tensors: Optional[Union[str, TensorType]] = TensorType.MINDSPORE,
-        **kwargs,
+            self,
+            images: ImageInput,
+            image_num_channels: Optional[int] = 3,
+            image_size: Optional[Dict[str, int]] = None,
+            image_mean: Optional[Union[float, List[float]]] = None,
+            image_std: Optional[Union[float, List[float]]] = None,
+            transform: Callable = None,
+            return_tensors: Optional[Union[str, TensorType]] = TensorType.MINDSPORE,
+            **kwargs,
     ) -> TensorType:
         """
         Preprocess a batch of images.
@@ -166,6 +165,7 @@ class IdeficsImageProcessor(BaseImageProcessor):
         images = BatchFeature(data={"pixel_values": images}, tensor_type=return_tensors)["pixel_values"]
 
         return images
+
 
 __all__ = [
     "IdeficsImageProcessor"

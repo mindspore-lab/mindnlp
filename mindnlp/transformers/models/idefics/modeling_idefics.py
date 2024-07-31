@@ -25,8 +25,8 @@ from functools import partial
 
 import mindspore
 import mindnlp.core.nn.functional as F
-from mindnlp.core import nn,ops
-from mindspore.common.initializer import Normal,initializer
+from mindnlp.core import nn, ops
+from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.core.nn import ModuleList
 from ...modeling_utils import PreTrainedModel
@@ -41,7 +41,6 @@ from mindnlp.core import get_default_dtype
 from .configuration_idefics import IdeficsConfig
 from .perceiver import IdeficsPerceiverResampler
 from .vision import IdeficsVisionTransformer
-
 
 logger = logging.get_logger(__name__)
 
@@ -136,16 +135,16 @@ class IdeficsCausalLMOutputWithPast(ModelOutput):
 
 
 def expand_inputs_for_generation(
-    input_ids,
-    expand_size=1,
-    is_encoder_decoder=False,
-    attention_mask=None,
-    encoder_outputs=None,
-    **model_kwargs,
+        input_ids,
+        expand_size=1,
+        is_encoder_decoder=False,
+        attention_mask=None,
+        encoder_outputs=None,
+        **model_kwargs,
 ):
     expanded_return_idx = (
         # ops.arange(input_ids.shape[0]).view(-1, 1).repeat((1, expand_size)).view(-1)
-        ops.tile(ops.arange(input_ids.shape[0]).view(-1, 1),(1, expand_size)).view(-1)
+        ops.tile(ops.arange(input_ids.shape[0]).view(-1, 1), (1, expand_size)).view(-1)
     )
     input_ids = input_ids.index_select(0, expanded_return_idx)
     model_kwargs["pixel_values"] = model_kwargs.get("pixel_values", None)
@@ -221,7 +220,6 @@ def prepare_inputs_for_generation(input_ids, past_key_values=None, **kwargs):
 
 
 def freeze_model(model, module_exceptions=[]):
-
     mapping = {
         "LayerNorm": nn.LayerNorm,
         "Linear": nn.Linear,
@@ -249,14 +247,14 @@ class IdeficsDecoupledEmbedding(nn.Embedding):
     """
 
     def __init__(
-        self,
-        num_embeddings,
-        num_additional_embeddings,
-        embedding_dim,
-        partially_freeze: Optional[bool] = False,
-        dtype=None,
-        padding_idx=None,
-        **kwargs,
+            self,
+            num_embeddings,
+            num_additional_embeddings,
+            embedding_dim,
+            partially_freeze: Optional[bool] = False,
+            dtype=None,
+            padding_idx=None,
+            **kwargs,
     ) -> None:
         """
         Args:
@@ -356,13 +354,13 @@ class IdeficsDecoupledLinear(nn.Linear):
     """
 
     def __init__(
-        self,
-        in_features: int,
-        out_features: int,
-        out_additional_features: int = 0,
-        bias: bool = True,
-        partially_freeze: bool = True,
-        dtype=None,
+            self,
+            in_features: int,
+            out_features: int,
+            out_additional_features: int = 0,
+            bias: bool = True,
+            partially_freeze: bool = True,
+            dtype=None,
     ) -> None:
         """
         out_additional_features: int. Number of additional trainable dimensions. Only makes sense when
@@ -476,7 +474,7 @@ class IdeficsEmbedding(nn.Module):
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return ops.cat((-x2, x1), dim=-1)
 
 
@@ -503,7 +501,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
 
-
     cos = cos[position_ids].unsqueeze(unsqueeze_dim)
     sin = sin[position_ids].unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
@@ -514,10 +511,10 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 # this was adapted from LlamaMLP
 class IdeficsMLP(nn.Module):
     def __init__(
-        self,
-        hidden_size: int,
-        intermediate_size: int,
-        hidden_act: str,
+            self,
+            hidden_size: int,
+            intermediate_size: int,
+            hidden_act: str,
     ):
         super().__init__()
         self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
@@ -534,13 +531,13 @@ class IdeficsAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
-        self,
-        hidden_size: int,
-        num_heads: int,
-        dropout: float = 0.0,
-        is_cross_attention: bool = False,
-        config: PretrainedConfig = None,
-        qk_layer_norms: bool = False,
+            self,
+            hidden_size: int,
+            num_heads: int,
+            dropout: float = 0.0,
+            is_cross_attention: bool = False,
+            config: PretrainedConfig = None,
+            qk_layer_norms: bool = False,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -607,14 +604,14 @@ class IdeficsAttention(nn.Module):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        key_value_states: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
+            self,
+            hidden_states: mindspore.Tensor,
+            key_value_states: Optional[mindspore.Tensor] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: bool = False,
+            use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         # if key_value_states are provided this layer is used as a cross-attention layer
         is_cross_attention = self.is_cross_attention or key_value_states is not None
@@ -715,13 +712,13 @@ class IdeficsDecoderLayer(nn.Module):
         self.dropout = config.dropout
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
@@ -838,15 +835,15 @@ class IdeficsGatedCrossAttentionLayer(nn.Module):
             raise ValueError("Alpha parameters not initialized correctly!")
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        image_hidden_states: Optional[mindspore.Tensor] = None,
-        image_attention_mask: Optional[mindspore.Tensor] = None,
-        cross_attention_gate: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            image_hidden_states: Optional[mindspore.Tensor] = None,
+            image_attention_mask: Optional[mindspore.Tensor] = None,
+            cross_attention_gate: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
@@ -928,7 +925,6 @@ LLAMA_START_DOCSTRING = r"""
             load the weights associated with the model, only the configuration. Check out the
             [`~PreTrainedModel.from_pretrained`] method to load the model weights.
 """
-
 
 
 class IdeficsPreTrainedModel(PreTrainedModel):
@@ -1033,7 +1029,6 @@ LLAMA_INPUTS_DOCSTRING = r"""
 """
 
 
-
 class IdeficsModel(IdeficsPreTrainedModel):
     """
     Transformer decoder consisting of `config.num_hidden_layers` layers. Each layer is a [`IdeficsDecoderLayer`]
@@ -1112,21 +1107,21 @@ class IdeficsModel(IdeficsPreTrainedModel):
         self.embed_tokens = value
 
     def forward(
-        self,
-        input_ids: mindspore.Tensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        image_encoder_embeddings: Optional[mindspore.Tensor] = None,
-        perceiver_embeddings: Optional[mindspore.Tensor] = None,
-        image_attention_mask: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: Optional[bool] = False,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            pixel_values: Optional[mindspore.Tensor] = None,
+            image_encoder_embeddings: Optional[mindspore.Tensor] = None,
+            perceiver_embeddings: Optional[mindspore.Tensor] = None,
+            image_attention_mask: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            interpolate_pos_encoding: Optional[bool] = False,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, IdeficsBaseModelOutputWithPast]:
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1256,19 +1251,19 @@ class IdeficsModel(IdeficsPreTrainedModel):
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
             def vblock(
-                main_block,
-                hidden_states,
-                attention_mask,
-                position_ids,
-                past_key_value,
-                image_hidden_states,
-                image_attention_mask,
-                cross_attention_gate,
-                output_attentions,
-                use_cache,
-                layer_idx,
-                cross_layer_interval,
-                gated_cross_attn_layers,
+                    main_block,
+                    hidden_states,
+                    attention_mask,
+                    position_ids,
+                    past_key_value,
+                    image_hidden_states,
+                    image_attention_mask,
+                    cross_attention_gate,
+                    output_attentions,
+                    use_cache,
+                    layer_idx,
+                    cross_layer_interval,
+                    gated_cross_attn_layers,
             ):
                 # TODO(ls): Add cross attention values to respective lists
                 if layer_idx % cross_layer_interval == 0:
@@ -1422,7 +1417,7 @@ class IdeficsForVisionText2Text(IdeficsPreTrainedModel):
         if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
             output_embeddings.out_features = input_embeddings.num_embeddings
             if hasattr(output_embeddings, "out_additional_features") and hasattr(
-                input_embeddings, "num_additional_embeddings"
+                    input_embeddings, "num_additional_embeddings"
             ):
                 output_embeddings.out_additional_features = input_embeddings.num_additional_embeddings
 
@@ -1439,22 +1434,22 @@ class IdeficsForVisionText2Text(IdeficsPreTrainedModel):
         # self.apply(partial(self._set_gradient_checkpointing, value=True))
 
     def forward(
-        self,
-        input_ids: mindspore.Tensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        image_encoder_embeddings: Optional[mindspore.Tensor] = None,
-        perceiver_embeddings: Optional[mindspore.Tensor] = None,
-        image_attention_mask: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: Optional[bool] = False,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            pixel_values: Optional[mindspore.Tensor] = None,
+            image_encoder_embeddings: Optional[mindspore.Tensor] = None,
+            perceiver_embeddings: Optional[mindspore.Tensor] = None,
+            image_attention_mask: Optional[mindspore.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            interpolate_pos_encoding: Optional[bool] = False,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, IdeficsCausalLMOutputWithPast]:
         r"""
         Args:
@@ -1536,17 +1531,17 @@ class IdeficsForVisionText2Text(IdeficsPreTrainedModel):
 
     @staticmethod
     def _expand_inputs_for_generation(
-        *args,
-        **model_kwargs,
+            *args,
+            **model_kwargs,
     ):
         return expand_inputs_for_generation(*args, **model_kwargs)
 
     def _update_model_kwargs_for_generation(
-        self,
-        outputs: ModelOutput,
-        model_kwargs: Dict[str, Any],
-        is_encoder_decoder: bool = False,
-        standardize_cache_format: bool = False,
+            self,
+            outputs: ModelOutput,
+            model_kwargs: Dict[str, Any],
+            is_encoder_decoder: bool = False,
+            standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
         model_kwargs = super()._update_model_kwargs_for_generation(
             outputs,
@@ -1571,7 +1566,8 @@ class IdeficsForVisionText2Text(IdeficsPreTrainedModel):
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
 
-__all__ =[
+
+__all__ = [
     "IdeficsForVisionText2Text",
     "IdeficsModel",
     "IdeficsPreTrainedModel",

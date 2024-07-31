@@ -30,7 +30,6 @@ from mindnlp.core.nn import functional as F
 if is_mindspore_available():
     import mindspore
 
-
 IMAGE_TOKEN = "<image>"
 
 
@@ -50,7 +49,6 @@ def incremental_to_binary_attention_mask(incremental_mask, return_tensors, num_c
         # attn_mask = mindspore.ops.one_hot(incremental_mask, depth=num_classes)
         attn_mask = F.one_hot(incremental_mask, num_classes=num_classes)
         attn_mask[negatives, :] = 0
-   
 
     return attn_mask
 
@@ -59,7 +57,6 @@ def incremental_to_binary_attention_mask(incremental_mask, return_tensors, num_c
 def image_attention_mask_for_packed_input_ids(input_ids, tokenizer, return_tensors):
     if return_tensors == "ms":
         return image_attention_mask_for_packed_input_ids_pt(input_ids, tokenizer)
-    
 
 
 def image_attention_mask_for_packed_input_ids_pt(input_ids, tokenizer):
@@ -107,6 +104,7 @@ def image_attention_mask_for_packed_input_ids_pt(input_ids, tokenizer):
         next_image_attention_mask[batch_idx][non_negative_indices] *= -1
 
     return image_attention_mask, next_image_attention_mask
+
 
 def is_url(string):
     """Checks if the passed string contains a valid url and nothing else. e.g. if space is included it's immediately
@@ -160,16 +158,16 @@ class IdeficsProcessor(ProcessorMixin):
         )
 
     def __call__(
-        self,
-        prompts: Union[List[TextInput], List[List[TextInput]]],
-        padding: Union[bool, str, PaddingStrategy] = "longest",
-        truncation: Union[bool, str, TruncationStrategy] = None,
-        max_length: Optional[int] = None,
-        transform: Callable = None,
-        add_eos_token=False,
-        add_end_of_utterance_token=None,
-        debug=False,
-        return_tensors="ms",
+            self,
+            prompts: Union[List[TextInput], List[List[TextInput]]],
+            padding: Union[bool, str, PaddingStrategy] = "longest",
+            truncation: Union[bool, str, TruncationStrategy] = None,
+            max_length: Optional[int] = None,
+            transform: Callable = None,
+            add_eos_token=False,
+            add_end_of_utterance_token=None,
+            debug=False,
+            return_tensors="ms",
     ) -> BatchEncoding:
         """This method takes batched or non-batched prompts made of text and images and converts them into prompts that
         the model was trained on and prepares the image pixel values for the model to process.
@@ -369,23 +367,20 @@ class IdeficsProcessor(ProcessorMixin):
                 if return_tensors == "ms":
                     padded_image_tensor = ops.zeros(max_num_images, *current_images.shape[1:])
                     padded_image_tensor[: current_images.shape[0]] = current_images
-                
+
             else:
                 if return_tensors == "ms":
                     padded_image_tensor = ops.zeros(max_num_images, *self.default_image_dims)
-                
 
             output_images.append(padded_image_tensor)
             if return_tensors == "ms":
                 output_input_ids.append(mindspore.tensor(padded_input_ids))
                 output_attention_masks.append(mindspore.tensor(attention_mask))
-            
 
         if return_tensors == "ms":
             output_input_ids = ops.stack(output_input_ids)
             output_images = ops.stack(output_images)
             output_attention_masks = ops.stack(output_attention_masks)
-        
 
         if at_least_one_image:
             image_attention_mask, _ = image_attention_mask_for_packed_input_ids(
@@ -400,7 +395,7 @@ class IdeficsProcessor(ProcessorMixin):
                 image_attention_mask = ops.zeros(
                     output_input_ids.shape[0], output_input_ids.shape[1], 1, dtype=mindspore.bool_
                 )
-            
+
         return BatchFeature(
             data={
                 "input_ids": output_input_ids,
@@ -430,6 +425,7 @@ class IdeficsProcessor(ProcessorMixin):
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))
 
-__all__ =[
+
+__all__ = [
     "IdeficsProcessor"
 ]

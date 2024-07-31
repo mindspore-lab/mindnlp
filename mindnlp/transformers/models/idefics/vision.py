@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn,ops
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
@@ -120,11 +120,11 @@ class IdeficsVisionEmbeddings(nn.Module):
             )
             patch_pos_embed = patch_pos_embed.to(mindspore.bfloat16)
 
-
         def mindspore_interpolate_bicubic(patch_pos_embed, scale_factor):
             patch_pos_embed = patch_pos_embed.asnumpy()
 
-            target_size = (int(patch_pos_embed.shape[2] * scale_factor[0]), int(patch_pos_embed.shape[3] * scale_factor[1]))
+            target_size = (
+            int(patch_pos_embed.shape[2] * scale_factor[0]), int(patch_pos_embed.shape[3] * scale_factor[1]))
             patch_pos_embed = np.transpose(patch_pos_embed, (0, 2, 3, 1))
 
             # 使用 Resize 调整尺寸
@@ -163,7 +163,7 @@ class IdeficsVisionEmbeddings(nn.Module):
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
 
-        patch_embeds = patch_embeds.flatten(start_dim = 2).swapaxes(1, 2)
+        patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
         embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
@@ -193,7 +193,7 @@ class IdeficsVisionAttention(nn.Module):
                 f"embed_dim must be divisible by num_heads (got `embed_dim`: {self.embed_dim} and `num_heads`:"
                 f" {self.num_heads})."
             )
-        self.scale = self.head_dim**-0.5
+        self.scale = self.head_dim ** -0.5
         self.dropout = config.attention_dropout
 
         self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
@@ -205,11 +205,11 @@ class IdeficsVisionAttention(nn.Module):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        causal_attention_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            causal_attention_mask: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
         """Input shape: Batch x Time x Channel"""
 
@@ -310,11 +310,11 @@ class IdeficsVisionEncoderLayer(nn.Module):
         self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: mindspore.Tensor,
-        causal_attention_mask: mindspore.Tensor,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: mindspore.Tensor,
+            causal_attention_mask: mindspore.Tensor,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
         Args:
@@ -367,13 +367,13 @@ class IdeficsVisionEncoder(nn.Module):
         self.gradient_checkpointing = False
 
     def forward(
-        self,
-        inputs_embeds,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        causal_attention_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            inputs_embeds,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            causal_attention_mask: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
@@ -465,12 +465,12 @@ class IdeficsVisionTransformer(nn.Module):
 
     # Adapted from transformers.models.clip.modeling_clip.CLIPVisionTransformer.forward
     def forward(
-        self,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: Optional[bool] = False,
-        return_dict: Optional[bool] = None,
+            self,
+            pixel_values: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            interpolate_pos_encoding: Optional[bool] = False,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
@@ -508,6 +508,7 @@ class IdeficsVisionTransformer(nn.Module):
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,
         )
+
 
 __all__ = [
     "IdeficsVisionTransformer"

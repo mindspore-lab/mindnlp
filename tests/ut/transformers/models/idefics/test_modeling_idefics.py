@@ -30,6 +30,7 @@ from mindnlp.utils import cached_property
 from mindnlp.core import ops
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+
 # from ...test_pipeline_mixin import PipelineTesterMixin
 
 
@@ -39,53 +40,52 @@ if is_mindspore_available():
     from mindnlp.transformers import IdeficsForVisionText2Text, IdeficsModel, IdeficsProcessor
     from mindnlp.transformers.models.idefics.configuration_idefics import IdeficsPerceiverConfig, IdeficsVisionConfig
 
-
 if is_vision_available():
     from PIL import Image
 
-
 mindspore.set_context(pynative_synchronize=True)
+
 
 class IdeficsModelTester:
     def __init__(
-        self,
-        parent,
-        batch_size=1,
-        seq_length=7,
-        image_size=30,
-        patch_size=2,
-        num_channels=3,
-        is_training=True,
-        use_input_mask=True,
-        use_token_type_ids=True,
-        use_labels=True,
-        vocab_size=99,
-        hidden_size=32,
-        num_hidden_layers=5,
-        num_attention_heads=4,
-        intermediate_size=37,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        max_position_embeddings=512,
-        type_vocab_size=16,
-        type_sequence_label_size=2,
-        initializer_range=0.02,
-        alpha_initializer="ones",
-        num_labels=3,
-        scope=None,
-        modality_type_vocab_size=2,
-        vision_embed_dim=32,
-        vision_patch_size=2,
-        vision_image_size=30,
-        vision_num_attention_heads=4,
-        vision_num_hidden_layers=5,
-        vision_intermediate_size=37,
-        perceiver_qk_layer_norms_perceiver=False,
-        perceiver_resampler_depth=2,
-        perceiver_resampler_head_dim=8,
-        perceiver_resampler_n_heads=2,
-        perceiver_resampler_n_latents=16,
+            self,
+            parent,
+            batch_size=1,
+            seq_length=7,
+            image_size=30,
+            patch_size=2,
+            num_channels=3,
+            is_training=True,
+            use_input_mask=True,
+            use_token_type_ids=True,
+            use_labels=True,
+            vocab_size=99,
+            hidden_size=32,
+            num_hidden_layers=5,
+            num_attention_heads=4,
+            intermediate_size=37,
+            hidden_act="gelu",
+            hidden_dropout_prob=0.1,
+            attention_probs_dropout_prob=0.1,
+            max_position_embeddings=512,
+            type_vocab_size=16,
+            type_sequence_label_size=2,
+            initializer_range=0.02,
+            alpha_initializer="ones",
+            num_labels=3,
+            scope=None,
+            modality_type_vocab_size=2,
+            vision_embed_dim=32,
+            vision_patch_size=2,
+            vision_image_size=30,
+            vision_num_attention_heads=4,
+            vision_num_hidden_layers=5,
+            vision_intermediate_size=37,
+            perceiver_qk_layer_norms_perceiver=False,
+            perceiver_resampler_depth=2,
+            perceiver_resampler_head_dim=8,
+            perceiver_resampler_n_heads=2,
+            perceiver_resampler_n_latents=16,
     ):
         self.parent = parent
         self.batch_size = batch_size
@@ -244,13 +244,13 @@ class IdeficsModelTester:
         )
 
     def create_and_check_model(
-        self,
-        config,
-        input_ids,
-        input_mask,
-        pixel_values,
-        image_attention_mask,
-        interpolate_pos_encoding,
+            self,
+            config,
+            input_ids,
+            input_mask,
+            pixel_values,
+            image_attention_mask,
+            interpolate_pos_encoding,
     ):
 
         model = IdeficsModel(config=config)
@@ -267,13 +267,13 @@ class IdeficsModelTester:
         )
 
     def create_and_check_model_gen(
-        self,
-        config,
-        input_ids,
-        input_mask,
-        pixel_values,
-        image_attention_mask,
-        interpolate_pos_encoding,
+            self,
+            config,
+            input_ids,
+            input_mask,
+            pixel_values,
+            image_attention_mask,
+            interpolate_pos_encoding,
     ):
         model = IdeficsForVisionText2Text(config)
         model.eval()
@@ -314,7 +314,6 @@ class IdeficsModelTester:
     @parameterized.expand([("float16",), ("bfloat16",), ("float32",)])
     def test_eager_matches_sdpa_inference(self, torch_dtype: str):
         self.skipTest(reason="Idefics has a hard requirement on SDPA, skipping this test")
-
 
 
 @require_mindspore
@@ -478,7 +477,6 @@ class IdeficsModelTest(ModelTesterMixin, unittest.TestCase):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         config.return_dict = True
 
-
         for model_class in self.all_model_classes:
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = False
@@ -574,7 +572,6 @@ class IdeficsModelTest(ModelTesterMixin, unittest.TestCase):
         self.skipTest(reason="Idefics has a hard requirement on SDPA, skipping this test")
 
 
-
 @require_mindspore
 class IdeficsForVisionText2TextTest(IdeficsModelTest, unittest.TestCase):
     all_model_classes = (IdeficsForVisionText2Text,) if is_mindspore_available() else ()
@@ -611,7 +608,6 @@ class IdeficsForVisionText2TextTest(IdeficsModelTest, unittest.TestCase):
         pass
 
 
-
 @require_mindspore
 @require_vision
 class IdeficsModelIntegrationTest(TestCasePlus):
@@ -623,7 +619,7 @@ class IdeficsModelIntegrationTest(TestCasePlus):
             if is_vision_available()
             else None
         )
-    
+
     @unittest.skip("no bitsandbytes")
     # @require_bitsandbytes
     @slow

@@ -18,11 +18,10 @@ import unittest
 
 import numpy as np
 
-from mindnlp.utils.testing_utils import require_mindspore,require_vision
-from mindnlp.utils import is_mindspore_available,is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision
+from mindnlp.utils import is_mindspore_available, is_vision_available
 
 from ...test_image_processing_common import ImageProcessingTestMixin, prepare_image_inputs
-
 
 if is_mindspore_available():
     import mindspore
@@ -35,16 +34,16 @@ if is_vision_available():
 
 class IdeficsImageProcessingTester(unittest.TestCase):
     def __init__(
-        self,
-        parent,
-        batch_size=7,
-        num_channels=3,
-        image_size=18,
-        min_resolution=30,
-        max_resolution=400,
-        size=None,
-        image_mean=[0.48145466, 0.4578275, 0.40821073],
-        image_std=[0.26862954, 0.26130258, 0.27577711],
+            self,
+            parent,
+            batch_size=7,
+            num_channels=3,
+            image_size=18,
+            min_resolution=30,
+            max_resolution=400,
+            size=None,
+            image_mean=[0.48145466, 0.4578275, 0.40821073],
+            image_std=[0.26862954, 0.26130258, 0.27577711],
     ):
         size = size if size is not None else {"shortest_edge": 30}
         self.parent = parent

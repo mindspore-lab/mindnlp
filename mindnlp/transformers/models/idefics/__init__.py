@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from . import configuration_idefics,image_processing_idefics,modeling_idefics,perceiver,processing_idefics,vision
+from . import configuration_idefics, image_processing_idefics, modeling_idefics, perceiver, processing_idefics, vision
 from .configuration_idefics import *
 from .image_processing_idefics import *
 from .modeling_idefics import *
@@ -26,4 +26,3 @@ __all__.extend(modeling_idefics.__all__)
 __all__.extend(perceiver.__all__)
 __all__.extend(processing_idefics.__all__)
 __all__.extend(vision.__all__)
-
