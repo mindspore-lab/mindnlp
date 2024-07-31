@@ -33,8 +33,8 @@ from mindnlp. transformers. ms_utils import apply_chunking_to_forward
 from mindnlp. transformers. activations import ACT2FN
 from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
 from mindnlp.utils import (ModelOutput, logging)
-from mindnlp.core import nn,ops
 from .configuration_xlnet import XLNetConfig
+from mindnlp.core import nn,ops#-----------------do not use the mindnlp version of ops
 
 logger = logging.get_logger(__name__)
 
@@ -544,10 +544,10 @@ class XLNetFeedForward(nn.Module):
         """
         output = inp
         output = self.layer_1(output)
-        output = self.activation_function(output)#
-        output = self.dropout(output)#
-        output = self.layer_2(output)#
-        output = self.dropout(output)#
+        output = self.activation_function(output)#--r1 output[0,0,:3] 2.93643117e-01,  8.41772705e-02,  2.98081905e-01
+        output = self.dropout(output)#--r1 1.80732846e-01,  4.49121334e-02,  1.83970094e-01
+        output = self.layer_2(output)#--r1 output 2.00814277e-01,  4.99023721e-02,  2.04411224e-01
+        output = self.dropout(output)#--r1 output
         output = self.layer_norm(output + inp)
         return output
 
@@ -1376,7 +1376,7 @@ class XLNetModel(XLNetPreTrainedModel):
 
         mlen = mems[0].shape[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen
-        #
+        #-----r1:mlen=0,keln=7,token_type_ids-target_mapping=None
         dtype_float = self.dtype
 
         # Attention mask
@@ -1424,15 +1424,15 @@ class XLNetModel(XLNetPreTrainedModel):
             non_tgt_mask = ((attn_mask + non_tgt_mask[:, :, None, None]) > 0).to(dtype=attn_mask.dtype)
         else:
             non_tgt_mask = None
-        #
+        #---r1:non_tgt_mask[0,1,:,0]=1 attn_mask[0,1,:,0]=1
         # Word embeddings and prepare h & g hidden states
         if inputs_embeds is not None:
             word_emb_k = inputs_embeds
         else:
             word_emb_k = self.word_embedding(input_ids)
-        #
+        #----r1 output_h
         output_h = self.dropout(word_emb_k)
-        # 
+        # ---r1 output_h
         if target_mapping is not None:
             word_emb_q = self.mask_emb.broadcast_to((target_mapping.shape[0], bsz, -1))
             # else:  # We removed the inp_q input which was same as target mapping
@@ -1441,7 +1441,7 @@ class XLNetModel(XLNetPreTrainedModel):
             output_g = self.dropout(word_emb_q)
         else:
             output_g = None
-        #
+        #--r1:word_emb_k[0,0,:3] [-5.35977706e-02,  1.45315463e-02, -1.62669867e-02]
         # Segment embedding
         if token_type_ids is not None:
             # Convert `token_type_ids` to one-hot `seg_mat`
@@ -1460,7 +1460,7 @@ class XLNetModel(XLNetPreTrainedModel):
         # Positional encoding
         pos_emb = self.relative_positional_encoding(qlen, klen, bsz=bsz)
         pos_emb = self.dropout(pos_emb)
-        #
+        #----r1:pos_emb[0,0,:3] [7.29985118e-01, -7.93023705e-01,  8.89357388e-01]
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x n_heads x N x N
@@ -1480,7 +1480,7 @@ class XLNetModel(XLNetPreTrainedModel):
         new_mems = ()
         if mems is None:
             mems = [None] * len(self.layer)
-        #
+        #r1:new_mems,new_mems=None
         attentions = [] if output_attentions else None
         hidden_states = [] if output_hidden_states else None
         for i, layer_module in enumerate(self.layer):# tot 5
@@ -1490,7 +1490,11 @@ class XLNetModel(XLNetPreTrainedModel):
             if output_hidden_states:
                 hidden_states.append((output_h, output_g) if output_g is not None else output_h)
             
-
+    #----r1 output_h[0,0,:3]=4.85972948e-02,  4.35888097e-02,  5.11950254e-02
+    #----r1 attn_mask[0]=1  attn_mask[1,1:]=1 attn_mask[2,2:]=1 tri
+    #----r1 layer_module:rel_attn,ff,dropout
+    #----r1
+    #----r1
            
             outputs = layer_module(
                 output_h,
@@ -1508,7 +1512,11 @@ class XLNetModel(XLNetPreTrainedModel):
             if output_attentions:
                 attentions.append(outputs[2])
             #record output for each iter
-
+    #---r1 i0:output_h[0,0,:3]=5.55440366e-01,  1.79805768e+00,  1.77641943e-01
+    #
+    #---r1 i1:output_h[0,0,:3]=
+    #---r1 i2:output_h[0,0,:3]=
+    #---r1 i3:output_h[0,0,:3]=
     
 
 
@@ -1517,7 +1525,7 @@ class XLNetModel(XLNetPreTrainedModel):
             hidden_states.append((output_h, output_g) if output_g is not None else output_h)
 
         output = self.dropout(output_g if output_g is not None else output_h)
-        #
+        #------r1:output_g=None output_h[0,0,:3]=[ 2.76843961e-02, -5.25338650e-01, -4.43054587e-01]
         # Prepare outputs, we swapaxes back here to shape [bsz, len, hidden_dim] (cf. beginning of forward() method)
         output = output.permute(1, 0, 2)
 
@@ -1545,7 +1553,7 @@ class XLNetModel(XLNetPreTrainedModel):
         return XLNetModelOutput(
             last_hidden_state=output, mems=new_mems, hidden_states=hidden_states, attentions=attentions
         )
-       
+        #r1:output[0,0,:3]=[0.00000000e+00, -5.83709657e-01, -4.92282897e-01]
 
 class XLNetLMHeadModel(XLNetPreTrainedModel):
 
