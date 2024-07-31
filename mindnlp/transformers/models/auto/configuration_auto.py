@@ -82,6 +82,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("donut-swin", "DonutSwinConfig"),
         ("dpt", "DPTConfig"),
         ("efficientformer", "EfficientFormerConfig"),
+        ("electra", "ElectraConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
