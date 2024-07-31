@@ -22,9 +22,11 @@ from typing import Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging
@@ -248,7 +250,7 @@ class VideoMAESelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -573,7 +575,7 @@ class VideoMAEDecoder(nn.Module):
             [VideoMAELayer(decoder_config) for _ in range(config.decoder_num_hidden_layers)]
         )
 
-        self.norm = nn.LayerNorm([config.decoder_hidden_size],epsilon=1e-5)
+        self.norm = nn.LayerNorm([config.decoder_hidden_size], eps=1e-5)
         self.head = (
             nn.Linear(config.decoder_hidden_size, decoder_num_labels) if decoder_num_labels > 0 else nn.Identity()
         )
@@ -679,7 +681,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
         pos_emb_mask = expanded_position_embeddings[bool_masked_pos].reshape((batch_size, -1, num_channels))
 
         # [batch_size, num_patches, decoder_hidden_size]
-        x_full = ops.cat([sequence_output + pos_emb_visible, self.mask_token + pos_emb_mask], axis=1)
+        x_full = ops.cat([sequence_output + pos_emb_visible, self.mask_token + pos_emb_mask], dim=1)
 
         # [batch_size, num_masked_patches, num_channels * patch_size * patch_size]
         decoder_outputs = self.decoder(x_full, pos_emb_mask.shape[1])

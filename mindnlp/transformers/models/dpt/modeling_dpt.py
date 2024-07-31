@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops

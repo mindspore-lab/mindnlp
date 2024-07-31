@@ -16,9 +16,11 @@
 JetMoE Experts.
 """
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import Uniform, initializer
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 def compute_gating(k: int, num_experts: int, top_k_gates: mindspore.Tensor, top_k_indices: mindspore.Tensor):
     """
@@ -114,6 +116,6 @@ class ParallelExperts(nn.Module):
         input_list = inputs.split(expert_size, axis=0)
         output_list = []
         for i in range(self.num_experts):
-            output_list.append(ops.dense(input_list[i], self.weight[i]))
-        results = ops.cat(output_list, axis=0)
+            output_list.append(F.linear(input_list[i], self.weight[i]))
+        results = ops.cat(output_list, dim=0)
         return results

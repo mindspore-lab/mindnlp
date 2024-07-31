@@ -645,21 +645,6 @@ input weights.
         diff_weight = hw.forward(w1a, w1b, w2a, w2b, scale)
         grad_w1a, grad_w1b, grad_w2a, grad_w2b, scale = hw.bprop(w1a, w1b, w2a, w2b, scale, out, dout)
     """
-    def __init__(self):
-        r"""
-        Initializes an instance of the HadaWeight class.
-        
-        Args:
-            self: The instance of the HadaWeight class.
-            
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            - No specific exceptions are raised by this method.
-        """
-        super().__init__()
-
     def forward(self, w1a, w1b, w2a, w2b, scale=mindspore.tensor(1)):
         r"""
         Constructs the Hadamard weight for the given inputs.
@@ -733,21 +718,6 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
     
     This class is designed to be used as a building block for neural network models that involve HadaWeightCP operations and provides an efficient and optimized implementation for such operations.
     """
-    def __init__(self):
-        r"""
-        Initializes a new instance of the HadaWeightCP class.
-        
-        Args:
-            self: The instance of the HadaWeightCP class.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
-        super().__init__()
-
     def forward(self, t1, w1a, w1b, t2, w2a, w2b, scale=mindspore.tensor(1)):
         r"""
         Constructs a weighted tensor product using the HadaWeightCP method.

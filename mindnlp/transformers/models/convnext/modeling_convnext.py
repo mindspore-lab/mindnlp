@@ -17,7 +17,7 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops

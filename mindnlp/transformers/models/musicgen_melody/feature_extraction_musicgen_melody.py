@@ -29,7 +29,7 @@ from ....utils import TensorType, is_mindspore_available, logging
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, nn
 
 logger = logging.get_logger(__name__)
 
@@ -152,7 +152,7 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         raw_chroma = ops.einsum("cf, ...ft->...ct", self.chroma_filters, spec)
 
         # normalise with max value
-        norm_chroma = raw_chroma / ops.norm(raw_chroma, ord=float("inf"), dim=-2, keepdim=True)
+        norm_chroma = nn.functional.normalize(raw_chroma, p=float("inf"), dim=-2, eps=1e-6)
 
         # transpose time and chroma dimension -> (batch, time, chroma)
         norm_chroma = norm_chroma.swapaxes(1, 2)
@@ -160,7 +160,7 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         # replace max value alongside chroma dimension with 1 and replace the rest with 0
         idx = norm_chroma.argmax(-1, keepdims=True)
         norm_chroma[:] = 0
-        norm_chroma = ops.tensor_scatter_elements(norm_chroma, idx, ops.ones_like(idx, dtype=norm_chroma.dtype), axis=-1)
+        norm_chroma = ops.scatter(norm_chroma, -1, idx, ops.ones_like(idx, dtype=norm_chroma.dtype))
 
         return norm_chroma
 

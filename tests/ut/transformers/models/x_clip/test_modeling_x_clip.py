@@ -222,9 +222,6 @@ class XCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             if not model_class.supports_gradient_checkpointing:
                 continue
-
-            print("Model class:", model_class)
-
             config.gradient_checkpointing = True
             model = model_class(config)
             self.assertTrue(model.is_gradient_checkpointing)

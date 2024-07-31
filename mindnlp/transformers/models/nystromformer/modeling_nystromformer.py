@@ -12,21 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Nystromformer model."""
+"""MindSpore Nystromformer model."""
 
 import math
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
-import mindspore.common.dtype as mstype
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-# from mindspore.ops import operations as P
-# from mindspore.ops import functional as F
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from .configuration_nystromformer import NystromformerConfig
@@ -66,9 +63,9 @@ class NystromformerEmbeddings(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids=ops.arange(config.max_position_embeddings).expand((1, -1)) + 2
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1)) + 2
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.token_type_ids=ops.zeros(self.position_ids.shape, dtype=mstype.int64)
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
     def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
@@ -87,10 +84,10 @@ class NystromformerEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -135,17 +132,14 @@ class NystromformerSelfAttention(nn.Module):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-
         if self.conv_kernel_size is not None:
             self.conv = nn.Conv2d(
                 in_channels=self.num_attention_heads,
                 out_channels=self.num_attention_heads,
                 kernel_size=(self.conv_kernel_size, 1),
-                # padding=(self.conv_kernel_size // 2, 0),
-                padding=(self.conv_kernel_size//2, self.conv_kernel_size//2, 0, 0),
+                padding=(self.conv_kernel_size // 2, 0),
                 bias=False,
-                group=self.num_attention_heads,
-                pad_mode="pad"
+                groups=self.num_attention_heads,
             )
 
     # Function to approximate Moore-Penrose inverse via the iterative method
@@ -156,10 +150,10 @@ class NystromformerSelfAttention(nn.Module):
         # The entries of key are positive and ||key||_{\infty} = 1 due to softmax
         if self.init_option == "original":
             # This original implementation is more conservative to compute coefficient of Z_0.
-            value = 1 / ops.max(ops.sum(key, dim=-2)) * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2)) * key.swapaxes(-1, -2)
         else:
             # This is the exact coefficient computation, 1 / ||key||_1, of initialization of Z_0, leading to faster convergence.
-            value = 1 / ops.max(ops.sum(key, dim=-2), axis=-1).values[:, :, None, None] * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2), dim=-1).values[:, :, None, None] * key.swapaxes(-1, -2)
 
         for _ in range(n_iter):
             key_value = ops.matmul(key, value)
@@ -186,13 +180,13 @@ class NystromformerSelfAttention(nn.Module):
         key_layer = key_layer / math.sqrt(math.sqrt(self.attention_head_size))
 
         if self.num_landmarks == self.seq_len:
-            attention_scores = ops.matmul(query_layer, key_layer.transpose(0, 1, 3, 2))
+            attention_scores = ops.matmul(query_layer, key_layer.permute(0, 1, 3, 2))
 
             if attention_mask is not None:
                 # Apply the attention mask is (precomputed for all layers in NystromformerModel forward() function)
                 attention_scores = attention_scores + attention_mask
 
-            attention_probs = ops.softmax(attention_scores, axis=-1)
+            attention_probs = ops.softmax(attention_scores, dim=-1)
             context_layer = ops.matmul(attention_probs, value_layer)
 
         else:
@@ -211,16 +205,16 @@ class NystromformerSelfAttention(nn.Module):
                 self.attention_head_size,
             ).mean(axis=-2)
 
-            kernel_1 = ops.softmax(ops.matmul(query_layer, k_landmarks.transpose(-1, -2)), axis=-1)
-            kernel_2 = ops.softmax(ops.matmul(q_landmarks, k_landmarks.transpose(-1, -2)), axis=-1)
+            kernel_1 = ops.softmax(ops.matmul(query_layer, k_landmarks.swapaxes(-1, -2)), dim=-1)
+            kernel_2 = ops.softmax(ops.matmul(q_landmarks, k_landmarks.swapaxes(-1, -2)), dim=-1)
 
-            attention_scores = ops.matmul(q_landmarks, key_layer.transpose(-1, -2))
+            attention_scores = ops.matmul(q_landmarks, key_layer.swapaxes(-1, -2))
 
             if attention_mask is not None:
                 # Apply the attention mask is (precomputed for all layers in NystromformerModel forward() function)
                 attention_scores = attention_scores + attention_mask
 
-            kernel_3 = ops.softmax(attention_scores, axis=-1)
+            kernel_3 = ops.softmax(attention_scores, dim=-1)
             attention_probs = ops.matmul(kernel_1, self.iterative_inv(kernel_2))
             new_value_layer = ops.matmul(kernel_3, value_layer)
             context_layer = ops.matmul(attention_probs, new_value_layer)
@@ -228,7 +222,7 @@ class NystromformerSelfAttention(nn.Module):
         if self.conv_kernel_size is not None:
             context_layer += self.conv(value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -596,10 +590,10 @@ class NystromformerModel(NystromformerPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -784,7 +778,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (mstype.int64, mstype.int32)):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

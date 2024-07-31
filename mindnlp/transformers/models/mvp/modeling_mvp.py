@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch MVP model."""
+"""MindSpore MVP model."""
 
 import copy
 import math
@@ -20,10 +20,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer,Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -70,11 +70,11 @@ class MvpLearnedPositionalEmbedding(nn.Embedding):
     This module learns positional embeddings up to a fixed maximum size.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int):
+    def __init__(self, num_embeddings: int, embedding_dim: int):
         # MVP is set up so that if padding_idx is specified then offset the embedding ids by 2
-        # and adjust vocab_size appropriately. Other models don't have this hack
+        # and adjust num_embeddings appropriately. Other models don't have this hack
         self.offset = 2
-        super().__init__(vocab_size + self.offset, embedding_dim)
+        super().__init__(num_embeddings + self.offset, embedding_dim)
 
     def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
@@ -153,8 +153,8 @@ class MvpAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -171,11 +171,11 @@ class MvpAttention(nn.Module):
             past_key_value = (key_states, value_states)
 
         if attn_prompt is not None:
-            key_states = ops.cat([attn_prompt[0].broadcast_to((bsz, -1, -1, -1)), key_states], axis=2)
-            value_states = ops.cat([attn_prompt[1].broadcast_to((bsz, -1, -1, -1)), value_states], axis=2)
+            key_states = ops.cat([attn_prompt[0].broadcast_to((bsz, -1, -1, -1)), key_states], dim=2)
+            value_states = ops.cat([attn_prompt[1].broadcast_to((bsz, -1, -1, -1)), value_states], dim=2)
             if attention_mask is not None:
                 prompt_mask = ops.zeros(bsz, 1, tgt_len, attn_prompt[0].shape[1])
-                attention_mask = ops.cat([prompt_mask, attention_mask], axis=-1)
+                attention_mask = ops.cat([prompt_mask, attention_mask], dim=-1)
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
@@ -199,7 +199,7 @@ class MvpAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -1104,8 +1104,8 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
     def __init__(self, config: MvpConfig):
         super().__init__(config)
         self.model = MvpModel(config)
-        self.final_logits_bias=ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Linear(config.d_model, self.model.shared.vocab_size, bias=False)
+        self.final_logits_bias=ops.zeros((1, self.model.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1127,7 +1127,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias=new_bias
 
     def get_output_embeddings(self):
@@ -1344,8 +1344,8 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
         )
         hidden_states = outputs[0]  # last hidden state
         eos_mask = input_ids.eq(self.config.eos_token_id)
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         sentence_representation = hidden_states[eos_mask, ].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:,-1,:]
         logits = self.classification_head(sentence_representation)
         loss = None

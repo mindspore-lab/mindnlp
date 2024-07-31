@@ -20,10 +20,10 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -65,7 +65,7 @@ def router_z_loss_func(router_logits: mindspore.Tensor) -> float:
         Scalar router z-loss.
     """
     num_groups, tokens_per_group, _ = router_logits.shape
-    log_z = ops.logsumexp(router_logits, axis=-1)
+    log_z = ops.logsumexp(router_logits, dim=-1)
     z_loss = log_z**2
     return ops.sum(z_loss) / (num_groups * tokens_per_group)
 
@@ -96,16 +96,16 @@ def load_balancing_loss_func(router_probs: mindspore.Tensor, expert_indices: min
     if len(expert_indices.shape) == 2:
         expert_indices = expert_indices.unsqueeze(2)
 
-    expert_mask = ops.one_hot(expert_indices, num_experts)
+    expert_mask = F.one_hot(expert_indices, num_experts)
 
     # For a given token, determine if it was routed to a given expert.
-    expert_mask = ops.max(expert_mask, axis=-2)[0]
+    expert_mask = ops.max(expert_mask, dim=-2)[0]
 
     # cast to float32 otherwise mean will fail
     expert_mask = mindspore.Tensor(expert_mask, mindspore.float32)
-    tokens_per_group_and_expert = ops.mean(expert_mask, axis=-2)
+    tokens_per_group_and_expert = ops.mean(expert_mask, dim=-2)
 
-    router_prob_per_group_and_expert = ops.mean(router_probs, axis=-2)
+    router_prob_per_group_and_expert = ops.mean(router_probs, dim=-2)
     return ops.mean(tokens_per_group_and_expert * router_prob_per_group_and_expert) * (num_experts**2)
 
 
@@ -164,7 +164,7 @@ class SwitchTransformersTop1Router(nn.Module):
         router_logits = self.classifier(hidden_states)
 
         # Apply Softmax and cast back to the original `dtype`
-        router_probabilities = ops.softmax(router_logits, axis=-1, dtype=self.dtype).astype(self.input_dtype)
+        router_probabilities = ops.softmax(router_logits, dim=-1, dtype=self.dtype).astype(self.input_dtype)
         return router_probabilities, router_logits
 
     def _cast_classifier(self):
@@ -199,12 +199,12 @@ class SwitchTransformersTop1Router(nn.Module):
         expert_index = ops.one_hot(expert_index, self.num_experts)
 
         # Mask tokens outside expert capacity. Sum over each sequence
-        token_priority = ops.cumsum(expert_index, axis=-2)
+        token_priority = ops.cumsum(expert_index, dim=-2)
         # mask if the token routed to to the expert will overflow
         expert_capacity_mask = token_priority <= self.expert_capacity
         expert_index = expert_index * expert_capacity_mask
 
-        router_probs = ops.max(router_probs, axis=-1)[0].unsqueeze(-1)
+        router_probs = ops.max(router_probs, dim=-1)[0].unsqueeze(-1)
         return expert_index, router_probs, router_logits
 
 
@@ -502,7 +502,7 @@ class SwitchTransformersAttention(nn.Module):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -556,7 +556,7 @@ class SwitchTransformersAttention(nn.Module):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float(), axis=-1).astype(
+        attn_weights = ops.softmax(scores.float(), dim=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
         attn_weights = F.dropout(
@@ -711,7 +711,7 @@ class SwitchTransformersBlock(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
@@ -738,7 +738,7 @@ class SwitchTransformersBlock(nn.Module):
 
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
@@ -758,7 +758,7 @@ class SwitchTransformersBlock(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -1487,7 +1487,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
             if self.encoder.config.encoder_sparse_step > 1:
                 encoder_router_logits, encoder_expert_indexes = self._unpack_router_logits(encoder_outputs[-1])
                 encoder_z_loss = router_z_loss_func(encoder_router_logits)
-                encoder_router_probs = nn.Softmax(axis=-1)(encoder_router_logits)
+                encoder_router_probs = nn.Softmax(dim=-1)(encoder_router_logits)
                 encoder_aux_loss = load_balancing_loss_func(encoder_router_probs, encoder_expert_indexes)
             else:
                 encoder_z_loss = 0
@@ -1496,7 +1496,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
             if self.decoder.config.decoder_sparse_step > 1:
                 decoder_router_logits, decoder_expert_indexes = self._unpack_router_logits(decoder_outputs[-1])
                 decoder_z_loss = router_z_loss_func(decoder_router_logits)
-                decoder_router_probs = nn.Softmax(axis=-1)(decoder_router_logits)
+                decoder_router_probs = nn.Softmax(dim=-1)(decoder_router_logits)
                 decoder_aux_loss = load_balancing_loss_func(decoder_router_probs, decoder_expert_indexes)
             else:
                 decoder_z_loss = 0
@@ -1544,7 +1544,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
                 router_logits, expert_indexes = router_output
                 total_router_logits.append(router_logits)
                 total_expert_indexes.append(expert_indexes)
-        return ops.cat(total_router_logits, axis=1), ops.cat(total_expert_indexes, axis=1)
+        return ops.cat(total_router_logits, dim=1), ops.cat(total_expert_indexes, dim=1)
 
     def prepare_inputs_for_generation(
         self,

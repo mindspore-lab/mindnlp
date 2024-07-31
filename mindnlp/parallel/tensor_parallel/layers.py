@@ -17,9 +17,10 @@
 from typing import Optional, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Initializer, Zero
+
+from mindnlp.core import nn, ops
 from .mappings import _get_rank, _get_group_size
 
 

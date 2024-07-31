@@ -20,9 +20,10 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -179,8 +180,8 @@ class SplinterSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -245,7 +246,7 @@ class SplinterSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -953,12 +954,8 @@ class SplinterForQuestionAnswering(SplinterPreTrainedModel):
             start_logits, end_logits = start_logits.squeeze(1), end_logits.squeeze(1)
 
         if attention_mask is not None:
-            start_logits = start_logits + (1 - attention_mask) * finfo(
-                start_logits.dtype, "min"
-            )
-            end_logits = end_logits + (1 - attention_mask) * finfo(
-                end_logits.dtype, "min"
-            )
+            start_logits = start_logits + (1 - attention_mask) * float(ops.finfo(start_logits.dtype).min)
+            end_logits = end_logits + (1 - attention_mask) * float(ops.finfo(end_logits.dtype).min)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:
@@ -1112,10 +1109,8 @@ class SplinterForPreTraining(SplinterPreTrainedModel):
             )
             start_logits = start_logits + (
                 1 - attention_mask_for_each_question
-            ) * finfo(start_logits.dtype, "min")
-            end_logits = end_logits + (1 - attention_mask_for_each_question) * finfo(
-                end_logits.dtype, "min"
-            )
+            ) * float(ops.finfo(start_logits.dtype).min)
+            end_logits = end_logits + (1 - attention_mask_for_each_question) * float(ops.finfo(end_logits.dtype).min)
 
         total_loss = None
         # [batch_size, num_questions, sequence_length]

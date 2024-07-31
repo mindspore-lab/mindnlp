@@ -21,17 +21,15 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
-from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, HeNormal, Normal, Uniform
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import CrossEntropyLoss
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -73,7 +71,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -254,7 +252,6 @@ class UniSpeechSatNoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -277,7 +274,6 @@ class UniSpeechSatLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -306,7 +302,6 @@ class UniSpeechSatGroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid',
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -327,12 +322,11 @@ class UniSpeechSatPositionalConvEmbedding(nn.Module):
             config.hidden_size,
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
-            pad_mode='pad',
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
         )
 
-        self.conv = weight_norm(self.conv, name="weight", dim=2)
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = UniSpeechSatSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -512,8 +506,8 @@ class UniSpeechSatAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -551,7 +545,7 @@ class UniSpeechSatAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -768,7 +762,7 @@ class UniSpeechSatEncoder(nn.Module):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * finfo(hidden_states.dtype, "min")
+                attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
                 attention_mask = attention_mask.expand(
                     attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
                 )
@@ -857,7 +851,7 @@ class UniSpeechSatEncoderStableLayerNorm(nn.Module):
             else:
                 # extend attention_mask
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
-                attention_mask = attention_mask * finfo(hidden_states.dtype, "min")
+                attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
                 attention_mask = attention_mask.expand(
                     attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
                 )
@@ -962,14 +956,14 @@ class UniSpeechSatGumbelVectorQuantizer(nn.Module):
 
             # compute perplexity
             codevector_soft_dist = ops.softmax(
-                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), axis=-1
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist)
         else:
             # take argmax in non-differentiable way
             # comptute hard codevector distribution (one hot)
             codevector_idx = hidden_states.argmax(axis=-1)
-            codevector_probs = hidden_states.new_zeros(*hidden_states.shape).scatter_(
+            codevector_probs = hidden_states.new_zeros(*hidden_states.shape).scatter(
                 -1, codevector_idx.view(-1, 1), 1.0
             )
             codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)
@@ -1319,7 +1313,7 @@ class UniSpeechSatForPreTraining(UniSpeechSatPreTrainedModel):
         Compute logits for contrastive loss based using cosine similarity as the distance measure between
         `[positive_feature, negative_features]` and `[predicted_features]`. Additionally, temperature can be applied.
         """
-        target_features = ops.cat([target_features, negative_features], axis=0)
+        target_features = ops.cat([target_features, negative_features], dim=0)
 
         logits = ops.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1)
         logits = logits.type_as(target_features)
@@ -1619,30 +1613,17 @@ class UniSpeechSatForCTC(UniSpeechSatPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            # loss = ops.ctc_loss(
-            #     log_probs,
-            #     flattened_targets.view(log_probs.shape[1], int(max(target_lengths))),
-            #     input_lengths,
-            #     target_lengths,
-            #     blank=self.config.pad_token_id,
-            #     reduction=self.config.ctc_loss_reduction,
-            #     zero_infinity=self.config.ctc_zero_infinity,
-            # )[0]
-            target = ops.zeros((log_probs.shape[1], int(max(target_lengths))), dtype=mindspore.int64)
-            j = 0
-            acc = 0
-            for i in target_lengths:
-                target[j, 0:i] = flattened_targets[acc:acc+i]
-                j += 1
-                acc += i
-            loss = nn.CTCLoss(blank=self.config.pad_token_id,
-                              reduction=self.config.ctc_loss_reduction,
-                              zero_infinity=self.config.ctc_zero_infinity)(log_probs,
-                                                                           target,
-                                                                           input_lengths,
-                                                                           target_lengths)
+            loss = F.ctc_loss(
+                log_probs,
+                flattened_targets.view(log_probs.shape[1], int(max(target_lengths))),
+                input_lengths,
+                target_lengths,
+                blank=self.config.pad_token_id,
+                reduction=self.config.ctc_loss_reduction,
+                zero_infinity=self.config.ctc_zero_infinity,
+            )
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1799,8 +1780,8 @@ class UniSpeechSatForSequenceClassification(UniSpeechSatPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -1970,8 +1951,8 @@ class UniSpeechSatForAudioFrameClassification(UniSpeechSatPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2007,12 +1988,12 @@ class AMSoftmaxLoss(nn.Module):
 
     def forward(self, hidden_states, labels):
         labels = labels.flatten()
-        weight = functional.normalize(self.weight, dim=0)
-        hidden_states = functional.normalize(hidden_states, dim=1)
+        weight = F.normalize(self.weight, dim=0)
+        hidden_states = F.normalize(hidden_states, dim=1)
         cos_theta = ops.mm(hidden_states, weight)
         psi = cos_theta - self.margin
 
-        onehot = ops.one_hot(labels, self.num_labels)
+        onehot = F.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
         loss = self.loss(logits, labels.to(mindspore.int32))
 
@@ -2197,8 +2178,8 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2211,9 +2192,7 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
         # Statistic Pooling
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
-            # std_features = hidden_states.std(axis=1)
-            std_features = mindspore.tensor(np.std(hidden_states.asnumpy(), axis=1, dtype=np.float32),
-                                            mindspore.float32)
+            std_features = ops.std(hidden_states, dim=1)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
@@ -2224,7 +2203,7 @@ class UniSpeechSatForXVector(UniSpeechSatPreTrainedModel):
                 std_features.append(hidden_states[i, :length].std(axis=0))
             mean_features = ops.stack(mean_features)
             std_features = ops.stack(std_features)
-        statistic_pooling = ops.cat([mean_features, std_features], axis=-1)
+        statistic_pooling = ops.cat([mean_features, std_features], dim=-1)
 
         output_embeddings = self.feature_extractor(statistic_pooling)
         logits = self.classifier(output_embeddings)

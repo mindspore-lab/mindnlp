@@ -15,13 +15,11 @@
 """MindSpore ConvBERT model."""
 
 import math
-import os
-from operator import attrgetter
 from typing import Optional, Tuple, Union
 
 import mindspore
 from mindspore import Parameter
-from mindspore.common.initializer import Normal, initializer
+from mindspore.common.initializer import Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 
@@ -814,7 +812,7 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

@@ -14,8 +14,8 @@
 # ============================================================================
 """modules init"""
 from . import loss, attentions, crf, accumulator
-from .attentions import ScaledDotAttention, SelfAttention, \
-    BinaryAttention, AdditiveAttention, CosineAttention, \
+from .attentions import ScaledDotProductAttention, DotProductAttention, \
+    BilinearAttention, AdditiveAttention, CosineAttention, \
     LinearAttention
 from .crf import CRF
 from .loss import RDropLoss, CMRC2018Loss

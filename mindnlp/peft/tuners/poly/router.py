@@ -15,9 +15,9 @@
 from abc import ABC, abstractmethod
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Uniform, initializer
 
+from mindnlp.core import nn, ops
 # from torch.distributions.relaxed_bernoulli import RelaxedBernoulli
 from .config import PolyConfig
 

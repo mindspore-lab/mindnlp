@@ -23,10 +23,11 @@ from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -248,8 +249,8 @@ class MultiHeadAttention(nn.Module):
             if self.layer_id in cache:
                 if kv is None:
                     k_, v_ = cache[self.layer_id]
-                    k = ops.cat([k_, k], axis=2)  # (bs, n_heads, klen, dim_per_head)
-                    v = ops.cat([v_, v], axis=2)  # (bs, n_heads, klen, dim_per_head)
+                    k = ops.cat([k_, k], dim=2)  # (bs, n_heads, klen, dim_per_head)
+                    v = ops.cat([v_, v], dim=2)  # (bs, n_heads, klen, dim_per_head)
                 else:
                     k, v = cache[self.layer_id]
             cache[self.layer_id] = (k, v)
@@ -259,7 +260,7 @@ class MultiHeadAttention(nn.Module):
         mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
         scores = scores.masked_fill(mask, np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)  # (bs, n_heads, qlen, klen)
 
-        weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
+        weights = ops.softmax(scores.float(), dim=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
         weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
 
         # Mask heads if we want to
@@ -969,7 +970,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
 
         effective_batch_size = input_ids.shape[0]
         mask_token = ops.full((effective_batch_size, 1), mask_token_id, dtype=mindspore.int64)
-        input_ids = ops.cat([input_ids, mask_token], axis=1)
+        input_ids = ops.cat([input_ids, mask_token], dim=1)
         if lang_id is not None:
             langs = ops.full_like(input_ids, lang_id)
         else:

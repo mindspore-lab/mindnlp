@@ -20,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, Constant
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -264,8 +265,8 @@ class UMT5Attention(nn.Module):
             value_states = self._shape(self.v(current_states))
             if past_key_value is not None and not is_cross_attention:
                 # reuse k, v, self_attention
-                key_states = ops.cat([past_key_value[0], key_states], axis=2)
-                value_states = ops.cat([past_key_value[1], value_states], axis=2)
+                key_states = ops.cat([past_key_value[0], key_states], dim=2)
+                value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         query_states = self._shape(self.q(hidden_states))
         attention_scores = ops.matmul(query_states, key_states.swapaxes(-1, -2))
@@ -297,7 +298,7 @@ class UMT5Attention(nn.Module):
             past_key_value = (key_states, value_states)
         attention_scores += position_bias
         # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.softmax(attention_scores.float(), axis=-1).type_as(attention_scores)
+        attn_weights = ops.softmax(attention_scores.float(), dim=-1).type_as(attention_scores)
         attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         # Mask heads if we want to

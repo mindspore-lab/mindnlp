@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-differ
-# pylint: disable=arguments-renamed
-# pylint: disable=useless-parent-delegation
-# pylint: disable=invalid-name
-# pylint: disable=unused-variable
-# pylint: disable=unused-argument
-# pylint: disable=too-many-arguments
 "Adalora Model"
 import warnings
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-from mindnlp.transformers.ms_utils import Conv1D
 
+from mindnlp.core import nn, ops
+from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
@@ -383,7 +376,7 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
                     I = ops.eye(*para_cov.shape)  # noqa: E741
                     I = ops.stop_gradient(I)
                     num_param += 1
-                    regu_loss += ops.norm(para_cov - I, ord="fro")
+                    regu_loss += ops.norm(para_cov - I, p="fro")
             if num_param > 0:
                 regu_loss = regu_loss / num_param
             else:

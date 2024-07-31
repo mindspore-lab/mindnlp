@@ -14,15 +14,12 @@
 # ============================================================================
 """Tensor Parallel mappings"""
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+from mindspore import nn, ops
 
 from mindspore.ops import constexpr
 from mindspore.communication import GlobalComm
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp._legacy.ops import AllGather
 from .utils import concat_tensor_along_last_dim, split_tensor_along_last_dim, get_rank, get_group_size
 
 
@@ -95,14 +92,14 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
     if rank_size == 1:
         return input_
 
-    _all_gather = _get_cache_prim(AllGather)()
+    _all_gather = _get_cache_prim(ops.AllGather)()
     tensor = _all_gather(input_)
     # # Size and dimension.
     output = concat_tensor_along_last_dim(tensor, rank_size)
 
     return output
 
-class _CopyToModelParallelRegion(nn.Module):
+class _CopyToModelParallelRegion(nn.Cell):
     """Pass the input to the model parallel region."""
     def forward(self, input_):
         r"""
@@ -125,7 +122,7 @@ class _CopyToModelParallelRegion(nn.Module):
         return (_reduce(dout),)
 
 
-class _ReduceFromModelParallelRegion(nn.Module):
+class _ReduceFromModelParallelRegion(nn.Cell):
     """All-redcue the input from the model parallel region."""
     def forward(self, input_):
         r"""
@@ -148,7 +145,7 @@ class _ReduceFromModelParallelRegion(nn.Module):
         return (dout, )
 
 
-class _ScatterToModelParallelRegion(nn.Module):
+class _ScatterToModelParallelRegion(nn.Cell):
     """Split the input and keep only the corresponding chuck to the rank."""
     def forward(self, input_):
         r"""
@@ -170,7 +167,7 @@ class _ScatterToModelParallelRegion(nn.Module):
         """_ScatterToModelParallelRegion backward method"""
         return (_gather(dout),)
 
-class _GatherFromModelParallelRegion(nn.Module):
+class _GatherFromModelParallelRegion(nn.Cell):
     """Gather the input from model parallel region and concatinate."""
     def forward(self, input_):
         r"""
