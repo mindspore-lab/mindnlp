@@ -23,6 +23,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from mindspore.common.initializer import initializer, Normal
 
+
 import mindspore
 
 from mindspore import Tensor, Parameter
