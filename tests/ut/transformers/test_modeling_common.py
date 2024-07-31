@@ -60,6 +60,9 @@ from mindnlp.transformers.models.auto.modeling_auto import (
     MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES,
     MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES,
     MODEL_MAPPING_NAMES,
+    MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING_NAMES,
+    MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES,
+    MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES
 )
 from mindnlp.utils.testing_utils import (
     CaptureLogger,
@@ -156,10 +159,10 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES),
                 *get_values(MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES),
             ]:
-                inputs_dict["start_positions"] = ops.ones(
+                inputs_dict["start_positions"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
                 )
-                inputs_dict["end_positions"] = ops.ones(
+                inputs_dict["end_positions"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
                 )
             elif model_class.__name__ in [
@@ -169,16 +172,18 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES),
                 *get_values(MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES),
             ]:
-                inputs_dict["labels"] = ops.ones(
+                inputs_dict["labels"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
                 )
             elif model_class.__name__ in [
                 *get_values(MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES),
                 *get_values(MODEL_FOR_CAUSAL_LM_MAPPING_NAMES),
+                *get_values(MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING_NAMES),
                 *get_values(MODEL_FOR_MASKED_LM_MAPPING_NAMES),
                 *get_values(MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES),
+                *get_values(MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES),
             ]:
-                inputs_dict["labels"] = ops.ones(
+                inputs_dict["labels"] = ops.zeros(
                     self.model_tester.batch_size, self.model_tester.seq_length, dtype=mindspore.int64
                 )
             elif model_class.__name__ in get_values(MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES):
@@ -186,7 +191,10 @@ class ModelTesterMixin:
                 inputs_dict["bool_masked_pos"] = ops.zeros(
                     self.model_tester.batch_size, num_patches ** 2, dtype=mindspore.int64
                 )
-
+            elif model_class.__name__ in get_values(MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES):
+                batch_size, num_channels, height, width = inputs_dict["pixel_values"].shape
+                inputs_dict["labels"] = ops.zeros(
+                    self.model_tester.batch_size, height, width).long()
 
         return inputs_dict
 
@@ -1286,7 +1294,8 @@ class ModelTesterMixin:
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
-            t[t != t] = 0
+            # t[t != t] = 0
+            ops.masked_fill(t, t != t, 0)
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):

@@ -30,7 +30,7 @@ import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
 from mindspore import Tensor, Parameter
-from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
+from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module, import-error
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -482,6 +482,7 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
         if getattr(self.config, "tie_word_embeddings", True):
             output_embeddings = self.get_output_embeddings()
             if output_embeddings is not None:
+                output_embeddings.weight.asnumpy()
                 self._tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
 
         if getattr(self.config, "is_encoder_decoder", False) and getattr(self.config, "tie_encoder_decoder", False):
@@ -603,18 +604,17 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
                 if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
                     new_bias = F.pad(
                         output_embeddings.bias.data,
-                        (0, output_embeddings.weight.shape[0] -
-                        output_embeddings.bias.shape[0]),
+                        (0, output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0]),
                         "constant",
                         0,
                     )
                 else:
                     new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
-                new_bias = Parameter(new_bias, name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad)
-                output_embeddings.bias = new_bias
+                new_bias = Parameter(new_bias, requires_grad=output_embeddings.bias.requires_grad)
+                output_embeddings.bias.assign_value(new_bias)
 
-        if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
-            output_embeddings.out_channels = input_embeddings.vocab_size
+        if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
+            output_embeddings.out_features = input_embeddings.num_embeddings
 
     def resize_token_embeddings(
         self, new_num_tokens: Optional[int] = None, pad_to_multiple_of: Optional[int] = None
@@ -670,19 +670,27 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
         """
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
-
+        # if hasattr(old_embeddings, "_hf_hook"):
+        #     hook = old_embeddings._hf_hook
+        #     add_hook_to_module(new_embeddings, hook)
+        old_embeddings_requires_grad = old_embeddings.weight.requires_grad
+        new_embeddings.requires_grad_(old_embeddings_requires_grad)
         self.set_input_embeddings(new_embeddings)
-        # self.get_input_embeddings().weight.data_sync(True)
-        # Update new_num_tokens with the actual size of new_embeddings
-        if pad_to_multiple_of is not None:
-            new_num_tokens = new_embeddings.weight.shape[0]
+        # is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
+
         # if word embeddings are not tied, make sure that lm head is resized as well
         if self.get_output_embeddings() is not None and not self.config.tie_word_embeddings:
-            old_lm_head = self.get_output_embeddings() # pylint: disable=assignment-from-none
-            new_lm_head = self._get_resized_lm_head(
-                old_lm_head, new_num_tokens)
+            old_lm_head = self.get_output_embeddings()
+            if isinstance(old_lm_head, nn.Embedding):
+                new_lm_head = self._get_resized_embeddings(old_lm_head, new_num_tokens)
+            else:
+                new_lm_head = self._get_resized_lm_head(old_lm_head, new_num_tokens)
+            # if hasattr(old_lm_head, "_hf_hook"):
+            #     hook = old_lm_head._hf_hook
+            #     add_hook_to_module(new_lm_head, hook)
+            old_lm_head_requires_grad = old_lm_head.weight.requires_grad
+            new_lm_head.requires_grad_(old_lm_head_requires_grad)
             self.set_output_embeddings(new_lm_head)
-            self.get_output_embeddings().weight.data_sync(True)
 
         return self.get_input_embeddings()
 
@@ -748,9 +756,14 @@ class PreTrainedModel(nn.Module, CellUtilMixin, GenerationMixin, PeftAdapterMixi
 
         # Copy word embeddings from the previous weights
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
-        new_embeddings.weight.data[:num_tokens_to_copy, :] = old_embeddings.weight.data[
-                                                                      :num_tokens_to_copy, :]
-        return new_embeddings
+        new_embeddings.weight.data[:num_tokens_to_copy, :] = old_embeddings.weight.data[:num_tokens_to_copy, :]
+
+        old_embeddings.weight = new_embeddings.weight
+        old_embeddings.num_embeddings = new_embeddings.weight.shape[0]
+        if old_embeddings.padding_idx is not None and (new_num_tokens - 1) < old_embeddings.padding_idx:
+            old_embeddings.padding_idx = None
+
+        return old_embeddings
 
     def _get_resized_lm_head(
         self, old_lm_head: nn.Linear, new_num_tokens: Optional[int] = None, transposed: Optional[bool] = False

@@ -176,6 +176,9 @@ class Conv1d(_ConvNd):
             pad_mode = padding
             pad = (0,) * 4
 
+        if self.padding_mode != 'zeros':
+            pad_mode = 'valid'
+            pad = (0,) * 4
         self.conv2d = ops.Conv2D(out_channel=self.out_channels,
                                 kernel_size=(1,) + self.kernel_size,
                                 mode=1,

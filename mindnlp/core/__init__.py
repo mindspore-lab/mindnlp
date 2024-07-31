@@ -13,5 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
+from mindspore.common.api import _no_grad as no_grad
 from . import optim, ops, nn
 from .utils import get_default_dtype, set_default_dtype
