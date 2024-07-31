@@ -19,12 +19,11 @@ from typing import Optional, Tuple
 import math
 import mindspore
 import numpy as np
-from mindspore import nn, ops, Tensor, Parameter, dtype_to_nptype
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
 from mindnlp.utils import logging
-from mindnlp._legacy.functional import split, where, arange, softmax
-from mindnlp._legacy.nn import Dropout, Matmul
 from .configuration_gpt2 import GPT2Config
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel, SequenceSummary
@@ -92,12 +91,11 @@ class GPT2Attention(nn.Module):
             self.c_attn = Conv1D(3 * self.embed_dim, self.embed_dim)
         self.c_proj = Conv1D(self.embed_dim, self.embed_dim)
 
-        self.attn_dropout = Dropout(p=config.attn_pdrop)
-        self.resid_dropout = Dropout(p=config.resid_pdrop)
+        self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
+        self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
         self.pruned_heads = set()
         self.output_attentions = config.output_attentions
-        self.matmul = Matmul()
         self.mask_value = Tensor(np.finfo(np.float32).min, dtype=mindspore.float32)
 
     def prune_heads(self, heads):
@@ -148,10 +146,10 @@ class GPT2Attention(nn.Module):
             RuntimeError:
                 If an error occurs during the attention calculation process.
         """
-        attn_weights = self.matmul(query, key.swapaxes(-1, -2))
+        attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
 
         if self.scale_attn_weights:
-            attn_weights = attn_weights / ops.sqrt(ops.scalar_to_tensor(value.shape[-1]))
+            attn_weights = attn_weights / ops.sqrt(value.shape[-1])
 
         # Layer-wise attention scaling
         if self.scale_attn_by_inverse_layer_idx:
@@ -169,7 +167,7 @@ class GPT2Attention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.astype(value.dtype)
@@ -179,7 +177,7 @@ class GPT2Attention(nn.Module):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_output = self.matmul(attn_weights, value)
+        attn_output = ops.matmul(attn_weights, value)
 
         return attn_output, attn_weights
 
@@ -232,14 +230,14 @@ class GPT2Attention(nn.Module):
         if not self.is_cross_attention:
             query_length, key_length = query.shape[-2], key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length: key_length, :key_length].bool()
-            mask_value = Tensor(np.finfo(dtype_to_nptype(attn_weights.dtype)).min, dtype=attn_weights.dtype)
-            attn_weights = where(causal_mask, attn_weights, mask_value)
+            mask_value = ops.finfo(attn_weights.dtype).min
+            attn_weights = ops.where(causal_mask, attn_weights, mask_value)
 
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op if otherwise
         if attn_weights.dtype != mindspore.float32:
@@ -251,7 +249,7 @@ class GPT2Attention(nn.Module):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_output = self.matmul(attn_weights, value)
+        attn_output = ops.matmul(attn_weights, value)
 
         return attn_output, attn_weights
 
@@ -261,13 +259,13 @@ class GPT2Attention(nn.Module):
         """
         new_shape = tensor.shape[:-1] + (num_heads, attn_head_size)
         tensor = tensor.view(new_shape)
-        return ops.transpose(tensor, (0, 2, 1, 3))  # (batch, head, seq_length, head_features)
+        return ops.permute(tensor, (0, 2, 1, 3))  # (batch, head, seq_length, head_features)
 
     def _merge_heads(self, tensor, num_heads, attn_head_size):
         """
         Merges attn_head_size dim and num_attn_heads dim into hidden_size
         """
-        tensor = ops.transpose(tensor, (0, 2, 1, 3))
+        tensor = ops.permute(tensor, (0, 2, 1, 3))
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
@@ -309,10 +307,10 @@ class GPT2Attention(nn.Module):
                 )
 
             query = self.q_attn(hidden_states)
-            key, value = split(self.c_attn(encoder_hidden_states), self.split_size, axis=2)
+            key, value = ops.split(self.c_attn(encoder_hidden_states), self.split_size, dim=2)
             attention_mask = encoder_attention_mask
         else:
-            query, key, value = split(self.c_attn(hidden_states), self.split_size, axis=2)
+            query, key, value = ops.split(self.c_attn(hidden_states), self.split_size, dim=2)
 
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
@@ -320,8 +318,8 @@ class GPT2Attention(nn.Module):
 
         if layer_past is not None:
             past_key, past_value = layer_past
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)
@@ -368,7 +366,7 @@ class GPT2MLP(nn.Module):
         self.c_fc = Conv1D(intermediate_size, embed_dim)
         self.c_proj = Conv1D(embed_dim, intermediate_size)
         self.act = ACT2FN[config.activation_function]
-        self.dropout = Dropout(p=config.resid_pdrop)
+        self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def forward(self, hidden_states: Tuple[Tensor]):
         """
@@ -625,7 +623,7 @@ class GPT2Model(GPT2PreTrainedModel):
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
-        self.drop = Dropout(p=config.embd_pdrop)
+        self.drop = nn.Dropout(p=config.embd_pdrop)
         self.h = nn.ModuleList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm((self.embed_dim,), eps=config.layer_norm_epsilon)
 
@@ -724,7 +722,7 @@ class GPT2Model(GPT2PreTrainedModel):
         else:
             past_length = past_key_values[0][0].shape[-2]
         if position_ids is None:
-            position_ids = arange(past_length, input_shape[-1] + past_length, 1, dtype=mindspore.int64)
+            position_ids = ops.arange(past_length, input_shape[-1] + past_length, 1, dtype=mindspore.int64)
             position_ids = position_ids.expand_dims(0).view(-1, input_shape[-1])
 
         # GPT2Attention mask.
@@ -734,7 +732,7 @@ class GPT2Model(GPT2PreTrainedModel):
             attention_mask = attention_mask.view(batch_size, -1)
             attention_mask = attention_mask[:, None, None, :]
             attention_mask = attention_mask.astype(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * Tensor(np.finfo(dtype_to_nptype(self.dtype)).min, self.dtype)
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         if self.add_cross_attention and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
@@ -1284,7 +1282,7 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = Dropout(p=classifier_dropout)
+        self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing

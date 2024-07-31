@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore ViT model."""
-
-
 import collections.abc
 import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, TruncatedNormal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -101,7 +101,7 @@ class ViTEmbeddings(nn.Module):
         )
         assert int(h0) == patch_pos_embed.shape[-2] and int(w0) == patch_pos_embed.shape[-1]
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(
         self,
@@ -121,7 +121,7 @@ class ViTEmbeddings(nn.Module):
 
         # add the [CLS] token to the embedded patch tokens
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
         # add positional encoding to each token
         if interpolate_pos_encoding:
             embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
@@ -210,7 +210,7 @@ class ViTSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -605,7 +605,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
             >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
             ...
             >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-            >>> loss, reforwarded_pixel_values = outputs.loss, outputs.reforwardion
+            >>> loss, reforwarded_pixel_values = outputs.loss, outputs.reconstruction
             >>> list(reforwarded_pixel_values.shape)
             [1, 3, 224, 224]
             ```
@@ -649,8 +649,8 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
                 .repeat_interleave(self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reforwardion_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
-            masked_im_loss = (reforwardion_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
+            reconstruction_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
+            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
             output = (reforwarded_pixel_values,) + outputs[1:]
@@ -658,7 +658,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
 
         return MaskedImageModelingOutput(
             loss=masked_im_loss,
-            reforwardion=reforwarded_pixel_values,
+            reconstruction=reforwarded_pixel_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )

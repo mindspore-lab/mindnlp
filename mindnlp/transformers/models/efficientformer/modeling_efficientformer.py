@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.core import nn, ops
@@ -264,11 +264,8 @@ class EfficientFormerDropPath(nn.Module):
 
 
 class EfficientFormerFlat(nn.Module):
-    def __init__(self):
-        super().__init__()
-
     def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
-        hidden_states = hidden_states.flatten(start_dim=2).swapaxes(1, 2)
+        hidden_states = ops.flatten(hidden_states, start_dim=2).swapaxes(1, 2)
         return hidden_states
 
 

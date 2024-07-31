@@ -24,10 +24,11 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal,TruncatedNormal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
 )
@@ -39,8 +40,6 @@ from .configuration_udop import UdopConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +105,7 @@ def get_visual_bbox(image_size=224, patch_size=16):
             visual_bbox_x[1:].repeat(image_feature_pool_shape[0], 1),
             visual_bbox_y[1:].repeat(image_feature_pool_shape[1], 1).swapaxes(0, 1),
         ],
-        axis=-1,
+        dim=-1,
     )
 
     visual_bbox_input = visual_bbox_input.view(-1, 4)
@@ -123,7 +122,7 @@ def pad_sequence(seq, target_len, pad_value=0):
     m = target_len - n
     if m > 0:
         ret = ops.stack([pad_value] * m).to(seq)
-        seq = ops.cat([seq, ret], axis=0)
+        seq = ops.cat([seq, ret], dim=0)
     return seq[:target_len]
 
 
@@ -170,7 +169,7 @@ def combine_image_text_embeddings(
             ops.arange(len(ocr_points))[:, None].repeat(1, ocr_points.shape[-1])[:, :, None].to(ocr_points),
             ocr_points[:, :, None],
         ],
-        axis=-1,
+        dim=-1,
     )
     ind = ind.flatten(0, 1)
     rows, cols = zip(*ind)
@@ -612,7 +611,7 @@ class UdopAttention(nn.Module):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -666,7 +665,7 @@ class UdopAttention(nn.Module):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float(), axis=-1).type_as(
+        attn_weights = ops.softmax(scores.float(), dim=-1).type_as(
             scores
         )  # (batch_size, n_heads, seq_length, key_length)
         attn_weights = F.dropout(

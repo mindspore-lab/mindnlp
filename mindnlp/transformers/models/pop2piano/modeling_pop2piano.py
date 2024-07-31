@@ -21,12 +21,12 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.transformers.generation import GenerationConfig
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from ...generation import GenerationConfig
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -563,7 +563,7 @@ class Pop2PianoAttention(nn.Module):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -617,7 +617,7 @@ class Pop2PianoAttention(nn.Module):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float(), axis=-1).astype(
+        attn_weights = ops.softmax(scores.float(), dim=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
         attn_weights = F.dropout(
@@ -947,8 +947,8 @@ class Pop2PianoBlock(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
-                finfo(hidden_states.dtype, 'max')
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000 if ops.isinf(hidden_states).any() else \
+                ops.finfo(hidden_states.dtype).max
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
@@ -975,8 +975,8 @@ class Pop2PianoBlock(nn.Module):
 
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16:
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
-                    finfo(hidden_states.dtype, 'max')
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000 if ops.isinf(hidden_states).any() else \
+                    ops.finfo(hidden_states.dtype).max
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
@@ -991,8 +991,8 @@ class Pop2PianoBlock(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
-                    finfo(hidden_states.dtype, 'max')
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000 if ops.isinf(hidden_states).any() else \
+                    ops.finfo(hidden_states.dtype).max
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -1470,7 +1470,7 @@ class Pop2PianoConcatEmbeddingToMel(nn.Module):
             None.
         """
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size=config.composer_vocab_size, embedding_size=config.d_model)
+        self.embedding = nn.Embedding(config.composer_vocab_size, config.d_model)
 
     def forward(self, feature, index_value, embedding_offset):
         """
@@ -1490,7 +1490,7 @@ class Pop2PianoConcatEmbeddingToMel(nn.Module):
         """
         index_shifted = index_value - embedding_offset
         composer_embedding = self.embedding(index_shifted).unsqueeze(1)
-        inputs_embeds = ops.cat([composer_embedding, feature], axis=1)
+        inputs_embeds = ops.cat([composer_embedding, feature], dim=1)
         return inputs_embeds
 
 class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
@@ -1730,7 +1730,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
             input_features[~attention_mask[:, 0].bool()] = 0.0
 
             # since self.mel_conditioner adds a new array at the front of inputs_embeds we need to do the same for attention_mask to keep the shapes same
-            attention_mask = ops.cat([attention_mask[:, 0].view(-1, 1), attention_mask], axis=1)
+            attention_mask = ops.cat([attention_mask[:, 0].view(-1, 1), attention_mask], dim=1)
             return input_features, attention_mask
 
         return input_features, None

@@ -10,7 +10,7 @@ def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 # argsort
 def argsort(input, dim=-1, descending=False, stable=False):
-    return sort(input, dim, descending, stable)[1]
+    return sort(input, dim=dim, descending=descending, stable=stable)[1]
 
 # eq
 def eq(input, other):

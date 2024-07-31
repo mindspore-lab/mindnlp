@@ -22,10 +22,11 @@ from typing import List, Tuple
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Constant, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -69,7 +70,7 @@ def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int, pad_value: i
     pad = [(0, 0)] * x.ndim
     pad[dim] = (0, pad_len)
     pad = sum(pad[::-1], ())
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
     return x
 
 def _split_into_blocks(x: mindspore.Tensor, block_len: int, dim: int) -> mindspore.Tensor:
@@ -97,7 +98,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
     pad[block_dim] = (1, 1)
     pad = sum(pad[::-1], ())
     # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
 
     blocks_list: List[mindspore.Tensor] = []
     for i in range(3):
@@ -108,7 +109,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
         indices = tuple(indices)
         blocks_list.append(x[indices])
     # [batch_size, num_blocks, 3 * block_len, ...]
-    return ops.cat(blocks_list, axis=sequence_dim)
+    return ops.cat(blocks_list, dim=sequence_dim)
 
 def _make_3block_relative_position_ids(block_len: int) -> mindspore.Tensor:
     """Makes 3-blocked relative position ids for local attention."""
@@ -166,7 +167,7 @@ def _make_global_fixed_block_ids(
         return block_ids
 
     fixed_block_mask = ops.ones_like(attention_mask) / global_block_size
-    fixed_block_mask = ops.cumsum(fixed_block_mask, axis=1) - fixed_block_mask
+    fixed_block_mask = ops.cumsum(fixed_block_mask, dim=1) - fixed_block_mask
     mask = ops.where(attention_mask != 0.0, 1.0, -1000.0).type(attention_mask.dtype)
     global_block_ids = ops.floor(mask + fixed_block_mask - 1.0).type(attention_mask.dtype)
     _global_block_ids_lower_bound = mindspore.tensor(-1, dtype=global_block_ids.dtype)
@@ -180,12 +181,12 @@ def _make_global_fixed_block_ids(
     num_globals = seq_len // global_block_size
     # [batch_size, seq_len // global_block_size]
     if num_globals > 0:
-        _sequence_block_ids_max = ops.max(global_block_ids, axis=-1).values.repeat(num_globals, 1).transpose(0, 1)
+        _sequence_block_ids_max = ops.max(global_block_ids, dim=-1).values.repeat(num_globals, 1).transpose(0, 1)
     else:
         _sequence_block_ids_max = ops.zeros(
             batch_size, dtype=global_block_ids.dtype
         )
-    global_segment_ids = ops.cumsum(ops.ones(batch_size, num_globals), axis=-1) - 1
+    global_segment_ids = ops.cumsum(ops.ones(batch_size, num_globals), dim=-1) - 1
     global_segment_ids = global_segment_ids.to(attention_mask.device)
     global_segment_ids = ops.where(global_segment_ids <= _sequence_block_ids_max, 1, 0)
     return global_block_ids.type(mindspore.Tensor.int), global_segment_ids.type(mindspore.Tensor.int)
@@ -578,7 +579,7 @@ class LongT5Attention(nn.Module):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -632,7 +633,7 @@ class LongT5Attention(nn.Module):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
         if self.training:
@@ -853,7 +854,7 @@ class LongT5LocalAttention(nn.Module):
 
         scores += position_bias
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
@@ -1109,8 +1110,8 @@ class LongT5TransientGlobalAttention(nn.Module):
 
         # Concatenate "local" and "side"/"global" key/value states to allow each token to attend global aggregated ones
         # New shape: (batch_size, num_blocks, 3 * block_len + global_seq_len, n_heads, dim_per_head)
-        key_states = ops.cat([key_states, side_key_states], axis=2)
-        value_states = ops.cat([value_states, side_value_states], axis=2)
+        key_states = ops.cat([key_states, side_key_states], dim=2)
+        value_states = ops.cat([value_states, side_value_states], dim=2)
 
         # Compute scores -> (batch_size, num_block, n_heads, block_len, 3 * block_len + global_seq_len)
         scores = ops.einsum(
@@ -1150,11 +1151,11 @@ class LongT5TransientGlobalAttention(nn.Module):
             side_position_bias = _split_into_blocks(side_position_bias, self.block_len, dim=-2).transpose(1, 2)
             side_position_bias = side_position_bias.type(scores.dtype).to(scores.device)
             # (batch_size, num_blocks, num_heads, block_len, 3 * block_len + global_seq_len)
-            position_bias = ops.cat([position_bias, side_position_bias], axis=-1)
+            position_bias = ops.cat([position_bias, side_position_bias], dim=-1)
 
         scores += position_bias
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)

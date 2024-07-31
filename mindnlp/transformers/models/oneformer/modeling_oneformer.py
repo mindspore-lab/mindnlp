@@ -22,11 +22,11 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal, XavierUniform, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ....amp import autocast
 
 from ...activations import ACT2FN
@@ -78,7 +78,7 @@ def multi_scale_deformable_attention(
         B, H, *others = tmp.shape
         sampling_grid_l_ = tmp.reshape([B*H, *others])
         # batch_size*num_heads, hidden_dim, num_queries, num_points
-        sampling_value_l_ = ops.grid_sample(
+        sampling_value_l_ = F.grid_sample(
             value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
         )
         sampling_value_list.append(sampling_value_l_)
@@ -89,7 +89,7 @@ def multi_scale_deformable_attention(
         batch_size * num_heads, 1, num_queries, num_levels * num_points
     )
     output = (
-        (ops.stack(sampling_value_list, axis=-2).flatten(start_dim=-2) * attention_weights)
+        (ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2) * attention_weights)
         .sum(-1)
         .view(batch_size, num_heads * hidden_dim, num_queries)
     )
@@ -224,7 +224,7 @@ def sample_point(
         point_coordinates = point_coordinates.unsqueeze(2)
 
     # use nn.function.grid_sample to get features for points in `point_coordinates` via bilinear interpolation
-    point_features = ops.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
+    point_features = F.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
     if add_dim:
         point_features = point_features.squeeze(3)
 
@@ -309,13 +309,13 @@ class OneFormerHungarianMatcher(nn.Module):
             # get ground truth labels
             target_mask = sample_point(
                 target_mask,
-                point_coords.repeat(target_mask.shape[0], 1, 1),
+                point_coords.tile((target_mask.shape[0], 1, 1)),
                 align_corners=False,
             ).squeeze(1)
 
             pred_mask = sample_point(
                 pred_mask,
-                point_coords.repeat(pred_mask.shape[0], 1, 1),
+                point_coords.tile((pred_mask.shape[0], 1, 1)),
                 align_corners=False,
             ).squeeze(1)
 
@@ -438,9 +438,8 @@ class OneFormerLoss(nn.Module):
         image_queries = contrastive_queries_logits.float()
 
         # [batch_size, hidden_dim]
-        normalize = lambda x: x / ops.norm(x, dim=-1, keepdim=True)  # pylint: disable=unnecessary-lambda-assignment
-        image_queries = normalize(image_queries.flatten(start_dim=1))
-        text_queries = normalize(text_queries.flatten(start_dim=1))
+        image_queries = nn.functional.normalize(ops.flatten(image_queries, 1), dim=-1)
+        text_queries = nn.functional.normalize(ops.flatten(text_queries, 1), dim=-1)
 
         logit_scale = ops.clamp(self.logit_scale.exp(), max=100)
 
@@ -620,19 +619,19 @@ class OneFormerLoss(nn.Module):
         if num_random_points > 0:
             point_coordinates = ops.cat(
                 [point_coordinates, ops.rand(num_boxes, num_random_points, 2)],
-                axis=1,
+                dim=1,
             )
         return point_coordinates
 
     def _get_predictions_permutation_indices(self, indices):
         # permute predictions following indices
-        batch_indices = ops.cat([ops.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(src, i, dtype=mindspore.int64) for i, (src, _) in enumerate(indices)])
         predictions_indices = ops.cat([src for (src, _) in indices])
         return batch_indices, predictions_indices
 
     def _get_targets_permutation_indices(self, indices):
         # permute labels following indices
-        batch_indices = ops.cat([ops.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(tgt, i, dtype=mindspore.int64) for i, (_, tgt) in enumerate(indices)])
         target_indices = ops.cat([tgt for (_, tgt) in indices])
         return batch_indices, target_indices
 
@@ -1060,7 +1059,7 @@ class OneFormerPixelDecoderEncoderLayer(nn.Module):
 
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.dropout = config.dropout
-        self.activation_fn = ops.relu
+        self.activation_fn = F.relu
         self.activation_dropout = config.dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_feedforward_dim)
         self.fc2 = nn.Linear(config.encoder_feedforward_dim, self.embed_dim)
@@ -1127,7 +1126,7 @@ class OneFormerPixelDecoderEncoderLayer(nn.Module):
 
         if self.is_training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -1172,6 +1171,7 @@ class OneFormerPixelDecoderEncoderOnly(nn.Module):
         """
         reference_points_list = []
         for lvl, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             ref_y, ref_x = ops.meshgrid(
                 ops.linspace(0.5, height - 0.5, height),
                 ops.linspace(0.5, width - 0.5, width),
@@ -1280,7 +1280,7 @@ class OneFormerPixelDecoder(nn.Module):
             input_projections_list = []
             for in_channels in transformer_in_channels[::-1]:
                 input_projections_list.append(
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(in_channels, config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
@@ -1289,7 +1289,7 @@ class OneFormerPixelDecoder(nn.Module):
         else:
             self.input_projections = nn.ModuleList(
                 [
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(transformer_in_channels[-1], config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
@@ -1317,7 +1317,7 @@ class OneFormerPixelDecoder(nn.Module):
         output_convs = []
 
         for idx, in_channels in enumerate(self.feature_channels[: self.num_fpn_levels]):
-            lateral_conv = nn.SequentialCell(
+            lateral_conv = nn.Sequential(
                 nn.Conv2d(
                     in_channels,
                     config.conv_dim,
@@ -1326,21 +1326,20 @@ class OneFormerPixelDecoder(nn.Module):
                 ),
                 nn.GroupNorm(32, config.conv_dim),
             )
-            output_conv = nn.SequentialCell(
+            output_conv = nn.Sequential(
                 nn.Conv2d(
                     config.conv_dim,
                     config.conv_dim,
                     kernel_size=3,
                     stride=1,
-                    pad_mode='pad',
                     padding=1,
                     bias=False,
                 ),
                 nn.GroupNorm(32, config.conv_dim),
                 nn.ReLU(),
             )
-            self.insert_child_to_cell("adapter_{}".format(idx + 1), lateral_conv)
-            self.insert_child_to_cell("layer_{}".format(idx + 1), output_conv)
+            self.add_module("adapter_{}".format(idx + 1), lateral_conv)
+            self.add_module("layer_{}".format(idx + 1), output_conv)
 
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
@@ -1392,7 +1391,7 @@ class OneFormerPixelDecoder(nn.Module):
             spatial_shape = (height, width)
             spatial_shapes.append(spatial_shape)
             source = source.flatten(start_dim=2).swapaxes(1, 2)
-            mask = mask.flatten(start_dim=1)
+            mask = ops.flatten(mask, start_dim=1)
             pos_embed = pos_embed.flatten(start_dim=2).swapaxes(1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
@@ -1402,7 +1401,7 @@ class OneFormerPixelDecoder(nn.Module):
         mask_flatten = ops.cat(mask_flatten, 1)
         lvl_pos_embed_flatten = ops.cat(lvl_pos_embed_flatten, 1)
         spatial_shapes = Tensor(spatial_shapes, dtype=mindspore.int64)
-        level_start_index = ops.cat((spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1]))
+        level_start_index = ops.cat((spatial_shapes.new_zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).int().cumsum(0)[:-1]))
         valid_ratios = ops.stack([self.get_valid_ratio(m, dtype=source_flatten.dtype) for m in masks], 1)
 
         # Fourth, sent source_flatten + mask_flatten + lvl_pos_embed_flatten (backbone + proj layer output) through encoder
@@ -1429,7 +1428,7 @@ class OneFormerPixelDecoder(nn.Module):
                 split_size_or_sections[i] = level_start_index[i + 1] - level_start_index[i]
             else:
                 split_size_or_sections[i] = y.shape[1] - level_start_index[i]
-        y = ops.split(y, [x.item() for x in split_size_or_sections], axis=1)
+        y = ops.split(y, [x.item() for x in split_size_or_sections], dim=1)
 
         out = []
         multi_scale_features = []
@@ -1444,7 +1443,7 @@ class OneFormerPixelDecoder(nn.Module):
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(feats)
             # Following FPN implementation, we use nearest upsampling here
-            y = cur_fpn + ops.interpolate(
+            y = cur_fpn + F.interpolate(
                 out[-1], size=cur_fpn.shape[-2:], mode="bilinear", align_corners=False
             )
             y = output_conv(y)
@@ -1594,7 +1593,7 @@ class OneFormerAttention(nn.Module):
                 )
             attn_weights += attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -1822,7 +1821,7 @@ class OneFormerMLPPredictionHead(nn.Module):
                 PredictionBlock(in_dim, out_dim, activation=nn.ReLU() if i < num_layers - 1 else nn.Identity())
             )
 
-        self.layers = nn.SequentialCell(*layers)
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, input: Tensor) -> Tensor:
         return self.layers(input)
@@ -2124,14 +2123,14 @@ class OneFormerTransformerDecoderQueryTransformer(nn.Module):
         batch_size = src.shape[0]
         src = src.flatten(start_dim=2).permute(2, 0, 1)
         pos_embed = pos_embed.flatten(start_dim=2).permute(2, 0, 1)
-        query_embed = query_embed.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embed = query_embed.unsqueeze(1).tile((1, batch_size, 1))
         if mask is not None:
             mask = mask.flatten(start_dim=1)
 
         if task_token is None:
             queries = ops.zeros_like(query_embed)
         else:
-            queries = task_token.repeat(query_embed.shape[0], 1, 1)
+            queries = task_token.tile((query_embed.shape[0], 1, 1))
 
         queries = self.decoder(queries, src, memory_key_padding_mask=mask, pos=pos_embed, query_pos=query_embed)
         return queries.swapaxes(1, 2)
@@ -2206,7 +2205,7 @@ class OneFormerTransformerDecoder(nn.Module):
 
         object_queries = object_queries[0].permute(1, 0, 2)
 
-        queries = ops.cat([object_queries, task_token], axis=0)
+        queries = ops.cat([object_queries, task_token], dim=0)
 
         output = Tensor.copy(queries)
 
@@ -2272,7 +2271,7 @@ class OneFormerTransformerDecoder(nn.Module):
         mask_embed = self.mask_embed(decoder_output)
         outputs_mask = ops.einsum("bqc,bchw->bqhw", mask_embed, mask_features)
 
-        attention_mask = ops.interpolate(
+        attention_mask = F.interpolate(
             outputs_mask, size=attention_mask_target_size, mode="bilinear", align_corners=False
         )
 
@@ -2283,7 +2282,7 @@ class OneFormerTransformerDecoder(nn.Module):
             return x.reshape([B * C, *others])
 
         attention_mask = (
-            flatten_01(attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).repeat(1, self.num_heads, 1, 1)) < 0.5
+            flatten_01(attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).tile((1, self.num_heads, 1, 1))) < 0.5
         ).bool()
 
         return outputs_class, outputs_mask, attention_mask
@@ -2317,7 +2316,7 @@ class OneFormerTransformerModule(nn.Module):
             if in_features != hidden_dim or config.enforce_input_proj:
                 self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1, bias=True))
             else:
-                self.input_projections.append(nn.SequentialCell())
+                self.input_projections.append(nn.Sequential())
 
         self.decoder = OneFormerTransformerDecoder(in_channels=in_features, config=config)
         self.level_embed = nn.Embedding(self.num_feature_levels, hidden_dim)
@@ -2353,7 +2352,7 @@ class OneFormerTransformerModule(nn.Module):
         _, batch_size, _ = multi_stage_features[0].shape
 
         # QxNxC
-        query_embeddings = self.queries_embedder.weight.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embeddings = self.queries_embedder.weight.unsqueeze(1).tile((1, batch_size, 1))
         task_token = task_token.unsqueeze(0)
 
         query_features = self.position_embedder(mask_features, None)
@@ -2405,9 +2404,9 @@ class OneFormerSinePositionEmbedding(nn.Module):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
 
@@ -2418,7 +2417,7 @@ class PredictionBlock(nn.Module):
         self.layers = [nn.Linear(in_dim, out_dim), activation]
         # Maintain submodule indexing as if part of a Sequential block
         for i, layer in enumerate(self.layers):
-            self.insert_child_to_cell(str(i), layer)
+            self.add_module(str(i), layer)
 
     def forward(self, input: Tensor) -> Tensor:
         hidden_state = input
@@ -2454,7 +2453,7 @@ class OneFormerTextMapperAttention(nn.Module):
 
         attn = ops.einsum("bnkc,bmkc->bknm", q, k) * self.scale
 
-        attn = ops.softmax(attn, axis=-1)
+        attn = ops.softmax(attn, dim=-1)
 
         output = ops.einsum("bknm,bmkc->bnkc", attn, v).reshape(batch_size, q_sequence_length, num_channels)
 
@@ -2480,7 +2479,7 @@ class OneFormerTextTransformerDecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
-        self.mlp = nn.SequentialCell(
+        self.mlp = nn.Sequential(
             nn.Linear(d_model, d_model * 4), nn.GELU(), nn.Dropout(p=dropout), nn.Linear(d_model * 4, d_model)
         )
 
@@ -2506,13 +2505,13 @@ class OneFormerTextContextDecoder(nn.Module):
     ):
         super().__init__()
 
-        self.memory_proj = nn.SequentialCell(
+        self.memory_proj = nn.Sequential(
             nn.LayerNorm(visual_dim, eps=layer_norm_eps),
             nn.Linear(visual_dim, transformer_width),
             nn.LayerNorm(transformer_width, eps=layer_norm_eps),
         )
 
-        self.text_proj = nn.SequentialCell(
+        self.text_proj = nn.Sequential(
             nn.LayerNorm(visual_dim, eps=layer_norm_eps),
             nn.Linear(visual_dim, transformer_width),
         )
@@ -2524,7 +2523,7 @@ class OneFormerTextContextDecoder(nn.Module):
             ]
         )
 
-        self.out_proj = nn.SequentialCell(
+        self.out_proj = nn.Sequential(
             nn.LayerNorm(transformer_width, eps=layer_norm_eps), nn.Linear(transformer_width, visual_dim)
         )
 
@@ -2604,7 +2603,7 @@ class OneFormerTextTransformer(nn.Module):
         super().__init__()
         self.width = width
         self.num_layers = layers
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[OneFormerTextTransformerLayer(width, heads, attn_mask, layer_norm_eps) for _ in range(layers)]
         )
         self.use_checkpoint = use_checkpoint
@@ -2648,8 +2647,8 @@ class OneFormerTextEncoder(nn.Module):
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
         # pytorch uses additive attention mask; fill with -inf
-        mask = ops.fill(mindspore.float32, (self.context_length, self.context_length), value=float("-inf"))
-        ops.triu(mask, 1)  # zero out the lower diagonal
+        mask = ops.full((self.context_length, self.context_length), float("-inf"), dtype=mindspore.float32)
+        mask = ops.triu(mask, 1)  # zero out the lower diagonal
         return mask
 
     def forward(self, text):
@@ -2719,8 +2718,8 @@ class OneFormerTextMapper(nn.Module):
             _, hidden_dim = text_queries.shape
             text_queries = text_queries.reshape(batch_size, num_text, hidden_dim)
             if self.prompt_ctx is not None:
-                text_queries_ctx = self.prompt_ctx.weight.unsqueeze(0).repeat(text_queries.shape[0], 1, 1)
-                text_queries = ops.cat([text_queries, text_queries_ctx], axis=1)
+                text_queries_ctx = self.prompt_ctx.weight.unsqueeze(0).tile((text_queries.shape[0], 1, 1))
+                text_queries = ops.cat([text_queries, text_queries_ctx], dim=1)
 
         return text_queries
 
@@ -2751,7 +2750,7 @@ class OneFormerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, OneFormerTransformerModule):
             if cell.input_projections is not None:
                 for input_projection in cell.input_projections:
-                    if not isinstance(input_projection, nn.SequentialCell):
+                    if not isinstance(input_projection, nn.Sequential):
                         input_projection.weight.set_data(initializer(XavierUniform(xavier_std), input_projection.weight.shape, input_projection.weight.dtype))
                         input_projection.bias.set_data(initializer('zeros', input_projection.bias.shape, input_projection.bias.dtype))
         elif isinstance(cell, OneFormerTransformerDecoder):
@@ -2765,7 +2764,7 @@ class OneFormerPreTrainedModel(PreTrainedModel):
             grid_init = (
                 (grid_init / grid_init.abs().max(-1, keepdims=True)[0])
                 .view(cell.n_heads, 1, 1, 2)
-                .repeat(1, cell.n_levels, cell.n_points, 1)
+                .tile((1, cell.n_levels, cell.n_points, 1))
             )
             for i in range(cell.n_points):
                 grid_init[:, :, i, :] *= i + 1
@@ -2803,13 +2802,13 @@ class OneFormerPreTrainedModel(PreTrainedModel):
                 if p.dim() > 1:
                     p.set_data(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
         elif isinstance(cell, OneFormerPixelLevelModule):
-            for subcell in cell.cells():
+            for subcell in cell.modules():
                 if isinstance(subcell, (nn.Conv2d, nn.Linear)):
                     subcell.weight.set_data(initializer(Normal(sigma=std), subcell.weight.shape, subcell.weight.dtype))
                     if subcell.bias is not None:
                         subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
         elif isinstance(cell, OneFormerTextContextDecoder):
-            for subcell in cell.cells():
+            for subcell in cell.modules():
                 if isinstance(subcell, nn.Linear):
                     subcell.weight.set_data(initializer(TruncatedNormal(sigma=0.02), subcell.weight.shape, subcell.weight.dtype))
                     if isinstance(subcell, nn.Linear) and subcell.bias is not None:
@@ -2833,9 +2832,9 @@ class OneFormerPreTrainedModel(PreTrainedModel):
             cell.reference_points.weight.set_data(initializer(XavierUniform(1.0), cell.reference_points.weight.shape, cell.reference_points.weight.dtype))
             cell.reference_points.set_data(initializer('zeros', cell.reference_points.shape, cell.reference_points.dtype))
         elif isinstance(cell, OneFormerTaskModel):
-            for subcell in cell.cells():
+            for subcell in cell.modules():
                 if isinstance(cell, OneFormerMLPPredictionHead):
-                    for subcell in cell.cells():
+                    for subcell in cell.modules():
                         if isinstance(subcell, nn.Linear):
                             subcell.weight.set_data(initializer(XavierUniform(xavier_std), subcell.weight.shape, subcell.weight.dtype))
                             subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))

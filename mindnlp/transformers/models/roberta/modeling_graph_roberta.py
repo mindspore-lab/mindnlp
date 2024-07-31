@@ -15,11 +15,11 @@
 
 """roberta model, base on bert."""
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp._legacy.nn import Dropout
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel
 
@@ -257,8 +257,8 @@ class MSRobertaClassificationHead(nn.Module):
             None.
         """
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size, activation='tanh')
-        self.dropout = Dropout(p=1-config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
     def forward(self, features):
@@ -280,6 +280,7 @@ class MSRobertaClassificationHead(nn.Module):
         x = features[:, 0, :]
         x = self.dropout(x)
         x = self.dense(x)
+        x = ops.tanh(x)
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
@@ -485,7 +486,7 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         """
         super().__init__(config, *args, **kwargs)
         self.roberta = MSRobertaModel(config)
-        self.dropout = Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, 1)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
@@ -562,7 +563,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).astype(mask.dtype) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).astype(mask.dtype) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 

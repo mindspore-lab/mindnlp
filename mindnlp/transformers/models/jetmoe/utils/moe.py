@@ -15,10 +15,10 @@
 """
 JetMoE MoE.
 """
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
+from mindnlp.core import nn, ops
 from .parallel_experts import ParallelExperts, compute_gating
 
 from .gate import top_k_gating
@@ -272,7 +272,7 @@ input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1'
             expert_idx = self.top_k_indices[0, i]
             y = ops.dense(x, self.input_linear.weight[expert_idx])
             y_list.append(y)
-        y = ops.cat(y_list, axis=0)
+        y = ops.cat(y_list, dim=0)
         y = y.view(bsz, length, self.top_k, -1)
         return y, loss
 

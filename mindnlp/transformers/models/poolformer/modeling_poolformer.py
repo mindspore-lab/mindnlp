@@ -18,10 +18,9 @@ import collections.abc
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithNoAttention, ImageClassifierOutputWithNoAttention
 from ...modeling_utils import PreTrainedModel
@@ -96,7 +95,7 @@ class PoolFormerEmbeddings(nn.Module):
             padding, collections.abc.Iterable) else padding
 
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size,
-                                    stride=stride, pad_mode='pad', padding=padding, bias=True)
+                                    stride=stride, padding=padding, bias=True)
         self.norm = norm_layer(hidden_size) if norm_layer else nn.Identity()
 
     def forward(self, pixel_values):
@@ -118,7 +117,7 @@ class PoolFormerPooling(nn.Module):
     def __init__(self, pool_size):
         super().__init__()
         self.pool = nn.AvgPool2d(
-            pool_size, stride=1, pad_mode='pad', padding=pool_size // 2, count_include_pad=False)
+            pool_size, stride=1, padding=pool_size // 2, count_include_pad=False)
 
     def forward(self, hidden_states):
         return self.pool(hidden_states) - hidden_states
@@ -281,16 +280,15 @@ class PoolFormerPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     _no_split_modules = ["PoolFormerLayer"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.data.initialize(Normal(self.config.initializer_range))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize('zeros')
-            cell.weight.data.fill(1.0)
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class PoolFormerModel(PoolFormerPreTrainedModel):

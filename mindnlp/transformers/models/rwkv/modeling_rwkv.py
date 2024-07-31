@@ -23,9 +23,10 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging, ModelOutput
 from ...modeling_utils import PreTrainedModel
 from .configuration_rwkv import RwkvConfig
@@ -158,13 +159,13 @@ class RwkvLinearAttention(nn.Module):
                 state = ops.zeros((batch_size, hidden_size, 3), dtype=mindspore.float32)
                 state[:, :, 2] -= 1e38
             else:
-                state = ops.cat([s.expand_dims(2) for s in state], axis=2)
+                state = ops.cat([s.expand_dims(2) for s in state], dim=2)
             output = self.wkv_forward_with_state(time_decay, time_first, key, value, state)
         else:
             output = self.wkv_forward(time_decay, time_first, key, value)
 
         if state is not None:
-            state = [s.squeeze(2) for s in ops.chunk(state, 3, axis=2)]
+            state = [s.squeeze(2) for s in ops.chunk(state, 3, dim=2)]
 
         return output.astype(input_dtype), state
 
@@ -405,7 +406,7 @@ class RwkvFeedForward(nn.Module):
         key = hidden * self.time_mix_key + shifted * (1 - self.time_mix_key)
         receptance = hidden * self.time_mix_receptance + shifted * (1 - self.time_mix_receptance)
 
-        key = ops.square(ops.relu(self.key(key)))
+        key = ops.square(F.relu(self.key(key)))
         value = self.value(key)
         receptance = ops.sigmoid(self.receptance(receptance))
 

@@ -677,7 +677,7 @@ class Data2VecTextPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(
-                initializer(        
+                initializer(
                     Normal(self.config.initializer_range),
                     cell.weight.shape,
                     cell.weight.dtype,

@@ -336,8 +336,8 @@ class RobertaSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -385,7 +385,7 @@ class RobertaSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1887,10 +1887,6 @@ class RobertaLMHead(nn.Module):
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
         self.decoder.bias = self.bias
 
-        # for mindspore.nn.Linear
-        self.decoder.bias = True
-        self.decoder.bias_add = ops.add
-
     def forward(self, features):
         """
         Constructs the output of the language model head for a given set of features.
@@ -1908,7 +1904,7 @@ class RobertaLMHead(nn.Module):
             RuntimeError: If there is an issue in the execution of the method.
         """
         x = self.dense(features)
-        x = ops.gelu(x)
+        x = F.gelu(x)
         x = self.layer_norm(x)
 
         # project back to size of vocabulary with bias
@@ -2552,7 +2548,7 @@ def create_position_ids_from_input_ids(
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
     incremental_indices = (
-        ops.cumsum(mask, axis=1).astype(mask.dtype) + past_key_values_length
+        ops.cumsum(mask, dim=1).astype(mask.dtype) + past_key_values_length
     ) * mask
     return incremental_indices.long() + padding_idx
 

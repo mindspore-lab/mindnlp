@@ -14,10 +14,9 @@
 """layer for adaption prompt tuners."""
 import math
 import numpy as np
-from mindnlp.core import nn, ops
+import mindspore
 from mindspore import Tensor, Parameter
-import mindspore.common.dtype as mstype
-from mindspore.ops import operations as P
+from mindnlp.core import nn, ops
 from .config import TRANSFORMERS_MODEL_CONFIG
 
 
@@ -41,11 +40,11 @@ class AdaptedAttention(nn.Module):
         # 正确的初始化和使用 Normal 初始化器
         normal_values = np.random.normal(loc=0.0, scale=1.0, size=(adapter_len, self.model.hidden_size)).astype(
             np.float32)
-        self.adaption_prompt = Parameter(Tensor(normal_values, dtype=mstype.float32), name="adaption_prompt")
+        self.adaption_prompt = Parameter(Tensor(normal_values, dtype=mindspore.float32), name="adaption_prompt")
 
         # 使用零初始化器初始化门控参数
         zero_values = np.zeros((1,), dtype=np.float32)
-        self.adaption_gate = Parameter(Tensor(zero_values, dtype=mstype.float32), name="adaption_gate")
+        self.adaption_gate = Parameter(Tensor(zero_values, dtype=mindspore.float32), name="adaption_gate")
     def forward(self, **kwargs):
         """
         Forward pass for the adapter which wraps the original LlamaAttention cell.
@@ -73,19 +72,17 @@ class AdaptedAttention(nn.Module):
             value = getattr(self.model, v_proj_layer)(self.adaption_prompt)
 
         # Operations are similar to PyTorch but using MindSpore operations
-        transpose_op = P.Transpose()
         adapter_k = key.view(1, self.adapter_len, (self.model.num_heads // factor), self.model.head_dim)
         adapter_k = ops.tile(adapter_k, (bsz, 1, 1, 1))
-        adapter_k = transpose_op(adapter_k, (0, 2, 1, 3))
+        adapter_k = ops.permute(adapter_k, (0, 2, 1, 3))
 
         adapter_v = value.view(1, self.adapter_len, (self.model.num_heads // factor), self.model.head_dim)
         adapter_v = ops.tile(adapter_v, (bsz, 1, 1, 1))
-        adapter_v = transpose_op(adapter_v, (0, 2, 1, 3))
+        adapter_v = ops.permute(adapter_v, (0, 2, 1, 3))
 
         # Repeat interleave functionality
-        repeat_interleave = P.Tile()
-        adapter_k = repeat_interleave(adapter_k, (1, factor, 1, 1))
-        adapter_v = repeat_interleave(adapter_v, (1, factor, 1, 1))
+        adapter_k = ops.repeat_interleave(adapter_k, (1, factor, 1, 1))
+        adapter_v = ops.repeat_interleave(adapter_v, (1, factor, 1, 1))
 
         # Recompute query states
         compute_query_states = TRANSFORMERS_MODEL_CONFIG[self.model_type].compute_query_states
@@ -94,15 +91,14 @@ class AdaptedAttention(nn.Module):
         previous_dtype = query_states.dtype
 
         # Dot product and softmax operations
-        matmul = P.BatchMatMul()
-        scores = matmul(query_states, adapter_k.transpose(2, 3))
+        scores = ops.bmm(query_states, adapter_k.transpose(2, 3))
         scores /= math.sqrt(self.model.head_dim)
 
-        softmax = nn.Softmax(axis=-1)
-        scores = softmax(scores).astype(mstype.float32)  # upcasting to fp32
+        softmax = nn.Softmax(dim=-1)
+        scores = softmax(scores).astype(mindspore.float32)  # upcasting to fp32
         scores *= self.adaption_gate
 
-        adapter_output = matmul(scores, adapter_v).transpose(1, 2).reshape(bsz, q_len, -1)
+        adapter_output = ops.matmul(scores, adapter_v).swapaxes(1, 2).reshape(bsz, q_len, -1)
 
         # Projection layer if exists
         if o_proj_layer is not None:

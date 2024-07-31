@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Data2VecAudio model."""
+"""MindSpore Data2VecAudio model."""
 import math
 import warnings
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore.common.initializer import Uniform, HeNormal, initializer,Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindspore.common.initializer import Uniform, HeNormal, initializer,Normal
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 #from ...integrations.deepspeed import is_deepspeed_zero3_enabled
@@ -1235,17 +1234,6 @@ class TDNNLayer(nn.Module):
         self.out_conv_dim = config.tdnn_dim[layer_id]
         self.kernel_size = config.tdnn_kernel[layer_id]
         self.dilation = config.tdnn_dilation[layer_id]
-        self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
-        self.activation = nn.ReLU()
-
-class TDNNLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
-        super().__init__()
-        self.in_conv_dim = config.tdnn_dim[layer_id - 1] if layer_id > 0 else config.tdnn_dim[layer_id]
-        self.out_conv_dim = config.tdnn_dim[layer_id]
-        self.kernel_size = config.tdnn_kernel[layer_id]
-        self.dilation = config.tdnn_dilation[layer_id]
-
         self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
         self.activation = nn.ReLU()
 

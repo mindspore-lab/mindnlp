@@ -107,7 +107,6 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             {"score": 0.0001, "answer": "oy 2312/2019 DUE", "start": 38, "end": 40},
         ]
         outputs = dqa_pipeline(image=image, question=question, top_k=2)
-        print(outputs)
         self.assertEqual(nested_simplify(outputs, decimals=4), expected_output)
 
         outputs = dqa_pipeline({"image": image, "question": question}, top_k=2)
@@ -139,7 +138,6 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         question = "What is the invoice number?"
 
         outputs = dqa_pipeline(image=image, question=question, top_k=2)
-        print(outputs)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -149,7 +147,6 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         )
 
         outputs = dqa_pipeline({"image": image, "question": question}, top_k=2)
-        print(outputs)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [

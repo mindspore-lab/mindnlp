@@ -1,12 +1,12 @@
-# mypy: allow-untyped-defs
+"""loss"""
+from typing import Callable, Optional
+from typing_extensions import deprecated
+from mindspore import Tensor
+
 from .distance import PairwiseDistance
 from .module import Module
 from .. import functional as F
 from .. import _reduction as _Reduction
-
-from typing import Callable, Optional
-from typing_extensions import deprecated
-from mindspore import Tensor
 
 __all__ = ['L1Loss', 'NLLLoss', 'NLLLoss2d', 'PoissonNLLLoss', 'GaussianNLLLoss', 'KLDivLoss',
            'MSELoss', 'BCELoss', 'BCEWithLogitsLoss', 'HingeEmbeddingLoss', 'MultiLabelMarginLoss',
@@ -94,9 +94,6 @@ class L1Loss(_Loss):
         >>> output.backward()
     """
     __constants__ = ['reduction']
-
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(size_average, reduce, reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.l1_loss(input, target, reduction=self.reduction)
@@ -542,13 +539,8 @@ class MSELoss(_Loss):
     """
     __constants__ = ['reduction']
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(size_average, reduce, reduction)
-
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.mse_loss(input, target, reduction=self.reduction)
-
-
 
 
 class BCELoss(_WeightedLoss):
@@ -627,13 +619,8 @@ class BCELoss(_WeightedLoss):
     """
     __constants__ = ['reduction']
 
-    def __init__(self, weight: Optional[Tensor] = None, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(weight, size_average, reduce, reduction)
-
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.binary_cross_entropy(input, target, weight=self.weight, reduction=self.reduction)
-
-
 
 
 class BCEWithLogitsLoss(_Loss):
@@ -873,9 +860,6 @@ class MultiLabelMarginLoss(_Loss):
     """
     __constants__ = ['reduction']
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(size_average, reduce, reduction)
-
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.multilabel_margin_loss(input, target, reduction=self.reduction)
 
@@ -1060,9 +1044,6 @@ class SoftMarginLoss(_Loss):
 
     """
     __constants__ = ['reduction']
-
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(size_average, reduce, reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.soft_margin_loss(input, target, reduction=self.reduction)
@@ -1258,9 +1239,6 @@ class MultiLabelSoftMarginLoss(_WeightedLoss):
         - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N)`.
     """
     __constants__ = ['reduction']
-
-    def __init__(self, weight: Optional[Tensor] = None, size_average=None, reduce=None, reduction: str = 'mean') -> None:
-        super().__init__(weight, size_average, reduce, reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return F.multilabel_soft_margin_loss(input, target, weight=self.weight, reduction=self.reduction)
@@ -1458,7 +1436,7 @@ class MultiMarginLoss(_WeightedLoss):
     def __init__(self, p: int = 1, margin: float = 1., weight: Optional[Tensor] = None, size_average=None,
                  reduce=None, reduction: str = 'mean') -> None:
         super().__init__(weight, size_average, reduce, reduction)
-        if p != 1 and p != 2:
+        if p not in (1, 2):
             raise ValueError("only p == 1 and p == 2 supported")
         if weight is not None and weight.dim() != 1 :
             raise ValueError(
@@ -1836,8 +1814,3 @@ class CTCLoss(_Loss):
     def forward(self, log_probs: Tensor, targets: Tensor, input_lengths: Tensor, target_lengths: Tensor) -> Tensor:
         return F.ctc_loss(log_probs, targets, input_lengths, target_lengths, self.blank, self.reduction,
                           self.zero_infinity)
-
-
-# TODO: L1HingeEmbeddingCriterion
-# TODO: MSECriterion weight
-# TODO: ClassSimplexCriterion

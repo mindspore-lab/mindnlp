@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -103,9 +104,6 @@ class MatMulWrapper(nn.Module):
     ops.matmul() in your code, the flop counter will typically ignore the flops of the matmul.
     """
 
-    def __init__(self):
-        super().__init__()
-
     def forward(self, mat1, mat2):
         """
         Here are the typical dimensions found in BERT (the B is optional) mat1.shape: [B, <optional extra dims>, M, K]
@@ -129,15 +127,13 @@ class SqueezeBertLayerNorm(nn.LayerNorm):
     """
 
     def __init__(self, hidden_size, eps=1e-12):
-        nn.LayerNorm.__init__(
-            self,
-            normalized_shape=hidden_size,
-            epsilon=epsilon,
-        )  # instantiates self.{weight, bias, eps}
+        nn.LayerNorm.__init__(self, normalized_shape=hidden_size, eps=eps)  # instantiates self.{weight, bias, eps}
+
     def forward(self, x):
         x = x.permute(0, 2, 1)
         x = nn.LayerNorm.forward(self, x)
         return x.permute(0, 2, 1)
+
 
 
 class ConvDropoutLayerNorm(nn.Module):
@@ -145,11 +141,11 @@ class ConvDropoutLayerNorm(nn.Module):
     ConvDropoutLayerNorm: Conv, Dropout, LayerNorm
     """
 
-    def __init__(self, cin, cout, group, dropout_prob):
+    def __init__(self, cin, cout, groups, dropout_prob):
         super().__init__()
 
         self.conv1d = nn.Conv1d(
-            in_channels=cin, out_channels=cout, kernel_size=1, group=group
+            in_channels=cin, out_channels=cout, kernel_size=1, groups=groups
         )
         self.layernorm = SqueezeBertLayerNorm(cout)
         self.dropout = nn.Dropout(p=dropout_prob)
@@ -170,7 +166,7 @@ class ConvActivation(nn.Module):
     def __init__(self, cin, cout, group, act):
         super().__init__()
         self.conv1d = nn.Conv1d(
-            in_channels=cin, out_channels=cout, kernel_size=1, group=group
+            in_channels=cin, out_channels=cout, kernel_size=1, groups=group
         )
         self.act = ACT2FN[act]
 
@@ -196,17 +192,17 @@ class SqueezeBertSelfAttention(nn.Module):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=q_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=q_groups
         )
         self.key = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=k_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=k_groups
         )
         self.value = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=v_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=v_groups
         )
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         self.matmul_qk = MatMulWrapper()
         self.matmul_qkv = MatMulWrapper()
@@ -319,7 +315,7 @@ class SqueezeBertModule(nn.Module):
         self.post_attention = ConvDropoutLayerNorm(
             cin=c0,
             cout=c1,
-            group=config.post_attention_groups,
+            groups=config.post_attention_groups,
             dropout_prob=config.hidden_dropout_prob,
         )
         self.intermediate = ConvActivation(
@@ -328,7 +324,7 @@ class SqueezeBertModule(nn.Module):
         self.output = ConvDropoutLayerNorm(
             cin=c2,
             cout=c3,
-            group=config.output_groups,
+            groups=config.output_groups,
             dropout_prob=config.hidden_dropout_prob,
         )
 

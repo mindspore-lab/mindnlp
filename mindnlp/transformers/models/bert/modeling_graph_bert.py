@@ -15,10 +15,10 @@
 
 """MindNLP bert model"""
 import mindspore.common.dtype as mstype
-from mindnlp.core import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-# from mindnlp.modules.functional import make_causal_mask, finfo
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -180,7 +180,7 @@ class MSBertSelfAttention(nn.Module):
         self.causal = causal
         self.init_cache = init_cache
 
-        self.causal_mask = make_causal_mask(
+        self.causal_mask = F.make_causal_mask(
             ops.ones((1, config.max_position_embeddings), dtype=mstype.bool_),
             dtype=mstype.bool_,
         )
@@ -333,17 +333,11 @@ class MSBertSelfAttention(nn.Module):
         # Convert the boolean attention mask to an attention bias.
         if attention_mask is not None:
             # attention mask in the form of attention bias
-            # attention_bias = ops.select(
-            #     attention_mask > 0,
-            #     ops.full(attention_mask.shape, 0.0).astype(hidden_states.dtype),
-            #     ops.full(attention_mask.shape, finfo(hidden_states.dtype, "min")).astype(
-            #         hidden_states.dtype
-            #     ),
-            # )
+
             attention_bias = ops.select(
                 attention_mask > 0,
                 ops.zeros_like(attention_mask).astype(hidden_states.dtype),
-                (ops.ones_like(attention_mask) * finfo(hidden_states.dtype, "min")).astype(
+                (ops.ones_like(attention_mask) * float(ops.finfo(hidden_states.dtype).min)).astype(
                     hidden_states.dtype
                 ),
             )
