@@ -19,13 +19,13 @@ Processor class for IDEFICS.
 from typing import Callable, List, Optional, Union
 from urllib.parse import urlparse
 
+from mindnlp.utils import is_mindspore_available
+from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
+
 from ...feature_extraction_utils import BatchFeature
 from ...processing_utils import ProcessorMixin
 from ...tokenization_utils_base import BatchEncoding, PaddingStrategy, TextInput, TruncationStrategy
-from mindnlp.utils import is_mindspore_available
-from mindnlp.core import ops
-
-from mindnlp.core.nn import functional as F
 
 if is_mindspore_available():
     import mindspore
@@ -152,9 +152,7 @@ class IdeficsProcessor(ProcessorMixin):
         )
 
         self.tokenizer_was_trained_with_end_of_utterance_token = (
-            True
-            if "<end_of_utterance>" in self.tokenizer.special_tokens_map.get("additional_special_tokens", [])
-            else False
+                "<end_of_utterance>" in self.tokenizer.special_tokens_map.get("additional_special_tokens", [])
         )
 
     def __call__(
@@ -305,7 +303,7 @@ class IdeficsProcessor(ProcessorMixin):
             last_was_text = False
             for i, item in enumerate(sample):
                 if i > 0:
-                    last_was_text = True if not last_was_image else False
+                    last_was_text = not last_was_image
 
                 if isinstance(item, str):
                     item = item.strip(" ")

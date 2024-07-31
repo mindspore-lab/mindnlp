@@ -19,15 +19,15 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
+from mindspore.dataset.vision import Inter, Resize
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import ModelOutput, logging
 
+import numpy as np
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
-from mindnlp.utils import ModelOutput, logging
 from .configuration_idefics import IdeficsVisionConfig
-from mindspore.dataset.vision import Inter, Resize
-import numpy as np
 
 logger = logging.get_logger(__name__)
 
@@ -124,7 +124,7 @@ class IdeficsVisionEmbeddings(nn.Module):
             patch_pos_embed = patch_pos_embed.asnumpy()
 
             target_size = (
-            int(patch_pos_embed.shape[2] * scale_factor[0]), int(patch_pos_embed.shape[3] * scale_factor[1]))
+                int(patch_pos_embed.shape[2] * scale_factor[0]), int(patch_pos_embed.shape[3] * scale_factor[1]))
             patch_pos_embed = np.transpose(patch_pos_embed, (0, 2, 3, 1))
 
             # 使用 Resize 调整尺寸

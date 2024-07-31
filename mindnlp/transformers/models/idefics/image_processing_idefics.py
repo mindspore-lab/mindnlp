@@ -18,6 +18,8 @@ from typing import Callable, Dict, List, Optional, Union
 
 from PIL import Image
 
+from mindnlp.utils import TensorType, is_mindspore_available
+
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import resize, to_channel_dimension_format
 from ...image_utils import (
@@ -28,7 +30,6 @@ from ...image_utils import (
     to_numpy_array,
     valid_images,
 )
-from mindnlp.utils import TensorType, is_mindspore_available
 
 IDEFICS_STANDARD_MEAN = [0.48145466, 0.4578275, 0.40821073]
 IDEFICS_STANDARD_STD = [0.26862954, 0.26130258, 0.27577711]
@@ -149,10 +150,10 @@ class IdeficsImageProcessor(BaseImageProcessor):
         if transform is not None:
             if not is_mindspore_available():
                 raise ImportError("To pass in `transform` torch must be installed")
-            import torch
+            import mindnlp
 
             images = [transform(x) for x in images]
-            return torch.stack(images)
+            return mindnlp.core.ops.stack(images)
 
         # for inference we do the exact transforms that were used to train IDEFICS
         images = [convert_to_rgb(x) for x in images]

@@ -450,7 +450,6 @@ class IdeficsModelTest(ModelTesterMixin, unittest.TestCase):
             config.return_dict = True
 
             model = model_class(config)
-            model.gradient_checkpointing_enable()
             model.train()
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             loss = model(**inputs).loss

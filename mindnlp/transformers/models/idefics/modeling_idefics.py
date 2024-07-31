@@ -21,22 +21,20 @@
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
-from functools import partial
 
 import mindspore
-import mindnlp.core.nn.functional as F
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
+import mindnlp.core.nn.functional as F
+from mindnlp.core import get_default_dtype
+from mindnlp.core import nn, ops
+from mindnlp.utils import logging
 
-from mindnlp.core.nn import ModuleList
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from ...modeling_outputs import ModelOutput
 from ...modeling_utils import PretrainedConfig
 from ...ms_utils import ALL_LAYERNORM_LAYERS
-from mindnlp.utils import logging
-from mindnlp.core import get_default_dtype
 
 from .configuration_idefics import IdeficsConfig
 from .perceiver import IdeficsPerceiverResampler
@@ -322,7 +320,7 @@ class IdeficsDecoupledEmbedding(nn.Embedding):
 
         # copy so that we don't modify the original input_ids later on
         input_ids = input_ids.copy()
-        additional_vocab_indices = ops.where(input_ids >= self.num_embeddings)
+        additional_vocab_indices = ops.where(input_ids >= self.num_embeddings)  # pylint: disable=no-value-for-parameter
         input_ids_additional_vocab = input_ids[additional_vocab_indices]
         additional_embeddings = self.additional_embedding(input_ids_additional_vocab - self.num_embeddings)
 
@@ -660,7 +658,7 @@ class IdeficsAttention(nn.Module):
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both ops.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
         # The q_len > 1 is necessary to match with AttentionMaskConverter.to_causal_4d that does not create a causal mask in case q_len == 1.
-        is_causal = True if self.is_causal and attention_mask is None and q_len > 1 else False
+        is_causal = self.is_causal and attention_mask is None and q_len > 1
 
         attn_output = F.scaled_dot_product_attention(
             query_states,
@@ -1420,18 +1418,6 @@ class IdeficsForVisionText2Text(IdeficsPreTrainedModel):
                     input_embeddings, "num_additional_embeddings"
             ):
                 output_embeddings.out_additional_features = input_embeddings.num_additional_embeddings
-
-    def gradient_checkpointing_enable(self):
-        """
-        Activates gradient checkpointing for the current model.
-        Note that in other frameworks this feature can be referred to as "activation checkpointing" or "checkpoint
-        activations".
-        """
-        pass
-        # if not self.supports_gradient_checkpointing:
-        #     raise ValueError(
-        #         f"{self.__class__.__name__} does not support gradient checkpointing.")
-        # self.apply(partial(self._set_gradient_checkpointing, value=True))
 
     def forward(
             self,
