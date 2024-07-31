@@ -1296,7 +1296,7 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
             # [batch_size, joint_seq_len]
             marginal_gold_log_probs = joint_gold_log_prob.logsumexp(1)
             # []
-            masked_lm_loss = - mindspore.ops.nansum(ops.sum(marginal_gold_log_probs * mlm_mask) / ops.sum(mlm_mask))
+            masked_lm_loss = - ops.nansum(ops.sum(marginal_gold_log_probs * mlm_mask) / ops.sum(mlm_mask))
 
         if not return_dict:
             output = (prediction_scores,) + joint_outputs[2:4]
