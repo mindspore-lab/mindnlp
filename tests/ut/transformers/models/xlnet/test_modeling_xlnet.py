@@ -280,7 +280,7 @@ class XLNetModelTester:
         single_mask = mindspore.ops.ones((input_ids_1.shape[0], 1, 1), dtype=mindspore.float32)
 
         # second forward pass
-        #-----need to assign use_mems
+        
         output_from_no_past = model(next_input_ids,use_mems=False,  perm_mask=causal_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, mems=mems,perm_mask=single_mask)["last_hidden_state"]
 
@@ -302,31 +302,7 @@ class XLNetModelTester:
 
         self.parent.assertTrue(np.allclose(output_from_past_slice_np, output_from_no_past_slice_np, atol=1e-3))
 
-        #-----------------------go again-----------------------------
-        # causal_mask = mindspore.ops.ones(
-        #     (input_ids_1.shape[0],
-        #      input_ids_1.shape[1],
-        #      input_ids_1.shape[1]),
-        #     dtype=mindspore.float32,
-        # )
-        # causal_mask = mindspore.ops.triu(causal_mask, diagonal=0)
-        # outputs_cache = model(input_ids_1, use_mems=True, perm_mask=causal_mask)
-        # outputs_no_cache = model(input_ids_1, use_mems=False, perm_mask=causal_mask)
-        # outputs_conf = model(input_ids_1)
-        # output, mems = outputs_cache.to_tuple()
-        # next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
-        # next_input_ids = mindspore.ops.cat([input_ids_1, next_tokens], axis=-1)
-        # causal_mask = mindspore.ops.ones((input_ids_1.shape[0], input_ids_1.shape[1] + 1, input_ids_1.shape[1] + 1), dtype=mindspore.float32)
-        # causal_mask = mindspore.ops.triu(causal_mask, diagonal=0)
-        # single_mask = mindspore.ops.ones((input_ids_1.shape[0], 1, 1), dtype=mindspore.float32)
-        # output_from_no_past = model(next_input_ids,use_mems=False,  perm_mask=causal_mask)["last_hidden_state"]
-        # output_from_past = model(next_tokens, mems=mems,perm_mask=single_mask)["last_hidden_state"]
-
-        # random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        # output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx]
-        # output_from_past_slice = output_from_past[:, 0, random_slice_idx]
-        # output_from_past_slice_np = output_from_past_slice.asnumpy()
-        # output_from_no_past_slice_np = output_from_no_past_slice.asnumpy()
+       
 
 
 
