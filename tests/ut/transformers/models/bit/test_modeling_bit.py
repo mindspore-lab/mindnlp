@@ -35,7 +35,6 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-
 class BitModelTester:
     def __init__(
         self,

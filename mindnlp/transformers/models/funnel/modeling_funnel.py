@@ -371,11 +371,11 @@ class FunnelRelMultiheadAttention(nn.Module):
         self.k_head = nn.Linear(d_model, n_head * d_head)
         self.v_head = nn.Linear(d_model, n_head * d_head)
 
-        self.r_w_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_r_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_kernel = mindspore.Parameter(ops.zeros([d_model, n_head, d_head]))
-        self.r_s_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.seg_embed = mindspore.Parameter(ops.zeros([2, n_head, d_head]))
+        self.r_w_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_r_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_kernel = mindspore.Parameter(ops.zeros(d_model, n_head, d_head))
+        self.r_s_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.seg_embed = mindspore.Parameter(ops.zeros(2, n_head, d_head))
 
         self.post_proj = nn.Linear(n_head * d_head, d_model)
         self.layer_norm = nn.LayerNorm([d_model], eps=config.layer_norm_eps)

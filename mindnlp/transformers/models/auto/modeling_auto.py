@@ -82,6 +82,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("dinov2", "Dinov2Model"),
         ("dpt", "DPTModel"),
         ("efficientformer", "EfficientFormerModel"),
+        ("electra", "ElectraModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
         ("ernie", "ErnieModel"),
@@ -207,6 +208,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("deepseek_v2", "DeepseekV2PreTrainedModel"),
+        ("electra", "ElectraForPreTraining"),
         ("flava", "FlavaForPreTraining"),
         ("fnet", "FNetForPreTraining"),
         ("funnel", "FunnelForPreTraining"),
@@ -251,6 +253,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("data2vec-text", "Data2VecTextForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
+        ("electra", "ElectraForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("fnet", "FNetForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
@@ -303,6 +306,8 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("cpmbee", "CpmBeeForCausalLM"),
         ("data2vec-text", "Data2VecTextForCausalLM"),
         ("deepseek_v2", "DeepseekV2ForCausalLM"),
+        ("electra", "ElectraForCausalLM"),
+        ("ernie", "ErnieForCausalLM"),
         ("falcon", "FalconForCausalLM"),
         ("gemma", "GemmaForCausalLM"),
         ("git", "GitForCausalLM"),
@@ -361,6 +366,12 @@ MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES = OrderedDict(
     ]
 )
 
+MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING_NAMES = OrderedDict(
+    # Model for Causal Image Modeling mapping
+    [
+        ("imagegpt", "ImageGPTForCausalImageModeling"),
+    ]
+)
 
 MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
@@ -471,6 +482,8 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("data2vec-text", "Data2VecTextForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
+        ("electra", "ElectraForMaskedLM"),
+        ("ernie", "ErnieForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("fnet", "FNetForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
@@ -575,6 +588,9 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2ForSequenceClassification"),
         ("deepseek_v2", "DeepseekV2ForSequenceClassification"),
         ("distilbert", "DistilBertForSequenceClassification"),
+        ("electra", "ElectraForSequenceClassification"),
+        ("ernie", "ErnieForSequenceClassification"),
+        ("ernie_m", "ErnieMForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("fnet", "FNetForSequenceClassification"),
