@@ -33,7 +33,7 @@ from mindnlp. transformers. ms_utils import apply_chunking_to_forward
 from mindnlp. transformers. activations import ACT2FN
 from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
 from mindnlp.utils import (ModelOutput, logging)
-from mindnlp.core import nn,ops#-----------------do not use the mindnlp version of ops
+from mindnlp.core import nn,ops
 from .configuration_xlnet import XLNetConfig
 
 
@@ -203,11 +203,8 @@ class XLNetRelativeAttention(nn.Module):
         x = x.reshape(x_size[0], x_size[1], x_size[3], x_size[2])
         x = x[:, :, 1:, :]
         x = x.reshape(x_size[0], x_size[1], x_size[2], x_size[3] - 1)
-        # Note: the tensor-slice form was faster in my testing than torch.index_select
-        #       However, tracing doesn't like the nature of the slice, and if klen changes
-        #       during the run then it'll fail, whereas index_select will be fine.
         x = ops.index_select(x, 3, ops.arange(klen, dtype=mindspore.int64))
-        # x = x[:, :, :, :klen]
+        
 
         return x
 
@@ -223,38 +220,37 @@ class XLNetRelativeAttention(nn.Module):
             output_attentions=False,
     ):
         """Core relative positional attention operations."""
-        # content based attention score
+
         ac = ops.einsum("ibnd,jbnd->bnij", q_head + self.r_w_bias, k_head_h)
 
-        # position based attention score
+
         bd = ops.einsum("ibnd,jbnd->bnij", q_head + self.r_r_bias, k_head_r)
         bd = self.rel_shift_bnij(bd, klen=ac.shape[3])
 
-        # segment based attention score
+
         if seg_mat is None:
             ef = 0
         else:
             ef = ops.einsum("ibnd,snd->ibns", q_head + self.r_s_bias, self.seg_embed)
             ef = ops.einsum("ijbs,ibns->bnij", seg_mat, ef)
 
-        # merge attention scores and perform masking
         attn_score = (ac + bd + ef) * self.scale
         if attn_mask is not None:
-            # attn_score = attn_score * (1 - attn_mask) - 1e30 * attn_mask
+
             if attn_mask.dtype == mindspore.float16:
                 attn_score = attn_score - 65500 * ops.einsum("ijbn->bnij", attn_mask)
             else:
                 attn_score = attn_score - 1e30 * ops.einsum("ijbn->bnij", attn_mask)
 
-        # attention probability
+
         attn_prob = ops.softmax(attn_score, 3)
         attn_prob = self.dropout(attn_prob)
 
-        # Mask heads if we want to
+
         if head_mask is not None:
             attn_prob = attn_prob * ops.einsum("ijbn->bnij", head_mask)
 
-        # attention output
+
         attn_vec = ops.einsum("bnij,jbnd->ibnd", attn_prob, v_head_h)
 
         if output_attentions:
@@ -264,7 +260,7 @@ class XLNetRelativeAttention(nn.Module):
 
     def post_attention(self, h, attn_vec, residual=True):
         """Post-attention processing."""
-        # post-attention projection (back to `d_model`)
+        
         attn_out = ops.einsum("ibnd,hnd->ibh", attn_vec, self.o)
 
         attn_out = self.dropout(attn_out)
@@ -545,10 +541,10 @@ class XLNetFeedForward(nn.Module):
         """
         output = inp
         output = self.layer_1(output)
-        output = self.activation_function(output)#--r1 output[0,0,:3] 2.93643117e-01,  8.41772705e-02,  2.98081905e-01
-        output = self.dropout(output)#--r1 1.80732846e-01,  4.49121334e-02,  1.83970094e-01
-        output = self.layer_2(output)#--r1 output 2.00814277e-01,  4.99023721e-02,  2.04411224e-01
-        output = self.dropout(output)#--r1 output
+        output = self.activation_function(output)
+        output = self.dropout(output)
+        output = self.layer_2(output)
+        output = self.dropout(output)
         output = self.layer_norm(output + inp)
         return output
 
@@ -1293,7 +1289,7 @@ class XLNetModel(XLNetPreTrainedModel):
             input_mask: Optional[mindspore.Tensor] = None,
             head_mask: Optional[mindspore.Tensor] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#----------------------modfiy
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -1331,7 +1327,7 @@ class XLNetModel(XLNetPreTrainedModel):
             FutureWarning: Raised when the 'use_cache' argument is deprecated. Use 'use_mems' instead.
             ValueError: Raised if an unsupported attention type is encountered.
         """
-        #--------------add---------------
+        
         # if mems==None:
         #     use_mems=False
 
@@ -1377,7 +1373,7 @@ class XLNetModel(XLNetPreTrainedModel):
 
         mlen = mems[0].shape[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen
-        #-----r1:mlen=0,keln=7,token_type_ids-target_mapping=None
+        
         dtype_float = self.dtype
 
         # Attention mask
@@ -1425,15 +1421,15 @@ class XLNetModel(XLNetPreTrainedModel):
             non_tgt_mask = ((attn_mask + non_tgt_mask[:, :, None, None]) > 0).to(dtype=attn_mask.dtype)
         else:
             non_tgt_mask = None
-        #---r1:non_tgt_mask[0,1,:,0]=1 attn_mask[0,1,:,0]=1
+        
         # Word embeddings and prepare h & g hidden states
         if inputs_embeds is not None:
             word_emb_k = inputs_embeds
         else:
             word_emb_k = self.word_embedding(input_ids)
-        #----r1 output_h
+        
         output_h = self.dropout(word_emb_k)
-        # ---r1 output_h
+        
         if target_mapping is not None:
             word_emb_q = self.mask_emb.broadcast_to((target_mapping.shape[0], bsz, -1))
             # else:  # We removed the inp_q input which was same as target mapping
@@ -1442,7 +1438,7 @@ class XLNetModel(XLNetPreTrainedModel):
             output_g = self.dropout(word_emb_q)
         else:
             output_g = None
-        #--r1:word_emb_k[0,0,:3] [-5.35977706e-02,  1.45315463e-02, -1.62669867e-02]
+        
         # Segment embedding
         if token_type_ids is not None:
             # Convert `token_type_ids` to one-hot `seg_mat`
@@ -1461,7 +1457,7 @@ class XLNetModel(XLNetPreTrainedModel):
         # Positional encoding
         pos_emb = self.relative_positional_encoding(qlen, klen, bsz=bsz)
         pos_emb = self.dropout(pos_emb)
-        #----r1:pos_emb[0,0,:3] [7.29985118e-01, -7.93023705e-01,  8.89357388e-01]
+        
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x n_heads x N x N
@@ -1491,11 +1487,7 @@ class XLNetModel(XLNetPreTrainedModel):
             if output_hidden_states:
                 hidden_states.append((output_h, output_g) if output_g is not None else output_h)
             
-    #----r1 output_h[0,0,:3]=4.85972948e-02,  4.35888097e-02,  5.11950254e-02
-    #----r1 attn_mask[0]=1  attn_mask[1,1:]=1 attn_mask[2,2:]=1 tri
-    #----r1 layer_module:rel_attn,ff,dropout
-    #----r1
-    #----r1
+
            
             outputs = layer_module(
                 output_h,
@@ -1513,11 +1505,7 @@ class XLNetModel(XLNetPreTrainedModel):
             if output_attentions:
                 attentions.append(outputs[2])
             #record output for each iter
-    #---r1 i0:output_h[0,0,:3]=5.55440366e-01,  1.79805768e+00,  1.77641943e-01
-    #
-    #---r1 i1:output_h[0,0,:3]=
-    #---r1 i2:output_h[0,0,:3]=
-    #---r1 i3:output_h[0,0,:3]=
+
     
 
 
@@ -1526,7 +1514,7 @@ class XLNetModel(XLNetPreTrainedModel):
             hidden_states.append((output_h, output_g) if output_g is not None else output_h)
 
         output = self.dropout(output_g if output_g is not None else output_h)
-        #------r1:output_g=None output_h[0,0,:3]=[ 2.76843961e-02, -5.25338650e-01, -4.43054587e-01]
+        
         # Prepare outputs, we swapaxes back here to shape [bsz, len, hidden_dim] (cf. beginning of forward() method)
         output = output.permute(1, 0, 2)
 
@@ -1642,7 +1630,7 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
         self.lm_loss = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, 
-    use_mems=True, #-------------------modfiy
+    use_mems=True,
     **kwargs):
         '''
         Args:
@@ -1713,7 +1701,7 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
             head_mask: Optional[mindspore.Tensor] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
             labels: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#------------modify------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -1925,7 +1913,7 @@ class XLNetForSequenceClassification(XLNetPreTrainedModel):
             head_mask: Optional[mindspore.Tensor] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
             labels: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#-------------------------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -2091,7 +2079,7 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
             head_mask: Optional[mindspore.Tensor] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
             labels: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#----------------------------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -2191,7 +2179,7 @@ class XLNetForMultipleChoice(XLNetPreTrainedModel):
             head_mask: Optional[mindspore.Tensor] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
             labels: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#--------------------------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -2342,7 +2330,7 @@ class XLNetForQuestionAnsweringSimple(XLNetPreTrainedModel):
             inputs_embeds: Optional[mindspore.Tensor] = None,
             start_positions: Optional[mindspore.Tensor] = None,
             end_positions: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#-------------------------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
@@ -2491,7 +2479,7 @@ class XLNetForQuestionAnswering(XLNetPreTrainedModel):
             is_impossible: Optional[mindspore.Tensor] = None,
             cls_index: Optional[mindspore.Tensor] = None,
             p_mask: Optional[mindspore.Tensor] = None,
-            use_mems: Optional[bool] = True,#----------------------------------
+            use_mems: Optional[bool] = True,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
