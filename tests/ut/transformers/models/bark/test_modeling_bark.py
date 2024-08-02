@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Bark model."""
+"""Testing suite for the MindSpore Bark model."""
 
 import copy
 import inspect
 import tempfile
 import unittest
 
-import pytest
 
 from mindnlp.transformers import (
     BarkCoarseConfig,
@@ -35,6 +34,7 @@ from mindnlp.transformers.models.bark.generation_configuration_bark import (
 from mindnlp.utils.testing_utils import (
     is_mindspore_available,
     require_mindspore,
+    require_mindspore_gpu,
     slow,
 )
 from mindnlp.utils import cached_property
@@ -47,7 +47,7 @@ from ..encodec.test_modeling_encodec import EncodecModelTester
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops, no_grad
+    from mindnlp.core import ops, nn, no_grad
     from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
@@ -58,7 +58,6 @@ if is_mindspore_available():
         BarkProcessor,
         BarkSemanticModel,
     )
-
 
 class BarkSemanticModelTester:
     def __init__(
@@ -916,117 +915,6 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
-    # @require_flash_attn
-    # @require_mindspore_gpu
-    # @pytest.mark.flash_attn_test
-    # @slow
-    # def test_flash_attn_2_inference_equivalence(self):
-    #     for model_class in self.all_model_classes:
-    #         if not model_class._supports_flash_attn_2:
-    #             self.skipTest(reason="Model does not support flash_attention_2")
-
-    #         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-    #         model = model_class(config)
-
-    #         with tempfile.TemporaryDirectory() as tmpdirname:
-    #             model.save_pretrained(tmpdirname)
-    #             model_fa = model_class.from_pretrained(
-    #                 tmpdirname, torch_dtype=mindspore.bfloat16, attn_implementation="flash_attention_2"
-    #             )
-
-    #             model = model_class.from_pretrained(tmpdirname, torch_dtype=mindspore.bfloat16)
-
-    #             dummy_input = inputs_dict["input_ids"][:1]
-    #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
-    #                 dummy_input = dummy_input.to(mindspore.bfloat16)
-
-    #             dummy_attention_mask = inputs_dict.get("attention_mask", None)
-
-    #             if dummy_attention_mask is not None:
-    #                 dummy_attention_mask = dummy_attention_mask[:1]
-    #                 dummy_attention_mask[:, 1:] = 1
-    #                 dummy_attention_mask[:, :1] = 0
-
-    #             outputs = model(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-    #             outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-
-    #             logits = outputs.hidden_states[-1]
-    #             logits_fa = outputs_fa.hidden_states[-1]
-
-    #             assert ops.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
-
-    #             other_inputs = {"output_hidden_states": True}
-    #             if dummy_attention_mask is not None:
-    #                 other_inputs["attention_mask"] = dummy_attention_mask
-
-    #             outputs = model(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-    #             outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-    #             logits = outputs.hidden_states[-1]
-    #             logits_fa = outputs_fa.hidden_states[-1]
-
-    #             assert ops.allclose(logits_fa[1:], logits[1:], atol=4e-2, rtol=4e-2)
-
-    #             # check with inference + dropout
-    #             model.train()
-    #             _ = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-    # @require_flash_attn
-    # @require_mindspore_gpu
-    # @pytest.mark.flash_attn_test
-    # @slow
-    # def test_flash_attn_2_inference_equivalence_right_padding(self):
-    #     for model_class in self.all_model_classes:
-    #         if not model_class._supports_flash_attn_2:
-    #             self.skipTest(reason="Model does not support flash_attention_2")
-
-    #         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-    #         model = model_class(config)
-
-    #         with tempfile.TemporaryDirectory() as tmpdirname:
-    #             model.save_pretrained(tmpdirname)
-    #             model_fa = model_class.from_pretrained(
-    #                 tmpdirname, torch_dtype=mindspore.bfloat16, attn_implementation="flash_attention_2"
-    #             )
-
-    #             model = model_class.from_pretrained(
-    #                 tmpdirname,
-    #                 torch_dtype=mindspore.bfloat16,
-    #             )
-
-    #             dummy_input = inputs_dict["input_ids"][:1]
-    #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
-    #                 dummy_input = dummy_input.to(mindspore.bfloat16)
-
-    #             dummy_attention_mask = inputs_dict.get("attention_mask", None)
-
-    #             if dummy_attention_mask is not None:
-    #                 dummy_attention_mask = dummy_attention_mask[:1]
-    #                 dummy_attention_mask[:, :-1] = 1
-    #                 dummy_attention_mask[:, -1:] = 0
-
-    #             outputs = model(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-    #             outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-
-    #             logits = outputs.hidden_states[-1]
-    #             logits_fa = outputs_fa.hidden_states[-1]
-
-    #             assert ops.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
-
-    #             other_inputs = {
-    #                 "output_hidden_states": True,
-    #             }
-    #             if dummy_attention_mask is not None:
-    #                 other_inputs["attention_mask"] = dummy_attention_mask
-
-    #             outputs = model(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-    #             outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-    #             logits = outputs.hidden_states[-1]
-    #             logits_fa = outputs_fa.hidden_states[-1]
-
-    #             assert ops.allclose(logits_fa[:-1], logits[:-1], atol=4e-2, rtol=4e-2)
-
 
 @require_mindspore
 class BarkModelIntegrationTests(unittest.TestCase):
@@ -1274,45 +1162,6 @@ class BarkModelIntegrationTests(unittest.TestCase):
         self.assertLess(
             len(output_ids_with_min_eos_p[0, :].tolist()), len(output_ids_without_min_eos_p[0, :].tolist())
         )
-
-    # @require_mindspore_gpu
-    # @slow
-    # def test_generate_end_to_end_with_offload(self):
-    #     input_ids = self.inputs
-
-    #     with no_grad():
-    #         # standard generation
-    #         output_with_no_offload = self.model.generate(**input_ids, do_sample=False, temperature=1.0)
-
-    #         torch.cuda.empty_cache()
-
-    #         memory_before_offload = torch.cuda.memory_allocated()
-    #         model_memory_footprint = self.model.get_memory_footprint()
-
-    #         # activate cpu offload
-    #         self.model.enable_cpu_offload()
-
-    #         memory_after_offload = torch.cuda.memory_allocated()
-
-    #         # checks if the model have been offloaded
-
-    #         # CUDA memory usage after offload should be near 0, leaving room to small differences
-    #         room_for_difference = 1.1
-    #         self.assertGreater(
-    #             (memory_before_offload - model_memory_footprint) * room_for_difference, memory_after_offload
-    #         )
-
-    #         # checks if device is the correct one
-    #         self.assertEqual(self.model.device.type, torch_device)
-
-    #         # checks if hooks exist
-    #         self.assertTrue(hasattr(self.model.semantic, "_hf_hook"))
-
-    #         # output with cpu offload
-    #         output_with_offload = self.model.generate(**input_ids, do_sample=False, temperature=1.0)
-
-    #     # checks if same output
-    #     self.assertListAlmostEqual(output_with_no_offload.squeeze().tolist(), output_with_offload.squeeze().tolist())
 
     def assertListAlmostEqual(self, list1, list2, tol=1e-6):
         self.assertEqual(len(list1), len(list2))

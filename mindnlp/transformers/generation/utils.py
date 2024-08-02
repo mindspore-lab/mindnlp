@@ -1335,7 +1335,6 @@ class GenerationMixin:
         # TODO joao: when we can detect `fullgraph=True` in `torch.compile` (https://github.com/pytorch/pytorch/pull/120400)
         # replace `is_torchdynamo_compiling` by the corresponding check. As it is, we are being too restrictive with
         # the parameterization in `fullgraph=False` so as to enable `fullgraph=True`.
-
         # priority: `generation_config` argument > `model.generation_config` (the default generation config)
         using_model_generation_config = False
         if generation_config is None:
@@ -1347,7 +1346,7 @@ class GenerationMixin:
             # NOTE: `torch.compile` can't compile `hash`, this legacy support is disabled with compilation.
             if (
                 self.generation_config._from_model_config
-                # and self.generation_config._original_object_hash == hash(self.generation_config)
+                and self.generation_config._original_object_hash == hash(self.generation_config)
                 and self.config._has_non_default_generation_parameters()
             ):
                 new_generation_config = GenerationConfig.from_model_config(self.config)
@@ -2955,7 +2954,6 @@ class GenerationMixin:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(next_token_scores, dim=-1)
-
             # finished sentences should have their next token be a padding token
             if has_eos_stopping_criteria:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
@@ -3936,7 +3934,6 @@ class GenerationMixin:
         this_peer_finished = False
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
             cur_len = input_ids.shape[-1]
-
             #  1. Fetch candidate sequences from a `CandidateGenerator`
             candidate_input_ids, candidate_logits = candidate_generator.get_candidates(input_ids)
 
@@ -4006,8 +4003,10 @@ class GenerationMixin:
                     selected_tokens = ops.argmax(new_logits, dim=-1)
 
                 candidate_new_tokens = candidate_input_ids[:, cur_len:]
-                n_matches = (ops.cumsum((~(candidate_new_tokens == selected_tokens[:, :-1])), dim=-1) < 1).sum()
-
+                if 0 in candidate_new_tokens.shape:
+                    n_matches = 0
+                else:
+                    n_matches = (ops.cumsum((~(candidate_new_tokens == selected_tokens[:, :-1])), dim=-1) < 1).sum()
                 # Ensure we don't generate beyond max_len or an EOS token
                 if is_done_candidate and n_matches == candidate_length:
                     n_matches -= 1
@@ -4085,7 +4084,6 @@ class GenerationMixin:
                 is_encoder_decoder=self.config.is_encoder_decoder,
                 num_new_tokens=n_matches + 1,
             )
-
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
             this_peer_finished = unfinished_sequences.max() == 0
 
@@ -4142,9 +4140,9 @@ def _speculative_sampling(
     # Gets the probabilities from the logits. q_i and p_i denote the assistant and model probabilities of the tokens
     # selected by the assistant, respectively.
     q = ops.softmax(candidate_logits, dim=-1)
-    q_i = q[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze(0, 1)
+    q_i = q[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
     p = ops.softmax(new_logits, dim=-1)
-    p_i = p[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze(0, 1)
+    p_i = p[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
     probability_ratio = p_i / q_i
 
     # When probability_ratio > 1 (i.e. q_i(x) < p_i(x), or "assistant probability of the candidate token is smaller
@@ -4152,7 +4150,7 @@ def _speculative_sampling(
     # (= keep with p = probability_ratio). Keep all the tokens until the first rejection
     r_i = ops.rand_like(probability_ratio)
     is_accepted = r_i <= probability_ratio
-    n_matches = ((~is_accepted).cumsum(dim=-1) < 1).sum()  # this is `n` in algorithm 1
+    n_matches = (ops.cumsum((~is_accepted), dim=-1) < 1).sum()  # this is `n` in algorithm 1
 
     # Ensure we don't generate beyond max_len or an EOS token (not in algorithm 1, but needed for correct behavior)
     if is_done_candidate and n_matches == candidate_length:
@@ -4394,13 +4392,13 @@ def _relative_top_filter(
     Reference: https://github.com/XiangLi1999/ContrastiveDecoding/blob/170e9142e92159c1237d731e240f5eb14aabf428/transformers/src/transformers/generation_logits_process.py#L235
     Apply filtering to only keep tokens with a probability above a certain threshold. The threshold is defined as `relative_top` * max probability in the distribution.
     """
-    scores_normalized = scores.log_softmax(dim=-1)
-    baseline_scores_normalized = baseline_scores.log_softmax(dim=-1)
+    scores_normalized = F.log_softmax(scores, dim=-1)
+    baseline_scores_normalized = F.log_softmax(baseline_scores, dim=-1)
     sorted_logits, sorted_indices = ops.sort(scores_normalized, descending=True)
     min_thresh = sorted_logits[..., min_tokens_to_keep - 1]
-    probs_max = ops.max(scores_normalized, dim=-1).values
+    probs_max = ops.max(scores_normalized, dim=-1)[0]
     probs_thresh = probs_max + np.log(relative_top)
-    probs_thresh = ops.min(min_thresh, probs_thresh)
+    probs_thresh = ops.minimum(min_thresh, probs_thresh)
     probs_thresh = probs_thresh.unsqueeze(-1)
     baseline_scores_normalized[scores_normalized < probs_thresh] = base_filter_value
     scores_normalized[scores_normalized < probs_thresh] = filter_value

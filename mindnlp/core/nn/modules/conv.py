@@ -2,11 +2,13 @@
 """conv"""
 import math
 from typing import Optional, Tuple, Union, List
-from mindspore import ops, Tensor, Parameter
-from mindspore.common.initializer import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
+from mindspore import Tensor, Parameter, ops as mops
 from .module import Module
 from ..common_types import _size_2_t, _size_1_t
 from ._utils import _single, _pair, _reverse_repeat_tuple
+from .. import init
+from ... import ops
+
 
 class _ConvNd(Module):
 
@@ -92,15 +94,28 @@ class _ConvNd(Module):
             self._reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
 
         if transposed:
-            self.weight = Parameter(initializer(HeUniform(math.sqrt(5)), (in_channels, out_channels // groups, *kernel_size)))
+            self.weight = Parameter(ops.empty(
+                (in_channels, out_channels // groups, *kernel_size), **factory_kwargs))
         else:
-            self.weight = Parameter(initializer(HeUniform(math.sqrt(5)), (out_channels, in_channels // groups, *kernel_size)))
+            self.weight = Parameter(ops.empty(
+                (out_channels, in_channels // groups, *kernel_size), **factory_kwargs))
         if bias:
-            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
-            bound = 1 / math.sqrt(fan_in)
-            self.bias = Parameter(initializer(Uniform(bound), (out_channels,)))
+            self.bias = Parameter(ops.empty(out_channels, **factory_kwargs))
         else:
             self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        # Setting a=sqrt(5) in kaiming_uniform is the same as initializing with
+        # uniform(-1/sqrt(k), 1/sqrt(k)), where k = weight.size(1) * prod(*kernel_size)
+        # For more details see: https://github.com/pytorch/pytorch/issues/15314#issuecomment-477448573
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            if fan_in != 0:
+                bound = 1 / math.sqrt(fan_in)
+                init.uniform_(self.bias, -bound, bound)
 
     def extra_repr(self):
         s = ('{in_channels}, {out_channels}, kernel_size={kernel_size}'
@@ -179,7 +194,7 @@ class Conv1d(_ConvNd):
         if self.padding_mode != 'zeros':
             pad_mode = 'valid'
             pad = (0,) * 4
-        self.conv2d = ops.Conv2D(out_channel=self.out_channels,
+        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
                                 kernel_size=(1,) + self.kernel_size,
                                 mode=1,
                                 pad_mode=pad_mode,
@@ -195,7 +210,7 @@ class Conv1d(_ConvNd):
         output = self.conv2d(input, self.weight.expand_dims(2))
 
         if self.bias is not None:
-            output = ops.bias_add(output, self.bias)
+            output = mops.bias_add(output, self.bias)
 
         output = output.squeeze(2)
         return output
@@ -235,7 +250,7 @@ class Conv2d(_ConvNd):
             pad_mode = padding
             pad = (0,) * 4
 
-        self.conv2d = ops.Conv2D(out_channel=self.out_channels,
+        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
                                 kernel_size=self.kernel_size,
                                 mode=1,
                                 pad_mode=pad_mode,
@@ -249,7 +264,7 @@ class Conv2d(_ConvNd):
             input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
         output = self.conv2d(input, self.weight)
         if self.bias is not None:
-            output = ops.bias_add(output, self.bias)
+            output = mops.bias_add(output, self.bias)
         return output
 
 
@@ -478,7 +493,7 @@ class ConvTranspose1d(_ConvTransposeNd):
             pad = (0,) * 4
 
         # cause Conv2DTranspose's out_channel refers to Conv2D's out_channel.
-        self.conv2d_transpose = ops.Conv2DTranspose(out_channel=self.out_channels,
+        self.conv2d_transpose = mops.Conv2DTranspose(out_channel=self.out_channels,
                                                     kernel_size=(1,) + self.kernel_size,
                                                     mode=1,
                                                     pad_mode=pad_mode,
@@ -500,14 +515,14 @@ class ConvTranspose1d(_ConvTransposeNd):
         output_padding = self._output_padding(
             input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
             num_spatial_dims, self.dilation)  # type: ignore[arg-type]
-        input = ops.expand_dims(input, 2)
+        input = mops.expand_dims(input, 2)
         n, _, h, w = input.shape
         conv2d_trans_ret = self.conv2d_transpose(input, self.weight.expand_dims(2),
                                                  (n, self.out_channels,
                                                   h + self.h_add,
                                                   w * self.stride[0] + self.w_add))
         if self.bias is not None:
-            conv2d_trans_ret = ops.bias_add(conv2d_trans_ret, self.bias)
+            conv2d_trans_ret = mops.bias_add(conv2d_trans_ret, self.bias)
 
         conv2d_trans_ret = conv2d_trans_ret.squeeze(2)
         conv2d_trans_ret = ops.pad(conv2d_trans_ret, (0,) + output_padding, value=0.)
@@ -636,7 +651,7 @@ class ConvTranspose2d(_ConvTransposeNd):
             pad = (0,) * 4
 
         # cause Conv2DTranspose's out_channel refers to Conv2D's out_channel.
-        self.conv2d_transpose = ops.Conv2DTranspose(out_channel=in_channels,
+        self.conv2d_transpose = mops.Conv2DTranspose(out_channel=in_channels,
                                                     kernel_size=kernel_size,
                                                     mode=1,
                                                     pad_mode=pad_mode,
@@ -666,7 +681,7 @@ class ConvTranspose2d(_ConvTransposeNd):
                                                   h * self.stride[0] + self.h_add,
                                                   w * self.stride[1] + self.w_add))
         if self.bias is not None:
-            conv2d_trans_ret = ops.bias_add(conv2d_trans_ret, self.bias)
+            conv2d_trans_ret = mops.bias_add(conv2d_trans_ret, self.bias)
 
         conv2d_trans_ret = ops.pad(conv2d_trans_ret, output_padding, value=0.)
 
