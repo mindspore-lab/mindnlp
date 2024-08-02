@@ -26,6 +26,7 @@ from typing import Optional, Tuple, Union
 # from torch.nn import LayerNorm
 import numpy as np
 import mindspore
+mindspore.set_context(pynative_synchronize=True)
 from mindspore import Tensor
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import LayerNorm
@@ -71,11 +72,13 @@ def ngram_attention_bias(sequence_length, ngram, dtype):
     left_block = (
         ops.ones((ngram, sequence_length, sequence_length), dtype=dtype) * finfo(dtype, 'min')
     )
-    right_block = left_block.detach().clone()
+    right_block = left_block.copy()
     # create bias
     for stream_idx in range(ngram):
-        right_block[stream_idx].fill_diagonal_(0, wrap=False)
-        left_block[stream_idx].triu_(-stream_idx + 1)
+        # right_block[stream_idx].fill_diagonal_(0, wrap=False)
+        right_block[stream_idx] = right_block[stream_idx].fill_diagonal(0.0, wrap=False)
+        # left_block[stream_idx].triu_(-stream_idx + 1)
+        left_block[stream_idx] = left_block[stream_idx].triu(-stream_idx + 1)
 
     left_block[:, :, 0] = 0
     return ops.cat([left_block, right_block], dim=2)
@@ -113,12 +116,12 @@ def compute_all_stream_relative_buckets(num_buckets, max_distance, position_ids)
     This function computes both main and predict relative position buckets. For more detail, see paper.
     """
     # main stream
-    main_stream_relative_positions = position_ids.unsqueeze(1).repeat((1, position_ids.shape[-1], 1))
+    main_stream_relative_positions = position_ids.unsqueeze(1).tile((1, position_ids.shape[-1], 1))
     main_stream_relative_positions = main_stream_relative_positions - position_ids.unsqueeze(-1)
 
     # predicting stream
     predicting_stream_relative_positions = ops.cat((position_ids - 1, position_ids), dim=-1).unsqueeze(1)
-    predicting_stream_relative_positions = predicting_stream_relative_positions.repeat((1, position_ids.shape[-1], 1))
+    predicting_stream_relative_positions = predicting_stream_relative_positions.tile((1, position_ids.shape[-1], 1))
     predicting_stream_relative_positions = predicting_stream_relative_positions - position_ids.unsqueeze(-1)
 
     # get both position buckets
@@ -454,12 +457,12 @@ class ProphetNetPreTrainedModel(PreTrainedModel):
 
         # shift inputs to the right
         shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-        shifted_input_ids[..., 1:] = input_ids[..., :-1].clone()
+        shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
         shifted_input_ids[..., 0] = decoder_start_token_id
 
         assert pad_token_id is not None, "self.model.config.pad_token_id has to be defined."
         # replace possible -100 values in labels by `pad_token_id`
-        shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+        shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
         assert ops.all(shifted_input_ids >= 0).item(), "Verify that `shifted_input_ids` has only positive values"
 
@@ -537,7 +540,7 @@ class ProphetNetAttention(nn.Module):
         self.out_proj = nn.Linear(hidden_size, hidden_size)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_attn_heads, self.head_dim).transpose(1, 2)
+        return tensor.view(bsz, seq_len, self.num_attn_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
         self,
@@ -588,7 +591,7 @@ class ProphetNetAttention(nn.Module):
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
         src_len = key_states.shape[2]
-        attn_weights = ops.einsum("bsij,bsjk->bsik", query_states, key_states.transpose(2, 3))
+        attn_weights = ops.einsum("bsij,bsjk->bsik", query_states, key_states.swapaxes(2, 3))
         expected_shape = (batch_size, self.num_attn_heads, tgt_len, src_len)
         if attn_weights.shape != expected_shape:
             raise ValueError(f"Attention weights should have size {expected_shape}, but is {attn_weights.shape}")
@@ -631,7 +634,7 @@ class ProphetNetAttention(nn.Module):
         if attn_output.shape != expected_shape:
             raise ValueError(f"`attn_output` should have shape {expected_shape}, but is of shape {attn_output.shape}")
 
-        attn_output = attn_output.transpose(1, 2).reshape(batch_size, tgt_len, hidden_size)
+        attn_output = attn_output.swapaxes(1, 2).reshape(batch_size, tgt_len, hidden_size)
         attn_output = self.out_proj(attn_output)
 
         attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
@@ -692,7 +695,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         self.onnx_trace = False
 
     def _shape(self, tensor, seq_len, batch_size):
-        return tensor.view(batch_size, seq_len, self.num_attn_heads, self.head_dim).transpose(1, 2)
+        return tensor.view(batch_size, seq_len, self.num_attn_heads, self.head_dim).swapaxes(1, 2)
 
     def prepare_for_onnx_export_(self):
         self.onnx_trace = True
@@ -733,10 +736,10 @@ class ProphetNetNgramSelfAttention(nn.Module):
         value_states = value_states.view(*proj_shape)
 
         # chunk into main stream and predict stream
-        hidden_states_list = hidden_states.chunk(1 + self.ngram, dim=1)
-        query_states_list = query_states.chunk(1 + self.ngram, dim=2)
-        key_states_list = key_states.chunk(1 + self.ngram, dim=2)
-        value_states_list = value_states.chunk(1 + self.ngram, dim=2)
+        hidden_states_list = hidden_states.chunk(1 + self.ngram, axis=1)
+        query_states_list = query_states.chunk(1 + self.ngram, axis=2)
+        key_states_list = key_states.chunk(1 + self.ngram, axis=2)
+        value_states_list = value_states.chunk(1 + self.ngram, axis=2)
 
         main_hidden_states, hidden_states_predict_list = hidden_states_list[0], hidden_states_list[1:]
         main_query_states, predict_query_states_list = query_states_list[0], query_states_list[1:]
@@ -761,7 +764,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # [batch_size, number_heads, sequence_length, head_dimesion]
         # x [batch_size, number_heads, head_dimesion, sequence_length]
         # -> [batch_size, number_heads, sequence_length, sequence_length]
-        main_attn_weights = ops.einsum("bntc,bncs->bnts", main_query_states, main_key_states.transpose(2, 3))
+        main_attn_weights = ops.einsum("bntc,bncs->bnts", main_query_states, main_key_states.swapaxes(2, 3))
 
         # retrieve relative position embeddings for each layer -> see paper for more details
         main_relative_pos_embeddings = self.get_main_relative_pos_embeddings(
@@ -795,7 +798,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # -> [batch_size, number_heads, sequence_length, head_dimesion]
         main_attn_output = ops.einsum("bntc,bncs->bnts", main_attn_probs, main_value_states)
         # reshape so that num_heads dim is merged into last `head_dim` axis
-        main_attn_output = main_attn_output.transpose(1, 2).reshape(batch_size, 1, sequence_length, hidden_size)
+        main_attn_output = main_attn_output.swapaxes(1, 2).reshape(batch_size, 1, sequence_length, hidden_size)
         main_attn_output = self.out_proj(main_attn_output)
 
         # PREDICT-STREAM
@@ -856,12 +859,12 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # x [batch_size, ngram, number_heads, 2*sequence_length, head_dimesion]
         # -> [batch_size, ngram, number_heads, sequence_length, head_dimesion]
         predict_attn_output = ops.einsum(
-            "bnhts,bnhsc->bnhtc", (predict_attn_probs, predict_value_states.transpose(1, 2))
+            "bnhts,bnhsc->bnhtc", (predict_attn_probs, predict_value_states.swapaxes(1, 2))
         )
 
         # reshape so that num_heads dim is merged into last `head_dim` axis
         # [batch_size, ngram, number_heads, sequence_length, head_dimesion] -> [batch_size, ngram, sequence_length, hidden_size]
-        predict_attn_output = predict_attn_output.transpose(2, 3)
+        predict_attn_output = predict_attn_output.swapaxes(2, 3)
         predict_attn_output = predict_attn_output.reshape(batch_size, self.ngram, sequence_length, hidden_size)
         predict_attn_output = self.out_proj(predict_attn_output)
 
@@ -889,10 +892,10 @@ class ProphetNetNgramSelfAttention(nn.Module):
                 ops.arange(1, attn_weights.shape[-1] + 1)
                 .unsqueeze(0)
                 .unsqueeze(0)
-                .repeat((batch_size, sequence_length, 1))
+                .tile((batch_size, sequence_length, 1))
             )
             # [batch_size, sequence_length, sequence_length+1]
-            relative_positions = relative_positions - position_ids.unsqueeze(0).repeat((batch_size, sequence_length, 1))
+            relative_positions = relative_positions - position_ids.unsqueeze(0).tile((batch_size, sequence_length, 1))
             main_relative_position_buckets = compute_relative_buckets(
                 self.num_buckets, self.relative_max_distance, relative_positions, False
             )
@@ -906,7 +909,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # [batch_size, num_heads, sequence_length, num_buckets]
         rel_pos_embeddings = rel_pos_embeddings.reshape(attn_weights.shape[:3] + (-1,))
 
-        main_relative_position_buckets = main_relative_position_buckets.repeat((1, self.num_attn_heads, 1))
+        main_relative_position_buckets = main_relative_position_buckets.tile((1, self.num_attn_heads, 1))
         # [batch_size * num_heads * sequence_length, sequence_length]
         main_relative_position_buckets = main_relative_position_buckets.view(
             -1, main_relative_position_buckets.shape[-1]
@@ -937,16 +940,16 @@ class ProphetNetNgramSelfAttention(nn.Module):
                 ops.arange(0, key_sequence_length)
                 .unsqueeze(0)
                 .unsqueeze(0)
-                .repeat((batch_size, sequence_length, 1))
+                .tile((batch_size, sequence_length, 1))
             )
 
-            relative_positions = relative_positions - position_ids.unsqueeze(0).repeat((batch_size, sequence_length, 1))
+            relative_positions = relative_positions - position_ids.unsqueeze(0).tile((batch_size, sequence_length, 1))
             predict_relative_position_buckets = compute_relative_buckets(
                 self.num_buckets, self.relative_max_distance, relative_positions, False
             )
 
         # [batch_size, ngram, sequence_length, hidden_size]
-        hidden_states = hidden_states.transpose(1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
         rel_pos_embeddings = self.relative_pos_embeddings(hidden_states)
 
         # [batch_size, ngram, sequence_length, num_buckets, num_heads]
@@ -958,7 +961,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         rel_pos_embeddings = rel_pos_embeddings.reshape(-1, self.num_buckets)
         # [ngram, batch_size, num_heads * sequence_length, -1]
         predict_relative_position_buckets = predict_relative_position_buckets.unsqueeze(0)
-        predict_relative_position_buckets = predict_relative_position_buckets.repeat((
+        predict_relative_position_buckets = predict_relative_position_buckets.tile((
             self.ngram, 1, self.num_attn_heads, 1
         ))
         # [ngram * batch_size * num_heads * sequence_length, -1]
@@ -1178,7 +1181,7 @@ class ProphetNetEncoder(ProphetNetPreTrainedModel):
         # prepare attention mask
         if attention_mask is not None:
             extended_attention_mask = (
-                1.0 - attention_mask[:, None, None, :].repeat((1, self.config.num_encoder_attention_heads, 1, 1))
+                1.0 - attention_mask[:, None, None, :].tile((1, self.config.num_encoder_attention_heads, 1, 1))
             ) * finfo(self.dtype, 'min')
             extended_attention_mask = extended_attention_mask.to(inputs_embeds.dtype)
         else:
@@ -1369,7 +1372,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
             ), "At the moment `use_cache` is only supported for `decoder_input_ids` of length 1"
 
             ngram_hidden_states = [
-                (ngram_embeddings[ngram - 1] + predicting_stream_pos_embed).repeat((batch_size, 1, 1))
+                (ngram_embeddings[ngram - 1] + predicting_stream_pos_embed).tile((batch_size, 1, 1))
                 for ngram in range(self.ngram)
             ]
             extended_attention_mask = None
@@ -1384,7 +1387,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
         # prepare encoder attention mask
         if encoder_attention_mask is not None:
             extended_encoder_attention_mask = (
-                1.0 - encoder_attention_mask[:, None, None, :].repeat((1, self.config.num_decoder_attention_heads, 1, 1))
+                1.0 - encoder_attention_mask[:, None, None, :].tile((1, self.config.num_decoder_attention_heads, 1, 1))
             ) * finfo(self.dtype, 'min')
             extended_encoder_attention_mask = extended_encoder_attention_mask.to(inputs_embeds.dtype)
         else:
@@ -1516,13 +1519,13 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
     def compute_buffered_relative_buckets(self, position_ids):
         batch_size, sequence_length = position_ids.shape
 
-        position_ids = ops.arange(1, self.max_target_positions).repeat((1, 1))
+        position_ids = ops.arange(1, self.max_target_positions).tile((1, 1))
         main_relative_buckets, predict_relative_buckets = compute_all_stream_relative_buckets(
             self.num_buckets, self.relative_max_distance, position_ids
         )
 
         # buffer relative buckets
-        main_relative_buckets = main_relative_buckets[:, :sequence_length, :sequence_length].repeat((batch_size, 1, 1))
+        main_relative_buckets = main_relative_buckets[:, :sequence_length, :sequence_length].tile((batch_size, 1, 1))
         predict_relative_buckets = ops.cat(
             [
                 predict_relative_buckets[:, :sequence_length, :sequence_length],
@@ -1531,7 +1534,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
                 ],
             ],
             2,
-        ).repeat((batch_size, 1, 1))
+        ).tile((batch_size, 1, 1))
 
         return main_relative_buckets, predict_relative_buckets
 
@@ -1853,18 +1856,21 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
             )
 
     def _compute_loss(self, logits, labels, ignore_index=-100):
-        expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
+        # expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
+        temp = labels.new_zeros((self.config.ngram, labels.shape[0], labels.shape[1]))
+        temp = temp.fill(ignore_index)
+        expend_targets = temp
 
         for i in range(self.config.ngram):
             if i > 0 and self.disable_ngram_loss:
                 break
             expend_targets[i, :, :] = labels
 
-        logits = logits.transpose(0, 1)
+        logits = logits.swapaxes(0, 1)
         lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
-            dtype=mindspore.float32,
+            # dtype=mindspore.float32,
         )
 
         loss = F.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
@@ -2109,18 +2115,21 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
             )
 
     def _compute_loss(self, logits, labels, ignore_index=-100):
-        expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
+        # expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
+        temp = labels.new_zeros((self.config.ngram, labels.shape[0], labels.shape[1]))
+        temp = temp.fill(ignore_index)
+        expend_targets = temp
 
         for i in range(self.config.ngram):
             if i > 0 and self.disable_ngram_loss:
                 break
             expend_targets[i, :, :] = labels
 
-        logits = logits.transpose(0, 1)
+        logits = logits.swapaxes(0, 1)
         lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
-            dtype=mindspore.float32,
+            # dtype=mindspore.float32,
         )
 
         loss = F.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
