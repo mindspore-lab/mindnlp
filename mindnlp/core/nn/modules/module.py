@@ -493,6 +493,17 @@ class Module:
                                       )
                     continue
 
+                # This is used to avoid copying uninitialized parameters into
+                # non-lazy modules, since they dont have the hook to do the checks
+                # in such case, it will error when accessing the .shape attribute.
+
+                if input_param.shape != param.shape:
+                    # local shape should match the one in checkpoint
+                    error_msgs.append(f'size mismatch for {key}: copying a param with shape {input_param.shape} from checkpoint, '
+                                      f'the shape in current model is {param.shape}.')
+                    continue
+
+
                 try:
                     if assign_to_params_buffers:
                         # Shape checks are already done above
@@ -500,10 +511,10 @@ class Module:
                             if not isinstance(input_param, Parameter):
                                 input_param = Parameter(input_param, requires_grad=param.requires_grad)
                             else:
-                                input_param.requires_grad_(param.requires_grad)
+                                input_param.requires_grad = param.requires_grad
                         setattr(self, name, input_param)
                     else:
-                        param.set_data(input_param)
+                        param.assign_value(input_param)
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '
@@ -526,9 +537,12 @@ class Module:
         if strict:
             for key in state_dict.keys():
                 if key.startswith(prefix) and key != extra_state_key:
-                    input_name = key[len(prefix):]
-                    input_name = input_name.split('.', 1)[0]  # get the name of param/buffer/child
-                    if input_name not in self._modules and input_name not in local_state:
+                    input_name = key[len(prefix):].split(".", 1)
+                    # Must be Module if it have attributes
+                    if len(input_name) > 1:
+                        if input_name[0] not in self._modules:
+                            unexpected_keys.append(key)
+                    elif input_name[0] not in local_state:
                         unexpected_keys.append(key)
 
     def load_state_dict(self, state_dict: Mapping[str, Any],
@@ -654,7 +668,7 @@ class Module:
 
             >>> # xdoctest: +SKIP("undefined vars")
             >>> for param in model.parameters():
-            >>>     print(type(param), param.size())
+            >>>     print(type(param), param.shape)
             <class 'torch.Tensor'> (20L,)
             <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
 
@@ -689,7 +703,7 @@ class Module:
             >>> # xdoctest: +SKIP("undefined vars")
             >>> for name, param in self.named_parameters():
             >>>     if name in ['bias']:
-            >>>         print(param.size())
+            >>>         print(param.shape)
 
         """
         gen = self._named_members(
@@ -699,6 +713,56 @@ class Module:
 
     def parameters_and_names(self, name_prefix='', expand=True):
         return self.named_parameters(name_prefix, expand)
+
+    def buffers(self, recurse: bool = True) -> Iterator[Tensor]:
+        r"""Return an iterator over module buffers.
+
+        Args:
+            recurse (bool): if True, then yields buffers of this module
+                and all submodules. Otherwise, yields only buffers that
+                are direct members of this module.
+
+        Yields:
+            torch.Tensor: module buffer
+
+        Example::
+
+            >>> # xdoctest: +SKIP("undefined vars")
+            >>> for buf in model.buffers():
+            >>>     print(type(buf), buf.shape)
+            <class 'torch.Tensor'> (20L,)
+            <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
+
+        """
+        for _, buf in self.named_buffers(recurse=recurse):
+            yield buf
+
+
+    def named_buffers(self, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True) -> Iterator[Tuple[str, Tensor]]:
+        r"""Return an iterator over module buffers, yielding both the name of the buffer as well as the buffer itself.
+
+        Args:
+            prefix (str): prefix to prepend to all buffer names.
+            recurse (bool, optional): if True, then yields buffers of this module
+                and all submodules. Otherwise, yields only buffers that
+                are direct members of this module. Defaults to True.
+            remove_duplicate (bool, optional): whether to remove the duplicated buffers in the result. Defaults to True.
+
+        Yields:
+            (str, torch.Tensor): Tuple containing the name and buffer
+
+        Example::
+
+            >>> # xdoctest: +SKIP("undefined vars")
+            >>> for name, buf in self.named_buffers():
+            >>>     if name in ['running_var']:
+            >>>         print(buf.shape)
+
+        """
+        gen = self._named_members(
+            lambda module: module._buffers.items(),
+            prefix=prefix, recurse=recurse, remove_duplicate=remove_duplicate)
+        yield from gen
 
     def _all_buffers(self, memo=None):
         if memo is None:

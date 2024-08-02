@@ -8,7 +8,6 @@ from mindspore.common.initializer import initializer
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
-from .pointwise import div
 from .creation import arange
 
 from .creation import arange
@@ -567,6 +566,9 @@ def meshgrid(*tensors, indexing=None):
 
 # repeat_interleave
 def repeat_interleave(input, repeats, dim=None):
+    if input.dtype == mindspore.bool_:
+        input = input.int()
+        return input.repeat(repeats, dim).bool()
     return input.repeat(repeats, dim)
 
 # roll
@@ -674,7 +676,7 @@ def unfold(input, dimension, size, step):
     sizedim = shape[dimension]
 
     low_indices = arange(0, sizedim, step)
-    min_length = div(sizedim - size, step, rounding_mode="floor") + 1
+    min_length = sizedim - size // step + 1
     indices = arange(size) + low_indices[:min_length][:, None]
 
     s = [slice(None)] * rank

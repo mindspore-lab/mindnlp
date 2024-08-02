@@ -41,12 +41,12 @@ import mindspore.experimental.optim
 from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 
 from mindnlp.core import nn, ops, optim
+from ...core.serialization import safe_load_file, safe_save_file
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
-from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
