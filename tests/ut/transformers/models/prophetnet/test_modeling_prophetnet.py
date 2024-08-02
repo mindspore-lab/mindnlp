@@ -29,7 +29,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, Tensor
+    from mindspore import Tensor
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         ProphetNetDecoder,
@@ -192,13 +193,13 @@ class ProphetNetModelTester:
         model.set_train(False)
 
         # make sure that lm_labels are correctly padded from the right
-        lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
-        # lm_labels = lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
+        # lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
+        lm_labels = lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
 
         # add casaul pad token mask
-        triangular_mask = ops.tril(lm_labels.new_ones(lm_labels.shape)).logical_not() ##?
-        lm_labels.masked_fill(triangular_mask, self.pad_token_id)
-        # lm_labels = lm_labels.masked_fill(triangular_mask, self.pad_token_id)
+        triangular_mask = ops.tril(lm_labels.new_ones(lm_labels.shape)).logical_not()
+        # lm_labels.masked_fill(triangular_mask, self.pad_token_id)
+        lm_labels = lm_labels.masked_fill(triangular_mask, self.pad_token_id)
         decoder_input_ids = model._shift_right(lm_labels)
 
         for i, (decoder_input_ids_slice, lm_labels_slice) in enumerate(zip(decoder_input_ids, lm_labels)):
@@ -703,7 +704,7 @@ class ProphetNetStandaloneDecoderModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -743,10 +744,10 @@ class ProphetNetStandaloneDecoderModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
