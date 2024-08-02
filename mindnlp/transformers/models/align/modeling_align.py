@@ -19,7 +19,6 @@
 import math
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
-from functools import partial
 
 import numpy as np
 import mindspore
@@ -2209,8 +2208,7 @@ class AlignVisionModel(AlignPreTrainedModel):
 
         # Final pooling layer
         if config.pooling_type == "mean":
-            # self.pooler = nn.AvgPool2d(config.hidden_dim, ceil_mode=True)
-            self.pooler = partial(ops.mean, dim=(2,3), keepdim=True)
+            self.pooler = nn.AvgPool2d(config.hidden_dim, ceil_mode=True)
         elif config.pooling_type == "max":
             self.pooler = nn.MaxPool2d(config.hidden_dim, ceil_mode=True)
         else:

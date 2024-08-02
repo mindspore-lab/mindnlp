@@ -28,6 +28,10 @@ jobs:
         run: |
           pylint mindnlp --rcfile=.github/pylint.conf
 
+      - name: install mindspore 2.2.14
+        run: |
+          pip install mindspore==2.2.14
+
       - name: Parse comment
         id: parse_comment
         run: |

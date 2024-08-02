@@ -1,21 +1,19 @@
 # coding=utf-8
 # Copyright 2020 The HuggingFace Inc. team
-# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""Beam search"""
-from abc import ABC
+"""beam search"""
+from abc import ABC, abstractmethod
 from collections import UserDict
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -31,6 +29,8 @@ class BeamScorer(ABC):
     Abstract base class for all beam scorers that are used for [`~PreTrainedModel.beam_search`] and
     [`~PreTrainedModel.beam_sample`].
     """
+
+    @abstractmethod
     def process(
         self,
         input_ids: mindspore.Tensor,
@@ -39,25 +39,9 @@ class BeamScorer(ABC):
         next_indices: mindspore.Tensor,
         **kwargs,
     ) -> Tuple[mindspore.Tensor]:
-        r"""
-        This method processes the input data to calculate the next scores, tokens, and indices for beam search.
-        
-        Args:
-            self: The instance of the BeamScorer class.
-            input_ids (mindspore.Tensor): The input tensor containing the token IDs.
-            next_scores (mindspore.Tensor): The tensor containing the scores for the next tokens.
-            next_tokens (mindspore.Tensor): The tensor containing the next token IDs.
-            next_indices (mindspore.Tensor): The tensor containing the indices of the next tokens.
-        
-        Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the updated next tokens tensor.
-        
-        Raises:
-            NotImplementedError: This exception is raised when the method is called directly as it is an abstract
-                method and should be implemented in a subclass.
-        """
         raise NotImplementedError("This is an abstract method.")
 
+    @abstractmethod
     def finalize(
         self,
         input_ids: mindspore.Tensor,
@@ -67,27 +51,6 @@ class BeamScorer(ABC):
         max_length: int,
         **kwargs,
     ) -> mindspore.Tensor:
-        r"""
-        Finalizes the beam scoring process.
-        
-        Args:
-            self (BeamScorer): The instance of the BeamScorer class.
-            input_ids (mindspore.Tensor): The input tensor with shape (batch_size, beam_width, sequence_length)
-                containing the input token IDs.
-            next_scores (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the scores
-                for the next tokens.
-            next_tokens (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the IDs of
-                the next tokens.
-            next_indices (mindspore.Tensor): The tensor with shape (batch_size, beam_width) containing the indices
-                of the next tokens.
-            max_length (int): The maximum length of the sequence.
-            
-        Returns:
-            mindspore.Tensor: The tensor with shape (batch_size, beam_width, max_length) representing the final scores.
-        
-        Raises:
-            NotImplementedError: This exception is raised if the method is called directly as it is an abstract method.
-        """
         raise NotImplementedError("This is an abstract method.")
 
 
@@ -106,9 +69,6 @@ class BeamSearchScorer(BeamScorer):
             Batch Size of `input_ids` for which standard beam search decoding is run in parallel.
         num_beams (`int`):
             Number of beams for beam search.
-        device (`torch.device`):
-            Defines the device type (*e.g.*, `"cpu"` or `"cuda"`) on which this instance of `BeamSearchScorer` will be
-            allocated.
         length_penalty (`float`, *optional*, defaults to 1.0):
             Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to
             the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log
@@ -122,13 +82,14 @@ class BeamSearchScorer(BeamScorer):
             beam search algorithm).
         num_beam_hyps_to_keep (`int`, *optional*, defaults to 1):
             The number of beam hypotheses that shall be returned upon calling
-            [`~transformer.BeamSearchScorer.finalize`].
+            [`~transformers.BeamSearchScorer.finalize`].
         num_beam_groups (`int`, *optional*, defaults to 1):
             Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams.
             See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.
         max_length (`int`, *optional*):
             The maximum length of the sequence to be generated.
     """
+
     def __init__(
         self,
         batch_size: int,
@@ -139,30 +100,6 @@ class BeamSearchScorer(BeamScorer):
         num_beam_groups: Optional[int] = 1,
         max_length: Optional[int] = None,
     ):
-        r"""
-        Initializes a new instance of the BeamSearchScorer class.
-        
-        Args:
-            self: The object itself.
-            batch_size (int): The size of the batch.
-            num_beams (int): The number of beams to use in the beam search.
-            length_penalty (Optional[float], default=1.0): The length penalty factor to apply during beam search.
-            do_early_stopping (Optional[Union[bool, str]], default=False): Determines whether to perform early stopping
-                during beam search. Can be a boolean value or a string.
-            num_beam_hyps_to_keep (Optional[int], default=1): The number of beam hypotheses to keep.
-            num_beam_groups (Optional[int], default=1): The number of beam groups to use during beam search.
-            max_length (Optional[int]): The maximum length of the generated sequences. If not specified, there is no
-                maximum length restriction.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If the num_beams parameter is not an integer strictly greater than 1, or if num_beams is 1 and
-                do_early_stopping is not used.
-            ValueError: If the num_beam_groups parameter is not an integer smaller or equal than num_beams, or if
-                num_beams is not divisible by num_beam_groups.
-        """
         self.num_beams = num_beams
         self.length_penalty = length_penalty
         self.do_early_stopping = do_early_stopping
@@ -202,26 +139,6 @@ class BeamSearchScorer(BeamScorer):
 
     @property
     def is_done(self) -> bool:
-        r"""
-        Checks if the BeamSearchScorer instance is done.
-        
-        Args:
-            self: The instance of the BeamSearchScorer class.
-        
-        Returns:
-            bool: Returns a boolean value indicating whether the BeamSearchScorer instance is done or not.
-        
-        Raises:
-            None.
-        
-        This method returns True if the internal '_done' attribute, which represents the completion status of the
-        BeamSearchScorer instance, is set to True for all elements. Otherwise, it returns False. The '_done' attribute
-        is a container that holds the completion status of each element in the BeamSearchScorer instance.
-
-        Note:
-            The '_done' attribute is expected to be a container with elements that can be evaluated as boolean values.
-            If the '_done' attribute contains non-boolean elements, unexpected behavior may occur.
-        """
         return self._done.all()
 
     def process(
@@ -230,57 +147,36 @@ class BeamSearchScorer(BeamScorer):
         next_scores: mindspore.Tensor,
         next_tokens: mindspore.Tensor,
         next_indices: mindspore.Tensor,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[Union[int, List[int]]] = None,
+        pad_token_id: Optional[Union[int, mindspore.Tensor]] = None,
+        eos_token_id: Optional[Union[int, List[int], mindspore.Tensor]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
         group_index: Optional[int] = 0,
+        decoder_prompt_len: Optional[int] = 0,
     ) -> Dict[str, mindspore.Tensor]:
-        r"""
-        This method processes input data for beam search scoring in a BeamSearchScorer instance.
-
-        Args:
-            self: BeamSearchScorer instance.
-            input_ids (mindspore.Tensor): The input tensor containing token IDs.
-            next_scores (mindspore.Tensor): The tensor containing scores for next tokens.
-            next_tokens (mindspore.Tensor): The tensor containing the IDs of next tokens.
-            next_indices (mindspore.Tensor): The tensor containing indices of next tokens.
-            pad_token_id (Optional[int]): The ID of the padding token. Default is None.
-            eos_token_id (Optional[Union[int, List[int]]]): The ID or list of IDs indicating end-of-sequence tokens.
-                Default is None.
-            beam_indices (Optional[mindspore.Tensor]): The tensor containing beam indices. Default is None.
-            group_index (Optional[int]): The index of the group. Default is 0.
-
-        Returns:
-            Dict[str, mindspore.Tensor]: A dictionary containing the processed beam scores, tokens, and indices.
-
-        Raises:
-            ValueError: If the input batch size does not match the expected group size.
-            ValueError: If the expected group size does not match the group size used by the beam scorer.
-            ValueError: If the generated beams are greater than or equal to the specified number of beams
-                without defining eos_token_id and pad_token.
-            ValueError: If the number of generated beams is less than the specified number of beams.
-            ValueError: If an error occurs during beam search processing.
-        """
-        cur_len = input_ids.shape[-1] + 1  # add up to the length which the next_scores is calculated on
+        # add up to the length which the next_scores is calculated on (including decoder prompt)
+        cur_len = input_ids.shape[-1] + 1
         batch_size = len(self._beam_hyps) // self.num_beam_groups
 
-        if batch_size != (input_ids.shape[0] // self.group_size):
+        if not (batch_size == (input_ids.shape[0] // self.group_size)):
             if self.num_beam_groups > 1:
                 raise ValueError(
                     f"A group beam size of {input_ids.shape[0]} is used as the input, but a group beam "
                     f"size of {self.group_size} is expected by the beam scorer."
                 )
-            raise ValueError(
-                f"A beam size of {input_ids.shape[0]} is used as the input, but a beam size of "
-                f"{self.group_size} is expected by the beam scorer."
-            )
+            else:
+                raise ValueError(
+                    f"A beam size of {input_ids.shape[0]} is used as the input, but a beam size of "
+                    f"{self.group_size} is expected by the beam scorer."
+                )
 
-        next_beam_scores = ops.zeros(batch_size, self.group_size, dtype=next_scores.dtype)
-        next_beam_tokens = ops.zeros(batch_size, self.group_size, dtype=next_tokens.dtype)
-        next_beam_indices = ops.zeros(batch_size, self.group_size, dtype=next_indices.dtype)
+        next_beam_scores = ops.zeros((batch_size, self.group_size), dtype=next_scores.dtype)
+        next_beam_tokens = ops.zeros((batch_size, self.group_size), dtype=next_tokens.dtype)
+        next_beam_indices = ops.zeros((batch_size, self.group_size), dtype=next_indices.dtype)
 
-        if isinstance(eos_token_id, int):
-            eos_token_id = [eos_token_id]
+        if eos_token_id is not None and not isinstance(eos_token_id, mindspore.Tensor):
+            if isinstance(eos_token_id, int):
+                eos_token_id = [eos_token_id]
+            eos_token_id = mindspore.tensor(eos_token_id)
 
         for batch_idx in range(batch_size):
             batch_group_idx = batch_idx * self.num_beam_groups + group_index
@@ -302,7 +198,7 @@ class BeamSearchScorer(BeamScorer):
             ):
                 batch_beam_idx = batch_idx * self.group_size + next_index
                 # add to generated hypotheses if end of sentence
-                if (eos_token_id is not None) and (next_token.asnumpy().item() in eos_token_id):
+                if (eos_token_id is not None) and (next_token.item() in eos_token_id):
                     # if beam_token does not belong to top num_beams tokens, it should not be added
                     is_beam_token_worse_than_top_num_beams = beam_token_rank >= self.group_size
                     if is_beam_token_worse_than_top_num_beams:
@@ -314,9 +210,10 @@ class BeamSearchScorer(BeamScorer):
                         beam_index = None
 
                     self._beam_hyps[batch_group_idx].add(
-                        input_ids[batch_beam_idx].copy(),
-                        next_score.asnumpy().item(),
+                        input_ids[batch_beam_idx],
+                        next_score.item(),
                         beam_indices=beam_index,
+                        generated_len=cur_len - decoder_prompt_len,
                     )
                 else:
                     # add next predicted token since it is not eos_token
@@ -337,7 +234,7 @@ class BeamSearchScorer(BeamScorer):
 
             # Check if we are done so that we can save a pad step if all(done)
             self._done[batch_group_idx] = self._done[batch_group_idx] or self._beam_hyps[batch_group_idx].is_done(
-                next_scores[batch_idx].max().asnumpy().item(), cur_len
+                next_scores[batch_idx].max().item(), cur_len, decoder_prompt_len
             )
 
         return UserDict(
@@ -355,37 +252,17 @@ class BeamSearchScorer(BeamScorer):
         final_beam_tokens: mindspore.Tensor,
         final_beam_indices: mindspore.Tensor,
         max_length: int,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[Union[int, List[int]]] = None,
+        pad_token_id: Optional[Union[int, mindspore.Tensor]] = None,
+        eos_token_id: Optional[Union[int, List[int], mindspore.Tensor]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
+        decoder_prompt_len: Optional[int] = 0,
     ) -> Tuple[mindspore.Tensor]:
-        r"""
-        This method finalizes the beam search process by selecting the best beam hypotheses and forwarding the
-        final output sequences.
-
-        Args:
-            self: The instance of the class BeamSearchScorer.
-            input_ids (mindspore.Tensor): The input tensor containing token IDs.
-            final_beam_scores (mindspore.Tensor): The final scores of the selected beam hypotheses.
-            final_beam_tokens (mindspore.Tensor): The token IDs of the final beam hypotheses.
-            final_beam_indices (mindspore.Tensor): The indices of the final beam hypotheses.
-            max_length (int): The maximum length of the output sequences.
-            pad_token_id (Optional[int]): The token ID used for padding, default is None.
-            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the end of
-                sequence, default is None.
-            beam_indices (Optional[mindspore.Tensor]): The indices of the beam hypotheses, default is None.
-
-        Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the final output sequences ('sequences' key), the scores of
-                the sequences ('sequence_scores' key), and the indices of the beam hypotheses ('beam_indices' key).
-
-        Raises:
-            ValueError: Raised if 'pad_token_id' is not defined when necessary.
-        """
         batch_size = len(self._beam_hyps) // self.num_beam_groups
 
-        if isinstance(eos_token_id, int):
-            eos_token_id = [eos_token_id]
+        if eos_token_id is not None and not isinstance(eos_token_id, mindspore.Tensor):
+            if isinstance(eos_token_id, int):
+                eos_token_id = [eos_token_id]
+            eos_token_id = mindspore.tensor(eos_token_id)
 
         # finalize all open beam hypotheses and add to generated hypotheses
         for batch_group_idx, beam_hyp in enumerate(self._beam_hyps):
@@ -396,10 +273,11 @@ class BeamSearchScorer(BeamScorer):
             # beam hypothesis class automatically keeps the best beams
             for index_per_group in range(self.group_size):
                 batch_beam_idx = batch_group_idx * self.group_size + index_per_group
-                final_score = final_beam_scores[batch_beam_idx].asnumpy().item()
+                final_score = final_beam_scores[batch_beam_idx].item()
                 final_tokens = input_ids[batch_beam_idx]
                 beam_index = beam_indices[batch_beam_idx] if beam_indices is not None else None
-                beam_hyp.add(final_tokens, final_score, beam_indices=beam_index)
+                generated_len = final_tokens.shape[-1] - decoder_prompt_len
+                beam_hyp.add(final_tokens, final_score, beam_indices=beam_index, generated_len=generated_len)
 
         # select the best hypotheses
         sent_lengths = ops.zeros(batch_size * self.num_beam_hyps_to_keep, dtype=input_ids.dtype)
@@ -428,16 +306,17 @@ class BeamSearchScorer(BeamScorer):
                 best_scores[i * self.num_beam_hyps_to_keep + j] = best_score
 
         # prepare for adding eos
-        sent_lengths_max = sent_lengths.max().asnumpy().item() + 1
+        sent_lengths_max = sent_lengths.max().item() + 1
         sent_max_len = min(sent_lengths_max, max_length) if max_length is not None else sent_lengths_max
         decoded: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
+
         if len(best_indices) > 0 and best_indices[0] is not None:
             indices: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
         else:
             indices = None
 
         # shorter batches are padded if needed
-        if sent_lengths.min().asnumpy().item() != sent_lengths.max().asnumpy().item():
+        if sent_lengths.min().item() != sent_lengths.max().item():
             if pad_token_id is None:
                 raise ValueError("`pad_token_id` has to be defined")
             decoded = decoded.fill(pad_token_id)
@@ -450,7 +329,7 @@ class BeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = ops.stack(best_idx)
+                indices[i, : len(best_idx)] = best_idx
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id
@@ -469,6 +348,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
     r"""
     [`BeamScorer`] implementing constrained beam search decoding.
 
+
     Args:
         batch_size (`int`):
             Batch Size of `input_ids` for which standard beam search decoding is run in parallel.
@@ -477,9 +357,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         constraints (`List[Constraint]`):
             A list of positive constraints represented as `Constraint` objects that must be fulfilled in the generation
             output. For more information, the documentation of [`Constraint`] should be read.
-        device (`torch.device`):
-            Defines the device type (*e.g.*, `"cpu"` or `"cuda"`) on which this instance of `BeamSearchScorer` will be
-            allocated.
         length_penalty (`float`, *optional*, defaults to 1.0):
             Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to
             the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log
@@ -493,13 +370,14 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             beam search algorithm).
         num_beam_hyps_to_keep (`int`, *optional*, defaults to 1):
             The number of beam hypotheses that shall be returned upon calling
-            [`~transformer.BeamSearchScorer.finalize`].
+            [`~transformers.BeamSearchScorer.finalize`].
         num_beam_groups (`int`, *optional*, defaults to 1):
             Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams.
             See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.
         max_length (`int`, *optional*):
             The maximum length of the sequence to be generated.
     """
+
     def __init__(
         self,
         batch_size: int,
@@ -511,39 +389,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         num_beam_groups: Optional[int] = 1,
         max_length: Optional[int] = None,
     ):
-        r"""
-        Initializes an instance of the ConstrainedBeamSearchScorer class.
-
-        Args:
-            self: The instance of the class.
-            batch_size (int): The number of examples in a batch.
-            num_beams (int): The number of beams to use for beam search.
-            constraints (List[Constraint]): A list of constraints to be applied during beam search.
-            length_penalty (Optional[float], default=1.0): The length penalty to be applied during beam search.
-            do_early_stopping (Optional[Union[bool, str]], default=False): Whether to perform early stopping during beam search.
-            num_beam_hyps_to_keep (Optional[int], default=1): The number of beam hypotheses to keep during beam search.
-            num_beam_groups (Optional[int], default=1): The number of beam groups to use during beam search.
-            max_length (Optional[int], default=None): The maximum length of output sequences.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If num_beams is not an integer strictly greater than 1 or if num_beam_groups is not an integer
-                smaller or equal than num_beams or if num_beam_groups is not divisible by num_beams.
-
-        Note:
-            - For `num_beams` == 1, it is recommended to use `greedy_search` instead.
-            - The parameter `constraints` is a list of constraints that should be satisfied by the generated sequences.
-            - The parameter `length_penalty` is a scalar value that affects the length normalization penalty
-            during beam search.
-            - The parameter `do_early_stopping` determines whether beam search should stop early if all beam hypotheses
-            have reached the end token.
-            - The parameter `num_beam_hyps_to_keep` specifies the number of beam hypotheses to keep during beam search.
-            - The parameter `num_beam_groups` determines the number of beam groups to use during beam search.
-            - The parameter `max_length` specifies the maximum length of the output sequences.
-            - The method initializes internal variables and objects required for beam search.
-        """
         self.num_beams = num_beams
         self.length_penalty = length_penalty
         self.do_early_stopping = do_early_stopping
@@ -578,53 +423,12 @@ class ConstrainedBeamSearchScorer(BeamScorer):
 
     @property
     def is_done(self) -> bool:
-        r"""
-        Method to check if the ConstrainedBeamSearchScorer instance has completed processing.
-
-        Args:
-            self (ConstrainedBeamSearchScorer): The instance of ConstrainedBeamSearchScorer on which the method is called.
-                This parameter is required to access the internal state of the scorer.
-
-        Returns:
-            bool: Returns a boolean value indicating whether the processing is completed (True) or not (False).
-                True if all processing is done, False otherwise.
-
-        Raises:
-            None.
-        """
         return self._done.all()
 
     def make_constraint_states(self, n):
-        r"""
-        Generates a list of constraint states for a ConstrainedBeamSearchScorer object.
-
-        Args:
-            self (ConstrainedBeamSearchScorer): The instance of the ConstrainedBeamSearchScorer class.
-            n (int): The number of constraint states to generate.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         return [ConstraintListState([constraint.copy() for constraint in self.constraints]) for _ in range(n)]
 
     def check_completes_constraints(self, sequence):
-        r"""
-        This method checks if the given sequence completes constraints in the ConstrainedBeamSearchScorer class.
-
-        Args:
-            self (ConstrainedBeamSearchScorer): The instance of the ConstrainedBeamSearchScorer class.
-            sequence (list): A list representing the input sequence to be checked for completing constraints.
-
-        Returns:
-            None: This method does not return any value explicitly.
-                It updates the state of the ConstrainedBeamSearchScorer instance.
-
-        Raises:
-            None.
-        """
         new_state = self.make_constraint_states(1)[0]
         new_state.reset(sequence)
         return new_state.completed
@@ -636,9 +440,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         next_tokens: mindspore.Tensor,
         next_indices: mindspore.Tensor,
         scores_for_all_vocab: mindspore.Tensor,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[Union[int, List[int]]] = None,
+        pad_token_id: Optional[Union[int, mindspore.Tensor]] = None,
+        eos_token_id: Optional[Union[int, List[int], mindspore.Tensor]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
+        decoder_prompt_len: Optional[int] = 0,
     ) -> Tuple[mindspore.Tensor]:
         r"""
         Args:
@@ -663,37 +468,45 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
             beam_indices (`mindspore.Tensor`, *optional*):
                 Beam indices indicating to which beam hypothesis each token correspond.
-
-        Returns:
-            `UserDict`:
-                A dictionary composed of the fields as defined above:
+            decoder_prompt_len (`int`, *optional*):
+                The length of prompt that is included in the input to decoder.
+        Return:
+            `UserDict`: A dictionary composed of the fields as defined above:
 
                 - **next_beam_scores** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Updated scores of
-                all non-finished beams.
+                  all
+                non-finished beams.
+
                 - **next_beam_tokens** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Next tokens to be
-                added to the non-finished beam_hypotheses.
+                  added
+                to the non-finished beam_hypotheses.
                 - **next_beam_indices** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Beam indices
                 indicating to which beam the next tokens shall be added.
         """
-        cur_len = input_ids.shape[-1] + 1  # add up to the length which the next_scores is calculated on
+
+        # add up to the length which the next_scores is calculated on (including decoder prompt)
+        cur_len = input_ids.shape[-1] + 1
         batch_size = len(self._beam_hyps)
-        if batch_size != (input_ids.shape[0] // self.group_size):
+        if not (batch_size == (input_ids.shape[0] // self.group_size)):
             if self.num_beam_groups > 1:
                 raise ValueError(
                     f"A group beam size of {input_ids.shape[0]} is used as the input, but a group beam "
                     f"size of {self.group_size} is expected by the beam scorer."
                 )
-            raise ValueError(
-                f"A beam size of {input_ids.shape[0]} is used as the input, but a beam size of "
-                f"{self.group_size} is expected by the beam scorer."
-            )
+            else:
+                raise ValueError(
+                    f"A beam size of {input_ids.shape[0]} is used as the input, but a beam size of "
+                    f"{self.group_size} is expected by the beam scorer."
+                )
 
-        next_beam_scores = ops.zeros(batch_size, self.group_size, dtype=next_scores.dtype)
-        next_beam_tokens = ops.zeros(batch_size, self.group_size, dtype=next_tokens.dtype)
-        next_beam_indices = ops.zeros(batch_size, self.group_size, dtype=next_indices.dtype)
+        next_beam_scores = ops.zeros((batch_size, self.group_size), dtype=next_scores.dtype)
+        next_beam_tokens = ops.zeros((batch_size, self.group_size), dtype=next_tokens.dtype)
+        next_beam_indices = ops.zeros((batch_size, self.group_size), dtype=next_indices.dtype)
 
-        if isinstance(eos_token_id, int):
-            eos_token_id = [eos_token_id]
+        if eos_token_id is not None and not isinstance(eos_token_id, mindspore.Tensor):
+            if isinstance(eos_token_id, int):
+                eos_token_id = [eos_token_id]
+            eos_token_id = mindspore.tensor(eos_token_id)
 
         for batch_idx, beam_hyp in enumerate(self._beam_hyps):
             if self._done[batch_idx]:
@@ -714,13 +527,13 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             ):
                 batch_beam_idx = batch_idx * self.group_size + next_index
                 # add to generated hypotheses if end of sentence
-                if (eos_token_id is not None) and (next_token.asnumpy().item() in eos_token_id):
+                if (eos_token_id is not None) and (next_token.item() in eos_token_id):
                     # if beam_token does not belong to top num_beams tokens, it should not be added
                     is_beam_token_worse_than_top_num_beams = beam_token_rank >= self.group_size
                     if is_beam_token_worse_than_top_num_beams:
                         continue
 
-                    completes_constraint = self.check_completes_constraints(input_ids[batch_beam_idx].asnumpy().tolist())
+                    completes_constraint = self.check_completes_constraints(input_ids[batch_beam_idx].tolist())
                     if completes_constraint:
                         if beam_indices is not None:
                             beam_index = beam_indices[batch_beam_idx]
@@ -729,9 +542,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                             beam_index = None
 
                         beam_hyp.add(
-                            input_ids[batch_beam_idx].clone(),
-                            next_score.asnumpy().item(),
+                            input_ids[batch_beam_idx],
+                            next_score.item(),
                             beam_indices=beam_index,
+                            generated_len=cur_len - decoder_prompt_len,
                         )
                 else:
                     # add next predicted token since it is not eos_token
@@ -765,7 +579,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
 
             # Check if we are done so that we can save a pad step if all(done)
             self._done[batch_idx] = self._done[batch_idx] or beam_hyp.is_done(
-                next_scores[batch_idx].max().asnumpy().item(), cur_len
+                next_scores[batch_idx].max().item(), cur_len, decoder_prompt_len
             )
 
         return UserDict(
@@ -786,27 +600,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         sent_beam_indices: mindspore.Tensor,
         push_progress: bool = False,
     ):
-        r"""
-        This method performs a step in the constrained beam search process to generate new sequences based on
-        the input constraints.
-
-        Args:
-            self: The instance of the ConstrainedBeamSearchScorer class.
-            batch_idx (int): The index of the batch being processed.
-            input_ids (mindspore.Tensor): The input token ids for the current batch.
-            vocab_scores (mindspore.Tensor): The scores for the vocabulary tokens.
-            sent_beam_scores (mindspore.Tensor): The scores of the current beam hypotheses.
-            sent_beam_tokens (mindspore.Tensor): The tokens of the current beam hypotheses.
-            sent_beam_indices (mindspore.Tensor): The indices of the current beam hypotheses.
-            push_progress (bool, optional): A flag indicating whether to push progress. Defaults to False.
-
-        Returns:
-            None: This method does not return any value. Instead, it updates the sent_beam_scores, sent_beam_tokens,
-                and sent_beam_indices in place.
-
-        Raises:
-            None.
-        """
         # sent_beam_tokens are the next {num_beams} number of tokens that are under consideration for this beam
         # (candidate next tokens)
 
@@ -826,7 +619,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         sidx, eidx = batch_idx * orig_len, (batch_idx + 1) * orig_len
         this_batch_input_ids = input_ids[sidx:eidx]
         this_batch_token_scores = vocab_scores[sidx:eidx]
-        full_hypotheses = ops.cat((input_ids[sent_beam_indices], sent_beam_tokens.unsqueeze(-1)), dim=-1)
+        full_hypotheses = ops.cat((input_ids[sent_beam_indices], sent_beam_tokens.long().unsqueeze(-1)), dim=-1)
 
         # need to make new hypothesis that advance the constraints
         track_new = {
@@ -845,19 +638,19 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             # hypotheses.
 
             topk_state = topk_contraint_states[seq_idx]
-            topk_state.reset(full_hypotheses[seq_idx].asnumpy().tolist())
+            topk_state.reset(full_hypotheses[seq_idx].tolist())
 
             advance_state = advance_constraint_states[seq_idx]
-            advance_state.reset(pre_seq.asnumpy().tolist())
+            advance_state.reset(pre_seq.tolist())
 
             if not advance_state.completed:
                 advance_tokens = mindspore.Tensor(advance_state.advance())
                 for advance_token in advance_tokens:
                     # since adding each `advance_token` leads to a different hypothesis, create new state instance.
                     new_state = advance_state.copy(stateful=True)
-                    new_state.add(advance_token.asnumpy().tolist())
+                    new_state.add(advance_token.tolist())
 
-                    advance_seq = ops.cat((pre_seq, advance_token.unsqueeze(0)), -1).asnumpy().tolist()
+                    advance_seq = ops.cat((pre_seq, advance_token.unsqueeze(0)), -1).tolist()
                     if advance_seq not in track_new["new_seqs"]:
                         # prevent duplicates, which are basically bound to happen in this process.
                         track_new["new_seqs"].append(advance_seq)
@@ -890,7 +683,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
 
                 advance_state = advance_constraint_states[seq_idx]
 
-                advance_seq = advance_seq.asnumpy().tolist()
+                advance_seq = advance_seq.tolist()
 
                 advance_state.reset(advance_seq)
                 if advance_seq not in track_new["new_seqs"]:
@@ -907,12 +700,12 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             new_scores = ops.stack(track_new["new_scores"])
 
             all_states = topk_contraint_states + track_new["new_states"]
-            all_tokens = ops.cat((sent_beam_tokens, new_tokens), -1)
+            all_tokens = ops.cat((sent_beam_tokens.long(), new_tokens), -1)
             all_scores = ops.cat((sent_beam_scores, new_scores), -1)
             all_banks = mindspore.tensor([one.get_bank() for one in all_states])
 
             zipped = all_banks * 100 + all_scores
-            indices = zipped.sort(descending=True)[1]
+            indices = ops.sort(zipped, descending=True)[1]
             sorted_banks = all_banks[indices]
 
             # Then we end up with {sorted among bank C}, {sorted among bank C-1}, ..., {sorted among bank 0}
@@ -944,35 +737,17 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         final_beam_tokens: mindspore.Tensor,
         final_beam_indices: mindspore.Tensor,
         max_length: int,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[Union[int, List[int]]] = None,
+        pad_token_id: Optional[Union[int, mindspore.Tensor]] = None,
+        eos_token_id: Optional[Union[int, List[int], mindspore.Tensor]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
+        decoder_prompt_len: Optional[int] = 0,
     ) -> Tuple[mindspore.Tensor]:
-        r"""
-        This method finalizes the beam search process in the ConstrainedBeamSearchScorer class.
-
-        Args:
-            self: The instance of the class.
-            input_ids (mindspore.Tensor): The input tensor containing token IDs.
-            final_beam_scores (mindspore.Tensor): The final scores of the beams.
-            final_beam_tokens (mindspore.Tensor): The final tokens of the beams.
-            final_beam_indices (mindspore.Tensor): The final indices of the beams.
-            max_length (int): The maximum length of the output sequences.
-            pad_token_id (Optional[int]): The token ID used for padding. Default is None.
-            eos_token_id (Optional[Union[int, List[int]]): The token ID or list of token IDs representing the
-                end of sequence. Default is None.
-            beam_indices (Optional[mindspore.Tensor]): The indices of the beams. Default is None.
-
-        Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the final sequences, sequence scores, and beam indices.
-
-        Raises:
-            ValueError: Raised if 'pad_token_id' is not defined.
-        """
         batch_size = len(self._beam_hyps)
 
-        if isinstance(eos_token_id, int):
-            eos_token_id = [eos_token_id]
+        if eos_token_id is not None and not isinstance(eos_token_id, mindspore.Tensor):
+            if isinstance(eos_token_id, int):
+                eos_token_id = [eos_token_id]
+            eos_token_id = mindspore.tensor(eos_token_id)
 
         # finalize all open beam hypotheses and add to generated hypotheses
         for batch_idx, beam_hyp in enumerate(self._beam_hyps):
@@ -985,13 +760,14 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             ids_collect = []
             for beam_id in range(self.num_beams):
                 batch_beam_idx = batch_idx * self.num_beams + beam_id
-                final_score = final_beam_scores[batch_beam_idx].asnumpy().item()
+                final_score = final_beam_scores[batch_beam_idx].item()
                 final_tokens = input_ids[batch_beam_idx]
 
-                completes_constraint = self.check_completes_constraints(final_tokens.asnumpy().tolist())
+                completes_constraint = self.check_completes_constraints(final_tokens.tolist())
                 if completes_constraint:
                     beam_index = beam_indices[batch_beam_idx] if beam_indices is not None else None
-                    beam_hyp.add(final_tokens, final_score, beam_indices=beam_index)
+                    generated_len = final_tokens.shape[-1] - decoder_prompt_len
+                    beam_hyp.add(final_tokens, final_score, beam_indices=beam_index, generated_len=generated_len)
                     ids_collect.append(beam_id)
 
             # due to overly complex constraints or other factors, sometimes we can't gaurantee a successful
@@ -1000,9 +776,10 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 for beam_id in range(self.num_beams):
                     if beam_id not in ids_collect:
                         batch_beam_idx = batch_idx * self.num_beams + beam_id
-                        final_score = final_beam_scores[batch_beam_idx].asnumpy().item()
+                        final_score = final_beam_scores[batch_beam_idx].item()
                         final_tokens = input_ids[batch_beam_idx]
-                        beam_hyp.add(final_tokens, final_score)
+                        generated_len = final_tokens.shape[-1] - decoder_prompt_len
+                        beam_hyp.add(final_tokens, final_score, generated_len=generated_len)
                     if len(ids_collect) >= self.num_beam_hyps_to_keep:
                         break
 
@@ -1031,7 +808,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 best_scores[i * self.num_beam_hyps_to_keep + j] = best_score
 
         # prepare for adding eos
-        sent_lengths_max = sent_lengths.max().asnumpy().item() + 1
+        sent_lengths_max = sent_lengths.max().item() + 1
 
         sent_max_len = min(sent_lengths_max, max_length) if max_length is not None else sent_lengths_max
         decoded: mindspore.Tensor = ops.zeros(batch_size * self.num_beam_hyps_to_keep, sent_max_len, dtype=input_ids.dtype)
@@ -1042,20 +819,20 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             indices = None
 
         # shorter batches are padded if needed
-        if sent_lengths.min().asnumpy().item() != sent_lengths.max().asnumpy().item():
+        if sent_lengths.min().item() != sent_lengths.max().item():
             if pad_token_id is None:
                 raise ValueError("`pad_token_id` has to be defined")
-            decoded = decoded.fill(pad_token_id)
+            decoded[:] = pad_token_id
 
         if indices is not None:
-            indices = indices.fill(-1)
+            indices[:] = -1
 
         # fill with hypotheses and eos_token_id if the latter fits in
         for i, (hypo, best_idx) in enumerate(zip(best, best_indices)):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = ops.stack(best_idx)
+                indices[i, : len(best_idx)] = best_idx
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id
@@ -1071,7 +848,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
 
 
 class BeamHypotheses:
-    """BeamHypotheses"""
     def __init__(self, num_beams: int, length_penalty: float, early_stopping: bool, max_length: Optional[int] = None):
         """
         Initialize n-best list of hypotheses.
@@ -1095,11 +871,22 @@ class BeamHypotheses:
         """
         return len(self.beams)
 
-    def add(self, hyp: mindspore.Tensor, sum_logprobs: float, beam_indices: Optional[mindspore.Tensor] = None):
+    def add(
+        self,
+        hyp: mindspore.Tensor,
+        sum_logprobs: float,
+        beam_indices: Optional[mindspore.Tensor] = None,
+        generated_len: Optional[int] = None,
+    ):
         """
         Add a new hypothesis to the list.
         """
-        score = sum_logprobs / (hyp.shape[-1] ** self.length_penalty)
+        if generated_len is not None:
+            score = sum_logprobs / (generated_len**self.length_penalty)
+        # This 'else' case exists for retrocompatibility
+        else:
+            score = sum_logprobs / (hyp.shape[-1] ** self.length_penalty)
+
         if len(self) < self.num_beams or score > self.worst_score:
             self.beams.append((score, hyp, beam_indices))
             if len(self) > self.num_beams:
@@ -1109,11 +896,12 @@ class BeamHypotheses:
             else:
                 self.worst_score = min(score, self.worst_score)
 
-    def is_done(self, best_sum_logprobs: float, cur_len: int) -> bool:
+    def is_done(self, best_sum_logprobs: float, cur_len: int, decoder_prompt_len: Optional[int] = 0) -> bool:
         """
         If there are enough hypotheses and that none of the hypotheses being generated can become better than the worst
         one in the heap, then we are done with this sentence.
         """
+
         if len(self) < self.num_beams:
             return False
 
@@ -1123,18 +911,23 @@ class BeamHypotheses:
         # `False`: heuristic -- compute best possible score from `cur_len`, even though it is not entirely accurate
         #  when `length_penalty` is positive. See the discussion below for more details.
         # https://github.com/huggingface/transformers/pull/20901#issuecomment-1369845565
-        if self.early_stopping is False:
-            highest_attainable_score = best_sum_logprobs / cur_len**self.length_penalty
+        elif self.early_stopping is False:
+            highest_attainable_score = best_sum_logprobs / (cur_len - decoder_prompt_len) ** self.length_penalty
             ret = self.worst_score >= highest_attainable_score
             return ret
         # `"never"`: compute the best possible score, depending on the signal of `length_penalty`
-        # `length_penalty` > 0.0 -> max denominator is obtaned from `max_length`, not from `cur_len` -> min
-        # abs(`highest_attainable_score`) is obtained -> `highest_attainable_score` is negative, hence we obtain
-        # its max this way
-        if self.length_penalty > 0.0:
-            highest_attainable_score = best_sum_logprobs / self.max_length**self.length_penalty
-        # the opposite logic applies here (max `highest_attainable_score` from `cur_len`)
         else:
-            highest_attainable_score = best_sum_logprobs / cur_len**self.length_penalty
-        ret = self.worst_score >= highest_attainable_score
-        return ret
+            # `length_penalty` > 0.0 -> max denominator is obtaned from `max_length`, not from `cur_len` -> min
+            # abs(`highest_attainable_score`) is obtained -> `highest_attainable_score` is negative, hence we obtain
+            # its max this way
+            if self.length_penalty > 0.0:
+                if self.max_length <= decoder_prompt_len:
+                    raise ValueError("max_length is not larger than decoder prompt length")
+                highest_attainable_score = (
+                    best_sum_logprobs / (self.max_length - decoder_prompt_len) ** self.length_penalty
+                )
+            # the opposite logic applies here (max `highest_attainable_score` from `cur_len`)
+            else:
+                highest_attainable_score = best_sum_logprobs / (cur_len - decoder_prompt_len) ** self.length_penalty
+            ret = self.worst_score >= highest_attainable_score
+            return ret

@@ -19,9 +19,7 @@ from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
 
-
 logger = logging.get_logger(__name__)
-
 
 class MvpConfig(PretrainedConfig):
     r"""
@@ -32,6 +30,7 @@ class MvpConfig(PretrainedConfig):
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
 
     Args:
         vocab_size (`int`, *optional*, defaults to 50267):
@@ -86,21 +85,20 @@ class MvpConfig(PretrainedConfig):
             The length of prompt.
         prompt_mid_dim (`int`, *optional*, defaults to 800):
             Dimensionality of the "intermediate" layer in prompt.
-
     Example:
-        ```python
-        >>> from transformers import MvpConfig, MvpModel
-        ...
-        >>> # Initializing a MVP RUCAIBox/mvp style configuration
-        >>> configuration = MvpConfig()
-        ...
-        >>> # Initializing a model (with random weights) from the RUCAIBox/mvp style configuration
-        >>> model = MvpModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+
+    ```python
+    >>> from transformers import MvpConfig, MvpModel
+
+    >>> # Initializing a MVP RUCAIBox/mvp style configuration
+    >>> configuration = MvpConfig()
+
+    >>> # Initializing a model (with random weights) from the RUCAIBox/mvp style configuration
+    >>> model = MvpModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
 
     model_type = "mvp"
     keys_to_ignore_at_inference = ["past_key_values"]
@@ -172,10 +170,11 @@ class MvpConfig(PretrainedConfig):
             **kwargs,
         )
 
-        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False):
+        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False): # pylint: disable=access-member-before-definition
             self.forced_bos_token_id = self.bos_token_id
             warnings.warn(
                 f"Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions. "
                 "The config can simply be saved and uploaded again to be fixed."
             )
+
 __all__ = ["MvpConfig"]

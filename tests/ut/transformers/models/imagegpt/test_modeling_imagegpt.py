@@ -42,7 +42,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         ImageGPTForCausalImageModeling,
