@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import Normal, initializer
 import mindnlp.core.nn.functional as F
 from mindnlp.core import get_default_dtype
 from mindnlp.core import nn, ops
