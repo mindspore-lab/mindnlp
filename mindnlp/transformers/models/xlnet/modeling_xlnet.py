@@ -204,8 +204,6 @@ class XLNetRelativeAttention(nn.Module):
         x = x[:, :, 1:, :]
         x = x.reshape(x_size[0], x_size[1], x_size[2], x_size[3] - 1)
         x = ops.index_select(x, 3, ops.arange(klen, dtype=mindspore.int64))
-        
-
         return x
 
     def rel_attn_core(
@@ -260,9 +258,7 @@ class XLNetRelativeAttention(nn.Module):
 
     def post_attention(self, h, attn_vec, residual=True):
         """Post-attention processing."""
-        
         attn_out = ops.einsum("ibnd,hnd->ibh", attn_vec, self.o)
-
         attn_out = self.dropout(attn_out)
         if residual:
             attn_out = attn_out + h
@@ -1327,11 +1323,6 @@ class XLNetModel(XLNetPreTrainedModel):
             FutureWarning: Raised when the 'use_cache' argument is deprecated. Use 'use_mems' instead.
             ValueError: Raised if an unsupported attention type is encountered.
         """
-        
-        # if mems==None:
-        #     use_mems=False
-
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1370,12 +1361,9 @@ class XLNetModel(XLNetPreTrainedModel):
         attention_mask = attention_mask.swapaxes(1, 0) if attention_mask is not None else None
         perm_mask = perm_mask.permute(1, 2, 0) if perm_mask is not None else None
         target_mapping = target_mapping.permute(1, 2, 0) if target_mapping is not None else None
-
         mlen = mems[0].shape[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen
-        
         dtype_float = self.dtype
-
         # Attention mask
         # causal attention mask
         if self.attn_type == "uni":
@@ -1427,9 +1415,7 @@ class XLNetModel(XLNetPreTrainedModel):
             word_emb_k = inputs_embeds
         else:
             word_emb_k = self.word_embedding(input_ids)
-        
         output_h = self.dropout(word_emb_k)
-        
         if target_mapping is not None:
             word_emb_q = self.mask_emb.broadcast_to((target_mapping.shape[0], bsz, -1))
             # else:  # We removed the inp_q input which was same as target mapping
@@ -1438,7 +1424,6 @@ class XLNetModel(XLNetPreTrainedModel):
             output_g = self.dropout(word_emb_q)
         else:
             output_g = None
-        
         # Segment embedding
         if token_type_ids is not None:
             # Convert `token_type_ids` to one-hot `seg_mat`
