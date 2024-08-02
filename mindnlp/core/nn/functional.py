@@ -205,12 +205,18 @@ def l1_loss(input, target, reduction='mean'):
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.softmax(input, dim, dtype=dtype)
+    if dim is None:
+        dim = -1
     return ops.softmax(input, dim, dtype=dtype)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if USE_PYBOOST:
         return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
-    _layer_norm = _get_cache_prim(ops.LayerNorm)(-1, -1, epsilon=eps)
+    if weight is not None:
+        begin_axis = input.ndim - weight.ndim
+    else:
+        begin_axis = -1
+    _layer_norm = _get_cache_prim(ops.LayerNorm)(begin_axis, begin_axis, epsilon=eps)
     return _layer_norm(input, weight, bias)[0]
 
 def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):

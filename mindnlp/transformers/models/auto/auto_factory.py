@@ -12,39 +12,356 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 """Factory function to build auto-model classes."""
+
 import copy
 import importlib
+import json
+import warnings
 from collections import OrderedDict
 
-from mindnlp.utils import logging
-from .configuration_auto import AutoConfig, model_type_to_module_name
 from ...configuration_utils import PretrainedConfig
+from ....configs import CONFIG_NAME
+from ....utils import (
+    cached_file,
+    copy_func,
+    extract_commit_hash,
+    find_adapter_config_file,
+    logging,
+)
+from .configuration_auto import AutoConfig, model_type_to_module_name, replace_list_option_in_docstrings
 
 
 logger = logging.get_logger(__name__)
 
 
+CLASS_DOCSTRING = """
+    This is a generic model class that will be instantiated as one of the model classes of the library when created
+    with the [`~BaseAutoModelClass.from_pretrained`] class method or the [`~BaseAutoModelClass.from_config`] class
+    method.
+
+    This class cannot be instantiated directly using `__init__()` (throws an error).
+"""
+
+FROM_CONFIG_DOCSTRING = """
+        Instantiates one of the model classes of the library from a configuration.
+
+        Note:
+            Loading a model from its configuration file does **not** load the model weights. It only affects the
+            model's configuration. Use [`~BaseAutoModelClass.from_pretrained`] to load the model weights.
+
+        Args:
+            config ([`PretrainedConfig`]):
+                The model class to instantiate is selected based on the configuration class:
+
+                List options
+            attn_implementation (`str`, *optional*):
+                The attention implementation to use in the model (if relevant). Can be any of `"eager"` (manual implementation of the attention), `"sdpa"` (using [`F.scaled_dot_product_attention`](https://pytorch.org/docs/master/generated/torch.nn.functional.scaled_dot_product_attention.html)), or `"flash_attention_2"` (using [Dao-AILab/flash-attention](https://github.com/Dao-AILab/flash-attention)). By default, if available, SDPA will be used for torch>=2.1.1. The default is otherwise the manual `"eager"` implementation.
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoConfig, BaseAutoModelClass
+
+        >>> # Download configuration from huggingface.co and cache.
+        >>> config = AutoConfig.from_pretrained("checkpoint_placeholder")
+        >>> model = BaseAutoModelClass.from_config(config)
+        ```
+"""
+
+FROM_PRETRAINED_TORCH_DOCSTRING = """
+        Instantiate one of the model classes of the library from a pretrained model.
+
+        The model class to instantiate is selected based on the `model_type` property of the config object (either
+        passed as an argument or loaded from `pretrained_model_name_or_path` if possible), or when it's missing, by
+        falling back to using pattern matching on `pretrained_model_name_or_path`:
+
+        List options
+
+        The model is set in evaluation mode by default using `model.eval()` (so for instance, dropout modules are
+        deactivated). To train the model, you should first set it back in training mode with `model.train()`
+
+        Args:
+            pretrained_model_name_or_path (`str` or `os.PathLike`):
+                Can be either:
+
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A path to a *directory* containing model weights saved using
+                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                    - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
+                      this case, `from_tf` should be set to `True` and a configuration object should be provided as
+                      `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
+                      PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
+            model_args (additional positional arguments, *optional*):
+                Will be passed along to the underlying model `__init__()` method.
+            config ([`PretrainedConfig`], *optional*):
+                Configuration for the model to use instead of an automatically loaded configuration. Configuration can
+                be automatically loaded when:
+
+                    - The model is a model provided by the library (loaded with the *model id* string of a pretrained
+                      model).
+                    - The model was saved using [`~PreTrainedModel.save_pretrained`] and is reloaded by supplying the
+                      save directory.
+                    - The model is loaded by supplying a local directory as `pretrained_model_name_or_path` and a
+                      configuration JSON file named *config.json* is found in the directory.
+            state_dict (*Dict[str, torch.Tensor]*, *optional*):
+                A state dictionary to use instead of a state dictionary loaded from saved weights file.
+
+                This option can be used if you want to create a model from a pretrained configuration but load your own
+                weights. In this case though, you should check if using [`~PreTrainedModel.save_pretrained`] and
+                [`~PreTrainedModel.from_pretrained`] is not a simpler option.
+            cache_dir (`str` or `os.PathLike`, *optional*):
+                Path to a directory in which a downloaded pretrained model configuration should be cached if the
+                standard cache should not be used.
+            from_tf (`bool`, *optional*, defaults to `False`):
+                Load the model weights from a TensorFlow checkpoint save file (see docstring of
+                `pretrained_model_name_or_path` argument).
+            force_download (`bool`, *optional*, defaults to `False`):
+                Whether or not to force the (re-)download of the model weights and configuration files, overriding the
+                cached versions if they exist.
+            resume_download:
+                Deprecated and ignored. All downloads are now resumed by default when possible.
+                Will be removed in v5 of Transformers.
+            proxies (`Dict[str, str]`, *optional*):
+                A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+                'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
+            output_loading_info(`bool`, *optional*, defaults to `False`):
+                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+            local_files_only(`bool`, *optional*, defaults to `False`):
+                Whether or not to only look at local files (e.g., not try downloading the model).
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+            trust_remote_code (`bool`, *optional*, defaults to `False`):
+                Whether or not to allow for custom models defined on the Hub in their own modeling files. This option
+                should only be set to `True` for repositories you trust and in which you have read the code, as it will
+                execute code present on the Hub on your local machine.
+            kwargs (additional keyword arguments, *optional*):
+                Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
+                `output_attentions=True`). Behaves differently depending on whether a `config` is provided or
+                automatically loaded:
+
+                    - If a configuration is provided with `config`, `**kwargs` will be directly passed to the
+                      underlying model's `__init__` method (we assume all relevant updates to the configuration have
+                      already been done)
+                    - If a configuration is not provided, `kwargs` will be first passed to the configuration class
+                      initialization function ([`~PretrainedConfig.from_pretrained`]). Each key of `kwargs` that
+                      corresponds to a configuration attribute will be used to override said attribute with the
+                      supplied `kwargs` value. Remaining keys that do not correspond to any configuration attribute
+                      will be passed to the underlying model's `__init__` function.
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoConfig, BaseAutoModelClass
+
+        >>> # Download model and configuration from huggingface.co and cache.
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder")
+
+        >>> # Update configuration during loading
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder", output_attentions=True)
+        >>> model.config.output_attentions
+        True
+
+        >>> # Loading from a TF checkpoint file instead of a PyTorch model (slower)
+        >>> config = AutoConfig.from_pretrained("./tf_model/shortcut_placeholder_tf_model_config.json")
+        >>> model = BaseAutoModelClass.from_pretrained(
+        ...     "./tf_model/shortcut_placeholder_tf_checkpoint.ckpt.index", from_tf=True, config=config
+        ... )
+        ```
+"""
+
+FROM_PRETRAINED_TF_DOCSTRING = """
+        Instantiate one of the model classes of the library from a pretrained model.
+
+        The model class to instantiate is selected based on the `model_type` property of the config object (either
+        passed as an argument or loaded from `pretrained_model_name_or_path` if possible), or when it's missing, by
+        falling back to using pattern matching on `pretrained_model_name_or_path`:
+
+        List options
+
+        Args:
+            pretrained_model_name_or_path (`str` or `os.PathLike`):
+                Can be either:
+
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A path to a *directory* containing model weights saved using
+                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                    - A path or url to a *PyTorch state_dict save file* (e.g, `./pt_model/pytorch_model.bin`). In this
+                      case, `from_pt` should be set to `True` and a configuration object should be provided as `config`
+                      argument. This loading path is slower than converting the PyTorch model in a TensorFlow model
+                      using the provided conversion scripts and loading the TensorFlow model afterwards.
+            model_args (additional positional arguments, *optional*):
+                Will be passed along to the underlying model `__init__()` method.
+            config ([`PretrainedConfig`], *optional*):
+                Configuration for the model to use instead of an automatically loaded configuration. Configuration can
+                be automatically loaded when:
+
+                    - The model is a model provided by the library (loaded with the *model id* string of a pretrained
+                      model).
+                    - The model was saved using [`~PreTrainedModel.save_pretrained`] and is reloaded by supplying the
+                      save directory.
+                    - The model is loaded by supplying a local directory as `pretrained_model_name_or_path` and a
+                      configuration JSON file named *config.json* is found in the directory.
+            cache_dir (`str` or `os.PathLike`, *optional*):
+                Path to a directory in which a downloaded pretrained model configuration should be cached if the
+                standard cache should not be used.
+            from_pt (`bool`, *optional*, defaults to `False`):
+                Load the model weights from a PyTorch checkpoint save file (see docstring of
+                `pretrained_model_name_or_path` argument).
+            force_download (`bool`, *optional*, defaults to `False`):
+                Whether or not to force the (re-)download of the model weights and configuration files, overriding the
+                cached versions if they exist.
+            resume_download:
+                Deprecated and ignored. All downloads are now resumed by default when possible.
+                Will be removed in v5 of Transformers.
+            proxies (`Dict[str, str]`, *optional*):
+                A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+                'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
+            output_loading_info(`bool`, *optional*, defaults to `False`):
+                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+            local_files_only(`bool`, *optional*, defaults to `False`):
+                Whether or not to only look at local files (e.g., not try downloading the model).
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+            trust_remote_code (`bool`, *optional*, defaults to `False`):
+                Whether or not to allow for custom models defined on the Hub in their own modeling files. This option
+                should only be set to `True` for repositories you trust and in which you have read the code, as it will
+                execute code present on the Hub on your local machine.
+            kwargs (additional keyword arguments, *optional*):
+                Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
+                `output_attentions=True`). Behaves differently depending on whether a `config` is provided or
+                automatically loaded:
+
+                    - If a configuration is provided with `config`, `**kwargs` will be directly passed to the
+                      underlying model's `__init__` method (we assume all relevant updates to the configuration have
+                      already been done)
+                    - If a configuration is not provided, `kwargs` will be first passed to the configuration class
+                      initialization function ([`~PretrainedConfig.from_pretrained`]). Each key of `kwargs` that
+                      corresponds to a configuration attribute will be used to override said attribute with the
+                      supplied `kwargs` value. Remaining keys that do not correspond to any configuration attribute
+                      will be passed to the underlying model's `__init__` function.
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoConfig, BaseAutoModelClass
+
+        >>> # Download model and configuration from huggingface.co and cache.
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder")
+
+        >>> # Update configuration during loading
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder", output_attentions=True)
+        >>> model.config.output_attentions
+        True
+
+        >>> # Loading from a PyTorch checkpoint file instead of a TensorFlow model (slower)
+        >>> config = AutoConfig.from_pretrained("./pt_model/shortcut_placeholder_pt_model_config.json")
+        >>> model = BaseAutoModelClass.from_pretrained(
+        ...     "./pt_model/shortcut_placeholder_pytorch_model.bin", from_pt=True, config=config
+        ... )
+        ```
+"""
+
+FROM_PRETRAINED_FLAX_DOCSTRING = """
+        Instantiate one of the model classes of the library from a pretrained model.
+
+        The model class to instantiate is selected based on the `model_type` property of the config object (either
+        passed as an argument or loaded from `pretrained_model_name_or_path` if possible), or when it's missing, by
+        falling back to using pattern matching on `pretrained_model_name_or_path`:
+
+        List options
+
+        Args:
+            pretrained_model_name_or_path (`str` or `os.PathLike`):
+                Can be either:
+
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A path to a *directory* containing model weights saved using
+                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                    - A path or url to a *PyTorch state_dict save file* (e.g, `./pt_model/pytorch_model.bin`). In this
+                      case, `from_pt` should be set to `True` and a configuration object should be provided as `config`
+                      argument. This loading path is slower than converting the PyTorch model in a TensorFlow model
+                      using the provided conversion scripts and loading the TensorFlow model afterwards.
+            model_args (additional positional arguments, *optional*):
+                Will be passed along to the underlying model `__init__()` method.
+            config ([`PretrainedConfig`], *optional*):
+                Configuration for the model to use instead of an automatically loaded configuration. Configuration can
+                be automatically loaded when:
+
+                    - The model is a model provided by the library (loaded with the *model id* string of a pretrained
+                      model).
+                    - The model was saved using [`~PreTrainedModel.save_pretrained`] and is reloaded by supplying the
+                      save directory.
+                    - The model is loaded by supplying a local directory as `pretrained_model_name_or_path` and a
+                      configuration JSON file named *config.json* is found in the directory.
+            cache_dir (`str` or `os.PathLike`, *optional*):
+                Path to a directory in which a downloaded pretrained model configuration should be cached if the
+                standard cache should not be used.
+            from_pt (`bool`, *optional*, defaults to `False`):
+                Load the model weights from a PyTorch checkpoint save file (see docstring of
+                `pretrained_model_name_or_path` argument).
+            force_download (`bool`, *optional*, defaults to `False`):
+                Whether or not to force the (re-)download of the model weights and configuration files, overriding the
+                cached versions if they exist.
+            resume_download:
+                Deprecated and ignored. All downloads are now resumed by default when possible.
+                Will be removed in v5 of Transformers.
+            proxies (`Dict[str, str]`, *optional*):
+                A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+                'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
+            output_loading_info(`bool`, *optional*, defaults to `False`):
+                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+            local_files_only(`bool`, *optional*, defaults to `False`):
+                Whether or not to only look at local files (e.g., not try downloading the model).
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+            trust_remote_code (`bool`, *optional*, defaults to `False`):
+                Whether or not to allow for custom models defined on the Hub in their own modeling files. This option
+                should only be set to `True` for repositories you trust and in which you have read the code, as it will
+                execute code present on the Hub on your local machine.
+            kwargs (additional keyword arguments, *optional*):
+                Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
+                `output_attentions=True`). Behaves differently depending on whether a `config` is provided or
+                automatically loaded:
+
+                    - If a configuration is provided with `config`, `**kwargs` will be directly passed to the
+                      underlying model's `__init__` method (we assume all relevant updates to the configuration have
+                      already been done)
+                    - If a configuration is not provided, `kwargs` will be first passed to the configuration class
+                      initialization function ([`~PretrainedConfig.from_pretrained`]). Each key of `kwargs` that
+                      corresponds to a configuration attribute will be used to override said attribute with the
+                      supplied `kwargs` value. Remaining keys that do not correspond to any configuration attribute
+                      will be passed to the underlying model's `__init__` function.
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoConfig, BaseAutoModelClass
+
+        >>> # Download model and configuration from huggingface.co and cache.
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder")
+
+        >>> # Update configuration during loading
+        >>> model = BaseAutoModelClass.from_pretrained("checkpoint_placeholder", output_attentions=True)
+        >>> model.config.output_attentions
+        True
+
+        >>> # Loading from a PyTorch checkpoint file instead of a TensorFlow model (slower)
+        >>> config = AutoConfig.from_pretrained("./pt_model/shortcut_placeholder_pt_model_config.json")
+        >>> model = BaseAutoModelClass.from_pretrained(
+        ...     "./pt_model/shortcut_placeholder_pytorch_model.bin", from_pt=True, config=config
+        ... )
+        ```
+"""
+
+
 def _get_model_class(config, model_mapping):
-    """
-    This function retrieves the model class based on the provided configuration and model mapping.
-    
-    Args:
-        config (object): The configuration object used to determine the model class. Must be of a supported type.
-        model_mapping (dict): A mapping of configuration types to supported model classes.
-    
-    Returns:
-        object: The model class selected based on the configuration and model mapping.
-    
-    Raises:
-        None.
-    
-    Note:
-        If the supported_models value in the model_mapping is not a list or tuple, it is returned directly.
-        Otherwise, the function searches for the model class based on the 'architectures' attribute of the config object.
-        The first architecture found in the mapping is returned. If no architectures are found, the first supported model is returned.
-    """
     supported_models = model_mapping[type(config)]
     if not isinstance(supported_models, (list, tuple)):
         return supported_models
@@ -54,6 +371,10 @@ def _get_model_class(config, model_mapping):
     for arch in architectures:
         if arch in name_to_model:
             return name_to_model[arch]
+        elif f"TF{arch}" in name_to_model:
+            return name_to_model[f"TF{arch}"]
+        elif f"Flax{arch}" in name_to_model:
+            return name_to_model[f"Flax{arch}"]
 
     # If not architecture is set in the config or match the supported models, the first element of the tuple is the
     # defaults.
@@ -61,43 +382,10 @@ def _get_model_class(config, model_mapping):
 
 
 class _BaseAutoModelClass:
-
-    """
-    _BaseAutoModelClass is a base class for AutoModels that provides methods for instantiating models from configurations or pretrained models. 
-    
-    The class includes methods for creating instances from configurations, pretrained models, and for registering new models within the class. 
-    
-    Methods:
-        from_config(cls, config, **kwargs): Instantiate a model from a configuration object.
-        from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs): Instantiate a model from a pretrained model or model path.
-        register(cls, config_class, model_class, exist_ok=False): Register a new model for the class based on a configuration and model class pair.
-    
-    For more details on each method's parameters and usage, refer to the method's specific documentation.
-    
-    Note: This class is intended to be inherited from and customized for specific auto-model implementations.
-    """
     # Base class for auto models.
     _model_mapping = None
 
     def __init__(self, *args, **kwargs):
-        """
-        Initializes an instance of the _BaseAutoModelClass class.
-        
-        Args:
-            self:
-                The instance of the class.
-
-                - Type: _BaseAutoModelClass
-                - Purpose: Represents the current instance of the class.
-        
-        Returns:
-            None.
-        
-        Raises:
-            EnvironmentError: If the __init__ method is called directly. 
-            The error message will specify that instances of _BaseAutoModelClass should be instantiated using the 
-            'from_pretrained(pretrained_model_name_or_path)' or 'from_config(config)' methods.
-        """
         raise EnvironmentError(
             f"{self.__class__.__name__} is designed to be instantiated "
             f"using the `{self.__class__.__name__}.from_pretrained(pretrained_model_name_or_path)` or "
@@ -106,30 +394,9 @@ class _BaseAutoModelClass:
 
     @classmethod
     def from_config(cls, config, **kwargs):
-        """
-        Converts a configuration object into an instance of the current `_BaseAutoModelClass` class.
-        
-        Args:
-            cls (type): The class object for the `_BaseAutoModelClass` class.
-            config: The configuration object that needs to be converted.
-                It should be of a type that is recognized by the `_model_mapping` dictionary.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If the `config` object is not recognized as a valid configuration class for this `AutoModel` class.
-                The error message will indicate the unrecognized configuration class and the expected valid configuration classes,
-                which are determined by the `_model_mapping` dictionary.
-        
-        Note:
-            1. The `config` parameter should be of a type that is present in the `_model_mapping` dictionary.
-                The `_model_mapping` dictionary maps configuration types to model classes.
-            2. This method is a class method, denoted by the `@classmethod` decorator.
-                It can be called directly on the class object without needing to create an instance of the class.
-            3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
-                to perform the conversion from the configuration object to an instance of the model class.
-        """
+        has_remote_code = hasattr(config, "auto_map") and cls.__name__ in config.auto_map
+        has_local_code = type(config) in cls._model_mapping.keys()
+
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class._from_config(config, **kwargs)
@@ -141,93 +408,106 @@ class _BaseAutoModelClass:
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        """
-        Performs a series of operations to load a pretrained model from either a local file or a remote repository.
-        
-        Args:
-            cls (class): The class object that the method is called on.
-            pretrained_model_name_or_path (str): The name or path of the pretrained model.
-                It can be a local file path or a remote repository URL.
-        
-        Returns:
-            None
-        
-        Raises:
-            ValueError: If the configuration class of the pretrained model is not recognized by the AutoModel class.
-        
-        Note:
-            This method is a class method, meaning it can be called on the class object itself without instantiation.
-        
-        Example:
-            ```python
-            >>> _BaseAutoModelClass.from_pretrained("bert-base-uncased")
-            ```
-
-        In the provided code snippet, the method `from_pretrained` is a class method of the `_BaseAutoModelClass` class.
-        It is used to load a pretrained model by either specifying its name or providing the path to the model file.
-        The method performs various operations to correctly configure and initialize the model.
-
-        The `cls` parameter is a reference to the class object itself. It is automatically passed when calling the method on the class.
-
-        The `pretrained_model_name_or_path` parameter is a string that represents the name or path of the pretrained model.
-        It can be either a local file path or a remote repository URL.
-        This parameter is required to specify the pretrained model to load.
-
-        The method does not return any value, as indicated by the `None` return type.
-
-        During the execution of the method, the following steps are performed:
-        >   1. The `config` parameter is obtained from the `kwargs` dictionary. If `config` is not provided, it is set to `None`.
-        >   2. The values of `from_pt`, `mirror`, `revision`, and `token` are obtained from the `kwargs` dictionary using the `get` method.
-        If any of these parameters is not provided, default values are used.
-        >   3. If the `config` parameter is not an instance of `PretrainedConfig`, the `kwargs` dictionary is deep copied to `kwargs_orig`.
-        >   4. If the `ms_dtype` parameter is set to `'auto'` in `kwargs`, it is removed from `kwargs`.
-        >   5. If the `quantization_config` parameter is not `None` in `kwargs`, it is removed from `kwargs`.
-        >   6. The `AutoConfig.from_pretrained` method is called with `pretrained_model_name_or_path` and the remaining `kwargs` as arguments.
-        The return values are assigned to `config` and `kwargs`.
-        >   7. If the `torch_dtype` parameter is set to `'auto'` in `kwargs_orig`, it is added to `kwargs` with the same value.
-        >   8. If the `quantization_config` parameter is not `None` in `kwargs_orig`, it is added to `kwargs` with the same value.
-        >   9. The `token`, `mirror`, and `revision` parameters are added to `kwargs` with their respective values obtained earlier.
-        >   10. If the type of `config` is one of the keys in `_model_mapping` of the class,
-        the corresponding model class is obtained using `_get_model_class` function with `config` and `_model_mapping` as  arguments.
-        >   11. The `from_pretrained` method of the obtained `model_class` is called with `pretrained_model_name_or_path`,
-        `model_args`, `config`, and the updated `kwargs` as arguments.
-        >   12. If the type of `config` is not recognized, a `ValueError` is raised with an informative error message.
-
-        Note that this docstring assumes the presence of additional helper functions and variables that are not included in the provided code snippet.
-        It is recommended to refer to the complete implementation for a comprehensive understanding.
-        """
         config = kwargs.pop("config", None)
-        _ = kwargs.get('from_pt', True)
-        mirror = kwargs.get('mirror', 'huggingface')
-        revision = kwargs.get('revision', 'main')
-        token = kwargs.get('token', None)
+        trust_remote_code = kwargs.pop("trust_remote_code", None)
+        kwargs["_from_auto"] = True
+        hub_kwargs_names = [
+            "cache_dir",
+            "force_download",
+            "local_files_only",
+            "proxies",
+            "resume_download",
+            "revision",
+            "subfolder",
+            "use_auth_token",
+            "token",
+        ]
+        hub_kwargs = {name: kwargs.pop(name) for name in hub_kwargs_names if name in kwargs}
+        commit_hash = kwargs.pop("_commit_hash", None)
+        adapter_kwargs = kwargs.pop("adapter_kwargs", None)
+
+        token = hub_kwargs.pop("token", None)
+        use_auth_token = hub_kwargs.pop("use_auth_token", None)
+        if use_auth_token is not None:
+            warnings.warn(
+                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                FutureWarning,
+            )
+            if token is not None:
+                raise ValueError(
+                    "`token` and `use_auth_token` are both specified. Please set only the argument `token`."
+                )
+            token = use_auth_token
+
+        if token is not None:
+            hub_kwargs["token"] = token
+
+        if commit_hash is None:
+            if not isinstance(config, PretrainedConfig):
+                # We make a call to the config file first (which may be absent) to get the commit hash as soon as possible
+                resolved_config_file = cached_file(
+                    pretrained_model_name_or_path,
+                    CONFIG_NAME,
+                    _raise_exceptions_for_gated_repo=False,
+                    _raise_exceptions_for_missing_entries=False,
+                    _raise_exceptions_for_connection_errors=False,
+                    **hub_kwargs,
+                )
+                commit_hash = extract_commit_hash(resolved_config_file, commit_hash)
+            else:
+                commit_hash = getattr(config, "_commit_hash", None)
+
+        if adapter_kwargs is None:
+            adapter_kwargs = {}
+            if token is not None:
+                adapter_kwargs["token"] = token
+
+        maybe_adapter_path = find_adapter_config_file(
+            pretrained_model_name_or_path, _commit_hash=commit_hash, **adapter_kwargs
+        )
+
+        if maybe_adapter_path is not None:
+            with open(maybe_adapter_path, "r", encoding="utf-8") as f:
+                adapter_config = json.load(f)
+
+                adapter_kwargs["_adapter_model_path"] = pretrained_model_name_or_path
+                pretrained_model_name_or_path = adapter_config["base_model_name_or_path"]
+
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
             # ensure not to pollute the config object with torch_dtype="auto" - since it's
             # meaningless in the context of the config object - torch.dtype values are acceptable
-            if kwargs.get("ms_dtype", None) == "auto":
-                _ = kwargs.pop("ms_dtype")
+            if kwargs.get("torch_dtype", None) == "auto":
+                _ = kwargs.pop("torch_dtype")
             # to not overwrite the quantization_config if config has a quantization_config
             if kwargs.get("quantization_config", None) is not None:
                 _ = kwargs.pop("quantization_config")
+
             config, kwargs = AutoConfig.from_pretrained(
                 pretrained_model_name_or_path,
                 return_unused_kwargs=True,
+                trust_remote_code=trust_remote_code,
+                _commit_hash=commit_hash,
+                **hub_kwargs,
                 **kwargs,
             )
+
             # if torch_dtype=auto was passed here, ensure to pass it on
             if kwargs_orig.get("torch_dtype", None) == "auto":
                 kwargs["torch_dtype"] = "auto"
             if kwargs_orig.get("quantization_config", None) is not None:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 
-        kwargs['token'] = token
-        kwargs['mirror'] = mirror
-        kwargs['revision'] = revision
+        has_remote_code = hasattr(config, "auto_map") and cls.__name__ in config.auto_map
+        has_local_code = type(config) in cls._model_mapping.keys()
+
+        # Set the adapter kwargs
+        kwargs["adapter_kwargs"] = adapter_kwargs
+
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class.from_pretrained(
-                pretrained_model_name_or_path, *model_args, config=config, **kwargs
+                pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
             )
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
@@ -245,7 +525,7 @@ class _BaseAutoModelClass:
             model_class ([`PreTrainedModel`]):
                 The model to register.
         """
-        if hasattr(model_class, "config_class") and model_class.config_class != config_class:
+        if hasattr(model_class, "config_class") and str(model_class.config_class) != str(config_class):
             raise ValueError(
                 "The model class you are passing has a `config_class` attribute that is not consistent with the "
                 f"config class you passed (model has {model_class.config_class} and you passed {config_class}. Fix "
@@ -254,20 +534,17 @@ class _BaseAutoModelClass:
         cls._model_mapping.register(config_class, model_class, exist_ok=exist_ok)
 
 
+class _BaseAutoBackboneClass(_BaseAutoModelClass):
+    # Base class for auto backbone models.
+    _model_mapping = None
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        use_timm_backbone = kwargs.pop("use_timm_backbone", False)
+        return super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+
+
 def insert_head_doc(docstring, head_doc=""):
-    """
-    Inserts a specified 'head_doc' into the provided 'docstring' to modify the description of a model class in the library.
-    
-    Args:
-        docstring (str): The original docstring that describes a model class in the library.
-        head_doc (str): The head type to insert into the docstring. It is used to modify the description of the model class.
-    
-    Returns:
-        None.
-    
-    Raises:
-        None.
-    """
     if len(head_doc) > 0:
         return docstring.replace(
             "one of the model classes of the library ",
@@ -278,20 +555,42 @@ def insert_head_doc(docstring, head_doc=""):
     )
 
 
+def auto_class_update(cls, checkpoint_for_example="google-bert/bert-base-cased", head_doc=""):
+    # Create a new class with the right name from the base class
+    model_mapping = cls._model_mapping
+    name = cls.__name__
+    class_docstring = insert_head_doc(CLASS_DOCSTRING, head_doc=head_doc)
+    cls.__doc__ = class_docstring.replace("BaseAutoModelClass", name)
+
+    # Now we need to copy and re-register `from_config` and `from_pretrained` as class methods otherwise we can't
+    # have a specific docstrings for them.
+    from_config = copy_func(_BaseAutoModelClass.from_config)
+    from_config_docstring = insert_head_doc(FROM_CONFIG_DOCSTRING, head_doc=head_doc)
+    from_config_docstring = from_config_docstring.replace("BaseAutoModelClass", name)
+    from_config_docstring = from_config_docstring.replace("checkpoint_placeholder", checkpoint_for_example)
+    from_config.__doc__ = from_config_docstring
+    from_config = replace_list_option_in_docstrings(model_mapping._model_mapping, use_model_types=False)(from_config)
+    cls.from_config = classmethod(from_config)
+
+    if name.startswith("TF"):
+        from_pretrained_docstring = FROM_PRETRAINED_TF_DOCSTRING
+    elif name.startswith("Flax"):
+        from_pretrained_docstring = FROM_PRETRAINED_FLAX_DOCSTRING
+    else:
+        from_pretrained_docstring = FROM_PRETRAINED_TORCH_DOCSTRING
+    from_pretrained = copy_func(_BaseAutoModelClass.from_pretrained)
+    from_pretrained_docstring = insert_head_doc(from_pretrained_docstring, head_doc=head_doc)
+    from_pretrained_docstring = from_pretrained_docstring.replace("BaseAutoModelClass", name)
+    from_pretrained_docstring = from_pretrained_docstring.replace("checkpoint_placeholder", checkpoint_for_example)
+    shortcut = checkpoint_for_example.split("/")[-1].split("-")[0]
+    from_pretrained_docstring = from_pretrained_docstring.replace("shortcut_placeholder", shortcut)
+    from_pretrained.__doc__ = from_pretrained_docstring
+    from_pretrained = replace_list_option_in_docstrings(model_mapping._model_mapping)(from_pretrained)
+    cls.from_pretrained = classmethod(from_pretrained)
+    return cls
+
+
 def get_values(model_mapping):
-    """
-    This function takes a dictionary called 'model_mapping' as a parameter and returns a list of values from the dictionary. 
-    
-    Args:
-        model_mapping (dict): A dictionary that maps keys to values. The values can be either a single object or a list/tuple of objects.
-    
-    Returns:
-        list: A list containing all the values from the 'model_mapping' dictionary. If a value is a list or tuple, its elements are included in the final list.
-    
-    Raises:
-        None.
-    
-    """
     result = []
     for model in model_mapping.values():
         if isinstance(model, (list, tuple)):
@@ -303,19 +602,6 @@ def get_values(model_mapping):
 
 
 def getattribute_from_module(module, attr):
-    """
-    This function retrieves an attribute from a given module.
-    
-    Args:
-        module (module): The module from which to retrieve the attribute.
-        attr (str or tuple): The name of the attribute to retrieve. If a tuple is provided, the function will recursively retrieve each attribute specified in the tuple.
-    
-    Returns:
-        None: If the attribute is None or cannot be found in the module.
-    
-    Raises:
-        ValueError: If the attribute is not found in the provided module or any of its dependencies.
-    """
     if attr is None:
         return None
     if isinstance(attr, tuple):
@@ -329,35 +615,22 @@ def getattribute_from_module(module, attr):
     if module != transformers_module:
         try:
             return getattribute_from_module(transformers_module, attr)
-        except ValueError as exc:
-            raise ValueError(f"Could not find {attr} neither in {module} nor in {transformers_module}!") from exc
+        except ValueError:
+            raise ValueError(f"Could not find {attr} neither in {module} nor in {transformers_module}!")
     else:
         raise ValueError(f"Could not find {attr} in {transformers_module}!")
 
 
 class _LazyAutoMapping(OrderedDict):
     """
-    A mapping config to object (model or tokenizer for instance) that will load keys and values when it is accessed.
+    " A mapping config to object (model or tokenizer for instance) that will load keys and values when it is accessed.
 
     Args:
-        config_mapping: The map model type to config class
-        model_mapping: The map model type to model (or tokenizer) class
+        - config_mapping: The map model type to config class
+        - model_mapping: The map model type to model (or tokenizer) class
     """
+
     def __init__(self, config_mapping, model_mapping):
-        """
-        Initializes a new instance of the _LazyAutoMapping class.
-        
-        Args:
-            self: The instance of the _LazyAutoMapping class.
-            config_mapping (dict): A dictionary that represents the mapping of configuration values.
-            model_mapping (dict): A dictionary that represents the mapping of model values.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         self._config_mapping = config_mapping
         self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
         self._model_mapping = model_mapping
@@ -366,38 +639,10 @@ class _LazyAutoMapping(OrderedDict):
         self._modules = {}
 
     def __len__(self):
-        """
-        Returns the length of the _LazyAutoMapping object.
-        
-        Args:
-            self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
-                The self parameter is automatically passed when calling this method.
-        
-        Returns:
-            int: The total number of common keys between the _config_mapping and _model_mapping dictionaries,
-                plus the number of elements in the _extra_content list.
-        
-        Raises:
-            None.
-        
-        Note:
-            This method does not modify the _LazyAutoMapping object.
-        """
         common_keys = set(self._config_mapping.keys()).intersection(self._model_mapping.keys())
         return len(common_keys) + len(self._extra_content)
 
     def __getitem__(self, key):
-        """
-        Args:
-            self (object): The instance of the '_LazyAutoMapping' class.
-            key (object): The key used to retrieve the value from the mapping. It should be a valid key present in the mapping.
-        
-        Returns:
-            None: This method does not explicitly return any value. The retrieved value is returned based on the key provided.
-        
-        Raises:
-            KeyError: If the provided key is not found in the mapping, a KeyError is raised.
-        """
         if key in self._extra_content:
             return self._extra_content[key]
         model_type = self._reverse_config_mapping[key.__name__]
@@ -414,39 +659,12 @@ class _LazyAutoMapping(OrderedDict):
         raise KeyError(key)
 
     def _load_attr_from_module(self, model_type, attr):
-        """
-        Load attribute from module based on model type.
-        
-        Args:
-            self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
-            model_type (str): The type of the model for which the attribute needs to be loaded.
-            attr (str): The attribute to be loaded from the module.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ModuleNotFoundError: If the specified module for the model type is not found.
-            AttributeError: If the specified attribute is not found in the module for the model type.
-        """
         module_name = model_type_to_module_name(model_type)
         if module_name not in self._modules:
             self._modules[module_name] = importlib.import_module(f".{module_name}", "mindnlp.transformers.models")
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):
-        """
-        This method retrieves the keys from the _LazyAutoMapping instance.
-        
-        Args:
-            self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
-            
-        Returns:
-            list: A list of keys from the _LazyAutoMapping instance.
-        
-        Raises:
-            None
-        """
         mapping_keys = [
             self._load_attr_from_module(key, name)
             for key, name in self._config_mapping.items()
@@ -455,58 +673,15 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_keys + list(self._extra_content.keys())
 
     def get(self, key, default):
-        """
-        This method retrieves the value associated with the specified key from the _LazyAutoMapping instance, and returns a default value if the key is not present.
-        
-        Args:
-            self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
-            key (any): The key whose associated value is to be retrieved.
-            default (any): The default value to be returned if the key is not present in the mapping.
-        
-        Returns:
-            If the key is present in the mapping, the method returns the value associated with the key.
-            If the key is not present, the method returns the specified default value.
-        
-        Raises:
-            KeyError: If the specified key is not present in the mapping, the method raises a KeyError.
-        """
         try:
             return self.__getitem__(key)
         except KeyError:
             return default
 
     def __bool__(self):
-        """
-        This method '__bool__' in the class '_LazyAutoMapping' returns a boolean value indicating whether the mapping object has any keys.
-        
-        Args:
-            self (object):
-                The instance of the '_LazyAutoMapping' class.
-                It represents the mapping object for which the method is being called.
-        
-        Returns:
-            bool:
-                A boolean value indicating whether the mapping object has any keys.
-                Returns True if the mapping object has keys, otherwise False.
-        
-        Raises:
-            No specific exceptions are raised by this method.
-        """
         return bool(self.keys())
 
     def values(self):
-        """
-        Method 'values' in the class '_LazyAutoMapping' retrieves values from the mapping and extra content.
-        
-        Args:
-            self: The reference to the current instance of the class '_LazyAutoMapping'.
-            
-        Returns:
-            A list of values retrieved from the mapping and extra content. The values are of type 'None'.
-        
-        Raises:
-            No exceptions are raised by this method.
-        """
         mapping_values = [
             self._load_attr_from_module(key, name)
             for key, name in self._model_mapping.items()
@@ -515,19 +690,6 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_values + list(self._extra_content.values())
 
     def items(self):
-        """
-        items(self)
-            This method returns a list of tuples representing the mapping items between the config and model mappings along with any extra content.
-        
-        Args:
-            self (object): The instance of the _LazyAutoMapping class.
-        
-        Returns:
-            list: A list of tuples representing the mapping items between the config and model mappings along with any extra content.
-        
-        Raises:
-            None
-        """
         mapping_items = [
             (
                 self._load_attr_from_module(key, self._config_mapping[key]),
@@ -539,40 +701,9 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_items + list(self._extra_content.items())
 
     def __iter__(self):
-        """
-        Method '__iter__' in the class '_LazyAutoMapping'.
-        
-        Args:
-            self (object): The instance of the '_LazyAutoMapping' class.
-                Represents the current instance of the class for which the iterator is being generated.
-        
-        Returns:
-            None: This method returns an iterator over the keys of the instance.
-        
-        Raises:
-            None.
-        """
         return iter(self.keys())
 
     def __contains__(self, item):
-        ''' 
-            This method checks if an item is present in the '_extra_content' attribute or if the item's name is present
-            in the '_reverse_config_mapping' attribute of the '_LazyAutoMapping' class instance.
-        
-            Args:
-                self (_LazyAutoMapping): The instance of the '_LazyAutoMapping' class.
-                item (Any):
-                    The item to be checked for presence in the '_extra_content' attribute
-                    or the item's name in the '_reverse_config_mapping' attribute.
-        
-            Returns:
-                bool:
-                    Returns True if the item is found in the '_extra_content' attribute
-                    or if the item's name is found in the '_reverse_config_mapping' attribute. Returns False otherwise.
-        
-            Raises:
-                None.
-        '''
         if item in self._extra_content:
             return True
         if not hasattr(item, "__name__") or item.__name__ not in self._reverse_config_mapping:

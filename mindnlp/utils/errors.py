@@ -19,6 +19,9 @@ from typing import Optional
 from requests import HTTPError, Response
 from requests import JSONDecodeError
 
+class OfflineModeIsEnabled(ConnectionError):
+    """Raised when a request is made but `HF_HUB_OFFLINE=1` is set as environment variable."""
+
 class MSHTTPError(HTTPError):
     """
     HTTPError to inherit from for any custom HTTP Error raised in MindNLP.
@@ -169,17 +172,35 @@ class LocalEntryNotFoundError(EntryNotFoundError, FileNotFoundError, ValueError)
 
 class BadRequestError(MSHTTPError, ValueError):
     """
-    Raised by `hf_raise_for_status` when the server returns a HTTP 400 error.
+    Raised by `raise_for_status` when the server returns a HTTP 400 error.
 
     Example:
 
     ```py
     >>> resp = requests.post("hf.co/api/check", ...)
-    >>> hf_raise_for_status(resp, endpoint_name="check")
+    >>> raise_for_status(resp, endpoint_name="check")
     huggingface_hub.utils._errors.BadRequestError: Bad request for check endpoint: {details} (Request ID: XXX)
     ```
     """
-def hf_raise_for_status(response: Response, endpoint_name: Optional[str] = None) -> None:
+
+class RevisionNotFoundError(MSHTTPError):
+    """
+    Raised when trying to access a hf.co URL with a valid repository but an invalid
+    revision.
+
+    Example:
+
+    ```py
+    >>> from huggingface_hub import hf_hub_download
+    >>> hf_hub_download('bert-base-cased', 'config.json', revision='<non-existent-revision>')
+    (...)
+    huggingface_hub.utils._errors.RevisionNotFoundError: 404 Client Error. (Request ID: Mwhe_c3Kt650GcdKEFomX)
+
+    Revision Not Found for url: https://huggingface.co/bert-base-cased/resolve/%3Cnon-existent-revision%3E/config.json.
+    ```
+    """
+
+def raise_for_status(response: Response, endpoint_name: Optional[str] = None) -> None:
     """
     Internal version of `response.raise_for_status()` that will refine a
     potential HTTPError. Raised exception will be an instance of `MSHTTPError`.
@@ -190,11 +211,11 @@ def hf_raise_for_status(response: Response, endpoint_name: Optional[str] = None)
     Example:
     ```py
         import requests
-        from huggingface_hub.utils import get_session, hf_raise_for_status, MSHTTPError
+        from huggingface_hub.utils import get_session, raise_for_status, MSHTTPError
 
         response = get_session().post(...)
         try:
-            hf_raise_for_status(response)
+            raise_for_status(response)
         except MSHTTPError as e:
             print(str(e)) # formatted message
             e.request_id, e.server_message # details returned by server

@@ -99,9 +99,11 @@ def nonzero(input, *, as_tuple=False):
     if GENERATOR_SEED:
         return ops.nonzero(input, as_tuple)
     out = ops.nonzero(input)
-    if 0 in out.shape:
-        return (out, )
-    return unbind(out, 1)
+    if as_tuple:
+        if 0 in out.shape:
+            return (out, out)
+        return unbind(out, 1)
+    return out
 
 # permute
 def permute(input, dims):

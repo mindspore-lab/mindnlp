@@ -66,7 +66,7 @@ class QuantEmbedding(nn.Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
 
-        self.weight = nn.Parameter(ops.zeros([num_embeddings, embedding_dim]))
+        self.weight = nn.Parameter(ops.zeros(num_embeddings, embedding_dim))
         self.register_buffer("weight_scaling_factor", ops.zeros(1))
         self.register_buffer("weight_integer", ops.zeros_like(self.weight))
 
@@ -229,7 +229,7 @@ class QuantLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.weight = nn.Parameter(ops.zeros([out_features, in_features]))
+        self.weight = nn.Parameter(ops.zeros(out_features, in_features))
         self.register_buffer("weight_integer", ops.zeros_like(self.weight))
         self.register_buffer("fc_scaling_factor", ops.zeros(self.out_features))
         if bias:

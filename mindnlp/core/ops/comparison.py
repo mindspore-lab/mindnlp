@@ -49,6 +49,11 @@ def isfinite(input):
     return ops.isfinite(input)
 
 # isin
+def isin(elements, test_elements):
+    elements = elements.asnumpy()
+    test_elements = test_elements.asnumpy()
+    mask = np.in1d(elements, test_elements).reshape(elements.shape)
+    return mindspore.tensor(mask)
 
 # isinf
 def isinf(input):
