@@ -14,12 +14,11 @@
 # ============================================================================
 """RNN Cells module, include RNNCell, GRUCell, LSTMCell."""
 import math
-import numpy as np
 
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Uniform
+from mindspore import Parameter
 from .module import Module
+from .. import init
 from .. import functional as F
 from ... import ops
 
@@ -88,25 +87,26 @@ def _gru_cell(inputs, hidden, w_ih, w_hh, b_ih, b_hh):
 class RNNCellBase(Module):
     """Basic class for RNN Cells"""
     def __init__(self, input_size: int, hidden_size: int, bias: bool, num_chunks: int,
-                 dtype=mindspore.float32):
+                 dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
-        self.weight_ih = Parameter(Tensor(np.random.randn(num_chunks * hidden_size, input_size), dtype=dtype))
-        self.weight_hh = Parameter(Tensor(np.random.randn(num_chunks * hidden_size, hidden_size), dtype=dtype))
+        self.weight_ih = Parameter(ops.empty((num_chunks * hidden_size, input_size), **factory_kwargs))
+        self.weight_hh = Parameter(ops.empty((num_chunks * hidden_size, hidden_size), **factory_kwargs))
         if bias:
-            self.bias_ih = Parameter(Tensor(np.random.randn(num_chunks * hidden_size), dtype=dtype))
-            self.bias_hh = Parameter(Tensor(np.random.randn(num_chunks * hidden_size), dtype=dtype))
+            self.bias_ih = Parameter(ops.empty(num_chunks * hidden_size, **factory_kwargs))
+            self.bias_hh = Parameter(ops.empty(num_chunks * hidden_size, **factory_kwargs))
         else:
             self.bias_ih = None
             self.bias_hh = None
-        self.reset_parameters(dtype=dtype)
+        self.reset_parameters()
 
-    def reset_parameters(self, dtype=mindspore.float32):
-        stdv = 1 / math.sqrt(self.hidden_size)
-        for weight in self.get_parameters():
-            weight.set_data(initializer(Uniform(stdv), weight.shape, dtype))
+    def reset_parameters(self) -> None:
+        stdv = 1.0 / math.sqrt(self.hidden_size) if self.hidden_size > 0 else 0
+        for weight in self.parameters():
+            init.uniform_(weight, -stdv, stdv)
 
 
 class RNNCell(RNNCellBase):

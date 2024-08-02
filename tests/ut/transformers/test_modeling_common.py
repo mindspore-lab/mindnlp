@@ -113,7 +113,7 @@ def _mock_init_weights(self, module):
     for name, param in module.named_parameters(recurse=False):
         # Use the first letter of the name to get a value and go from a <> -13 to z <> 12
         value = ord(name[0].lower()) - 110
-        param[:] = value
+        param.set_data(ops.full(param.shape, value, dtype=param.dtype))
 
 
 def _mock_all_init_weights(self):

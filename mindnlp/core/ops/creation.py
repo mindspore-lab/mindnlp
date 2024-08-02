@@ -93,6 +93,8 @@ def eye(n, m=None, *, dtype=None):
 
 # empty
 def empty(*size, dtype=None):
+    if isinstance(size[0], (tuple, list)):
+        size = size[0]
     if dtype is None:
         dtype = mindspore.float32
     return CTensor(dtype, size)
@@ -111,6 +113,8 @@ def full(size, fill_value, *, dtype=None):
 
 # full_like
 def full_like(input, fill_value, *, dtype=None):
+    if dtype is None:
+        dtype = input.dtype
     return full(input.shape, fill_value, dtype=dtype)
 
 # quantize_per_tensor

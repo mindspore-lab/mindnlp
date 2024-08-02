@@ -498,7 +498,7 @@ class TopKLogitsWarper(LogitsWarper):
         top_k = min(self.top_k, scores.shape[-1])  # Safety check
         # Remove all tokens with a probability less than the last token of the top-k
         indices_to_remove = scores < ops.topk(scores, top_k)[0][..., -1, None]
-        scores_processed = scores.masked_fill(indices_to_remove, self.filter_value)
+        scores_processed = ops.masked_fill(scores, indices_to_remove, ops.finfo(scores.dtype).min)
         return scores_processed
 
 
@@ -1552,7 +1552,7 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
         cur_len = input_ids.shape[-1]
         scores_processed = scores
         if cur_len == self.max_length - 1:
-            scores_processed = ops.full_like(scores, -math.inf)
+            scores_processed = ops.full_like(scores, -math.inf, dtype=scores.dtype)
             scores_processed[:, self.eos_token_id] = 0
         return scores_processed
 

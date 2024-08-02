@@ -20,6 +20,7 @@ from .generic import *
 from .decompress import unzip, untar, ungz
 from .download import *
 from .compatibility import *
+from .chat_template_utils import *
 from .import_utils import requires_backends, is_mindspore_available, OptionalDependencyNotAvailable, is_sentencepiece_available, \
 is_tokenizers_available, direct_transformers_import, is_protobuf_available, is_safetensors_available, \
 is_cython_available, is_pretty_midi_available, is_essentia_available, is_librosa_available, is_scipy_available, is_pyctcdecode_available, \

@@ -13,6 +13,25 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-from mindspore.common.api import _no_grad as no_grad
+import contextlib
+import mindspore
+from mindspore.common.api import _pynative_executor
 from . import optim, ops, nn
 from .utils import get_default_dtype, set_default_dtype
+
+
+class no_grad(contextlib.ContextDecorator):
+    """
+    Context Manager to disable gradient calculation. When enter this context, we will disable calculate
+    gradient. When exit this context, we will resume its prev state.
+    Currently, it can only use in Pynative mode. It also can be used as decorator.
+    """
+
+    def __enter__(self):
+        if mindspore.get_context("mode") == mindspore.GRAPH_MODE:
+            raise RuntimeError("For no_grad feature, currently only support Pynative mode, but got Graph mode.")
+        _pynative_executor.set_enable_grad(False)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _pynative_executor.set_enable_grad(True)
+        return False
