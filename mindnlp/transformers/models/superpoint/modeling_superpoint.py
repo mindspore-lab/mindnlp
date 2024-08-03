@@ -17,7 +17,8 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn,ops
+from mindnlp.core.nn import functional as F
 from mindspore.common.initializer import initializer, Normal
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import (
@@ -69,23 +70,23 @@ def simple_nms(scores: mindspore.Tensor, nms_radius: int) -> mindspore.Tensor:
         raise ValueError("Expected positive values for nms_radius")
 
     def max_pool(x):
-        return ops.max_pool2d(
+        return F.max_pool2d(
             x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius
         )
 
     zeros = ops.zeros_like(scores)
-    scores = ops.expand_dims(
-        scores, axis=0
+    scores = ops.unsqueeze(
+        scores, dim=0
     )  # 加维度因为维度问题max_pool在3维情况下报错
     max_mask = scores == max_pool(scores)
-    scores = ops.squeeze(scores, axis=0)  # 减维度
+    scores = ops.squeeze(scores, dim=0)  # 减维度
 
     for _ in range(2):
         supp_mask = max_pool(max_mask.float()) > 0
         supp_scores = ops.where(supp_mask, zeros, scores)
         new_max_mask = supp_scores == max_pool(supp_scores)
         max_mask = max_mask | (new_max_mask & (~supp_mask))
-    max_mask = ops.squeeze(max_mask, axis=0)  # 减维度
+    max_mask = ops.squeeze(max_mask, dim=0)  # 减维度
     return ops.where(max_mask, scores, zeros)
 
 
@@ -124,7 +125,9 @@ class SuperPointKeypointDescriptionOutput(ModelOutput):
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
-class SuperPointConvBlock(nn.Cell):
+class SuperPointConvBlock(nn.Module):
+    "SuperPointConvBlock"
+    
     def __init__(
         self,
         config: SuperPointConfig,
@@ -139,8 +142,6 @@ class SuperPointConvBlock(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode="pad",
-            has_bias=True,
         )
         self.conv_b = nn.Conv2d(
             out_channels,
@@ -148,13 +149,11 @@ class SuperPointConvBlock(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode="pad",
-            has_bias=True,
         )
         self.relu = nn.ReLU()
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2) if add_pooling else None
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.relu(self.conv_a(hidden_states))
         hidden_states = self.relu(self.conv_b(hidden_states))
         if self.pool is not None:
@@ -162,7 +161,7 @@ class SuperPointConvBlock(nn.Cell):
         return hidden_states
 
 
-class SuperPointEncoder(nn.Cell):
+class SuperPointEncoder(nn.Module):
     """
     SuperPoint encoder module. It is made of 4 convolutional layers with ReLU activation and max pooling, reducing the
      dimensionality of the image.
@@ -196,9 +195,9 @@ class SuperPointEncoder(nn.Cell):
                 add_pooling=False,
             )
         )
-        self.conv_blocks = nn.CellList(conv_blocks)
+        self.conv_blocks = nn.ModuleList(conv_blocks)
 
-    def construct(
+    def forward(
         self,
         input,
         output_hidden_states: Optional[bool] = False,
@@ -220,7 +219,7 @@ class SuperPointEncoder(nn.Cell):
         )
 
 
-class SuperPointInterestPointDecoder(nn.Cell):
+class SuperPointInterestPointDecoder(nn.Module):
     """
     The SuperPointInterestPointDecoder uses the output of the SuperPointEncoder to compute the keypoint with scores.
     The scores are first computed by a convolutional layer, then a softmax is applied to get a probability distribution
@@ -244,8 +243,6 @@ class SuperPointInterestPointDecoder(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode="pad",
-            has_bias=True,
         )
         self.conv_score_b = nn.Conv2d(
             config.decoder_hidden_size,
@@ -253,11 +250,9 @@ class SuperPointInterestPointDecoder(nn.Cell):
             kernel_size=1,
             stride=1,
             padding=0,
-            pad_mode="pad",
-            has_bias=True,
         )
 
-    def construct(
+    def forward(
         self, encoded: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
         scores = self._get_pixel_scores(encoded)
@@ -269,7 +264,7 @@ class SuperPointInterestPointDecoder(nn.Cell):
         """Based on the encoder output, compute the scores for each pixel of the image"""
         scores = self.relu(self.conv_score_a(encoded))
         scores = self.conv_score_b(scores)
-        scores = ops.softmax(scores, 1)[:, :-1]
+        scores = F.softmax(scores, 1)[:, :-1]
         batch_size, _, height, width = scores.shape
         scores = scores.permute(0, 2, 3, 1).reshape(batch_size, height, width, 8, 8)
         scores = scores.permute(0, 1, 3, 2, 4).reshape(
@@ -303,7 +298,7 @@ class SuperPointInterestPointDecoder(nn.Cell):
         return keypoints, scores
 
 
-class SuperPointDescriptorDecoder(nn.Cell):
+class SuperPointDescriptorDecoder(nn.Module):
     """
     The SuperPointDescriptorDecoder uses the outputs of both the SuperPointEncoder and the
     SuperPointInterestPointDecoder to compute the descriptors at the keypoints locations.
@@ -323,8 +318,6 @@ class SuperPointDescriptorDecoder(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode="pad",
-            has_bias=True,
         )
         self.conv_descriptor_b = nn.Conv2d(
             config.decoder_hidden_size,
@@ -332,17 +325,14 @@ class SuperPointDescriptorDecoder(nn.Cell):
             kernel_size=1,
             stride=1,
             padding=0,
-            pad_mode="pad",
-            has_bias=True,
         )
 
-    def construct(
+    def forward(
         self, encoded: mindspore.Tensor, keypoints: mindspore.Tensor
     ) -> mindspore.Tensor:
         """Based on the encoder output and the keypoints, compute the descriptors for each keypoint"""
         descriptors = self.conv_descriptor_b(self.relu(self.conv_descriptor_a(encoded)))
-        # descriptors = ops.normalize(descriptors, p=2, axis=1)
-        descriptors = ops.L2Normalize(axis=1)(descriptors)
+        descriptors = F.normalize(descriptors, p=2, dim=1)
         descriptors = self._sample_descriptors(
             keypoints[None], descriptors[0][None], 8
         )[0]
@@ -366,11 +356,10 @@ class SuperPointDescriptorDecoder(nn.Cell):
         kwargs = {"align_corners": True}
         keypoints = keypoints.view(batch_size, 1, -1, 2)
 
-        descriptors = ops.grid_sample(descriptors, keypoints, mode="bilinear", **kwargs)
+        descriptors = F.grid_sample(descriptors, keypoints, mode="bilinear", **kwargs)
         # [batch_size, descriptor_decoder_dim, num_channels, num_keypoints] -> [batch_size, descriptor_decoder_dim, num_keypoints]
         descriptors = ops.reshape(descriptors, (batch_size, num_channels, -1))
-        # descriptors = ops.normalize(descriptors, p=2, axis=1
-        descriptors = ops.L2Normalize(axis=1)(descriptors)
+        descriptors = F.normalize(descriptors, p=2, dim=1)
 
         return descriptors
 
@@ -386,23 +375,23 @@ class SuperPointPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = False
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
-            cell.weight.set_data(
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            module.weight.set_data(
                 initializer(
                     Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
+                    module.weight.shape,
+                    module.weight.dtype,
                 )
             )
-            if cell.has_bias:
-                cell.bias.set_data(
-                    initializer("zero", cell.bias.shape, cell.bias.dtype)
+            if module.bias is not None:
+                module.bias.set_data(
+                    initializer("zero", module.bias.shape, module.bias.dtype)
                 )
-        elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer("zeros", cell.beta.shape, cell.beta.dtype))
+        elif isinstance(module, nn.LayerNorm):
+            module.gamma.set_data(initializer("ones", module.gamma.shape, module.gamma.dtype))
+            module.beta.set_data(initializer("zeros", module.beta.shape, module.beta.dtype))
 
     def extract_one_channel_pixel_values(
         self, pixel_values: mindspore.Tensor
@@ -424,7 +413,7 @@ class SuperPointPreTrainedModel(PreTrainedModel):
 
 
 SUPERPOINT_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass. Use it
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
     as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -468,7 +457,7 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         labels: Optional[mindspore.Tensor] = None,
@@ -542,7 +531,7 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
         descriptors = ops.zeros(
             (batch_size, maximum_num_keypoints, self.config.descriptor_decoder_dim),
         )
-        mask = ops.zeros((batch_size, maximum_num_keypoints), dtype=mindspore.int32)
+        mask = ops.zeros((batch_size, maximum_num_keypoints), dtype=mindspore.float32)
 
         for i, (_keypoints, _scores, _descriptors) in enumerate(
             zip(list_keypoints, list_scores, list_descriptors)
