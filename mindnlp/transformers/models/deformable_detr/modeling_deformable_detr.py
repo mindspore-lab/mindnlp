@@ -21,8 +21,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
+import numpy as np
 
-from mindnlp.core import get_default_dtype, nn, ops
+from mindnlp.core import get_default_dtype, nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -59,59 +60,6 @@ logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "DeformableDetrConfig"
 _CHECKPOINT_FOR_DOC = "sensetime/deformable-detr"
-
-
-class MultiScaleDeformableAttentionFunction(nn.Module):
-    @staticmethod
-    def forward(
-        context,
-        value,
-        value_spatial_shapes,
-        value_level_start_index,
-        sampling_locations,
-        attention_weights,
-        im2col_step,
-    ):
-        context.im2col_step = im2col_step
-        output = MultiScaleDeformableAttention.ms_deform_attn_forward(
-            value,
-            value_spatial_shapes,
-            value_level_start_index,
-            sampling_locations,
-            attention_weights,
-            context.im2col_step,
-        )
-        context.save_for_backward(
-            value,
-            value_spatial_shapes,
-            value_level_start_index,
-            sampling_locations,
-            attention_weights,
-        )
-        return output
-
-    @staticmethod
-    def bprop(context, grad_output):
-        (
-            value,
-            value_spatial_shapes,
-            value_level_start_index,
-            sampling_locations,
-            attention_weights,
-        ) = context.saved_tensors
-        grad_value, grad_sampling_loc, grad_attn_weight = (
-            MultiScaleDeformableAttention.ms_deform_attn_backward(
-                value,
-                value_spatial_shapes,
-                value_level_start_index,
-                sampling_locations,
-                attention_weights,
-                grad_output,
-                context.im2col_step,
-            )
-        )
-
-        return grad_value, None, None, grad_sampling_loc, grad_attn_weight, None
 
 
 @dataclass
@@ -394,7 +342,8 @@ class DeformableDetrConvEncoder(nn.Module):
         backbone = load_backbone(config)
 
         # replace batch norm by frozen batch norm
-        replace_batch_norm(backbone)
+        with no_grad():
+            replace_batch_norm(backbone)
         self.model = backbone
         self.intermediate_channel_sizes = (
             self.model.feature_info.channels()
@@ -676,7 +625,8 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Module):
         for i in range(self.n_points):
             grid_init[:, :, i, :] *= i + 1
 
-        self.sampling_offsets.bias = mindspore.Parameter(grid_init.view(-1))
+        with no_grad():
+            self.sampling_offsets.bias = mindspore.Parameter(grid_init.view(-1))
         nn.init.zeros_(self.attention_weights.weight)
         nn.init.zeros_(self.attention_weights.bias)
         nn.init.xavier_uniform_(self.value_proj.weight)
@@ -751,27 +701,27 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Module):
                 f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}"
             )
 
-        if self.disable_custom_kernels:
-            # PyTorch implementation
-            output = multi_scale_deformable_attention(
-                value, spatial_shapes, sampling_locations, attention_weights
-            )
-        else:
-            try:
-                # custom kernel
-                output = MultiScaleDeformableAttentionFunction.apply(
-                    value,
-                    spatial_shapes,
-                    level_start_index,
-                    sampling_locations,
-                    attention_weights,
-                    self.im2col_step,
-                )
-            except Exception:
-                # PyTorch implementation
-                output = multi_scale_deformable_attention(
-                    value, spatial_shapes, sampling_locations, attention_weights
-                )
+        # if self.disable_custom_kernels:
+        # PyTorch implementation
+        output = multi_scale_deformable_attention(
+            value, spatial_shapes, sampling_locations, attention_weights
+        )
+        # else:
+        #     try:
+        #         # custom kernel
+        #         output = MultiScaleDeformableAttentionFunction()(
+        #             value,
+        #             spatial_shapes,
+        #             level_start_index,
+        #             sampling_locations,
+        #             attention_weights,
+        #             self.im2col_step,
+        #         )
+        #     except Exception:
+        #         # PyTorch implementation
+        #         output = multi_scale_deformable_attention(
+        #             value, spatial_shapes, sampling_locations, attention_weights
+        #         )
         output = self.output_proj(output)
 
         return output, attention_weights
@@ -998,6 +948,7 @@ class DeformableDetrEncoderLayer(nn.Module):
         if self.training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
                 clamp_value = ops.finfo(hidden_states.dtype).max - 1000
+
                 hidden_states = ops.clamp(
                     hidden_states, min=-clamp_value, max=clamp_value
                 )

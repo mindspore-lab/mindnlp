@@ -35,7 +35,7 @@ if is_mindspore_available():
 
 if is_vision_available():
     from PIL import Image
-    from transformers import DeformableDetrImageProcessor
+    from mindnlp.transformers import DeformableDetrImageProcessor
 
 
 class DeformableDetrImageProcessingTester(unittest.TestCase):
@@ -193,7 +193,7 @@ class DeformableDetrImageProcessingTest(
         # encode them
         image_processing = DeformableDetrImageProcessor()
         encoding = image_processing(
-            images=image, annotations=target, return_tensors="pt"
+            images=image, annotations=target, return_tensors="ms"
         )
 
         # verify pixel values
@@ -203,7 +203,9 @@ class DeformableDetrImageProcessingTest(
         expected_slice = mindspore.tensor([0.2796, 0.3138, 0.3481])
         self.assertTrue(
             np.allclose(
-                encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4
+                encoding["pixel_values"][0, 0, 0, :3].numpy(),
+                expected_slice.numpy(),
+                atol=1e-4,
             )
         )
 
@@ -211,39 +213,54 @@ class DeformableDetrImageProcessingTest(
         expected_area = mindspore.tensor(
             [5887.9600, 11250.2061, 489353.8438, 837122.7500, 147967.5156, 165732.3438]
         )
-        self.assertTrue(np.allclose(encoding["labels"][0]["area"], expected_area))
+        self.assertTrue(
+            np.allclose(encoding["labels"][0]["area"].numpy(), expected_area.numpy())
+        )
         # verify boxes
         expected_boxes_shape = (6, 4)
         self.assertEqual(encoding["labels"][0]["boxes"].shape, expected_boxes_shape)
         expected_boxes_slice = mindspore.tensor([0.5503, 0.2765, 0.0604, 0.2215])
         self.assertTrue(
             np.allclose(
-                encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3
+                encoding["labels"][0]["boxes"][0].numpy(),
+                expected_boxes_slice.numpy(),
+                atol=1e-3,
             )
         )
         # verify image_id
         expected_image_id = mindspore.tensor([39769])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["image_id"], expected_image_id)
+            np.allclose(
+                encoding["labels"][0]["image_id"].numpy(), expected_image_id.numpy()
+            )
         )
         # verify is_crowd
         expected_is_crowd = mindspore.tensor([0, 0, 0, 0, 0, 0])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd)
+            np.allclose(
+                encoding["labels"][0]["iscrowd"].numpy(), expected_is_crowd.numpy()
+            )
         )
         # verify class_labels
         expected_class_labels = mindspore.tensor([75, 75, 63, 65, 17, 17])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["class_labels"], expected_class_labels)
+            np.allclose(
+                encoding["labels"][0]["class_labels"].numpy(),
+                expected_class_labels.numpy(),
+            )
         )
         # verify orig_size
         expected_orig_size = mindspore.tensor([480, 640])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["orig_size"], expected_orig_size)
+            np.allclose(
+                encoding["labels"][0]["orig_size"].numpy(), expected_orig_size.numpy()
+            )
         )
         # verify size
         expected_size = mindspore.tensor([800, 1066])
-        self.assertTrue(np.allclose(encoding["labels"][0]["size"], expected_size))
+        self.assertTrue(
+            np.allclose(encoding["labels"][0]["size"].numpy(), expected_size.numpy())
+        )
 
     @slow
     def test_call_pytorch_with_coco_panoptic_annotations(self):
@@ -265,7 +282,7 @@ class DeformableDetrImageProcessingTest(
         # encode them
         image_processing = DeformableDetrImageProcessor(format="coco_panoptic")
         encoding = image_processing(
-            images=image, annotations=target, masks_path=masks_path, return_tensors="pt"
+            images=image, annotations=target, masks_path=masks_path, return_tensors="ms"
         )
 
         # verify pixel values
@@ -275,7 +292,9 @@ class DeformableDetrImageProcessingTest(
         expected_slice = mindspore.tensor([0.2796, 0.3138, 0.3481])
         self.assertTrue(
             np.allclose(
-                encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4
+                encoding["pixel_values"][0, 0, 0, :3].numpy(),
+                expected_slice.numpy(),
+                atol=1e-4,
             )
         )
 
@@ -283,30 +302,41 @@ class DeformableDetrImageProcessingTest(
         expected_area = mindspore.tensor(
             [147979.6875, 165527.0469, 484638.5938, 11292.9375, 5879.6562, 7634.1147]
         )
-        self.assertTrue(np.allclose(encoding["labels"][0]["area"], expected_area))
+        self.assertTrue(
+            np.allclose(encoding["labels"][0]["area"].numpy(), expected_area.numpy())
+        )
         # verify boxes
         expected_boxes_shape = (6, 4)
         self.assertEqual(encoding["labels"][0]["boxes"].shape, expected_boxes_shape)
         expected_boxes_slice = mindspore.tensor([0.2625, 0.5437, 0.4688, 0.8625])
         self.assertTrue(
             np.allclose(
-                encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3
+                encoding["labels"][0]["boxes"][0].numpy(),
+                expected_boxes_slice.numpy(),
+                atol=1e-3,
             )
         )
         # verify image_id
         expected_image_id = mindspore.tensor([39769])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["image_id"], expected_image_id)
+            np.allclose(
+                encoding["labels"][0]["image_id"].numpy(), expected_image_id.numpy()
+            )
         )
         # verify is_crowd
         expected_is_crowd = mindspore.tensor([0, 0, 0, 0, 0, 0])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd)
+            np.allclose(
+                encoding["labels"][0]["iscrowd"].numpy(), expected_is_crowd.numpy()
+            )
         )
         # verify class_labels
         expected_class_labels = mindspore.tensor([17, 17, 63, 75, 75, 93])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["class_labels"], expected_class_labels)
+            np.allclose(
+                encoding["labels"][0]["class_labels"].numpy(),
+                expected_class_labels.numpy(),
+            )
         )
         # verify masks
         expected_masks_sum = 822873
@@ -316,11 +346,15 @@ class DeformableDetrImageProcessingTest(
         # verify orig_size
         expected_orig_size = mindspore.tensor([480, 640])
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["orig_size"], expected_orig_size)
+            np.allclose(
+                encoding["labels"][0]["orig_size"].numpy(), expected_orig_size.numpy()
+            )
         )
         # verify size
         expected_size = mindspore.tensor([800, 1066])
-        self.assertTrue(np.allclose(encoding["labels"][0]["size"], expected_size))
+        self.assertTrue(
+            np.allclose(encoding["labels"][0]["size"].numpy(), expected_size.numpy())
+        )
 
     @slow
     # Copied from tests.models.detr.test_image_processing_detr.DetrImageProcessingTest.test_batched_coco_detection_annotations with Detr->DeformableDetr
@@ -357,7 +391,7 @@ class DeformableDetrImageProcessingTest(
             images=images,
             annotations=annotations,
             return_segmentation_masks=True,
-            return_tensors="pt",  # do_convert_annotations=True
+            return_tensors="ms",  # do_convert_annotations=True
         )
 
         # Check the pixel values have been padded
@@ -389,10 +423,18 @@ class DeformableDetrImageProcessingTest(
             ]
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["boxes"], expected_boxes_0, rtol=1e-3)
+            np.allclose(
+                encoding["labels"][0]["boxes"].numpy(),
+                expected_boxes_0.numpy(),
+                rtol=1e-3,
+            )
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][1]["boxes"], expected_boxes_1, rtol=1e-3)
+            np.allclose(
+                encoding["labels"][1]["boxes"].numpy(),
+                expected_boxes_1.numpy(),
+                rtol=1e-3,
+            )
         )
 
         # Check the masks have also been padded
@@ -407,7 +449,7 @@ class DeformableDetrImageProcessingTest(
             annotations=annotations,
             return_segmentation_masks=True,
             do_convert_annotations=False,
-            return_tensors="pt",
+            return_tensors="ms",
         )
         self.assertEqual(encoding["labels"][0]["boxes"].shape, (6, 4))
         self.assertEqual(encoding["labels"][1]["boxes"].shape, (6, 4))
@@ -446,10 +488,14 @@ class DeformableDetrImageProcessingTest(
             ]
         ).T
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["boxes"], expected_boxes_0, rtol=1)
+            np.allclose(
+                encoding["labels"][0]["boxes"].numpy(), expected_boxes_0.numpy(), rtol=1
+            )
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][1]["boxes"], expected_boxes_1, rtol=1)
+            np.allclose(
+                encoding["labels"][1]["boxes"].numpy(), expected_boxes_1.numpy(), rtol=1
+            )
         )
 
     # Copied from tests.models.detr.test_image_processing_detr.DetrImageProcessingTest.test_batched_coco_panoptic_annotations with Detr->DeformableDetr
@@ -499,7 +545,7 @@ class DeformableDetrImageProcessingTest(
             images=images,
             annotations=annotations,
             masks_path=masks_path,
-            return_tensors="pt",
+            return_tensors="ms",
             return_segmentation_masks=True,
         )
 
@@ -532,10 +578,18 @@ class DeformableDetrImageProcessingTest(
             ]
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["boxes"], expected_boxes_0, rtol=1e-3)
+            np.allclose(
+                encoding["labels"][0]["boxes"].numpy(),
+                expected_boxes_0.numpy(),
+                rtol=1e-3,
+            )
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][1]["boxes"], expected_boxes_1, rtol=1e-3)
+            np.allclose(
+                encoding["labels"][1]["boxes"].numpy(),
+                expected_boxes_1.numpy(),
+                rtol=1e-3,
+            )
         )
 
         # Check the masks have also been padded
@@ -551,7 +605,7 @@ class DeformableDetrImageProcessingTest(
             masks_path=masks_path,
             return_segmentation_masks=True,
             do_convert_annotations=False,
-            return_tensors="pt",
+            return_tensors="ms",
         )
         self.assertEqual(encoding["labels"][0]["boxes"].shape, (6, 4))
         self.assertEqual(encoding["labels"][1]["boxes"].shape, (6, 4))
@@ -590,10 +644,14 @@ class DeformableDetrImageProcessingTest(
             ]
         ).T
         self.assertTrue(
-            np.allclose(encoding["labels"][0]["boxes"], expected_boxes_0, rtol=1)
+            np.allclose(
+                encoding["labels"][0]["boxes"].numpy(), expected_boxes_0.numpy(), rtol=1
+            )
         )
         self.assertTrue(
-            np.allclose(encoding["labels"][1]["boxes"], expected_boxes_1, rtol=1)
+            np.allclose(
+                encoding["labels"][1]["boxes"].numpy(), expected_boxes_1.numpy(), rtol=1
+            )
         )
 
     # Copied from tests.models.detr.test_image_processing_detr.DetrImageProcessingTest.test_max_width_max_height_resizing_and_pad_strategy with Detr->DeformableDetr
@@ -602,10 +660,10 @@ class DeformableDetrImageProcessingTest(
 
         # do_pad=False, max_height=100, max_width=100, image=200x100 -> 100x50
         image_processor = DeformableDetrImageProcessor(
-            size={"max_height": 100, "max_width": 100},
+            size={"height": 100, "width": 100},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_1], return_tensors="pt")
+        inputs = image_processor(images=[image_1], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 100, 50))
 
         # do_pad=False, max_height=300, max_width=100, image=200x100 -> 200x100
@@ -613,7 +671,7 @@ class DeformableDetrImageProcessingTest(
             size={"max_height": 300, "max_width": 100},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_1], return_tensors="pt")
+        inputs = image_processor(images=[image_1], return_tensors="ms")
 
         # do_pad=True, max_height=100, max_width=100, image=200x100 -> 100x100
         image_processor = DeformableDetrImageProcessor(
@@ -621,7 +679,7 @@ class DeformableDetrImageProcessingTest(
             do_pad=True,
             pad_size={"height": 100, "width": 100},
         )
-        inputs = image_processor(images=[image_1], return_tensors="pt")
+        inputs = image_processor(images=[image_1], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 100, 100))
 
         # do_pad=True, max_height=300, max_width=100, image=200x100 -> 300x100
@@ -630,7 +688,7 @@ class DeformableDetrImageProcessingTest(
             do_pad=True,
             pad_size={"height": 301, "width": 101},
         )
-        inputs = image_processor(images=[image_1], return_tensors="pt")
+        inputs = image_processor(images=[image_1], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 301, 101))
 
         ### Check for batch
@@ -642,7 +700,7 @@ class DeformableDetrImageProcessingTest(
             do_pad=True,
             pad_size={"height": 150, "width": 100},
         )
-        inputs = image_processor(images=[image_1, image_2], return_tensors="pt")
+        inputs = image_processor(images=[image_1, image_2], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (2, 3, 150, 100))
 
     def test_longest_edge_shortest_edge_resizing_strategy(self):
@@ -654,7 +712,7 @@ class DeformableDetrImageProcessingTest(
             size={"longest_edge": 640, "shortest_edge": 640},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_1], return_tensors="pt")
+        inputs = image_processor(images=[image_1], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 640, 436))
 
         image_2 = ops.ones(653, 958, 3, dtype=mindspore.uint8)
@@ -664,7 +722,7 @@ class DeformableDetrImageProcessingTest(
             size={"longest_edge": 640, "shortest_edge": 640},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_2], return_tensors="pt")
+        inputs = image_processor(images=[image_2], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 436, 640))
 
         image_3 = ops.ones(100, 120, 3, dtype=mindspore.uint8)
@@ -674,7 +732,7 @@ class DeformableDetrImageProcessingTest(
             size={"longest_edge": 118, "shortest_edge": 100},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_3], return_tensors="pt")
+        inputs = image_processor(images=[image_3], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 98, 118))
 
         image_4 = ops.ones(128, 50, 3, dtype=mindspore.uint8)
@@ -684,7 +742,7 @@ class DeformableDetrImageProcessingTest(
             size={"longest_edge": 256, "shortest_edge": 50},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_4], return_tensors="pt")
+        inputs = image_processor(images=[image_4], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 128, 50))
 
         image_5 = ops.ones(50, 50, 3, dtype=mindspore.uint8)
@@ -694,5 +752,5 @@ class DeformableDetrImageProcessingTest(
             size={"longest_edge": 117, "shortest_edge": 50},
             do_pad=False,
         )
-        inputs = image_processor(images=[image_5], return_tensors="pt")
+        inputs = image_processor(images=[image_5], return_tensors="ms")
         self.assertEqual(inputs["pixel_values"].shape, (1, 3, 50, 50))
