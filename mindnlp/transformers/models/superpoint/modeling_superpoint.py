@@ -13,24 +13,21 @@
 # limitations under the License.
 # ============================================================================
 """PyTorch SuperPoint model."""
-
-from dataclasses import dataclass
-from typing import Optional, Tuple, Union
 import mindspore
-from mindnlp.core import nn,ops
-from mindnlp.core.nn import functional as F
+from dataclasses import dataclass
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
+from typing import Optional, Tuple, Union
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
 )
 from .configuration_superpoint import SuperPointConfig
-
-
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
 
 
 logger = logging.get_logger(__name__)
@@ -75,9 +72,7 @@ def simple_nms(scores: mindspore.Tensor, nms_radius: int) -> mindspore.Tensor:
         )
 
     zeros = ops.zeros_like(scores)
-    scores = ops.unsqueeze(
-        scores, dim=0
-    )  # 加维度因为维度问题max_pool在3维情况下报错
+    scores = ops.unsqueeze(scores, dim=0)  # 加维度因为维度问题max_pool在3维情况下报错
     max_mask = scores == max_pool(scores)
     scores = ops.squeeze(scores, dim=0)  # 减维度
 
@@ -127,7 +122,6 @@ class SuperPointKeypointDescriptionOutput(ModelOutput):
 
 class SuperPointConvBlock(nn.Module):
     "SuperPointConvBlock"
-    
     def __init__(
         self,
         config: SuperPointConfig,
@@ -390,8 +384,12 @@ class SuperPointPreTrainedModel(PreTrainedModel):
                     initializer("zero", module.bias.shape, module.bias.dtype)
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.gamma.set_data(initializer("ones", module.gamma.shape, module.gamma.dtype))
-            module.beta.set_data(initializer("zeros", module.beta.shape, module.beta.dtype))
+            module.gamma.set_data(
+                initializer("ones", module.gamma.shape, module.gamma.dtype)
+            )
+            module.beta.set_data(
+                initializer("zeros", module.beta.shape, module.beta.dtype)
+            )
 
     def extract_one_channel_pixel_values(
         self, pixel_values: mindspore.Tensor

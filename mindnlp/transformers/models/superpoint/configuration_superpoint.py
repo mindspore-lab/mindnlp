@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
+"""SuperPoint model configuration"""
 from typing import List
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
