@@ -21,10 +21,11 @@ from typing import Optional, Tuple, List, Callable, Dict, Any
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import embedding
 from ...modeling_utils import PreTrainedModel
 from ...generation.logits_process import LogitsProcessor
 from ...generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
@@ -42,10 +43,12 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         Args:
             self (object): The instance of the class.
             input_ids (mindspore.Tensor): A tensor containing input IDs.
-            scores (mindspore.Tensor): A tensor containing scores to be processed. It is expected to be a valid tensor.
+            scores (mindspore.Tensor): A tensor containing scores to be processed.
+                It is expected to be a valid tensor.
         
         Returns:
-            mindspore.Tensor: A tensor representing the processed scores. If any values in the input 'scores' tensor are NaN or Inf,
+            mindspore.Tensor: A tensor representing the processed scores.
+                If any values in the input 'scores' tensor are NaN or Inf,
             they are replaced with zeros, and the value at index 5 is set to 50000.0.
         
         Raises:
@@ -57,7 +60,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     """
     The model to encode the prefix
     Input shape: (batch-size, prefix-length)
@@ -69,19 +72,21 @@ class PrefixEncoder(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters. It should have the following attributes:
+            config: An object containing configuration parameters.
+                It should have the following attributes:
+
                 - prefix_projection (bool): A flag indicating whether to use prefix projection.
                 - pre_seq_len (int): The length of the input sequence.
                 - hidden_size (int): The size of the hidden layers.
                 - num_layers (int): The number of layers.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - AttributeError: If the config object is missing any of the required attributes.
-            - ValueError: If the config attributes are not of the expected types or do not meet the specified restrictions.
-            - TypeError: If the config object is not of the expected type.
+            AttributeError: If the config object is missing any of the required attributes.
+            ValueError: If the config attributes are not of the expected types or do not meet the specified restrictions.
+            TypeError: If the config object is not of the expected type.
         """
         super().__init__()
         self.prefix_projection = config.prefix_projection
@@ -89,24 +94,24 @@ class PrefixEncoder(nn.Cell):
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
             self.trans = nn.SequentialCell(
-                nn.Dense(config.hidden_size, config.hidden_size),
+                nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
-                nn.Dense(config.hidden_size, config.num_layers * config.hidden_size * 2)
+                nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
             )
         else:
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
         Constructs past key values for the PrefixEncoder.
-        
+
         Args:
             self (PrefixEncoder): An instance of the PrefixEncoder class.
             prefix (mindspore.Tensor): The input prefix tensor.
-        
+
         Returns:
-            None. This method returns the past key values for the PrefixEncoder.
-        
+            The past key values for the PrefixEncoder.
+
         Raises:
             None.
         """
@@ -118,22 +123,22 @@ class PrefixEncoder(nn.Cell):
         return past_key_values
 
 
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     """Rotary Embedding."""
     def __init__(self, dim, base=10000, precision=mindspore.float16, max_seq_len=2048):
         """
         Initializes an instance of the RotaryEmbedding class.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimensionality of the embeddings.
             base (int, optional): The base value used for calculating inverse frequencies. Defaults to 10000.
             precision (mindspore.dtype, optional): The data type precision of the embeddings. Defaults to mindspore.float16.
             max_seq_len (int, optional): The maximum sequence length. Defaults to 2048.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -147,20 +152,20 @@ class RotaryEmbedding(nn.Cell):
         self.cos_cached = Tensor(self.cos_cached, precision)
         self.sin_cached = Tensor(self.sin_cached, precision)
 
-    def construct(self, seq_len):
+    def forward(self, seq_len):
         """
         Constructs and returns the cached cosine and sine arrays of the specified length for the RotaryEmbedding class.
-        
+
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
-            seq_len (int): The length of the sequence for which the cosine and sine arrays should be constructed. 
-        
+            seq_len (int): The length of the sequence for which the cosine and sine arrays should be forwarded.
+
         Returns:
-            None: This method does not return any value.
-        
+            None
+
         Raises:
-            None: This method does not raise any exceptions.
-        
+            None.
+
         """
         return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
 
@@ -168,14 +173,14 @@ class RotaryEmbedding(nn.Cell):
 def rotate_half(x):
     """rotate half tensor."""
     x1, x2 = x.chunk(2, x.ndim - 1)
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
     """apply rotary pos"""
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
 
     q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
     return q, k
@@ -186,7 +191,7 @@ def default_init(cls, *args, **kwargs):
     return cls(*args, **kwargs)
 
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
     """Self Attention."""
     def __init__(self, config, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
@@ -202,12 +207,13 @@ class SelfAttention(nn.Cell):
             bias (bool): A flag indicating whether to use bias in the dense layers.
             params_dtype (object): The data type of the parameters. Defaults to mindspore.float32.
             position_encoding_2d (bool): A flag indicating whether to use 2D position encoding.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the hidden_size_per_attention_head is provided and is not compatible with the hidden_size and num_attention_heads.
+            ValueError: If the hidden_size_per_attention_head is provided and is not compatible with the hidden_size
+                and num_attention_heads.
             ValueError: If config.max_sequence_length is not provided or is invalid.
             TypeError: If the data type of the parameters is not supported.
         """
@@ -238,17 +244,17 @@ class SelfAttention(nn.Cell):
         self.inner_hidden_size = num_attention_heads * self.hidden_size_per_attention_head
 
         # Strided linear layer.
-        self.query_key_value = nn.Dense(
+        self.query_key_value = nn.Linear(
             hidden_size,
             3 * self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             self.inner_hidden_size,
             hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -262,19 +268,18 @@ class SelfAttention(nn.Cell):
         Arguments:
             tensor: input tensor.
             num_partitions: number of partitions to split the tensor
-            contiguous_split_chunks: If True, make each chunk contiguous
-                                    in memory.
+            contiguous_split_chunks: If True, make each chunk contiguous in memory.
         """
         # Get the size and dimension.
         last_dim = tensor.ndim - 1
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
-        tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+        tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
 
         return tensor_list
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -285,8 +290,9 @@ class SelfAttention(nn.Cell):
             output_attentions: bool = False,
     ):
         """
-        hidden_states: [seq_len, batch, hidden_size]
-        attention_mask: [(1, 1), seq_len, seq_len]
+        Args:
+            hidden_states: [seq_len, batch, hidden_size]
+            attention_mask: [(1, 1), seq_len, seq_len]
         """
         # [seq_len, batch, 3 * hidden_size]
         mixed_raw_layer = self.query_key_value(hidden_states)
@@ -310,8 +316,8 @@ class SelfAttention(nn.Cell):
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
 
-            query_layer = ops.concat([q1, q2], axis=3)
-            key_layer = ops.concat([k1, k2], axis=3)
+            query_layer = ops.concat([q1, q2], dim=3)
+            key_layer = ops.concat([k1, k2], dim=3)
         else:
             position_ids = position_ids.swapaxes(0, 1)
             cos, sin = self.rotary_emb(position_ids.max() + 1)
@@ -356,8 +362,8 @@ class SelfAttention(nn.Cell):
         if layer_past is not None and seq_len == 1:
             # layer_past = layer_past.chunk(2, 0)
             past_key, past_value = layer_past[0], layer_past[1]
-            key_layer = ops.cat((past_key, key_layer), axis=0)
-            value_layer = ops.cat((past_value, value_layer), axis=0)
+            key_layer = ops.cat((past_key, key_layer), dim=0)
+            value_layer = ops.cat((past_value, value_layer), dim=0)
 
         # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
         hidden_size = key_layer.shape[-1]
@@ -403,7 +409,7 @@ class SelfAttention(nn.Cell):
         attention_scores = attention_scores.float()
         attention_scores = attention_scores * query_key_layer_scaling_coeff
 
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         attention_probs = attention_probs.astype(dtype)
 
@@ -445,71 +451,75 @@ def gelu(x):
     return ops.gelu(x, approximate='tanh')
 
 
-class GEGLU(nn.Cell):
+class GEGLU(nn.Module):
     """GEGLU"""
     def __init__(self):
         """
         Initializes an instance of the GEGLU class.
-        
+
         Args:
             self: The instance of the GEGLU class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.activation_fn = ops.gelu
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a GEGLU object.
-        
+
         Args:
             self (GEGLU): The instance of the GEGLU class.
             x (Tensor): The input tensor to be processed. It should have a dimension greater than or equal to 1.
-            
+
         Returns:
-            None. The method modifies the instance's internal state.
-        
+            None: The method modifies the instance's internal state.
+
         Raises:
             ValueError: If the input tensor `x` has a dimension less than 1.
-        
-        This method takes an input tensor `x` and performs the GEGLU operation on it. The GEGLU operation splits the input tensor into two parts, `x1` and `x2`, along the last axis, and multiplies `x1` with
-the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
-        
+
+        This method takes an input tensor `x` and performs the GEGLU operation on it.
+        The GEGLU operation splits the input tensor into two parts, `x1` and `x2`, along the last axis, and multiplies `x1` with
+        the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
+
         Note that the activation function used for the GEGLU operation is defined during the instantiation of the GEGLU object.
-        
+
         Example:
+            ```python
             >>> g = GEGLU()
             >>> x = torch.tensor([1, 2, 3, 4])
-            >>> g.construct(x)
+            >>> g.forward(x)
+            ```
         """
         # dim=-1 breaks in jit for pt<1.10
         x1, x2 = x.chunk(2, axis=x.ndim - 1)
         return x1 * self.activation_fn(x2)
 
 
-class GLU(nn.Cell):
+class GLU(nn.Module):
     """GLU"""
     def __init__(self, hidden_size, inner_hidden_size=None,
                  layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
         """
         Initializes an instance of the GLU class.
-        
+
         Args:
             hidden_size (int): The size of the hidden layer.
-            inner_hidden_size (int, optional): The size of the inner hidden layer. If not provided, it defaults to 4 times the hidden size.
+            inner_hidden_size (int, optional): The size of the inner hidden layer.
+                If not provided, it defaults to 4 times the hidden size.
             layer_id (int, optional): The ID of the layer. Defaults to None.
             bias (bool, optional): Indicates whether bias should be included in the dense layers. Defaults to True.
             activation_func (function, optional): The activation function to be used. Defaults to gelu.
             params_dtype (mindspore.dtype, optional): The data type of the parameters. Defaults to mindspore.float32.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -522,23 +532,24 @@ class GLU(nn.Cell):
         if inner_hidden_size is None:
             inner_hidden_size = 4 * hidden_size
         self.inner_hidden_size = inner_hidden_size
-        self.dense_h_to_4h = nn.Dense(
+        self.dense_h_to_4h = nn.Linear(
             self.hidden_size,
             self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
+        self.dense_4h_to_h = nn.Linear(
             self.inner_hidden_size,
             self.hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        hidden_states: [seq_len, batch, hidden_size]
+        Args:
+            hidden_states: [seq_len, batch, hidden_size]
         """
         # [seq_len, batch, inner_hidden_size]
         intermediate_parallel = self.dense_h_to_4h(hidden_states)
@@ -550,7 +561,7 @@ class GLU(nn.Cell):
         return output
 
 
-class GLMBlock(nn.Cell):
+class GLMBlock(nn.Module):
     """GLM Block."""
     def __init__(
             self,
@@ -568,7 +579,7 @@ class GLMBlock(nn.Cell):
     ):
         """
         Initializes a GLMBlock object.
-        
+
         Args:
             self: The object itself.
             config: Configuration object.
@@ -582,10 +593,10 @@ class GLMBlock(nn.Cell):
             params_dtype (mindspore.dtype, optional): The data type of the parameters. Defaults to mindspore.float32.
             num_layers (int, optional): The number of layers. Defaults to 28.
             position_encoding_2d (bool, optional): Whether to use 2D position encoding. Defaults to True.
-        
+
         Returns:
-            None. 
-        
+            None.
+
         Raises:
             None.
         """
@@ -595,7 +606,7 @@ class GLMBlock(nn.Cell):
         self.layer_id = layer_id
 
         # Layernorm on the input data.
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.position_encoding_2d = position_encoding_2d
 
@@ -612,7 +623,7 @@ class GLMBlock(nn.Cell):
         )
 
         # Layernorm on the input data.
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.num_layers = num_layers
 
@@ -625,7 +636,7 @@ class GLMBlock(nn.Cell):
             params_dtype=params_dtype,
         )
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -636,8 +647,9 @@ class GLMBlock(nn.Cell):
             output_attentions: bool = False,
     ):
         """
-        hidden_states: [seq_len, batch, hidden_size]
-        attention_mask: [(1, 1), seq_len, seq_len]
+        Args:
+            hidden_states: [seq_len, batch, hidden_size]
+            attention_mask: [(1, 1), seq_len, seq_len]
         """
         # Layer norm at the begining of the transformer layer.
         # [seq_len, batch, hidden_size]
@@ -690,7 +702,7 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GLMBlock"]
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         """Initialize the weights."""
     def get_masks(self, input_ids):
         """get masks"""
@@ -719,8 +731,8 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
                 ops.zeros(context_length, dtype=mindspore.int64),
                 ops.arange(seq_length - context_length, dtype=mindspore.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = ops.stack(block_position_ids, dim=0)
+            position_ids = ops.stack((position_ids, block_position_ids), dim=1)
         else:
             position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
             for i, context_length in enumerate(context_lengths):
@@ -746,28 +758,31 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     `encoder_hidden_states` is then expected as an input to the forward pass.
     """
     def __init__(self, config: ChatGLMConfig):
-        """Initializes an instance of the MSChatGLMModel class with the provided configuration.
-        
+        """
+        Initializes an instance of the MSChatGLMModel class with the provided configuration.
+
         Args:
             self: The instance of the MSChatGLMModel class.
-            config (ChatGLMConfig): The configuration for the model.
-                max_sequence_length (int): The maximum sequence length for the input.
-                hidden_size (int): The size of the hidden layer.
-                num_attention_heads (int): The number of attention heads.
-                vocab_size (int): The size of the vocabulary.
-                num_layers (int): The number of layers for the model.
-                layernorm_epsilon (float): The epsilon value for the layer normalization.
-                inner_hidden_size (int): The size of the inner hidden layer.
-                position_encoding_2d (bool): Whether to use 2D position encoding.
-                pre_seq_len (int): The length of the prefix sequence.
-                prefix_projection (bool): Whether to use prefix projection.
-                use_cache (bool): Whether to use cache.
-                output_hidden_states (bool): Whether to output hidden states.
-                output_attentions (bool): Whether to output attentions.
-        
+            config (ChatGLMConfig):
+                The configuration for the model.
+
+                - max_sequence_length (int): The maximum sequence length for the input.
+                - hidden_size (int): The size of the hidden layer.
+                - num_attention_heads (int): The number of attention heads.
+                - vocab_size (int): The size of the vocabulary.
+                - num_layers (int): The number of layers for the model.
+                - layernorm_epsilon (float): The epsilon value for the layer normalization.
+                - inner_hidden_size (int): The size of the inner hidden layer.
+                - position_encoding_2d (bool): Whether to use 2D position encoding.
+                - pre_seq_len (int): The length of the prefix sequence.
+                - prefix_projection (bool): Whether to use prefix projection.
+                - use_cache (bool): Whether to use cache.
+                - output_hidden_states (bool): Whether to output hidden states.
+                - output_attentions (bool): Whether to output attentions.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -809,11 +824,11 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
                 position_encoding_2d=self.position_encoding_2d,
             )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [get_layer(layer_id) for layer_id in range(self.num_layers)]
         )
         # Final layer norm before output.
-        self.final_layernorm = nn.LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
+        self.final_layernorm = nn.LayerNorm([self.hidden_size], eps=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
             # for param in self.parameters():
@@ -829,33 +844,33 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     def get_input_embeddings(self):
         """
         Retrieve the input embeddings for the MSChatGLMModel.
-        
+
         Args:
             self (MSChatGLMModel): An instance of the MSChatGLMModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
         """
         Sets the input embeddings for the MSChatGLMModel.
-        
+
         Args:
             self (MSChatGLMModel): The instance of the MSChatGLMModel class.
             new_embeddings (mindspore.Tensor): The new embeddings to be set as input.
                 It should be a tensor object representing the word embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Note:
             The input embeddings are used for representing words in the MSChatGLMModel.
             By setting new embeddings, the model can be fine-tuned or customized to use different word representations.
@@ -879,7 +894,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         # past_key_values = [(v[0], v[1]) for v in past_key_values]
         return past_key_values
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -888,24 +903,25 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             inputs_embeds: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor, ...]:
         """Constructs the MSChatGLMModel.
-        
-        This method is used to construct the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
-        
+
+        This method is used to forward the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
+
         Args:
             self (MSChatGLMModel): The instance of the MSChatGLMModel class.
             input_ids (Optional[mindspore.Tensor]): The input tensor representing the tokenized input sequences. Default is None.
             position_ids (Optional[mindspore.Tensor]): The input tensor representing the position ids of the tokens. Default is None.
             attention_mask (Optional[mindspore.Tensor]): The input tensor representing the attention mask. Default is None.
-            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): The input tensor representing the past key values. Default is None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]):
+                The input tensor representing the past key values. Default is None.
             inputs_embeds (Optional[mindspore.Tensor]): The input tensor representing the embedded input sequences. Default is None.
-        
+
         Returns:
             Tuple[mindspore.Tensor, ...]: A tuple containing the hidden states, presents, all hidden states, and all self attentions.
-        
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
             ValueError: If neither input_ids nor inputs_embeds are specified.
-        
+
         """
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
@@ -951,7 +967,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=3)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=3)
 
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
@@ -1003,31 +1019,33 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
 class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
     """MSChatGLMForConditionalGeneration"""
     def __init__(self, config: ChatGLMConfig):
-        """ 
+        """
         Initializes an instance of the MSChatGLMForConditionalGeneration class.
-        
+
         Args:
             self: The instance of the MSChatGLMForConditionalGeneration class.
-            config (ChatGLMConfig): An object of type ChatGLMConfig containing configuration parameters for the model.
+            config (ChatGLMConfig):
+                An object of type ChatGLMConfig containing configuration parameters for the model.
+
                 - max_sequence_length (int): The maximum length of input sequences.
                 - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
                 - quantization_bit (int): Number of bits to use for quantization.
-            
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
         self.max_sequence_length = config.max_sequence_length
         self.position_encoding_2d = config.position_encoding_2d
         self.transformer = MSChatGLMModel(config)
-        self.lm_head = nn.Dense(
+        self.lm_head = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
             dtype=mindspore.float16
         )
         self.quantized = False
@@ -1038,34 +1056,36 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the MSChatGLMForConditionalGeneration model.
-        
+
         Args:
             self: The instance of the MSChatGLMForConditionalGeneration class.
-        
+
         Returns:
-            None. The method returns the output embeddings of the model as a tensor.
-        
+            returns the output embeddings of the model as a tensor.
+
         Raises:
             None.
-        
-        This method retrieves the output embeddings of the MSChatGLMForConditionalGeneration model. The output embeddings are the final representations of the input tokens after being processed by the model's
-language model head. The embeddings are returned as a tensor.
+
+        This method retrieves the output embeddings of the MSChatGLMForConditionalGeneration model.
+        The output embeddings are the final representations of the input tokens after being processed by the model's
+        language model head. The embeddings are returned as a tensor.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings for the MSChatGLMForConditionalGeneration model.
-        
+
         Args:
             self (MSChatGLMForConditionalGeneration): The instance of the MSChatGLMForConditionalGeneration class.
-            new_embeddings (object): The new embeddings to be set as the output embeddings for the model. It can be of any valid type.
-        
+            new_embeddings (object): The new embeddings to be set as the output embeddings for the model.
+                It can be of any valid type.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -1077,25 +1097,26 @@ language model head. The embeddings are returned as a tensor.
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
         """
-        This method '_update_model_kwargs_for_generation' in the class 'MSChatGLMForConditionalGeneration' updates the model_kwargs for generation based on the provided outputs and other parameters.
-        
+        This method '_update_model_kwargs_for_generation' in the class 'MSChatGLMForConditionalGeneration' updates
+        the model_kwargs for generation based on the provided outputs and other parameters.
+
         Args:
             self: The instance of the class.
             outputs: The model outputs that are used to update the model_kwargs.
             model_kwargs (Dict[str, Any]): A dictionary containing keyword arguments for the model.
             is_encoder_decoder (bool): A boolean indicating whether the model is an encoder-decoder model. Default is False.
             standardize_cache_format (bool): A boolean indicating whether to standardize the cache format. Default is False.
-        
+
         Returns:
             Dict[str, Any]: A dictionary containing updated keyword arguments for the model.
-        
+
         Raises:
-            - ValueError: If the provided attention_mask has an unsupported data type.
-            - IndexError: If there are issues with indexing while updating position_ids.
+            ValueError: If the provided attention_mask has an unsupported data type.
+            IndexError: If there are issues with indexing while updating position_ids.
         """
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
 
         # update attention mask
@@ -1103,11 +1124,11 @@ language model head. The embeddings are returned as a tensor.
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], axis=3)
+                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, new_attention_mask], axis=2
+                    [attention_mask, new_attention_mask], dim=2
                 )
 
         # update position ids
@@ -1116,7 +1137,7 @@ language model head. The embeddings are returned as a tensor.
             new_position_id = position_ids[..., -1:].copy()
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         return model_kwargs
@@ -1132,24 +1153,25 @@ language model head. The embeddings are returned as a tensor.
     ) -> dict:
         """
         This method prepares inputs for generation in the MSChatGLMForConditionalGeneration class.
-        
+
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing token ids.
-        - past (Optional[mindspore.Tensor]): The past state tensor (default is None).
-        - past_key_values (Optional[mindspore.Tensor]): The past key values tensor (default is None).
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default is None).
-        - position_ids (Optional[mindspore.Tensor]): The position ids tensor (default is None).
-        - **kwargs: Additional keyword arguments.
-        
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing token ids.
+            past (Optional[mindspore.Tensor]): The past state tensor (default is None).
+            past_key_values (Optional[mindspore.Tensor]): The past key values tensor (default is None).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default is None).
+            position_ids (Optional[mindspore.Tensor]): The position ids tensor (default is None).
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values', 'position_ids', and 'attention_mask'.
-        
+            dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values',
+                'position_ids', and 'attention_mask'.
+
         Raises:
-        - TypeError: If the input arguments are not of the expected types.
-        - ValueError: If there are issues with the input data or configuration.
-        - IndexError: If there are index out of bounds errors during processing.
-        - Warning: If there are issues with the dtype of attention mask.
+            TypeError: If the input arguments are not of the expected types.
+            ValueError: If there are issues with the input data or configuration.
+            IndexError: If there are index out of bounds errors during processing.
+            Warning: If there are issues with the dtype of attention mask.
         """
         batch_size, seq_length = input_ids.shape
 
@@ -1217,7 +1239,7 @@ language model head. The embeddings are returned as a tensor.
                 "attention_mask": attention_mask
             }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1227,17 +1249,23 @@ language model head. The embeddings are returned as a tensor.
     ):
         """
         Constructs the MSChatGLMForConditionalGeneration model.
-        
+
         Args:
             self (MSChatGLMForConditionalGeneration): The instance of the MSChatGLMForConditionalGeneration class.
-            input_ids (Optional[mindspore.Tensor]): The input tensor containing the tokenized input sequence. Default is None.
-            position_ids (Optional[mindspore.Tensor]): The tensor containing the position indices for each token in the input sequence. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): The mask tensor indicating which elements in the input sequence should be attended to. Default is None.
-            past_key_values (Optional[Tuple[mindspore.Tensor]]): The tuple of tensors containing the key-value pairs from the previous attention pass. Default is None.
+            input_ids (Optional[mindspore.Tensor]):
+                The input tensor containing the tokenized input sequence. Default is None.
+            position_ids (Optional[mindspore.Tensor]):
+                The tensor containing the position indices for each token in the input sequence. Default is None.
+            attention_mask (Optional[mindspore.Tensor]):
+                The mask tensor indicating which elements in the input sequence should be attended to. Default is None.
+            past_key_values (Optional[Tuple[mindspore.Tensor]]):
+                The tuple of tensors containing the key-value pairs from the previous attention pass. Default is None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            dict: A dictionary containing the following keys:
+            dict:
+                A dictionary containing the following keys:
+
                 - 'loss' (None): The loss value. Always None.
                 - 'logits' (mindspore.Tensor): The output logits tensor of shape (batch_size, sequence_length, vocab_size).
                 - 'past_key_values' (Tuple[mindspore.Tensor]): The tuple of tensors containing the key-value pairs from the current attention pass.
@@ -1438,14 +1466,14 @@ language model head. The embeddings are returned as a tensor.
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

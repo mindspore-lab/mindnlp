@@ -26,6 +26,7 @@ def make_divisible(
         v: input value
         divisor: default to 8
         min_value: minimum divisor value
+
     Returns:
         new_v: new divisible value
     """
@@ -39,7 +40,8 @@ def make_divisible(
 
 
 def compute_heads(model_dim: int, head_dim: int) -> int:
-    """Compute the number of heads.
+    """
+    Compute the number of heads.
 
     Args:
         model_dim: Model dimension.
@@ -60,7 +62,8 @@ def compute_heads(model_dim: int, head_dim: int) -> int:
 
 class OpenELMConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`OpenELMModel`]. It is used to instantiate an OpenELM model according to the specified arguments, defining the model architecture.
+    This is the configuration class to store the configuration of a [`OpenELMModel`].
+    It is used to instantiate an OpenELM model according to the specified arguments, defining the model architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -80,21 +83,24 @@ class OpenELMConfig(PretrainedConfig):
             If the qkv_multipliers is a Number, then all attention layers have the same latent dimensions,
             resulting in uniform allocation of parameters.
             If the qkv_multipliers is a List of Number, then each attention layer have different latent dimensions
-            assuming qkv_multipliers[0] != qkv_multipliers[1]. This results in variable allocation of parameters in attention layer.
+            assuming qkv_multipliers[0] != qkv_multipliers[1]. This results in variable allocation of parameters
+            in attention layer.
             This scaling is known as layer-wise or block-wise scaling: https://arxiv.org/abs/2008.00623
         num_query_heads (`Union[int, None]`, *optional*, defaults to None):
             The number of query heads, computed from `compute_heads(model_dim=model_dim, head_dim=head_dim)`.
         num_gqa_groups (`int`, *optional*, defaults to 1):
             This variable allows to switch between multi-head attention, group query attention, and multi-query attention.
             When num_gqa_groups == 1, then it is multi-head attention.
-            When 1 < num_gqa_groups < num_heads and num_heads is divisible by num_gqa_groups, then it is group query attention
+            When 1 < num_gqa_groups < num_heads and num_heads is divisible by num_gqa_groups,
+            then it is group query attention
             When num_gqa_groups == num_heads, then it is multi-query attention
         ffn_multipliers (`Union[Number, List[Number]]`, *optional*, defaults to 4.0):
             Feed-forward network (FFN) multipliers.
             If the ffn_multipliers is a Number, then all FFN layers have the same latent dimensions,
             resulting in uniform allocation of parameters.
             If the ffn_multipliers is a List of Number, then each FFN layer have different latent dimensions
-            assuming ffn_multipliers[0] != ffn_multipliers[1]. This results in variable allocation of parameters in FFN layer.
+            assuming ffn_multipliers[0] != ffn_multipliers[1]. This results in variable allocation of parameters
+            in FFN layer.
             This scaling is known as layer-wise or block-wise scaling: https://arxiv.org/abs/2008.00623
         ffn_with_glu (`bool`, *optional*, defaults to True):
             Whether to use FFN with Gated Linear Unit (GLU)
@@ -154,34 +160,35 @@ class OpenELMConfig(PretrainedConfig):
         This method initializes an instance of the OpenELMConfig class with the provided parameters.
         
         Args:
-        - self: The instance of the class.
-        - vocab_size (int): The size of the vocabulary.
-        - max_context_length (int): The maximum length of the context.
-        - num_transformer_layers (int): The number of transformer layers.
-        - model_dim (int): The dimension of the model.
-        - head_dim (int): The dimension of the head.
-        - qkv_multipliers (Union[Number, List[Number]]): The multiplier(s) for query, key, and value vectors.
-        - num_query_heads (Union[int, None]): The number of query heads. If None, it will be computed based on model_dim and head_dim.
-        - num_gqa_groups (int): The number of groups for generalized query attention.
-        - ffn_multipliers (Union[Number, List[Number]]): The multiplier(s) for feed-forward network.
-        - ffn_with_glu (bool): A boolean indicating whether to use gated linear units in the feed-forward network.
-        - ffn_dim_divisor (int): The divisor for the feed-forward network dimension.
-        - activation_fn_name (str): The name of the activation function.
-        - normalization_layer_name (str): The name of the normalization layer.
-        - normalize_qk_projections (bool): A boolean indicating whether to normalize query and key projections.
-        - share_input_output_layers (bool): A boolean indicating whether to share input and output layers.
-        - rope_freq_constant (int): The frequency constant for the relative positional encoding.
-        - rope_max_length (int): The maximum length for the relative positional encoding.
-        - initializer_range (float): The range for random weight initialization.
-        - use_cache (bool): A boolean indicating whether to use cache.
-        - bos_token_id (int): The token ID for the beginning of sentence.
-        - eos_token_id (int): The token ID for the end of sentence.
-        
+            self: The instance of the class.
+            vocab_size (int): The size of the vocabulary.
+            max_context_length (int): The maximum length of the context.
+            num_transformer_layers (int): The number of transformer layers.
+            model_dim (int): The dimension of the model.
+            head_dim (int): The dimension of the head.
+            qkv_multipliers (Union[Number, List[Number]]): The multiplier(s) for query, key, and value vectors.
+            num_query_heads (Union[int, None]): The number of query heads.
+                If None, it will be computed based on model_dim and head_dim.
+            num_gqa_groups (int): The number of groups for generalized query attention.
+            ffn_multipliers (Union[Number, List[Number]]): The multiplier(s) for feed-forward network.
+            ffn_with_glu (bool): A boolean indicating whether to use gated linear units in the feed-forward network.
+            ffn_dim_divisor (int): The divisor for the feed-forward network dimension.
+            activation_fn_name (str): The name of the activation function.
+            normalization_layer_name (str): The name of the normalization layer.
+            normalize_qk_projections (bool): A boolean indicating whether to normalize query and key projections.
+            share_input_output_layers (bool): A boolean indicating whether to share input and output layers.
+            rope_freq_constant (int): The frequency constant for the relative positional encoding.
+            rope_max_length (int): The maximum length for the relative positional encoding.
+            initializer_range (float): The range for random weight initialization.
+            use_cache (bool): A boolean indicating whether to use cache.
+            bos_token_id (int): The token ID for the beginning of sentence.
+            eos_token_id (int): The token ID for the end of sentence.
+
         Returns:
-        - None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - No specific exceptions are documented for this method.
+            None.
         """
         self.vocab_size = vocab_size
         self.max_context_length = max_context_length
@@ -218,17 +225,18 @@ class OpenELMConfig(PretrainedConfig):
     def __post_init__(self) -> None:
         """
         This method initializes the configuration parameters for the OpenELM model.
-        
+
         Args:
             self (OpenELMConfig): The instance of the OpenELMConfig class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            NotImplementedError: If the QKV multipliers are not a single number or a list containing exactly two numbers, or if the FFN multipliers are not a single number or a list containing exactly two
-numbers.
-            AssertionError: If the length of the FFN multipliers does not match the number of transformer layers, or if the number of query heads is not divisible by the number of key-value heads for any layer.
+            NotImplementedError: If the QKV multipliers are not a single number or a list containing exactly two numbers,
+                or if the FFN multipliers are not a single number or a list containing exactly two numbers.
+            AssertionError: If the length of the FFN multipliers does not match the number of transformer layers, or if
+                the number of query heads is not divisible by the number of key-value heads for any layer.
         """
         if self.num_gqa_groups is not None:
             head_multiple_of = self.num_gqa_groups

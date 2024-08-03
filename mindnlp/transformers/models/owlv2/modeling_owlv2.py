@@ -19,9 +19,10 @@ from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Tensor, nn, ops
-from mindspore.common.initializer import Normal
+from mindspore import Tensor
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import (
     _create_4d_causal_attention_mask,
@@ -50,7 +51,7 @@ _CHECKPOINT_FOR_DOC = "google/owlv2-base-patch16-ensemble"
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss with clip->owlv2
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(
+    return F.cross_entropy(
         logits,
         ops.arange(len(logits)),
     )
@@ -284,7 +285,7 @@ class Owlv2ImageGuidedObjectDetectionOutput(ModelOutput):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTVisionEmbeddings with OwlViT->Owlv2
-class Owlv2VisionEmbeddings(nn.Cell):
+class Owlv2VisionEmbeddings(nn.Module):
     def __init__(self, config: Owlv2VisionConfig):
         super().__init__()
         self.config = config
@@ -296,8 +297,7 @@ class Owlv2VisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=config.patch_size,
             stride=config.patch_size,
-            has_bias=False,
-            pad_mode="pad",
+            bias=False,
             padding=0,
         )
 
@@ -306,7 +306,7 @@ class Owlv2VisionEmbeddings(nn.Cell):
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
         self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
-    def construct(self, pixel_values: ms.Tensor) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size = pixel_values.shape[0]
         patch_embeds = self.patch_embedding(
             pixel_values
@@ -314,14 +314,14 @@ class Owlv2VisionEmbeddings(nn.Cell):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
 
         return embeddings
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTTextEmbeddings with OwlViT->Owlv2
-class Owlv2TextEmbeddings(nn.Cell):
+class Owlv2TextEmbeddings(nn.Module):
     def __init__(self, config: Owlv2TextConfig):
         super().__init__()
         self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
@@ -334,7 +334,7 @@ class Owlv2TextEmbeddings(nn.Cell):
             (1, -1)
         )
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         position_ids: Optional[ms.Tensor] = None,
@@ -357,7 +357,7 @@ class Owlv2TextEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTAttention with OwlViT->Owlv2
-class Owlv2Attention(nn.Cell):
+class Owlv2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -374,15 +374,15 @@ class Owlv2Attention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -436,7 +436,7 @@ class Owlv2Attention(nn.Cell):
             )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -452,7 +452,7 @@ class Owlv2Attention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         # For int8 compatibility, sometimes the `attn_probs` are in `fp32`
         attn_probs = attn_probs.astype(value_states.dtype)
@@ -475,15 +475,15 @@ class Owlv2Attention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->Owlv2
-class Owlv2MLP(nn.Cell):
+class Owlv2MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -491,16 +491,16 @@ class Owlv2MLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->Owlv2
-class Owlv2EncoderLayer(nn.Cell):
+class Owlv2EncoderLayer(nn.Module):
     def __init__(self, config: Owlv2Config):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = Owlv2Attention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = Owlv2MLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -553,59 +553,48 @@ class Owlv2PreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["Owlv2EncoderLayer"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor
-        if isinstance(cell, Owlv2TextEmbeddings):
-            cell.token_embedding.weight.data.initialize(Normal(factor * 0.02))
-            cell.position_embedding.weight.data.initialize(Normal(factor * 0.02))
-        elif isinstance(cell, Owlv2VisionEmbeddings):
+        if isinstance(module, Owlv2TextEmbeddings):
+            nn.init.normal_(module.token_embedding.weight, mean=0.0, std=factor * 0.02)
+            nn.init.normal_(module.position_embedding.weight, mean=0.0, std=factor * 0.02)
+        elif isinstance(module, Owlv2VisionEmbeddings):
             factor = self.config.initializer_factor
-            cell.class_embedding.initialize(Normal(cell.embed_dim**-0.5 * factor))
-            cell.patch_embedding.weight.data.initialize(
-                Normal(cell.config.initializer_range * factor)
-            )
-            cell.position_embedding.weight.data.initialize(
-                Normal(cell.config.initializer_range * factor)
-            )
-        elif isinstance(cell, Owlv2Attention):
+            nn.init.normal_(module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor)
+            nn.init.normal_(module.patch_embedding.weight, std=module.config.initializer_range * factor)
+            nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
+        elif isinstance(module, Owlv2Attention):
             factor = self.config.initializer_factor
-            in_proj_std = (
-                (cell.embed_dim**-0.5)
-                * ((2 * cell.config.num_hidden_layers) ** -0.5)
-                * factor
-            )
-            out_proj_std = (cell.embed_dim**-0.5) * factor
-            cell.q_proj.weight.data.initialize(Normal(in_proj_std))
-            cell.k_proj.weight.data.initialize(Normal(in_proj_std))
-            cell.v_proj.weight.data.initialize(Normal(in_proj_std))
-            cell.out_proj.weight.data.initialize(Normal(out_proj_std))
-        elif isinstance(cell, Owlv2MLP):
+            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            out_proj_std = (module.embed_dim**-0.5) * factor
+            nn.init.normal_(module.q_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.k_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.v_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.out_proj.weight, std=out_proj_std)
+        elif isinstance(module, Owlv2MLP):
             factor = self.config.initializer_factor
-            in_proj_std = (
-                (cell.config.hidden_size**-0.5)
-                * ((2 * cell.config.num_hidden_layers) ** -0.5)
-                * factor
+            in_proj_std = (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
+            nn.init.normal_(module.fc1.weight, std=fc_std)
+            nn.init.normal_(module.fc2.weight, std=in_proj_std)
+        elif isinstance(module, Owlv2Model):
+            nn.init.normal_(
+                module.text_projection.weight,
+                std=module.text_embed_dim**-0.5 * self.config.initializer_factor,
             )
-            fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            cell.fc1.weight.data.initialize(Normal(fc_std))
-            cell.fc2.weight.data.initialize(Normal(in_proj_std))
-        elif isinstance(cell, Owlv2Model):
-            cell.text_projection.weight.data.initialize(
-                Normal(cell.text_embed_dim**-0.5 * self.config.initializer_factor)
+            nn.init.normal_(
+                module.visual_projection.weight,
+                std=module.vision_embed_dim**-0.5 * self.config.initializer_factor,
             )
-            cell.visual_projection.weight.data.initialize(
-                Normal(cell.vision_embed_dim**-0.5 * self.config.initializer_factor)
-            )
-        if isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize("zeros")
-            cell.weight.data.fill(1.0)
-        if isinstance(cell, nn.Dense) and cell.bias is not None:
-            cell.bias.initialize("zeros")
-
+        if isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            nn.init.zeros_(module.bias)
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTEncoder with OwlViT->Owlv2
-class Owlv2Encoder(nn.Cell):
+class Owlv2Encoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`Owlv2EncoderLayer`].
@@ -616,12 +605,12 @@ class Owlv2Encoder(nn.Cell):
 
     def __init__(self, config: Owlv2Config):
         super().__init__()
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Owlv2EncoderLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[ms.Tensor] = None,
@@ -711,16 +700,16 @@ class Owlv2Encoder(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTTextTransformer with OWLVIT->OWLV2,OwlViT->Owlv2
-class Owlv2TextTransformer(nn.Cell):
+class Owlv2TextTransformer(nn.Module):
     def __init__(self, config: Owlv2TextConfig):
         super().__init__()
         self.config = config
         embed_dim = config.hidden_size
         self.embeddings = Owlv2TextEmbeddings(config)
         self.encoder = Owlv2Encoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -806,13 +795,13 @@ class Owlv2TextModel(Owlv2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -848,21 +837,21 @@ class Owlv2TextModel(Owlv2PreTrainedModel):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTVisionTransformer with OWLVIT->OWLV2,OwlViT->Owlv2
-class Owlv2VisionTransformer(nn.Cell):
+class Owlv2VisionTransformer(nn.Module):
     def __init__(self, config: Owlv2VisionConfig):
         super().__init__()
         self.config = config
 
         self.embeddings = Owlv2VisionEmbeddings(config)
         self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
         self.encoder = Owlv2Encoder(config)
         self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps
+            config.hidden_size, eps=config.layer_norm_eps
         )
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,
@@ -927,10 +916,10 @@ class Owlv2VisionModel(Owlv2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -994,11 +983,11 @@ class Owlv2Model(Owlv2PreTrainedModel):
         self.text_model = Owlv2TextTransformer(text_config)
         self.vision_model = Owlv2VisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(
-            self.vision_embed_dim, self.projection_dim, has_bias=False
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False
         )
-        self.text_projection = nn.Dense(
-            self.text_embed_dim, self.projection_dim, has_bias=False
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False
         )
         self.logit_scale = ms.Parameter(ms.tensor(config.logit_scale_init_value))
 
@@ -1095,7 +1084,7 @@ class Owlv2Model(Owlv2PreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,
@@ -1162,10 +1151,10 @@ class Owlv2Model(Owlv2PreTrainedModel):
 
         # normalized features
         image_embeds = image_embeds / ops.norm(
-            image_embeds, ord=2, dim=-1, keepdim=True
+            image_embeds, p=2, dim=-1, keepdim=True
         )
         text_embeds_norm = text_embeds / ops.norm(
-            text_embeds, ord=2, dim=-1, keepdim=True
+            text_embeds, p=2, dim=-1, keepdim=True
         )
 
         # cosine similarity as logits and set it on the correct device
@@ -1203,17 +1192,17 @@ class Owlv2Model(Owlv2PreTrainedModel):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTBoxPredictionHead with OwlViT->Owlv2
-class Owlv2BoxPredictionHead(nn.Cell):
+class Owlv2BoxPredictionHead(nn.Module):
     def __init__(self, config: Owlv2Config, out_dim: int = 4):
         super().__init__()
 
         width = config.vision_config.hidden_size
-        self.dense0 = nn.Dense(width, width)
-        self.dense1 = nn.Dense(width, width)
+        self.dense0 = nn.Linear(width, width)
+        self.dense1 = nn.Linear(width, width)
         self.gelu = nn.GELU()
-        self.dense2 = nn.Dense(width, out_dim)
+        self.dense2 = nn.Linear(width, out_dim)
 
-    def construct(self, image_features: ms.Tensor) -> ms.Tensor:
+    def forward(self, image_features: ms.Tensor) -> ms.Tensor:
         output = self.dense0(image_features)
         output = self.gelu(output)
         output = self.dense1(output)
@@ -1223,19 +1212,19 @@ class Owlv2BoxPredictionHead(nn.Cell):
 
 
 # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTClassPredictionHead with OwlViT->Owlv2
-class Owlv2ClassPredictionHead(nn.Cell):
+class Owlv2ClassPredictionHead(nn.Module):
     def __init__(self, config: Owlv2Config):
         super().__init__()
 
         out_dim = config.text_config.hidden_size
         self.query_dim = config.vision_config.hidden_size
 
-        self.dense0 = nn.Dense(self.query_dim, out_dim)
-        self.logit_shift = nn.Dense(self.query_dim, 1)
-        self.logit_scale = nn.Dense(self.query_dim, 1)
+        self.dense0 = nn.Linear(self.query_dim, out_dim)
+        self.logit_shift = nn.Linear(self.query_dim, 1)
+        self.logit_scale = nn.Linear(self.query_dim, 1)
         self.elu = nn.ELU()
 
-    def construct(
+    def forward(
         self,
         image_embeds: ms.Tensor,
         query_embeds: Optional[ms.Tensor],
@@ -1249,10 +1238,10 @@ class Owlv2ClassPredictionHead(nn.Cell):
 
         # Normalize image and text features
         image_class_embeds = image_class_embeds / (
-            ops.norm(image_class_embeds, dim=-1, keepdim=True) + 1e-6
+            ops.norm(image_class_embeds, p=2, dim=-1, keepdim=True) + 1e-6
         )
         query_embeds = query_embeds / (
-            ops.norm(query_embeds, dim=-1, keepdim=True) + 1e-6
+            ops.norm(query_embeds, p=2, dim=-1, keepdim=True) + 1e-6
         )
 
         # Get class predictions
@@ -1287,7 +1276,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
 
         self.layer_norm = nn.LayerNorm(
             config.vision_config.hidden_size,
-            epsilon=config.vision_config.layer_norm_eps,
+            eps=config.vision_config.layer_norm_eps,
         )
         self.sigmoid = nn.Sigmoid()
 
@@ -1305,7 +1294,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
         xx, yy = ops.meshgrid(x_coordinates, y_coordinates, indexing="xy")
 
         # Stack the coordinates and divide by num_patches
-        box_coordinates = ops.stack((xx, yy), axis=-1)
+        box_coordinates = ops.stack((xx, yy), dim=-1)
         box_coordinates /= num_patches
 
         # Flatten (h, w, 2) -> (h*w, 2)
@@ -1338,7 +1327,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
             )
         # The box center is biased to its position on the feature grid
         box_coordinates = self.normalize_grid_corner_coordinates(num_patches)
-        box_coordinates = ops.clip(box_coordinates, 0.0, 1.0)
+        box_coordinates = ops.clamp(box_coordinates, 0.0, 1.0)
 
         # Unnormalize xy
         box_coord_bias = ops.log(box_coordinates + 1e-4) - ops.log1p(
@@ -1350,7 +1339,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
         box_size_bias = ops.log(box_size + 1e-4) - ops.log1p(-box_size + 1e-4)
 
         # Compute box bias
-        box_bias = ops.cat([box_coord_bias, box_size_bias], axis=-1)
+        box_bias = ops.cat([box_coord_bias, box_size_bias], dim=-1)
         return box_bias
 
     # Copied from transformers.models.owlvit.modeling_owlvit.OwlViTForObjectDetection.box_predictor
@@ -1511,7 +1500,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
             selected_inds = (ious[0] >= iou_threshold).nonzero()
             if selected_inds.numel():
                 selected_embeddings = class_embeds[i][selected_inds.squeeze(1)]
-                mean_embeds = ops.mean(class_embeds[i], axis=0)
+                mean_embeds = ops.mean(class_embeds[i], dim=0)
                 mean_sim = ops.einsum("d,id->i", mean_embeds, selected_embeddings)
                 best_box_ind = selected_inds[ops.argmin(mean_sim)]
                 best_class_embeds.append(class_embeds[i][best_box_ind])
@@ -1649,7 +1638,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
             vision_model_output=vision_outputs,
         )
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor,
         pixel_values: ms.Tensor,

@@ -22,7 +22,10 @@ from typing import Any, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore.common.initializer import initializer, Normal
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -43,7 +46,7 @@ _CHECKPOINT_FOR_DOC = "nvidia/groupvit-gcc-yfcc"
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/CLIP.html
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->groupvit
@@ -54,10 +57,10 @@ def groupvit_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def hard_softmax(logits: mindspore.Tensor, dim: int):
-    y_soft = ops.softmax(logits,axis=dim)
+    y_soft = ops.softmax(logits,dim=dim)
     # Straight through.
     index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
+    y_hard = ops.scatter(ops.zeros_like(logits,dtype=mindspore.float32), dim, index, ops.ones_like(index,dtype=mindspore.float32))
     y_soft = ops.stop_gradient(y_soft)
     ret = y_hard - y_soft + y_soft
 
@@ -73,12 +76,12 @@ def gumbel_softmax(logits: mindspore.Tensor, tau: float = 1, hard: bool = False,
     gumbels = gumbel_dist.sample(logits.shape)
 
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
-    y_soft = ops.softmax(gumbels,axis=dim)
+    y_soft = ops.softmax(gumbels,dim=dim)
 
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
+        y_hard = ops.scatter(ops.zeros_like(logits,dtype=mindspore.float32), dim, index, ops.ones_like(index,dtype=mindspore.float32))
         y_soft = ops.stop_gradient(y_soft)
         ret = y_hard - y_soft + y_soft
     else:
@@ -111,7 +114,7 @@ def resize_attention_map(attentions, height, width, align_corners=False):
     groups = attentions.shape[1]  # number of group token
     # [batch_size, groups, height*width, groups] -> [batch_size, groups, height, width]
     attentions = attentions.reshape(batch_size, groups, feat_height, feat_width)
-    attentions = ops.interpolate(
+    attentions = F.interpolate(
         attentions, size=(height, width), mode="bilinear", align_corners=align_corners
     )
     return attentions
@@ -122,6 +125,7 @@ def get_grouping_from_attentions(attentions, hw_shape):
     Args:
         attentions (`tuple(mindspore.Tensor)`: tuple of attention maps returned by `GroupViTVisionTransformer`
         hw_shape (`tuple(int)`): height and width of the output attention map
+
     Returns:
         `mindspore.Tensor`: the attention map of shape [batch_size, groups, height, width]
     """
@@ -145,15 +149,15 @@ def get_grouping_from_attentions(attentions, hw_shape):
     return final_grouping
 
 
-class GroupViTCrossAttentionLayer(nn.Cell):
+class GroupViTCrossAttentionLayer(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.attn = GroupViTAttention(config)
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.mlp = GroupViTMLP(config)
-        self.norm_post = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_post = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def construct(self, query, key):
+    def forward(self, query, key):
         x = query
         x = x + self.attn(query, encoder_hidden_states=key)[0]
         x = x + self.mlp(self.norm2(x))
@@ -161,15 +165,15 @@ class GroupViTCrossAttentionLayer(nn.Cell):
         return x
 
 
-class GroupViTAssignAttention(nn.Cell):
+class GroupViTAssignAttention(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.scale = config.hidden_size**-0.5
 
-        self.q_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.k_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.v_proj = nn.Dense(config.hidden_size, config.hidden_size)
-        self.proj = nn.Dense(config.hidden_size, config.hidden_size)
+        self.q_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.k_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.v_proj = nn.Linear(config.hidden_size, config.hidden_size)
+        self.proj = nn.Linear(config.hidden_size, config.hidden_size)
         self.assign_eps = config.assign_eps
 
     def get_attn(self, attn, gumbel=True, hard=True):
@@ -179,11 +183,11 @@ class GroupViTAssignAttention(nn.Cell):
             if hard:
                 attn = hard_softmax(attn, dim=-2)
             else:
-                attn = ops.softmax(attn, axis=-2)
+                attn = ops.softmax(attn, dim=-2)
 
         return attn
 
-    def construct(self, query, key):
+    def forward(self, query, key):
         value = key
         # [batch_size, query_length, channels]
         query = self.q_proj(query)
@@ -209,12 +213,12 @@ class GroupViTAssignAttention(nn.Cell):
         return out, soft_attn
 
 
-class GroupViTTokenAssign(nn.Cell):
+class GroupViTTokenAssign(nn.Module):
     def __init__(self, config: GroupViTVisionConfig, num_group_token, num_output_group):
         super().__init__()
         self.num_output_group = num_output_group
         # norm on group_tokens
-        self.norm_tokens = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_tokens = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         assign_mlp_ratio = (
             config.assign_mlp_ratio
             if isinstance(config.assign_mlp_ratio, collections.abc.Iterable)
@@ -222,13 +226,13 @@ class GroupViTTokenAssign(nn.Cell):
         )
         tokens_dim, channels_dim = [int(x * config.hidden_size) for x in assign_mlp_ratio]
         self.mlp_inter = GroupViTMixerMLP(config, num_group_token, tokens_dim, num_output_group)
-        self.norm_post_tokens = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_post_tokens = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         # norm on x
-        self.norm_x = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_x = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.pre_assign_attn = GroupViTCrossAttentionLayer(config)
 
         self.assign = GroupViTAssignAttention(config)
-        self.norm_new_x = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm_new_x = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.mlp_channels = GroupViTMLP(config, config.hidden_size, channels_dim, config.hidden_size)
 
     def project_group_token(self, group_tokens):
@@ -244,7 +248,7 @@ class GroupViTTokenAssign(nn.Cell):
         projected_group_tokens = self.norm_post_tokens(projected_group_tokens)
         return projected_group_tokens
 
-    def construct(self, image_tokens, group_tokens):
+    def forward(self, image_tokens, group_tokens):
         """
         Args:
             image_tokens (`mindspore.Tensor`): image tokens, of shape [batch_size, input_length, channels]
@@ -315,7 +319,7 @@ class GroupViTModelOutput(ModelOutput):
         )
 
 
-class GroupViTPatchEmbeddings(nn.Cell):
+class GroupViTPatchEmbeddings(nn.Module):
     """
     Image to Patch Embedding.
     """
@@ -335,9 +339,9 @@ class GroupViTPatchEmbeddings(nn.Cell):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,has_bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,bias=True)
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if not interpolate_pos_encoding:
             if height != self.image_size[0] or width != self.image_size[1]:
@@ -349,7 +353,7 @@ class GroupViTPatchEmbeddings(nn.Cell):
         return x
 
 
-class GroupViTVisionEmbeddings(nn.Cell):
+class GroupViTVisionEmbeddings(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
 
@@ -362,7 +366,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
         num_patches = self.patch_embeddings.num_patches
         self.position_embeddings = Parameter(ops.zeros(1, num_patches, config.hidden_size))
         self.dropout = nn.Dropout(p=config.dropout)
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.config = config
 
     def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
@@ -390,7 +394,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
             0, 3, 1, 2
         )
         scale_factor = (feat_height / original_height, feat_width / original_width)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             reshaped_patch_pos_embed,
             scale_factor=scale_factor,
             mode="bicubic",
@@ -399,7 +403,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return patch_pos_embed
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
 
@@ -419,7 +423,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextEmbeddings with CLIP->GroupViT
-class GroupViTTextEmbeddings(nn.Cell):
+class GroupViTTextEmbeddings(nn.Module):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         embed_dim = config.hidden_size
@@ -430,7 +434,7 @@ class GroupViTTextEmbeddings(nn.Cell):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -450,7 +454,7 @@ class GroupViTTextEmbeddings(nn.Cell):
         return embeddings
 
 
-class GroupViTStage(nn.Cell):
+class GroupViTStage(nn.Module):
     """This corresponds to the `GroupingLayer` class in the GroupViT implementation."""
 
     def __init__(
@@ -468,7 +472,7 @@ class GroupViTStage(nn.Cell):
             self.group_token = Parameter(ops.zeros(1, num_group_token, config.hidden_size))
         else:
             self.group_token = None
-        self.layers = nn.CellList([GroupViTEncoderLayer(config) for _ in range(depth)])
+        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(depth)])
 
         if num_group_token > 0:
             self.downsample = GroupViTTokenAssign(
@@ -480,10 +484,10 @@ class GroupViTStage(nn.Cell):
             self.downsample = None
 
         if num_prev_group_token > 0 and num_group_token > 0:
-            self.group_projector = nn.SequentialCell([
-                nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps),
+            self.group_projector = nn.Sequential(
+                nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps),
                 GroupViTMixerMLP(config, num_prev_group_token, config.hidden_size // 2, num_group_token),
-            ])
+            )
         else:
             self.group_projector = None
 
@@ -500,9 +504,9 @@ class GroupViTStage(nn.Cell):
     def concat_x(self, x: mindspore.Tensor, group_token: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         if group_token is None:
             return x
-        return ops.cat((x, group_token), axis=1)
+        return ops.cat((x, group_token), dim=1)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         prev_group_token: Optional[mindspore.Tensor] = None,
@@ -544,7 +548,7 @@ class GroupViTStage(nn.Cell):
         return outputs
 
 
-class GroupViTMLP(nn.Cell):
+class GroupViTMLP(nn.Module):
     def __init__(
         self,
         config: GroupViTVisionConfig,
@@ -558,10 +562,10 @@ class GroupViTMLP(nn.Cell):
         hidden_size = hidden_size if hidden_size is not None else config.hidden_size
         intermediate_size = intermediate_size if intermediate_size is not None else config.intermediate_size
         output_size = output_size if output_size is not None else hidden_size
-        self.fc1 = nn.Dense(hidden_size, intermediate_size)
-        self.fc2 = nn.Dense(intermediate_size, output_size)
+        self.fc1 = nn.Linear(hidden_size, intermediate_size)
+        self.fc2 = nn.Linear(intermediate_size, output_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -569,12 +573,12 @@ class GroupViTMLP(nn.Cell):
 
 
 class GroupViTMixerMLP(GroupViTMLP):
-    def construct(self, x):
-        x = super().construct(x.swapaxes(1, 2))
+    def forward(self, x):
+        x = super().forward(x.swapaxes(1, 2))
         return x.swapaxes(1, 2)
 
 
-class GroupViTAttention(nn.Cell):
+class GroupViTAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -591,15 +595,15 @@ class GroupViTAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -653,7 +657,7 @@ class GroupViTAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -665,7 +669,7 @@ class GroupViTAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -685,16 +689,16 @@ class GroupViTAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->GroupViT
-class GroupViTEncoderLayer(nn.Cell):
+class GroupViTEncoderLayer(nn.Module):
     def __init__(self, config: GroupViTConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = GroupViTAttention(config)
-        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
         self.mlp = GroupViTMLP(config)
-        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -749,7 +753,7 @@ class GroupViTPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
 
         init_range = self.config.initializer_range
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(init_range),
@@ -788,11 +792,11 @@ class GroupViTPreTrainedModel(PreTrainedModel):
             cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
                                     cell.fc2.weight.shape, cell.fc2.weight.dtype))
 
-class GroupViTVisionEncoder(nn.Cell):
+class GroupViTVisionEncoder(nn.Module):
     def __init__(self, config: GroupViTVisionConfig) -> None:
         super().__init__()
         self.config = config
-        self.stages = nn.CellList(
+        self.stages = nn.ModuleList(
             [
                 GroupViTStage(
                     config=config,
@@ -806,7 +810,7 @@ class GroupViTVisionEncoder(nn.Cell):
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,
@@ -846,7 +850,7 @@ class GroupViTVisionEncoder(nn.Cell):
         )
 
 
-class GroupViTTextEncoder(nn.Cell):
+class GroupViTTextEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self-attention layers. Each layer is a
     [`GroupViTEncoderLayer`].
@@ -858,10 +862,10 @@ class GroupViTTextEncoder(nn.Cell):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -944,20 +948,20 @@ class GroupViTTextEncoder(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextTransformer with CLIPText->GroupViTText, CLIPEncoder->GroupViTTextEncoder, CLIP_TEXT->GROUPVIT_TEXT
-class GroupViTTextTransformer(nn.Cell):
+class GroupViTTextTransformer(nn.Module):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         self.config = config
         embed_dim = config.hidden_size
         self.embeddings = GroupViTTextEmbeddings(config)
         self.encoder = GroupViTTextEncoder(config)
-        self.final_layer_norm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -967,8 +971,9 @@ class GroupViTTextTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-        Returns:
 
+        Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1048,13 +1053,13 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1065,21 +1070,22 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import CLIPTokenizer, GroupViTTextModel
-
-        >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> model = GroupViTTextModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import CLIPTokenizer, GroupViTTextModel
+            ...
+            >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> model = GroupViTTextModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            ...
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
+            ```
+        """
         return self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1090,7 +1096,7 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
         )
 
 
-class GroupViTVisionTransformer(nn.Cell):
+class GroupViTVisionTransformer(nn.Module):
     def __init__(self, config: GroupViTVisionConfig):
         super().__init__()
         self.config = config
@@ -1098,9 +1104,9 @@ class GroupViTVisionTransformer(nn.Cell):
 
         self.embeddings = GroupViTVisionEmbeddings(config)
         self.encoder = GroupViTVisionEncoder(config)
-        self.layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([embed_dim], eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1108,8 +1114,9 @@ class GroupViTVisionTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-        Returns:
 
+        Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1159,7 +1166,7 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
     def get_input_embeddings(self) -> GroupViTPatchEmbeddings:
         return self.vision_model.embeddings.patch_embeddings
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1168,26 +1175,27 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTVisionModel
-
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> model = GroupViTVisionModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTVisionModel
+            ...
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> model = GroupViTVisionModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         return self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1225,17 +1233,17 @@ class GroupViTModel(GroupViTPreTrainedModel):
         self.text_model = GroupViTTextTransformer(text_config)
         self.vision_model = GroupViTVisionTransformer(vision_config)
 
-        self.visual_projection = nn.SequentialCell(
-            nn.Dense(self.vision_embed_dim, self.projection_intermediate_dim, has_bias=True),
+        self.visual_projection = nn.Sequential(
+            nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Dense(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
-        self.text_projection = nn.SequentialCell(
-            nn.Dense(self.text_embed_dim, self.projection_intermediate_dim, has_bias=True),
+        self.text_projection = nn.Sequential(
+            nn.Linear(self.text_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
-            nn.Dense(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
+            nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
         self.logit_scale = Parameter(mindspore.Tensor([self.config.logit_scale_init_value]))
 
@@ -1254,19 +1262,19 @@ class GroupViTModel(GroupViTPreTrainedModel):
         r"""
         Returns:
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
-            applying the projection layer to the pooled output of [`GroupViTTextModel`].
+                applying the projection layer to the pooled output of [`GroupViTTextModel`].
 
-        Examples:
-
-        ```python
-        >>> from transformers import CLIPTokenizer, GroupViTModel
-
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import CLIPTokenizer, GroupViTModel
+            ...
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            ...
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1300,23 +1308,23 @@ class GroupViTModel(GroupViTPreTrainedModel):
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
             applying the projection layer to the pooled output of [`GroupViTVisionModel`].
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTModel
-
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTModel
+            ...
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1336,7 +1344,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -1350,28 +1358,29 @@ class GroupViTModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, GroupViTModelOutput]:
         r"""
         Returns:
+            `Union[Tuple, GroupViTModelOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTModel
-
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-        ... )
-
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTModel
+            ...
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ... )
+            ...
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_segmentation = (

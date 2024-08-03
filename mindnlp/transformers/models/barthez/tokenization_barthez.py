@@ -62,8 +62,9 @@ class BarthezTokenizer(PreTrainedTokenizer):
         vocab_file (`str`):
             [SentencePiece](https://github.com/google/sentencepiece) file (generally has a *.spm* extension) that
             contains the vocabulary necessary to instantiate a tokenizer.
-        bos_token (`str`, *optional*, defaults to `"<s>"`):
+        bos_token (`str`, *optional*):
             The beginning of sequence token that was used during pretraining. Can be used a sequence classifier token.
+            defaults to `"<s>"`
 
             <Tip>
 
@@ -72,8 +73,8 @@ class BarthezTokenizer(PreTrainedTokenizer):
 
             </Tip>
 
-        eos_token (`str`, *optional*, defaults to `"</s>"`):
-            The end of sequence token.
+        eos_token (`str`, *optional*):
+            The end of sequence token. defaults to `"</s>"`
 
             <Tip>
 
@@ -82,21 +83,22 @@ class BarthezTokenizer(PreTrainedTokenizer):
 
             </Tip>
 
-        sep_token (`str`, *optional*, defaults to `"</s>"`):
+        sep_token (`str`, *optional*):
             The separator token, which is used when building a sequence from multiple sequences, e.g. two sequences for
             sequence classification or for a text and a question for question answering. It is also used as the last
-            token of a sequence built with special tokens.
-        cls_token (`str`, *optional*, defaults to `"<s>"`):
+            token of a sequence built with special tokens. defaults to `"</s>"`
+        cls_token (`str`, *optional*):
             The classifier token which is used when doing sequence classification (classification of the whole sequence
             instead of per-token classification). It is the first token of the sequence when built with special tokens.
-        unk_token (`str`, *optional*, defaults to `"<unk>"`):
+            defaults to `"<s>"`
+        unk_token (`str`, *optional*):
             The unknown token. A token that is not in the vocabulary cannot be converted to an ID and is set to be this
-            token instead.
-        pad_token (`str`, *optional*, defaults to `"<pad>"`):
-            The token used for padding, for example when batching sequences of different lengths.
-        mask_token (`str`, *optional*, defaults to `"<mask>"`):
+            token instead. defaults to `"<unk>"`
+        pad_token (`str`, *optional*):
+            The token used for padding, for example when batching sequences of different lengths. defaults to `"<pad>"`
+        mask_token (`str`, *optional*):
             The token used for masking values. This is the token used when training this model with masked language
-            modeling. This is the token which the model will try to predict.
+            modeling. This is the token which the model will try to predict. defaults to `"<mask>"`
         sp_model_kwargs (`dict`, *optional*):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
@@ -105,12 +107,11 @@ class BarthezTokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+           - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
 
     Attributes:
@@ -137,9 +138,9 @@ class BarthezTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         __init__
-        
+
         Initializes a new instance of the BarthezTokenizer class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str): The path to the vocabulary file.
@@ -151,10 +152,10 @@ class BarthezTokenizer(PreTrainedTokenizer):
             pad_token (str, optional): The padding token. Defaults to '<pad>'.
             mask_token (str, optional): The mask token. Defaults to '<mask>'.
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional sentence piece model arguments. Defaults to None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the vocab_file is not a valid string.
             TypeError: If any token parameter is not a valid string.
@@ -260,30 +261,30 @@ class BarthezTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         Returns the size of the vocabulary used by the BarthezTokenizer instance.
-        
+
         Args:
             self (BarthezTokenizer): The instance of the BarthezTokenizer class.
-        
+
         Returns:
             int: The size of the vocabulary used by the BarthezTokenizer instance.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return len(self.sp_model)
 
     def get_vocab(self):
         """
         Get the vocabulary of the BarthezTokenizer.
-        
+
         Args:
             self (BarthezTokenizer): The instance of the BarthezTokenizer class.
                 It represents the tokenizer object.
-                
+
         Returns:
             dict: A dictionary containing the vocabulary of the tokenizer.
                 Keys are tokens and values are corresponding token IDs.
-        
+
         Raises:
             None.
         """
@@ -294,16 +295,16 @@ class BarthezTokenizer(PreTrainedTokenizer):
     def _tokenize(self, text: str) -> List[str]:
         """
         This method '_tokenize' in the class 'BarthezTokenizer' tokenizes the input text using the SentencePiece model.
-        
+
         Args:
             self: An instance of the BarthezTokenizer class.
             text (str): The input text to be tokenized.
-        
+
         Returns:
             List[str]: A list of strings representing the tokens generated from the input text.
-        
+
         Raises:
-            N/A
+            None
         """
         return self.sp_model.encode(text, out_type=str)
 
@@ -338,18 +339,19 @@ class BarthezTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         __getstate__
-        
+
         Description:
-        This method is used to return the state of the BarthezTokenizer object for pickling.
-        
+            This method is used to return the state of the BarthezTokenizer object for pickling.
+
         Args:
-        - self (object): The instance of the BarthezTokenizer class.
-        
+            self (object): The instance of the BarthezTokenizer class.
+
         Returns:
-        - None: This method returns a value of type None, indicating that it does not return any specific data but modifies the state of the object.
-        
+            None: This method returns a value of type None,
+                indicating that it does not return any specific data but modifies the state of the object.
+
         Raises:
-        This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -358,14 +360,14 @@ class BarthezTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         Sets the state of the BarthezTokenizer object by restoring its attributes from a dictionary.
-        
+
         Args:
             self (BarthezTokenizer): The instance of the BarthezTokenizer class.
             d (dict): The dictionary containing the attributes to restore the state of the object.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -381,21 +383,21 @@ class BarthezTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary of the BarthezTokenizer to a specified directory.
-        
+
         Args:
             self (BarthezTokenizer): An instance of the BarthezTokenizer class.
             save_directory (str): The directory where the vocabulary will be saved.
             filename_prefix (Optional[str], optional): The prefix to be added to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path of the saved vocabulary file.
-        
+
         Raises:
             OSError: If the save_directory is not a valid directory.
             FileNotFoundError: If the self.vocab_file does not exist.
             IOError: If an error occurs while copying the vocabulary file.
             Exception: If any other exception occurs.
-        
+
         Note:
             - The save_directory should be a valid directory where the vocabulary file will be saved.
             - The filename_prefix, if provided, will be added as a prefix to the filename.

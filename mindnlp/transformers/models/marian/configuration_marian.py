@@ -79,20 +79,20 @@ class MarianConfig(PretrainedConfig):
             The id of the token to force as the last generated token when `max_length` is reached. Usually set to
             `eos_token_id`.
 
-    Examples:
-
-    ```python
-    >>> from transformers import MarianModel, MarianConfig
-
-    >>> # Initializing a Marian Helsinki-NLP/opus-mt-en-de style configuration
-    >>> configuration = MarianConfig()
-
-    >>> # Initializing a model from the Helsinki-NLP/opus-mt-en-de style configuration
-    >>> model = MarianModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import MarianModel, MarianConfig
+        ...
+        >>> # Initializing a Marian Helsinki-NLP/opus-mt-en-de style configuration
+        >>> configuration = MarianConfig()
+        ...
+        >>> # Initializing a model from the Helsinki-NLP/opus-mt-en-de style configuration
+        >>> model = MarianModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "marian"
     keys_to_ignore_at_inference = ["past_key_values"]

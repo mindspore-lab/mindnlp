@@ -85,19 +85,19 @@ class LongformerConfig(PretrainedConfig):
             different window size for each layer, use a `List[int]` where `len(attention_window) == num_hidden_layers`.
 
     Example:
-
-    ```python
-    >>> from transformers import LongformerConfig, LongformerModel
-
-    >>> # Initializing a Longformer configuration
-    >>> configuration = LongformerConfig()
-
-    >>> # Initializing a model from the configuration
-    >>> model = LongformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import LongformerConfig, LongformerModel
+        ...
+        >>> # Initializing a Longformer configuration
+        >>> configuration = LongformerConfig()
+        ...
+        >>> # Initializing a model from the configuration
+        >>> model = LongformerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "longformer"
 
     def __init__(

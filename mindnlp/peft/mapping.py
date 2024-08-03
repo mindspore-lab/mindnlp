@@ -15,7 +15,7 @@
 """mappings"""
 from typing import Any, Dict
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from .config import PeftConfig
 from .peft_model import (
@@ -94,7 +94,7 @@ def get_peft_config(config_dict: Dict[str, Any]):
     return PEFT_TYPE_TO_CONFIG_MAPPING[config_dict["peft_type"]](**config_dict)
 
 
-def get_peft_model(model: nn.Cell, peft_config: PeftConfig, adapter_name: str = "default") -> PeftModel:
+def get_peft_model(model: nn.Module, peft_config: PeftConfig, adapter_name: str = "default") -> PeftModel:
     """
     Returns a Peft model object from a model and a config.
 
@@ -117,8 +117,8 @@ def get_peft_model(model: nn.Cell, peft_config: PeftConfig, adapter_name: str = 
     return MODEL_TYPE_TO_PEFT_MODEL_MAPPING[peft_config.task_type](model, peft_config, adapter_name=adapter_name)
 
 def inject_adapter_in_model(
-    peft_config: PeftConfig, model: nn.Cell, adapter_name: str = "default"
-) -> nn.Cell:
+    peft_config: PeftConfig, model: nn.Module, adapter_name: str = "default"
+) -> nn.Module:
     r"""
     A simple API to create and inject adapter in-place into a model. Currently the API does not support prompt learning
     methods and adaption prompt. Make sure to have the correct `target_names` set in the `peft_config` object. The API
@@ -127,7 +127,7 @@ def inject_adapter_in_model(
     Args:
         peft_config (`PeftConfig`):
             Configuration object containing the parameters of the Peft model.
-        model (`nn.Cell`):
+        model (`nn.Module`):
             The input model where the adapter will be injected.
         adapter_name (`str`, `optional`, defaults to `"default"`):
             The name of the adapter to be injected, if not provided, the default adapter name is used ("default").

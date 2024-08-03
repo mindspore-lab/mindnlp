@@ -27,7 +27,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         IBertForMaskedLM,
@@ -47,7 +47,6 @@ if is_mindspore_available():
         QuantLinear,
         create_position_ids_from_input_ids,
     )
-
 
 class IBertModelTester:
     def __init__(
@@ -339,7 +338,7 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
             self.assertIsInstance(model.get_input_embeddings(), QuantEmbedding)
             model.set_input_embeddings(nn.Embedding(10, 10))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     # Override
     def test_feed_forward_chunking(self):
@@ -627,7 +626,7 @@ class IBertModelIntegrationTest(unittest.TestCase):
         x = x_int * x_scaling_factor
 
         ln_q = IntLayerNorm(x.shape[1:], 1e-5, quant_mode=True, output_bit=output_bit)
-        ln_dq = nn.LayerNorm(x.shape[1:], begin_norm_axis=1, begin_params_axis=1, epsilon=1e-5)
+        ln_dq = nn.LayerNorm(x.shape[1:], eps=1e-5)
 
         ln_q.weight = mindspore.Parameter(ops.ones(x.shape[1:]), 'weight')
         ln_q.bias = mindspore.Parameter(ops.ones(x.shape[1:]), 'bias')
@@ -685,14 +684,14 @@ class IBertModelIntegrationTest(unittest.TestCase):
         elif type(model) == nn.SequentialCell:
             for n, m in model.named_children():
                 self.quantize(m)
-        elif type(model) == nn.CellList:
+        elif type(model) == nn.ModuleList:
             for n in model:
                 self.quantize(n)
         else:
             for attr in dir(model):
                 if hasattr(model, attr):
                     mod = getattr(model, attr)
-                    if isinstance(mod, nn.Cell) and mod != model:
+                    if isinstance(mod, nn.Module) and mod != model:
                         self.quantize(mod)
 
     @slow

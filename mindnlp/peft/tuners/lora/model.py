@@ -29,10 +29,10 @@ try:
 except:
     from typing_extensions import Literal
 
-import mindspore
-from mindspore import nn, ops
 from tqdm import tqdm
+import mindspore
 
+from mindnlp.core import nn, ops
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
@@ -78,12 +78,12 @@ class LoraModel(BaseTuner):
     The method is described in detail in https://arxiv.org/abs/2106.09685.
 
     Args:
-        model ([`nn.Cell`]): The model to be adapted.
+        model ([`nn.Module`]): The model to be adapted.
         config ([`LoraConfig`]): The configuration of the Lora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        LoraModel ([`mindspore.nn.Cell`]): The Lora model.
+        LoraModel ([`mindspore.nn.Module`]): The Lora model.
 
     Example:
 
@@ -199,7 +199,7 @@ class LoraModel(BaseTuner):
         Args:
             peft_config (`PeftConfig`):
                 The prepared adapter config.
-            model (`nn.Cell`):
+            model (`nn.Module`):
                 The model that is going to be adapted.
         """
         if peft_config.layer_replication:
@@ -804,8 +804,8 @@ class LoraModel(BaseTuner):
 
                     if len(loras_A) == 0:
                         raise ValueError("No matching LoRAs found. Please raise an issue on GitHub.")
-                    loras_A = ops.cat(loras_A, axis=0)
-                    loras_B = ops.cat(loras_B, axis=1)
+                    loras_A = ops.cat(loras_A, dim=0)
+                    loras_B = ops.cat(loras_B, dim=1)
                     target_lora_A.data[: loras_A.shape[0], :] = loras_A
                     target_lora_B.data[:, : loras_B.shape[1]] = loras_B
                 elif combination_type in [
@@ -1028,7 +1028,7 @@ class LoraModel(BaseTuner):
 
     def merge_and_unload(
         self, progressbar: bool = False, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
-    ) -> nn.Cell:
+    ) -> nn.Module:
         r"""
         This method merges the LoRa layers into the base model. This is needed if someone wants to use the base model
         as a standalone model.
@@ -1058,7 +1058,7 @@ class LoraModel(BaseTuner):
             progressbar=progressbar, safe_merge=safe_merge, adapter_names=adapter_names
         )
 
-    def unload(self) -> nn.Cell:
+    def unload(self) -> nn.Module:
         """
         Gets back the base model by removing all the lora cells without merging. This gives back the original base
         model.

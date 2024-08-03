@@ -129,17 +129,21 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
             unk_token (str, optional): The unknown token. Default is '<unk>'.
             pad_token (str, optional): The padding token. Default is '<pad>'.
             extra_ids (int, optional): The number of extra tokens to be added. Default is 100.
-            additional_special_tokens (list, optional): Additional special tokens to be added. Default is None.
-                If provided, it must include the extra_ids tokens.
-                If not provided, extra_ids number of '<extra_id_i>' tokens will be added automatically.
-                If provided and no '<extra_id_i>' tokens are found, extra_ids number of '<extra_id_i>' tokens will be added automatically.
+            additional_special_tokens (list, optional):
+                Additional special tokens to be added. Default is None.
+
+                - If provided, it must include the extra_ids tokens.
+                - If not provided, extra_ids number of '<extra_id_i>' tokens will be added automatically.
+                - If provided and no '<extra_id_i>' tokens are found, extra_ids number of '<extra_id_i>' tokens
+                will be added automatically.
             **kwargs (dict): Additional keyword arguments.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If both extra_ids and additional_special_tokens are provided, but additional_special_tokens does not include the extra_ids tokens.
+            ValueError: If both extra_ids and additional_special_tokens are provided, but additional_special_tokens
+                does not include the extra_ids tokens.
         """
         # Add extra_ids to the special token list
         if additional_special_tokens is not None:
@@ -174,15 +178,16 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
     def can_save_slow_tokenizer(self) -> bool:
         """
         This method checks if the slow tokenizer can be saved.
-        
+
         Args:
             self (T5TokenizerFast): The instance of the T5TokenizerFast class.
-                It is used to access the vocab_file attribute which is required for checking if the slow tokenizer can be saved.
-        
+                It is used to access the vocab_file attribute which is required for checking
+                if the slow tokenizer can be saved.
+
         Returns:
-            bool: Returns a boolean value indicating whether the slow tokenizer can be saved. 
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
                 True if the vocab_file exists, otherwise False.
-        
+
         Raises:
             None
         """
@@ -191,26 +196,31 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
         """
-        This method updates the maximum model length for the T5 tokenizer. It checks if the provided `pretrained_model_name_or_path` is valid and compares the `init_max_model_length` with the
-`max_model_length` to determine the final value.
-        
+        This method updates the maximum model length for the T5 tokenizer. It checks if the provided
+        `pretrained_model_name_or_path` is valid and compares the `init_max_model_length` with the
+        `max_model_length` to determine the final value.
+
         Args:
             pretrained_model_name_or_path (str): The name or path of the pretrained model.
             max_model_length (int): The maximum length for the model.
             init_max_model_length (int or None): The initial maximum model length.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            FutureWarning: If the tokenizer was incorrectly instantiated with a deprecated maximum model length, a warning is raised. This is to maintain backwards compatibility and inform the user about
-possible issues when padding or encoding with `truncation` set to True.
-        
+            FutureWarning: If the tokenizer was incorrectly instantiated with a deprecated maximum model length,
+            a warning is raised. This is to maintain backwards compatibility and inform the user about possible issues
+            when padding or encoding with `truncation` set to True.
+
         Note:
-            - If `pretrained_model_name_or_path` is in the list of `T5TokenizerFast.max_model_input_sizes`, the deprecated maximum model length will be retrieved.
-            - If `init_max_model_length` is provided and different from `max_model_length`, it will be returned as the final value.
-            - If `init_max_model_length` is None, a FutureWarning will be raised to inform about the deprecated behavior and recommend explicit specification of `max_length` or `model_max_length` when encoding
-or padding sequences longer than the deprecated maximum model length.
+            - If `pretrained_model_name_or_path` is in the list of `T5TokenizerFast.max_model_input_sizes`,
+            the deprecated maximum model length will be retrieved.
+            - If `init_max_model_length` is provided and different from `max_model_length`,
+            it will be returned as the final value.
+            - If `init_max_model_length` is None, a FutureWarning will be raised to inform about the deprecated behavior
+            and recommend explicit specification of `max_length` or `model_max_length` when encoding
+            or padding sequences longer than the deprecated maximum model length.
         """
         if pretrained_model_name_or_path in T5TokenizerFast.max_model_input_sizes:
             deprecated_max_model_length = T5TokenizerFast.max_model_input_sizes[pretrained_model_name_or_path]
@@ -235,25 +245,29 @@ or padding sequences longer than the deprecated maximum model length.
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Saves the vocabulary for a slow tokenizer.
-        
+
         Args:
             self (T5TokenizerFast): An instance of the T5TokenizerFast class.
             save_directory (str): The directory where the vocabulary will be saved.
             filename_prefix (Optional[str], optional): A prefix to be added to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for
+                a slow tokenizer.
             FileNotFoundError: If the save_directory does not exist.
-        
+
         Note:
-            The method assumes that the fast tokenizer has the necessary information to save the vocabulary for a slow tokenizer.
-        
+            The method assumes that the fast tokenizer has the necessary information to save the vocabulary for
+            a slow tokenizer.
+
         Example:
-            tokenizer = T5TokenizerFast()
-            tokenizer.save_vocabulary('/path/to/save', 'vocab')
+            ```python
+            >>> tokenizer = T5TokenizerFast()
+            >>> tokenizer.save_vocabulary('/path/to/save', 'vocab')
+            ```
         """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
@@ -329,7 +343,8 @@ or padding sequences longer than the deprecated maximum model length.
             self (T5TokenizerFast): The T5TokenizerFast instance.
             
         Returns:
-            list: A list of sentinel tokens filtered from the additional_special_tokens attribute of the T5TokenizerFast instance.
+            list: A list of sentinel tokens filtered from the additional_special_tokens attribute of the
+                T5TokenizerFast instance.
         
         Raises:
             None.
@@ -340,17 +355,19 @@ or padding sequences longer than the deprecated maximum model length.
 
     def get_sentinel_token_ids(self):
         """
-        This method 'get_sentinel_token_ids' in the class 'T5TokenizerFast' retrieves the token IDs corresponding to the sentinel tokens.
+        This method 'get_sentinel_token_ids' in the class 'T5TokenizerFast' retrieves the token IDs corresponding
+        to the sentinel tokens.
         
         Args:
             self (T5TokenizerFast): The instance of the T5TokenizerFast class.
                 Represents the tokenizer object which provides the necessary methods for tokenization.
         
         Returns:
-            list of int: A list containing the token IDs of the sentinel tokens obtained by converting each sentinel token using the 'convert_tokens_to_ids' method.
+            list of int: A list containing the token IDs of the sentinel tokens obtained by converting each sentinel
+                token using the 'convert_tokens_to_ids' method.
         
         Raises:
-            This method does not explicitly raise any exceptions.
+            None.
         """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
 

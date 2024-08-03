@@ -16,13 +16,17 @@
 Global configs
 """
 import os
+from packaging import version
 import mindspore
 
+DEVICE_TARGET = mindspore.get_context('device_target')
+GENERATOR_SEED = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+USE_PYBOOST = version.parse(mindspore.__version__) >= version.parse('2.3.0') and DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 
-WEIGHTS_NAME = "mindspore.ckpt"
+WEIGHTS_NAME = "mindspore_model.ckpt"
 PT_WEIGHTS_NAME = "pytorch_model.bin"
-WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
+WEIGHTS_INDEX_NAME = "mindspore_model.ckpt.index.json"
 PT_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
 SAFE_WEIGHTS_NAME = "model.safetensors"
 SAFE_WEIGHTS_INDEX_NAME = "model.safetensors.index.json"

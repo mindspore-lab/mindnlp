@@ -22,9 +22,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -166,7 +167,7 @@ AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesFeatureEmbedder with TimeSeries->Autoformer
-class AutoformerFeatureEmbedder(nn.Cell):
+class AutoformerFeatureEmbedder(nn.Module):
     """
     Embed a sequence of categorical features.
 
@@ -187,7 +188,7 @@ class AutoformerFeatureEmbedder(nn.Cell):
                 The length of this list should be the same as the length of 'cardinalities'.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             TypeError: If 'cardinalities' or 'embedding_dims' is not of type List[int].
@@ -196,11 +197,11 @@ class AutoformerFeatureEmbedder(nn.Cell):
         super().__init__()
 
         self.num_features = len(cardinalities)
-        self.embedders = nn.CellList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
+        self.embedders = nn.ModuleList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
 
-    def construct(self, features: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, features: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Constructs feature embeddings for the AutoformerFeatureEmbedder.
+        forwards feature embeddings for the AutoformerFeatureEmbedder.
         
         Args:
             self (AutoformerFeatureEmbedder): The instance of the AutoformerFeatureEmbedder class.
@@ -208,7 +209,7 @@ class AutoformerFeatureEmbedder(nn.Cell):
                 It should have a shape compatible with the embedding operation and contain the features to be embedded.
         
         Returns:
-            mindspore.Tensor: The tensor containing the constructed feature embeddings.
+            mindspore.Tensor: The tensor containing the forwarded feature embeddings.
         
         Raises:
             ValueError: If the number of features is less than or equal to 0.
@@ -218,7 +219,7 @@ class AutoformerFeatureEmbedder(nn.Cell):
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
             cat_feature_slices = ops.chunk(
-                features, self.num_features, axis=-1)
+                features, self.num_features, dim=-1)
         else:
             cat_feature_slices = [features]
 
@@ -227,12 +228,12 @@ class AutoformerFeatureEmbedder(nn.Cell):
                 embed(cat_feature_slice.squeeze(-1))
                 for embed, cat_feature_slice in zip(self.embedders, cat_feature_slices)
             ],
-            axis=-1,
+            dim=-1,
         )
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesStdScaler with TimeSeries->Autoformer
-class AutoformerStdScaler(nn.Cell):
+class AutoformerStdScaler(nn.Module):
     """
     Standardize features by calculating the mean and scaling along some given dimension `dim`, and then normalizes it
     by subtracting from the mean and dividing by the standard deviation.
@@ -253,38 +254,41 @@ class AutoformerStdScaler(nn.Cell):
             self (AutoformerStdScaler): The instance of the AutoformerStdScaler class.
             config (AutoformerConfig): An object containing configuration settings for the AutoformerStdScaler.
                 The config parameter should be an instance of AutoformerConfig and must contain the following attributes:
+                
                 - scaling_dim (int, optional): The dimension for scaling. If not provided, defaults to 1.
                 - keepdim (bool, optional): A flag indicating whether to keep the dimension. Defaults to True.
                 - minimum_scale (float, optional): The minimum scale value. Defaults to 1e-05.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         super().__init__()
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
         self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-5
 
-    def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def forward(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
-        Constructs the AutoformerStdScaler.
-        
+        forwards the AutoformerStdScaler.
+
         This method takes three parameters: self, data, and observed_indicator. It returns a tuple of three mindspore.Tensor objects.
-        
+
         Args:
             self: The instance of the AutoformerStdScaler class.
             data (mindspore.Tensor): The input data tensor.
             observed_indicator (mindspore.Tensor): The observed indicator tensor.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing three tensors.
+            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+                A tuple containing three tensors.
+            
                 - The first tensor represents the scaled data, obtained by subtracting the location and dividing by the scale.
                 - The second tensor represents the location, calculated as the weighted sum of the data.
                 - The third tensor represents the scale, calculated as the square root of the variance plus a minimum scale value.
-        
+
         Raises:
             None.
         """
@@ -298,7 +302,7 @@ class AutoformerStdScaler(nn.Cell):
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesMeanScaler with TimeSeries->Autoformer
-class AutoformerMeanScaler(nn.Cell):
+class AutoformerMeanScaler(nn.Module):
     """
     Computes a scaling factor as the weighted average absolute value along dimension `dim`, and scales the data
     accordingly.
@@ -316,20 +320,22 @@ class AutoformerMeanScaler(nn.Cell):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerMeanScaler class.
-        
+
         Args:
             self: The instance of the AutoformerMeanScaler class.
-            config (AutoformerConfig): An object containing configuration parameters for the AutoformerMeanScaler.
-                The config parameter should be an instance of AutoformerConfig class.
+            config (AutoformerConfig):
+                An object containing configuration parameters for the AutoformerMeanScaler.
+                The config parameter should be an instance of AutoformerConfig class. 
                 It is used to set the following attributes:
-                    - dim (int): The dimension for scaling, default is 1 if not specified in the config.
-                    - keepdim (bool): A flag indicating whether to keep the dimensions, defaults to True if not specified.
-                    - minimum_scale (float): The minimum scale value, defaults to 1e-10 if not specified.
-                    - default_scale (float): The default scale value, which can be set to None if not specified.
-        
+                
+                - dim (int): The dimension for scaling, default is 1 if not specified in the config.
+                - keepdim (bool): A flag indicating whether to keep the dimensions, defaults to True if not specified.
+                - minimum_scale (float): The minimum scale value, defaults to 1e-10 if not specified.
+                - default_scale (float): The default scale value, which can be set to None if not specified.
+
         Returns:
-            None. This method initializes the attributes of the AutoformerMeanScaler instance based on the provided config.
-        
+            None: This method initializes the attributes of the AutoformerMeanScaler instance based on the provided config.
+
         Raises:
             None.
         """
@@ -339,32 +345,38 @@ class AutoformerMeanScaler(nn.Cell):
         self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-10
         self.default_scale = config.default_scale if hasattr(config, "default_scale") else None
 
-    def construct(
+    def forward(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
-        Construct method in the AutoformerMeanScaler class.
-        
+        forward method in the AutoformerMeanScaler class.
+
         This method takes three parameters: self, data, and observed_indicator, and returns a tuple of three mindspore.Tensor objects.
-        
+
         Args:
             self: An instance of the AutoformerMeanScaler class.
-            data (mindspore.Tensor): Input data for scaling.
+            data (mindspore.Tensor): 
+                Input data for scaling.
+            
                 - Type: mindspore.Tensor
                 - Purpose: Represents the data to be scaled.
                 - Restrictions: None
-        
-            observed_indicator (mindspore.Tensor): Indicator tensor for observed values.
+
+            observed_indicator (mindspore.Tensor): 
+                Indicator tensor for observed values.
+            
                 - Type: mindspore.Tensor
                 - Purpose: Represents the observed values indicator.
                 - Restrictions: None
-        
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing three tensors.
+            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: 
+                A tuple containing three tensors.
+            
                 - The first tensor represents the scaled data.
                 - The second tensor is a zero tensor with the same shape as the scale tensor.
                 - The third tensor represents the scale value.
-        
+
         Raises:
             None.
         """
@@ -377,7 +389,7 @@ class AutoformerMeanScaler(nn.Cell):
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ts_sum.sum(axis=0)
+            batch_sum = ops.sum(ts_sum, dim=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
@@ -391,13 +403,13 @@ class AutoformerMeanScaler(nn.Cell):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = scale.squeeze(axis=self.dim)
+            scale = scale.squeeze(dim=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesNOPScaler with TimeSeries->Autoformer
-class AutoformerNOPScaler(nn.Cell):
+class AutoformerNOPScaler(nn.Module):
     """
     Assigns a scaling factor equal to 1 along dimension `dim`, and therefore applies no scaling to the input data.
 
@@ -410,39 +422,40 @@ class AutoformerNOPScaler(nn.Cell):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerNOPScaler class.
-        
+
         Args:
             self: The instance of the AutoformerNOPScaler class.
             config (AutoformerConfig): An instance of AutoformerConfig containing configuration parameters for the scaler.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__()
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
 
-    def construct(
+    def forward(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor      ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-        ''' 
-        Constructs the scaling parameters for the AutoformerNOPScaler.
-        
+        '''
+        forwards the scaling parameters for the AutoformerNOPScaler.
+
         Args:
             data (mindspore.Tensor): The input data tensor for scaling.
             observed_indicator (mindspore.Tensor): The indicator tensor specifying which data points are observed.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing the scaled data, the mean location, and the scaling factor.
-        
+            Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: 
+                A tuple containing the scaled data, the mean location, and the scaling factor.
+
         Raises:
             None
         '''
-        scale = ops.ones_like(data).mean(axis=self.dim, keepdims=self.keepdim)
+        scale = ops.ones_like(data).mean(dim=self.dim, keepdims=self.keepdim)
         loc = ops.zeros_like(data).mean(
-            axis=self.dim, keepdims=self.keepdim)
+            dim=self.dim, keepdims=self.keepdim)
         return data, loc, scale
 
 
@@ -466,13 +479,13 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     if weights is not None:
         weighted_tensor = ops.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
         sum_weights = ops.clamp(weights.sum(
-            axis=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
-    return input_tensor.mean(axis=dim)
+            dim=dim) if dim else weights.sum(), min=1.0)
+        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
+    return input_tensor.mean(dim=dim)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
-def nll(input: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
@@ -485,18 +498,18 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
         """
         Initializes an instance of AutoformerSinusoidalPositionalEmbedding.
-        
+
         Args:
             self: The instance of the class.
             num_positions (int): The number of positions in the sequence.
             embedding_dim (int): The dimension of the embedding.
             padding_idx (Optional[int], optional): Index of the padding token. Default is None.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(num_positions, embedding_dim)
         self.weight = self._init_weight(self.weight)
@@ -518,53 +531,52 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         #out.detach_() #todo
         return out
 
-    def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
+    def forward(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         #bsz, seq_len = input_ids_shape[:2]
         seq_len = input_ids_shape[1]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().construct(positions)
+        return super().forward(positions)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesValueEmbedding with TimeSeries->Autoformer
-class AutoformerValueEmbedding(nn.Cell):
+class AutoformerValueEmbedding(nn.Module):
     r"""
     #todo add docstring
     """
     def __init__(self, feature_size, d_model):
         """
         Initializes an instance of the AutoformerValueEmbedding class.
-        
+
         Args:
             self (AutoformerValueEmbedding): The instance of the class.
             feature_size (int): The size of the input feature.
             d_model (int): The size of the output model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__()
-        self.value_projection = nn.Dense(
-            in_channels=feature_size, out_channels=d_model, has_bias=False)
+        self.value_projection = nn.Linear(feature_size, d_model, bias=False)
 
-    def construct(self, x):
+    def forward(self, x):
         """
-        Constructs the value embedding for the given input.
-        
+        forwards the value embedding for the given input.
+
         Args:
             self (AutoformerValueEmbedding): The instance of the AutoformerValueEmbedding class.
             x: The input value to be embedded.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.value_projection(x)
 
@@ -572,7 +584,7 @@ class AutoformerValueEmbedding(nn.Cell):
 # Class based on
 # https://github.com/thuml/Autoformer/blob/c6a0694ff484753f2d986cc0bb1f99ee850fc1a8/layers/Autoformer_EncDec.py#L39
 # where AutoformerSeriesDecompositionLayer is series_decomp + moving_average
-class AutoformerSeriesDecompositionLayer(nn.Cell):
+class AutoformerSeriesDecompositionLayer(nn.Module):
     """
     Returns the trend and the seasonal parts of the time series. Calculated as:
 
@@ -581,15 +593,18 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerSeriesDecompositionLayer class.
-        
+
         Args:
             self: The instance of the class.
-            config (AutoformerConfig): The configuration object containing the settings for the AutoformerSeriesDecompositionLayer.
-                - `moving_average` (int): The size of the moving average kernel for the average pooling operation. Must be a positive integer.
-                
+            config (AutoformerConfig):
+                The configuration object containing the settings for the AutoformerSeriesDecompositionLayer.
+
+                - `moving_average` (int): The size of the moving average kernel for the average pooling operation.
+                Must be a positive integer.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -597,13 +612,13 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
         self.kernel_size = config.moving_average
         self.avg = nn.AvgPool1d(kernel_size=self.kernel_size, stride=1, padding=0)
 
-    def construct(self, x):
+    def forward(self, x):
         """Input shape: Batch x Time x EMBED_DIM"""
         # padding on the both ends of time series
         num_of_pads = (self.kernel_size - 1) // 2
         front = x[:, 0:1, :].tile((1, num_of_pads, 1))
         end = x[:, -1:, :].tile((1, num_of_pads, 1))
-        x_padded = ops.cat([front, x, end], axis=1)
+        x_padded = ops.cat([front, x, end], dim=1)
 
         # calculate the trend and seasonal part of the series
         x_trend = self.avg(x_padded.transpose(0, 2, 1)).transpose(0, 2, 1)
@@ -614,49 +629,50 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
 # Class based on
 # https://github.com/thuml/Autoformer/blob/c6a0694ff484753f2d986cc0bb1f99ee850fc1a8/layers/Autoformer_EncDec.py#L6
 # where AutoformerLayernorm is my_Layernorm
-class AutoformerLayernorm(nn.Cell):
+class AutoformerLayernorm(nn.Module):
     """
     Special designed layer normalization for the seasonal part, calculated as: AutoformerLayernorm(x) = nn.LayerNorm(x)
-    - torch.mean(nn.LayerNorm(x))
+    >   - torch.mean(nn.LayerNorm(x))
     """
     def __init__(self, config: AutoformerConfig):
         """
         Initializes a new instance of the AutoformerLayernorm class.
-        
+
         Args:
             self: The instance of the class.
-            config (AutoformerConfig): An instance of the AutoformerConfig class containing the configuration parameters for the layernorm. It should have the attribute 'd_model' representing the model
-dimension.
-        
+            config (AutoformerConfig):
+                An instance of the AutoformerConfig class containing the configuration parameters for the layernorm.
+                It should have the attribute 'd_model' representing the model dimension.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__()
         self.layernorm = nn.LayerNorm([config.d_model])
 
-    def construct(self, x):
+    def forward(self, x):
         """
-        This method 'construct' is a part of the class 'AutoformerLayernorm' and is used to perform a specific data processing operation. 
-        
+        This method 'forward' is a part of the class 'AutoformerLayernorm' and is used to perform a specific data processing operation.
+
         Args:
             self (AutoformerLayernorm): The instance of the AutoformerLayernorm class on which this method is called.
             x (tensor): The input tensor to be processed by the method.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         x_hat = self.layernorm(x)
-        bias = ops.mean(x_hat, axis=1).unsqueeze(1).tile((1, x.shape[1], 1))
+        bias = ops.mean(x_hat, dim=1).unsqueeze(1).tile((1, x.shape[1], 1))
         return x_hat - bias
 
 
-class AutoformerAttention(nn.Cell):
+class AutoformerAttention(nn.Module):
     """
     AutoCorrelation Mechanism with the following two phases:
         (1) period-based dependencies discovery (2) time delay aggregation
@@ -673,20 +689,21 @@ class AutoformerAttention(nn.Cell):
     ):
         """
         Initialize the AutoformerAttention class.
-        
+
         Args:
-        - embed_dim (int): The dimension of the input embeddings.
-        - num_heads (int): The number of attention heads to use.
-        - dropout (float, optional): The dropout probability to apply. Defaults to 0.0.
-        - is_decoder (bool, optional): Indicates whether the attention is used in a decoder setting. Defaults to False.
-        - bias (bool, optional): Indicates whether to include bias in linear projections. Defaults to True.
-        - autocorrelation_factor (int): The factor used for autocorrelation.
-        
+            embed_dim (int): The dimension of the input embeddings.
+            num_heads (int): The number of attention heads to use.
+            dropout (float, optional): The dropout probability to apply. Defaults to 0.0.
+            is_decoder (bool, optional): Indicates whether the attention is used in a decoder setting.
+                Defaults to False.
+            bias (bool, optional): Indicates whether to include bias in linear projections. Defaults to True.
+            autocorrelation_factor (int): The factor used for autocorrelation.
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - ValueError: If embed_dim is not divisible by num_heads.
+            ValueError: If embed_dim is not divisible by num_heads.
         """
         super().__init__()
         self.embed_dim = embed_dim
@@ -702,49 +719,52 @@ class AutoformerAttention(nn.Cell):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
         self.autocorrelation_factor = autocorrelation_factor
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         Reshapes a given tensor to match the desired shape for AutoformerAttention.
-        
+
         Args:
             self (AutoformerAttention): An instance of the AutoformerAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The sequence length of the tensor.
             bsz (int): The batch size of the tensor.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method reshapes the input tensor according to the desired shape for AutoformerAttention. The tensor is reshaped into a new shape (bsz, seq_len, num_heads, head_dim) and the dimensions are swapped
-along the second and third axes.
-        
+
+        This method reshapes the input tensor according to the desired shape for AutoformerAttention.
+        The tensor is reshaped into a new shape (bsz, seq_len, num_heads, head_dim) and the dimensions are swapped
+        along the second and third axes.
+
         Note:
             - The `tensor` should have a shape compatible with the desired shape (seq_len * num_heads * head_dim).
             - The `seq_len` and `bsz` parameters should be greater than 0.
-        
+
         Example:
-            # Create an instance of AutoformerAttention
-            autoformer_attn = AutoformerAttention()
-        
-            # Define input tensor
-            tensor = mindspore.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-        
-            # Reshape the tensor
-            autoformer_attn._shape(tensor, 2, 2)
+            ```python
+            >>> # Create an instance of AutoformerAttention
+            >>> autoformer_attn = AutoformerAttention()
+            ...
+            >>> # Define input tensor
+            >>> tensor = mindspore.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+            ...
+            >>> # Reshape the tensor
+            >>> autoformer_attn._shape(tensor, 2, 2)
+            ```
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -782,8 +802,8 @@ along the second and third axes.
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -811,39 +831,16 @@ along the second and third axes.
         if queries_time_length > values_time_length:
             query_states = query_states[:, : (queries_time_length - values_time_length), :]
             zeros = ops.zeros_like(query_states).float()
-            value_states = ops.cat([value_states, zeros], axis=1)
-            key_states = ops.cat([key_states, zeros], axis=1)
+            value_states = ops.cat([value_states, zeros], dim=1)
+            key_states = ops.cat([key_states, zeros], dim=1)
         else:
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        try:
-            query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
-            key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
-            attn_weights = query_states_fft * ops.conj(key_states_fft)
-            attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
-        except:
-            rfft_net = ops.FFTWithSize(signal_ndim=3, inverse=False, real=True)
-            if query_states.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - query_states.shape[1]), 0)
-                query_states = pad2d(query_states)
-            else:
-                query_states = query_states[:,:tgt_len,:]
-            query_states_fft = rfft_net(query_states)
-            if key_states.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - key_states.shape[1]), 0)
-                key_states = pad2d(key_states)
-            else:
-                key_states = key_states[:,:tgt_len,:]
-            key_states_fft = rfft_net(key_states)
-            attn_weights = query_states_fft * ops.conj(key_states_fft)
-            irfft_net = ops.FFTWithSize(signal_ndim=3, inverse=True, real=True)
-            if attn_weights.shape[1] < tgt_len:
-                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - attn_weights.shape[1]), 0)
-                attn_weights = pad2d(attn_weights)
-            else:
-                attn_weights = attn_weights[:, :tgt_len, :]
-            attn_weights = irfft_net(attn_weights)
+        query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
+        key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
+        attn_weights = query_states_fft * ops.conj(key_states_fft)
+        attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
         src_len = key_states.shape[1]
         channel = key_states.shape[2]
 
@@ -887,13 +884,13 @@ along the second and third axes.
         # find top k autocorrelations delays
         top_k = int(self.autocorrelation_factor * math.log(time_length))
         autocorrelations_mean_on_head_channel = ops.mean(
-            autocorrelations, axis=(1, -1))  # bsz x tgt_len
+            autocorrelations, dim=(1, -1))  # bsz x tgt_len
         if self.training:
             autocorrelations_mean_on_bsz = ops.mean(
-                autocorrelations_mean_on_head_channel, axis=0)
+                autocorrelations_mean_on_head_channel, dim=0)
             _, top_k_delays_index = ops.topk(autocorrelations_mean_on_bsz, top_k)
             top_k_autocorrelations = ops.stack(
-                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], axis=-1
+                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], dim=-1
             )
         else:
             top_k_autocorrelations, top_k_delays_index = ops.topk(
@@ -901,7 +898,7 @@ along the second and third axes.
             )
 
         top_k_autocorrelations = ops.softmax(
-            top_k_autocorrelations, axis=-1)  # bsz x top_k
+            top_k_autocorrelations, dim=-1)  # bsz x top_k
 
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
@@ -920,7 +917,7 @@ along the second and third axes.
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).tile(
                     (self.num_heads, tgt_len, channel)
                 )
-                value_states_roll_delay = ops.gather_elements(
+                value_states_roll_delay = ops.gather(
                     tmp_values, dim=1, index=tmp_delay)
             else:
                 value_states_roll_delay = value_states.roll(shifts=-int(top_k_delays_index[i]), dims=1)
@@ -951,23 +948,24 @@ along the second and third axes.
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class AutoformerEncoderLayer(nn.Cell):
+class AutoformerEncoderLayer(nn.Module):
     r"""
     #todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of AutoformerEncoderLayer.
-        
+
         Args:
             self: The instance of the AutoformerEncoderLayer class.
-            config (AutoformerConfig): An instance of AutoformerConfig containing configuration settings for the encoder layer. 
-                It specifies the model dimensions, attention heads, dropout rates, activation functions, etc. 
+            config (AutoformerConfig):
+                An instance of AutoformerConfig containing configuration settings for the encoder layer.
+                It specifies the model dimensions, attention heads, dropout rates, activation functions, etc.
                 The config parameter is used to set up the layer's components accordingly.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -983,13 +981,13 @@ class AutoformerEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = AutoformerLayernorm(config)
         self.decomp1 = AutoformerSeriesDecompositionLayer(config)
         self.decomp2 = AutoformerSeriesDecompositionLayer(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -1014,7 +1012,7 @@ class AutoformerEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         # added layer norm here as an improvement
         hidden_states = self.self_attn_layer_norm(hidden_states)
@@ -1022,9 +1020,9 @@ class AutoformerEncoderLayer(nn.Cell):
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, _ = self.decomp2(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
@@ -1043,17 +1041,19 @@ class AutoformerEncoderLayer(nn.Cell):
         return outputs
 
 
-class AutoformerDecoderLayer(nn.Cell):
+class AutoformerDecoderLayer(nn.Module):
     r"""
     #todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerDecoderLayer class.
-        
+
         Args:
             self: The instance of the AutoformerDecoderLayer class.
-            config (AutoformerConfig): The configuration object containing various parameters for the decoder layer.
+            config (AutoformerConfig):
+                The configuration object containing various parameters for the decoder layer.
+
                 - config.d_model (int): The embedding dimension.
                 - config.decoder_attention_heads (int): The number of attention heads for decoder self-attention.
                 - config.attention_dropout (float): The dropout rate for attention weights.
@@ -1063,10 +1063,10 @@ class AutoformerDecoderLayer(nn.Cell):
                 - config.activation_dropout (float): The dropout rate for the activation output.
                 - config.decoder_ffn_dim (int): The hidden dimension of the feed-forward network.
                 - config.feature_size (int): The size of the output feature.
-        
+
         Returns:
-            None. This method initializes the AutoformerDecoderLayer object.
-        
+            None: This method initializes the AutoformerDecoderLayer object.
+
         Raises:
             None.
         """
@@ -1093,8 +1093,8 @@ class AutoformerDecoderLayer(nn.Cell):
             autocorrelation_factor=config.autocorrelation_factor,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = AutoformerLayernorm(config)
 
         self.decomp1 = AutoformerSeriesDecompositionLayer(config)
@@ -1108,11 +1108,11 @@ class AutoformerDecoderLayer(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            pad_mode="pad",#todo
-            has_bias=False,
+            padding_mode="circular",
+            bias=False,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1158,7 +1158,7 @@ class AutoformerDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend1 = self.decomp1(hidden_states)
         # added layer norm here as an improvement
@@ -1180,7 +1180,7 @@ class AutoformerDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states, trend2 = self.decomp2(hidden_states)
             # added layer norm here as an improvement
@@ -1192,9 +1192,9 @@ class AutoformerDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend3 = self.decomp3(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
@@ -1227,23 +1227,23 @@ class AutoformerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """
         Initializes the weights of the given cell.
-        
+
         Args:
             self (AutoformerPreTrainedModel): The instance of the AutoformerPreTrainedModel class.
             cell: The cell whose weights need to be initialized.
-        
+
         Returns:
-            None. This method initializes the weights of the given cell in-place.
-        
+            None: This method initializes the weights of the given cell in-place.
+
         Raises:
             None.
         """
         std = self.config.init_std
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             cell.weight.set_data(initializer(Normal(std),
                                              cell.weight.shape,
                                              cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, AutoformerSinusoidalPositionalEmbedding):
@@ -1265,11 +1265,13 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes the AutoformerEncoder.
-        
+
         Args:
             self: The instance of the AutoformerEncoder class.
-            config (AutoformerConfig): An instance of AutoformerConfig class containing the configuration parameters for the AutoformerEncoder. 
+            config (AutoformerConfig):
+                An instance of AutoformerConfig class containing the configuration parameters for the AutoformerEncoder.
                 It includes the following attributes:
+
                 - dropout (float): The dropout probability for the encoder layers.
                 - encoder_layerdrop (float): The layer dropout probability for the encoder layers.
                 - prediction_length (int): The length of the prediction sequence. It cannot be None.
@@ -1277,10 +1279,10 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
                 - d_model (int): The dimension of the model.
                 - context_length (int): The length of the input context.
                 - encoder_layers (int): The number of encoder layers.
-        
+
         Returns:
-            None. This method initializes the AutoformerEncoder and does not return any value.
-        
+            None: This method initializes the AutoformerEncoder and does not return any value.
+
         Raises:
             ValueError: If the `prediction_length` config parameter is not specified.
         """
@@ -1295,13 +1297,13 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         self.embed_positions = AutoformerSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.CellList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         attention_mask: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -1320,6 +1322,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`torch.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
+
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
@@ -1348,7 +1351,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -1411,10 +1414,12 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerDecoder class.
-        
+
         Args:
             self: The instance of the AutoformerDecoder class.
-            config (AutoformerConfig): An instance of AutoformerConfig containing configuration parameters for the decoder.
+            config (AutoformerConfig):
+                An instance of AutoformerConfig containing configuration parameters for the decoder.
+
                 - dropout (float): The dropout rate to be applied.
                 - decoder_layerdrop (float): The layer dropout rate for the decoder.
                 - prediction_length (int): The length of the prediction sequence.
@@ -1422,10 +1427,10 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
                 - d_model (int): The dimensionality of the model.
                 - context_length (int): The length of the context sequence.
                 - decoder_layers (int): The number of decoder layers to be created.
-        
+
         Returns:
-            None. This method initializes various attributes and does not return any value.
-        
+            None.
+
         Raises:
             ValueError: Raised if the 'prediction_length' config parameter is not specified.
         """
@@ -1439,16 +1444,16 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         self.embed_positions = AutoformerSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.CellList([AutoformerDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([AutoformerDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         # https://github.com/thuml/Autoformer/blob/e6371e24f2ae2dd53e472edefdd5814c5176f864/models/Autoformer.py#L74
-        self.seasonality_projection = nn.Dense(config.d_model, config.feature_size)
+        self.seasonality_projection = nn.Linear(config.d_model, config.feature_size)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         trend: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1546,7 +1551,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             inputs_embeds.shape, past_key_values_length=self.config.context_length - self.config.label_length
         )
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1631,47 +1636,49 @@ class AutoformerModel(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerModel class.
-        
+
         Args:
             self: The object instance itself.
             config (AutoformerConfig): An instance of the AutoformerConfig class, containing configuration parameters for the model.
-            
+
         Returns:
             None
-            
+
         Raises:
             None
-        
+
         Description:
-        This method is called when creating a new AutoformerModel object. It initializes various components of the model based on the provided configuration.
-        
-        - self: The 'self' parameter refers to the instance of the object itself, and is automatically passed in when calling the method.
-        
-        - config: The 'config' parameter is of type AutoformerConfig and contains the configuration parameters for the model. It is used to define the behavior and settings of the AutoformerModel instance.
-        
-            - config.scaling: A string or boolean value indicating the scaling method to be used. If set to 'mean' or True, the AutoformerMeanScaler class will be used for scaling. If set to 'std', the
-AutoformerStdScaler class will be used. Otherwise, the AutoformerNOPScaler class will be used.
-            
-            - config.num_static_categorical_features: An integer representing the number of static categorical features in the dataset. If greater than zero, the AutoformerFeatureEmbedder class will be
-initialized.
-            
-            - config.cardinality: A list of integers representing the cardinalities of the categorical features. This is used by the AutoformerFeatureEmbedder class for embedding dimensions.
-            
-            - config.embedding_dimension: An integer representing the dimension of the categorical feature embeddings. This is used by the AutoformerFeatureEmbedder class.
-            
-        The following components are initialized during the method:
-        
-        - self.scaler: An instance of a scaler class based on the 'scaling' parameter in the config. It is responsible for scaling the input data.
-        
-        - self.embedder: An instance of the AutoformerFeatureEmbedder class if 'num_static_categorical_features' is greater than zero. It is responsible for embedding the static categorical features.
-        
-        - self.encoder: An instance of the AutoformerEncoder class. It is responsible for encoding the input data.
-        
-        - self.decoder: An instance of the AutoformerDecoder class. It is responsible for decoding the encoded data.
-        
-        - self.decomposition_layer: An instance of the AutoformerSeriesDecompositionLayer class. It is responsible for decomposing the input series data.
-        
-        Note: The 'super().__init__(config)' line invokes the initialization method of the parent class, which is not explicitly described in this docstring.
+            This method is called when creating a new AutoformerModel object.
+            It initializes various components of the model based on the provided configuration.
+
+            - self: The 'self' parameter refers to the instance of the object itself, and is automatically passed in when calling the method.
+            - config: The 'config' parameter is of type AutoformerConfig and contains the configuration parameters for the model.
+            It is used to define the behavior and settings of the AutoformerModel instance.
+
+                - config.scaling: A string or boolean value indicating the scaling method to be used.
+                If set to 'mean' or True, the AutoformerMeanScaler class will be used for scaling.
+                If set to 'std', the AutoformerStdScaler class will be used. Otherwise, the AutoformerNOPScaler class will be used.
+                - config.num_static_categorical_features: An integer representing the number of static categorical features in the dataset.
+                If greater than zero, the AutoformerFeatureEmbedder class will be initialized.
+                - config.cardinality: A list of integers representing the cardinalities of the categorical features.
+                This is used by the AutoformerFeatureEmbedder class for embedding dimensions.
+                - config.embedding_dimension: An integer representing the dimension of the categorical feature embeddings.
+                This is used by the AutoformerFeatureEmbedder class.
+
+            The following components are initialized during the method:
+
+            - self.scaler: An instance of a scaler class based on the 'scaling' parameter in the config.
+            It is responsible for scaling the input data.
+            - self.embedder: An instance of the AutoformerFeatureEmbedder class if 'num_static_categorical_features'
+            is greater than zero. It is responsible for embedding the static categorical features.
+            - self.encoder: An instance of the AutoformerEncoder class. It is responsible for encoding the input data.
+            - self.decoder: An instance of the AutoformerDecoder class. It is responsible for decoding the encoded data.
+            - self.decomposition_layer: An instance of the AutoformerSeriesDecompositionLayer class.
+            It is responsible for decomposing the input series data.
+
+        Note:
+            The 'super().__init__(config)' line invokes the initialization method of the parent class,
+            which is not explicitly described in this docstring.
         """
         super().__init__(config)
 
@@ -1701,15 +1708,15 @@ initialized.
     def _past_length(self) -> int:
         """
         Method _past_length in class AutoformerModel.
-        
+
         Args:
             self (AutoformerModel): The instance of the AutoformerModel class.
                 This parameter is required to access the attributes and methods of the class.
-        
+
         Returns:
             int: The calculated past length based on the context length and maximum lag in the lags sequence.
                 This value represents the length of the past context used in the model.
-        
+
         Raises:
             None.
         """
@@ -1750,7 +1757,7 @@ initialized.
             lagged_values.append(sequence[:, begin_index:end_index, ...])
 
         # return as stacked tensor in the feature dimension
-        return ops.stack(lagged_values, axis=-1)
+        return ops.stack(lagged_values, dim=-1)
 
     def create_network_inputs(
         self,
@@ -1782,17 +1789,16 @@ initialized.
                 An optional tensor of shape `(batch_size, future_length, input_size)` containing the future values.
 
         Returns:
-            A tuple containing the following tensors:
-            - reshaped_lagged_sequence (`torch.Tensor`): A tensor of shape `(batch_size, sequence_length, num_lags *
-              input_size)` containing the lagged subsequences of the inputs.
-            - features (`torch.Tensor`): A tensor of shape `(batch_size, sequence_length, num_features)` containing the
-              concatenated static and time features.
-            - loc (`torch.Tensor`): A tensor of shape `(batch_size, input_size)` containing the mean of the input
-              values.
-            - scale (`torch.Tensor`): A tensor of shape `(batch_size, input_size)` containing the std of the input
-              values.
-            - static_feat (`torch.Tensor`): A tensor of shape `(batch_size, num_static_features)` containing the
-              concatenated static features.
+            reshaped_lagged_sequence (`torch.Tensor`): A tensor of shape `(batch_size, sequence_length, num_lags *
+                input_size)` containing the lagged subsequences of the inputs.
+            features (`torch.Tensor`): A tensor of shape `(batch_size, sequence_length, num_features)` containing the
+                concatenated static and time features.
+            loc (`torch.Tensor`): A tensor of shape `(batch_size, input_size)` containing the mean of the input
+                values.
+            scale (`torch.Tensor`): A tensor of shape `(batch_size, input_size)` containing the std of the input
+                values.
+            static_feat (`torch.Tensor`): A tensor of shape `(batch_size, num_static_features)` containing the
+                concatenated static features.
         """
         # time feature
         time_feat = (
@@ -1801,7 +1807,7 @@ initialized.
                     past_time_features[:, self._past_length - self.config.context_length :, ...],
                     future_time_features,
                 ),
-                axis=1,
+                dim=1,
             )
             if future_values is not None
             else past_time_features[:, self._past_length - self.config.context_length :, ...]
@@ -1816,7 +1822,7 @@ initialized.
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
-            (ops.cat((past_values, future_values), axis=1) - loc) / scale
+            (ops.cat((past_values, future_values), dim=1) - loc) / scale
             if future_values is not None
             else (past_values - loc) / scale
         )
@@ -1824,18 +1830,18 @@ initialized.
         # static features
         log_abs_loc = loc.abs().log1p() if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        static_feat = ops.cat((log_abs_loc, log_scale), axis=1)
+        static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
 
         if static_real_features is not None:
-            static_feat = ops.cat((static_real_features, static_feat), axis=1)
+            static_feat = ops.cat((static_real_features, static_feat), dim=1)
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
-            static_feat = ops.cat((embedded_cat, static_feat), axis=1)
+            static_feat = ops.cat((embedded_cat, static_feat), dim=1)
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_feat.shape[1], -1))
 
         # all features
-        features = ops.cat((expanded_static_feat, time_feat), axis=-1)
+        features = ops.cat((expanded_static_feat, time_feat), dim=-1)
 
         # lagged features
         subsequences_length = (
@@ -1865,7 +1871,7 @@ initialized.
         """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         past_values: mindspore.Tensor,
         past_time_features: mindspore.Tensor,
@@ -1887,34 +1893,35 @@ initialized.
     ) -> Union[AutoformerModelOutput, Tuple]:
         r"""
         Returns:
+            Union[AutoformerModelOutput, Tuple]
 
-        Examples:
-
-        ```python
-        >>> from huggingface_hub import hf_hub_download
-
-        >>> from transformers import AutoformerModel
-
-        >>> file = hf_hub_download(
-        ...     repo_id="hf-internal-testing/tourism-monthly-batch", filename="train-batch.pt", repo_type="dataset"
-        ... )
-        >>> batch = torch.load(file)
-
-        >>> model = AutoformerModel.from_pretrained("huggingface/autoformer-tourism-monthly")
-
-        >>> # during training, one provides both past and future values
-        >>> # as well as possible additional features
-        >>> outputs = model(
-        ...     past_values=batch["past_values"],
-        ...     past_time_features=batch["past_time_features"],
-        ...     past_observed_mask=batch["past_observed_mask"],
-        ...     static_categorical_features=batch["static_categorical_features"],
-        ...     future_values=batch["future_values"],
-        ...     future_time_features=batch["future_time_features"],
-        ... )
-
-        >>> last_hidden_state = outputs.last_hidden_state
-        ```"""
+        Example:
+            ```python
+            >>> from huggingface_hub import hf_hub_download
+            ...
+            >>> from transformers import AutoformerModel
+            ...
+            >>> file = hf_hub_download(
+            ...     repo_id="hf-internal-testing/tourism-monthly-batch", filename="train-batch.pt", repo_type="dataset"
+            ... )
+            >>> batch = torch.load(file)
+            ...
+            >>> model = AutoformerModel.from_pretrained("huggingface/autoformer-tourism-monthly")
+            ...
+            >>> # during training, one provides both past and future values
+            >>> # as well as possible additional features
+            >>> outputs = model(
+            ...     past_values=batch["past_values"],
+            ...     past_time_features=batch["past_time_features"],
+            ...     past_observed_mask=batch["past_observed_mask"],
+            ...     static_categorical_features=batch["static_categorical_features"],
+            ...     future_values=batch["future_values"],
+            ...     future_time_features=batch["future_time_features"],
+            ... )
+            ...
+            >>> last_hidden_state = outputs.last_hidden_state
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1938,7 +1945,7 @@ initialized.
                     transformer_inputs[:, : self.config.context_length, ...],
                     temporal_features[:, : self.config.context_length, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
             encoder_outputs = self.encoder(
                 inputs_embeds=enc_input,
@@ -1964,7 +1971,7 @@ initialized.
             )
             mean = (
                 ops.mean(
-                    transformer_inputs[:, : self.config.context_length, ...], axis=1)
+                    transformer_inputs[:, : self.config.context_length, ...], dim=1)
                 .unsqueeze(1)
                 .tile((1, self.config.prediction_length, 1))
             )
@@ -1973,18 +1980,18 @@ initialized.
             decoder_input = ops.cat(
                 (
                     ops.cat(
-                        (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
+                        (seasonal_input[:, -self.config.label_length:, ...], zeros), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
             trend_init = ops.cat(
                 (
                     ops.cat(
-                        (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
+                        (trend_input[:, -self.config.label_length:, ...], mean), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                axis=-1,
+                dim=-1,
             )
 
             decoder_outputs = self.decoder(
@@ -2029,14 +2036,14 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of AutoformerForPrediction.
-        
+
         Args:
             self: The instance of the class.
             config (AutoformerConfig): An object containing the configuration settings for AutoformerForPrediction.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the 'config.distribution_output' is not 'student_t' or 'normal'.
             ValueError: If the 'config.loss' is not 'nll'.
@@ -2081,7 +2088,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         """
         return self.model.get_decoder()
 
-    def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> nn.probability.distribution.Distribution:
+    def output_distribution(self, params, loc=None, scale=None, trailing_n=None):
         r"""
         #todo add docstring
         """
@@ -2090,7 +2097,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             sliced_params = [p[:, -trailing_n:] for p in params]
         return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
 
-    def construct(
+    def forward(
         self,
         past_values: mindspore.Tensor,
         past_time_features: mindspore.Tensor,
@@ -2113,50 +2120,51 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
     ) -> Union[Seq2SeqTSPredictionOutput, Tuple]:
         r"""
         Returns:
+            Union[Seq2SeqTSPredictionOutput, Tuple]
 
-        Examples:
-
-        ```python
-        >>> from huggingface_hub import hf_hub_download
-
-        >>> from transformers import AutoformerForPrediction
-
-        >>> file = hf_hub_download(
-        ...     repo_id="hf-internal-testing/tourism-monthly-batch", filename="train-batch.pt", repo_type="dataset"
-        ... )
-        >>> batch = torch.load(file)
-
-        >>> model = AutoformerForPrediction.from_pretrained("huggingface/autoformer-tourism-monthly")
-
-        >>> # during training, one provides both past and future values
-        >>> # as well as possible additional features
-        >>> outputs = model(
-        ...     past_values=batch["past_values"],
-        ...     past_time_features=batch["past_time_features"],
-        ...     past_observed_mask=batch["past_observed_mask"],
-        ...     static_categorical_features=batch["static_categorical_features"],
-        ...     static_real_features=batch["static_real_features"],
-        ...     future_values=batch["future_values"],
-        ...     future_time_features=batch["future_time_features"],
-        ... )
-
-        >>> loss = outputs.loss
-        >>> loss.backward()
-
-        >>> # during inference, one only provides past values
-        >>> # as well as possible additional features
-        >>> # the model autoregressively generates future values
-        >>> outputs = model.generate(
-        ...     past_values=batch["past_values"],
-        ...     past_time_features=batch["past_time_features"],
-        ...     past_observed_mask=batch["past_observed_mask"],
-        ...     static_categorical_features=batch["static_categorical_features"],
-        ...     static_real_features=batch["static_real_features"],
-        ...     future_time_features=batch["future_time_features"],
-        ... )
-
-        >>> mean_prediction = outputs.sequences.mean(dim=1)
-        ```"""
+        Example:
+            ```python
+            >>> from huggingface_hub import hf_hub_download
+            ...
+            >>> from transformers import AutoformerForPrediction
+            ...
+            >>> file = hf_hub_download(
+            ...     repo_id="hf-internal-testing/tourism-monthly-batch", filename="train-batch.pt", repo_type="dataset"
+            ... )
+            >>> batch = torch.load(file)
+            ...
+            >>> model = AutoformerForPrediction.from_pretrained("huggingface/autoformer-tourism-monthly")
+            ...
+            >>> # during training, one provides both past and future values
+            >>> # as well as possible additional features
+            >>> outputs = model(
+            ...     past_values=batch["past_values"],
+            ...     past_time_features=batch["past_time_features"],
+            ...     past_observed_mask=batch["past_observed_mask"],
+            ...     static_categorical_features=batch["static_categorical_features"],
+            ...     static_real_features=batch["static_real_features"],
+            ...     future_values=batch["future_values"],
+            ...     future_time_features=batch["future_time_features"],
+            ... )
+            ...
+            >>> loss = outputs.loss
+            >>> loss.backward()
+            ...
+            >>> # during inference, one only provides past values
+            >>> # as well as possible additional features
+            >>> # the model autoregressively generates future values
+            >>> outputs = model.generate(
+            ...     past_values=batch["past_values"],
+            ...     past_time_features=batch["past_time_features"],
+            ...     past_observed_mask=batch["past_observed_mask"],
+            ...     static_categorical_features=batch["static_categorical_features"],
+            ...     static_real_features=batch["static_real_features"],
+            ...     future_time_features=batch["future_time_features"],
+            ... )
+            ...
+            >>> mean_prediction = outputs.sequences.mean(dim=1)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if future_values is not None:
             use_cache = False
@@ -2197,7 +2205,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
                 loss_weights = future_observed_mask
             else:
                 loss_weights, _ = future_observed_mask.min(
-                    axis=-1, keepdims=False)
+                    dim=-1, keepdims=False)
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
@@ -2238,7 +2246,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             past_values (`torch.FloatTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`):
                 Past values of the time series, that serve as context in order to predict the future. The sequence size
                 of this tensor must be larger than the `context_length` of the model, since the model will use the
-                larger size to construct lag features, i.e. additional values from the past which are added in order to
+                larger size to forward lag features, i.e. additional values from the past which are added in order to
                 serve as "extra context".
 
                 The `sequence_length` here is equal to `config.context_length` + `max(config.lags_sequence)`, which if
@@ -2338,25 +2346,25 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, axis=0)
+        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
         repeated_scale = scale.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         repeated_past_values = (
             past_values.repeat_interleave(
-                repeats=num_parallel_samples, axis=0) - repeated_loc
+                repeats=num_parallel_samples, dim=0) - repeated_loc
         ) / repeated_scale
 
-        time_features = ops.cat((past_time_features, future_time_features), axis=1)
+        time_features = ops.cat((past_time_features, future_time_features), dim=1)
 
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_features.shape[1], -1))
-        features = ops.cat((expanded_static_feat, time_features), axis=-1)
+        features = ops.cat((expanded_static_feat, time_features), dim=-1)
         repeated_features = features.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+            repeats=num_parallel_samples, dim=0)
 
         lagged_sequence = self.model.get_lagged_subsequences(
             sequence=repeated_past_values, subsequences_length=self.config.context_length
@@ -2365,25 +2373,25 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
-        mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
+        mean = ops.mean(reshaped_lagged_sequence, dim=1).unsqueeze(
             1).tile((1, self.config.prediction_length, 1))
         zeros = ops.zeros(reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2])
 
         decoder_input = ops.cat(
             (
                 ops.cat(
-                    (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
+                    (seasonal_input[:, -self.config.label_length:, ...], zeros), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
         trend_init = ops.cat(
             (
                 ops.cat(
-                    (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
+                    (trend_input[:, -self.config.label_length:, ...], mean), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            axis=-1,
+            dim=-1,
         )
         decoder_outputs = decoder(
             trend=trend_init, inputs_embeds=decoder_input, encoder_hidden_states=repeated_enc_last_hidden

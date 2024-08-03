@@ -43,7 +43,7 @@ class LNTuningModel(BaseTuner):
     The method is described in detail in https://arxiv.org/abs/2312.11420.
 
     Args:
-        model ([`mindspore.nn.Cell`]): The model to be adapted.
+        model ([`mindspore.nn.Module`]): The model to be adapted.
         config ([`LNTuningConfig`]): The configuration of the Lora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
@@ -79,7 +79,7 @@ class LNTuningModel(BaseTuner):
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
         try:
-            return super().__getattr__(name)  # defer to nn.Cell's logic
+            return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
 
@@ -219,5 +219,5 @@ class LNTuningModel(BaseTuner):
         progressbar: bool = False,
         safe_merge: bool = False,
         adapter_names: Optional[list[str]] = None,
-    ) -> nn.Cell:
+    ) -> nn.Module:
         return self._unload_and_optionally_merge(merge=True)

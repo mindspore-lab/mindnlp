@@ -116,19 +116,19 @@ class GraphormerConfig(PretrainedConfig):
         traceable (`bool`, *optional*, defaults to `False`):
             Changes return value of the encoder's inner_state to stacked tensors.
 
-        Example:
-            ```python
-            >>> from transformers import GraphormerForGraphClassification, GraphormerConfig
-
-            >>> # Initializing a Graphormer graphormer-base-pcqm4mv2 style configuration
-            >>> configuration = GraphormerConfig()
-
-            >>> # Initializing a model from the graphormer-base-pcqm4mv1 style configuration
-            >>> model = GraphormerForGraphClassification(configuration)
-
-            >>> # Accessing the model configuration
-            >>> configuration = model.config
-            ```
+    Example:
+        ```python
+        >>> from transformers import GraphormerForGraphClassification, GraphormerConfig
+        ...
+        >>> # Initializing a Graphormer graphormer-base-pcqm4mv2 style configuration
+        >>> configuration = GraphormerConfig()
+        ...
+        >>> # Initializing a model from the graphormer-base-pcqm4mv1 style configuration
+        >>> model = GraphormerForGraphClassification(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "graphormer"
     keys_to_ignore_at_inference = ["past_key_values"]
@@ -178,50 +178,50 @@ class GraphormerConfig(PretrainedConfig):
         Initialize a GraphormerConfig object with specified configuration parameters.
         
         Args:
-        - num_classes (int): Number of classes for classification task.
-        - num_atoms (int): Number of atoms in the graph.
-        - num_edges (int): Number of edges in the graph.
-        - num_in_degree (int): Number of incoming degrees for each node.
-        - num_out_degree (int): Number of outgoing degrees for each node.
-        - num_spatial (int): Number of spatial features.
-        - num_edge_dis (int): Number of edge distances.
-        - multi_hop_max_dist (int): Maximum distance for multi-hop attention.
-        - spatial_pos_max (int): Maximum spatial position value.
-        - edge_type (str): Type of edges in the graph.
-        - max_nodes (int): Maximum number of nodes in the graph.
-        - share_input_output_embed (bool): Flag to indicate sharing input and output embeddings.
-        - num_hidden_layers (int): Number of hidden layers.
-        - embedding_dim (int): Dimension of embeddings.
-        - ffn_embedding_dim (int): Dimension of feed-forward network embeddings.
-        - num_attention_heads (int): Number of attention heads.
-        - dropout (float): Dropout rate.
-        - attention_dropout (float): Dropout rate for attention layers.
-        - activation_dropout (float): Dropout rate for activation layers.
-        - layerdrop (float): Layer drop probability.
-        - encoder_normalize_before (bool): Flag to normalize before encoder layers.
-        - pre_layernorm (bool): Flag to apply pre-layer normalization.
-        - apply_graphormer_init (bool): Flag to apply Graphormer initialization.
-        - activation_fn (str): Activation function to use.
-        - embed_scale (float): Scaling factor for embeddings.
-        - freeze_embeddings (bool): Flag to freeze embeddings.
-        - num_trans_layers_to_freeze (int): Number of transformer layers to freeze.
-        - traceable (bool): Flag for traceability.
-        - q_noise (float): Quantum noise level.
-        - qn_block_size (int): Quantum noise block size.
-        - kdim (int): Key dimension.
-        - vdim (int): Value dimension.
-        - bias (bool): Flag to include bias terms.
-        - self_attention (bool): Flag to use self-attention mechanism.
-        - pad_token_id: ID for padding token.
-        - bos_token_id: ID for beginning-of-sequence token.
-        - eos_token_id: ID for end-of-sequence token.
-        - **kwargs: Additional keyword arguments.
-        
+            num_classes (int): Number of classes for classification task.
+            num_atoms (int): Number of atoms in the graph.
+            num_edges (int): Number of edges in the graph.
+            num_in_degree (int): Number of incoming degrees for each node.
+            num_out_degree (int): Number of outgoing degrees for each node.
+            num_spatial (int): Number of spatial features.
+            num_edge_dis (int): Number of edge distances.
+            multi_hop_max_dist (int): Maximum distance for multi-hop attention.
+            spatial_pos_max (int): Maximum spatial position value.
+            edge_type (str): Type of edges in the graph.
+            max_nodes (int): Maximum number of nodes in the graph.
+            share_input_output_embed (bool): Flag to indicate sharing input and output embeddings.
+            num_hidden_layers (int): Number of hidden layers.
+            embedding_dim (int): Dimension of embeddings.
+            ffn_embedding_dim (int): Dimension of feed-forward network embeddings.
+            num_attention_heads (int): Number of attention heads.
+            dropout (float): Dropout rate.
+            attention_dropout (float): Dropout rate for attention layers.
+            activation_dropout (float): Dropout rate for activation layers.
+            layerdrop (float): Layer drop probability.
+            encoder_normalize_before (bool): Flag to normalize before encoder layers.
+            pre_layernorm (bool): Flag to apply pre-layer normalization.
+            apply_graphormer_init (bool): Flag to apply Graphormer initialization.
+            activation_fn (str): Activation function to use.
+            embed_scale (float): Scaling factor for embeddings.
+            freeze_embeddings (bool): Flag to freeze embeddings.
+            num_trans_layers_to_freeze (int): Number of transformer layers to freeze.
+            traceable (bool): Flag for traceability.
+            q_noise (float): Quantum noise level.
+            qn_block_size (int): Quantum noise block size.
+            kdim (int): Key dimension.
+            vdim (int): Value dimension.
+            bias (bool): Flag to include bias terms.
+            self_attention (bool): Flag to use self-attention mechanism.
+            pad_token_id: ID for padding token.
+            bos_token_id: ID for beginning-of-sequence token.
+            eos_token_id: ID for end-of-sequence token.
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        - None.
-        
+            None.
+
         Raises:
-        - None.
+            None.
         """
         self.num_classes = num_classes
         self.num_atoms = num_atoms

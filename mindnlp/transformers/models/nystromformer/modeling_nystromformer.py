@@ -12,20 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Nystromformer model."""
+"""MindSpore Nystromformer model."""
 
 import math
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
-import mindspore.common.dtype as mstype
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-# from mindspore.ops import operations as P
-# from mindspore.ops import functional as F
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from .configuration_nystromformer import NystromformerConfig
@@ -50,7 +48,7 @@ _CHECKPOINT_FOR_DOC = "uw-madison/nystromformer-512"
 _CONFIG_FOR_DOC = "NystromformerConfig"
 
 
-class NystromformerEmbeddings(nn.Cell):
+class NystromformerEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -61,15 +59,15 @@ class NystromformerEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids=ops.arange(config.max_position_embeddings).expand((1, -1)) + 2
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1)) + 2
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.token_type_ids=ops.zeros(self.position_ids.shape, dtype=mstype.int64)
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -80,16 +78,16 @@ class NystromformerEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -104,7 +102,7 @@ class NystromformerEmbeddings(nn.Cell):
         return embeddings
 
 
-class NystromformerSelfAttention(nn.Cell):
+class NystromformerSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -126,25 +124,22 @@ class NystromformerSelfAttention(nn.Cell):
         else:
             self.init_option = "original"
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-
         if self.conv_kernel_size is not None:
             self.conv = nn.Conv2d(
                 in_channels=self.num_attention_heads,
                 out_channels=self.num_attention_heads,
                 kernel_size=(self.conv_kernel_size, 1),
-                # padding=(self.conv_kernel_size // 2, 0),
-                padding=(self.conv_kernel_size//2, self.conv_kernel_size//2, 0, 0),
-                has_bias=False,
-                group=self.num_attention_heads,
-                pad_mode="pad"
+                padding=(self.conv_kernel_size // 2, 0),
+                bias=False,
+                groups=self.num_attention_heads,
             )
 
     # Function to approximate Moore-Penrose inverse via the iterative method
@@ -155,10 +150,10 @@ class NystromformerSelfAttention(nn.Cell):
         # The entries of key are positive and ||key||_{\infty} = 1 due to softmax
         if self.init_option == "original":
             # This original implementation is more conservative to compute coefficient of Z_0.
-            value = 1 / ops.max(ops.sum(key, dim=-2)) * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2)) * key.swapaxes(-1, -2)
         else:
             # This is the exact coefficient computation, 1 / ||key||_1, of initialization of Z_0, leading to faster convergence.
-            value = 1 / ops.max(ops.sum(key, dim=-2), axis=-1).values[:, :, None, None] * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2), dim=-1).values[:, :, None, None] * key.swapaxes(-1, -2)
 
         for _ in range(n_iter):
             key_value = ops.matmul(key, value)
@@ -174,7 +169,7 @@ class NystromformerSelfAttention(nn.Cell):
         layer = layer.view(*new_layer_shape)
         return layer.permute(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -185,13 +180,13 @@ class NystromformerSelfAttention(nn.Cell):
         key_layer = key_layer / math.sqrt(math.sqrt(self.attention_head_size))
 
         if self.num_landmarks == self.seq_len:
-            attention_scores = ops.matmul(query_layer, key_layer.transpose(0, 1, 3, 2))
+            attention_scores = ops.matmul(query_layer, key_layer.permute(0, 1, 3, 2))
 
             if attention_mask is not None:
                 # Apply the attention mask is (precomputed for all layers in NystromformerModel forward() function)
                 attention_scores = attention_scores + attention_mask
 
-            attention_probs = ops.softmax(attention_scores, axis=-1)
+            attention_probs = ops.softmax(attention_scores, dim=-1)
             context_layer = ops.matmul(attention_probs, value_layer)
 
         else:
@@ -210,16 +205,16 @@ class NystromformerSelfAttention(nn.Cell):
                 self.attention_head_size,
             ).mean(axis=-2)
 
-            kernel_1 = ops.softmax(ops.matmul(query_layer, k_landmarks.transpose(-1, -2)), axis=-1)
-            kernel_2 = ops.softmax(ops.matmul(q_landmarks, k_landmarks.transpose(-1, -2)), axis=-1)
+            kernel_1 = ops.softmax(ops.matmul(query_layer, k_landmarks.swapaxes(-1, -2)), dim=-1)
+            kernel_2 = ops.softmax(ops.matmul(q_landmarks, k_landmarks.swapaxes(-1, -2)), dim=-1)
 
-            attention_scores = ops.matmul(q_landmarks, key_layer.transpose(-1, -2))
+            attention_scores = ops.matmul(q_landmarks, key_layer.swapaxes(-1, -2))
 
             if attention_mask is not None:
                 # Apply the attention mask is (precomputed for all layers in NystromformerModel forward() function)
                 attention_scores = attention_scores + attention_mask
 
-            kernel_3 = ops.softmax(attention_scores, axis=-1)
+            kernel_3 = ops.softmax(attention_scores, dim=-1)
             attention_probs = ops.matmul(kernel_1, self.iterative_inv(kernel_2))
             new_value_layer = ops.matmul(kernel_3, value_layer)
             context_layer = ops.matmul(attention_probs, new_value_layer)
@@ -227,7 +222,7 @@ class NystromformerSelfAttention(nn.Cell):
         if self.conv_kernel_size is not None:
             context_layer += self.conv(value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -237,21 +232,21 @@ class NystromformerSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class NystromformerSelfOutput(nn.Cell):
+class NystromformerSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class NystromformerAttention(nn.Cell):
+class NystromformerAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = NystromformerSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -269,14 +264,14 @@ class NystromformerAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         self_outputs = self.self(hidden_states, attention_mask, output_attentions)
         attention_output = self.output(self_outputs[0], hidden_states)
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
@@ -284,37 +279,37 @@ class NystromformerAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->Nystromformer
-class NystromformerIntermediate(nn.Cell):
+class NystromformerIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->Nystromformer
-class NystromformerOutput(nn.Cell):
+class NystromformerOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class NystromformerLayer(nn.Cell):
+class NystromformerLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -324,7 +319,7 @@ class NystromformerLayer(nn.Cell):
         self.intermediate = NystromformerIntermediate(config)
         self.output = NystromformerOutput(config)
 
-    def construct(self, hidden_states, attention_mask=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, output_attentions=False):
         self_attention_outputs = self.attention(hidden_states, attention_mask, output_attentions=output_attentions)
         attention_output = self_attention_outputs[0]
 
@@ -343,14 +338,14 @@ class NystromformerLayer(nn.Cell):
         return layer_output
 
 
-class NystromformerEncoder(nn.Cell):
+class NystromformerEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([NystromformerLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([NystromformerLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -393,17 +388,17 @@ class NystromformerEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Nystromformer
-class NystromformerPredictionHeadTransform(nn.Cell):
+class NystromformerPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -411,14 +406,14 @@ class NystromformerPredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Nystromformer
-class NystromformerLMPredictionHead(nn.Cell):
+class NystromformerLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = NystromformerPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -428,19 +423,19 @@ class NystromformerLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Nystromformer
-class NystromformerOnlyMLMHead(nn.Cell):
+class NystromformerOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = NystromformerLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -457,12 +452,12 @@ class NystromformerPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -475,7 +470,7 @@ class NystromformerPreTrainedModel(PreTrainedModel):
 
 
 NYSTROMFORMER_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -496,27 +491,26 @@ NYSTROMFORMER_INPUTS_DOCSTRING = r"""
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
-
+            
             [What are attention masks?](../glossary#attention-mask)
         token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
-            1]`:
-
+            Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0, 1]`:
+            
             - 0 corresponds to a *sentence A* token,
             - 1 corresponds to a *sentence B* token.
-
+            
             [What are token type IDs?](../glossary#token-type-ids)
         position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
+        
+            - Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
             config.max_position_embeddings - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
+            - [What are position IDs?](../glossary#position-ids)
         head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
@@ -560,7 +554,7 @@ class NystromformerModel(NystromformerPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -596,10 +590,10 @@ class NystromformerModel(NystromformerPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mstype.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -658,7 +652,7 @@ class NystromformerForMaskedLM(NystromformerPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -672,10 +666,11 @@ class NystromformerForMaskedLM(NystromformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -696,7 +691,7 @@ class NystromformerForMaskedLM(NystromformerPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[1:]
@@ -710,18 +705,18 @@ class NystromformerForMaskedLM(NystromformerPreTrainedModel):
         )
 
 
-class NystromformerClassificationHead(nn.Cell):
+class NystromformerClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
         self.config = config
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
@@ -741,7 +736,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -755,10 +750,11 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -782,7 +778,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (mstype.int64, mstype.int32)):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -793,7 +789,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
                 else:
                     loss = ops.mse(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = mindspore.nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -814,13 +810,13 @@ class NystromformerForMultipleChoice(NystromformerPreTrainedModel):
         super().__init__(config)
 
         self.nystromformer = NystromformerModel(config)
-        self.pre_classifier = nn.Dense(config.hidden_size, config.hidden_size)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.pre_classifier = nn.Linear(config.hidden_size, config.hidden_size)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -834,10 +830,11 @@ class NystromformerForMultipleChoice(NystromformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -874,7 +871,7 @@ class NystromformerForMultipleChoice(NystromformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[1:]
@@ -895,12 +892,12 @@ class NystromformerForTokenClassification(NystromformerPreTrainedModel):
 
         self.nystromformer = NystromformerModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -914,8 +911,9 @@ class NystromformerForTokenClassification(NystromformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -938,7 +936,7 @@ class NystromformerForTokenClassification(NystromformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -960,12 +958,12 @@ class NystromformerForQuestionAnswering(NystromformerPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.nystromformer = NystromformerModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -980,14 +978,15 @@ class NystromformerForQuestionAnswering(NystromformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1022,8 +1021,8 @@ class NystromformerForQuestionAnswering(NystromformerPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

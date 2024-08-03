@@ -24,13 +24,11 @@
 import math
 import unittest
 import pytest
-import numpy as np
 
 from datasets import load_dataset
 
-import mindspore as ms
-import mindspore.ops as F
-import mindspore.numpy as mnp
+import mindspore
+from mindnlp.core import ops
 from mindspore import Tensor
 
 from mindnlp.transformers import HubertConfig
@@ -56,8 +54,6 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
-
-mnp.allclose = lambda x, y, *args, **kwargs: np.allclose(x.asnumpy(), y.asnumpy(), *args, **kwargs)
 
 
 class HubertModelTester:
@@ -163,7 +159,7 @@ class HubertModelTester:
         model.set_train(False)
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.bool_)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.bool_)
 
         # pad input
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
@@ -178,17 +174,17 @@ class HubertModelTester:
             output = model(input_slice).last_hidden_state
 
             batch_output = batch_outputs[i : i + 1, : output.shape[1]]
-            self.parent.assertTrue(mnp.allclose(output, batch_output, atol=1e-3))
+            self.parent.assertTrue(ops.allclose(output, batch_output, atol=1e-3))
 
     def check_ctc_loss(self, config, input_values, *args):
         model = HubertForCTC(config=config)
         model.set_train(False) # make sure that dropout is disabled
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.int64)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.int64)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], min(max_length_labels).item() - 1), model.config.vocab_size)
 
         # pad input
@@ -210,7 +206,7 @@ class HubertModelTester:
         model.set_train(False) # make sure that dropout is disabled
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.int64)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.int64)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         labels = ids_tensor((input_values.shape[0], 1), len(model.config.id2label))
@@ -237,7 +233,7 @@ class HubertModelTester:
 
         input_values = input_values[:3]
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], max(max_length_labels).item() - 2), model.config.vocab_size)
 
         # pad input
@@ -250,7 +246,7 @@ class HubertModelTester:
                 labels[i, max_length_labels[i].item() - 1 :] = -100
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(F.isinf(loss).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
         # TODO: backward()
 
@@ -271,7 +267,7 @@ class HubertModelTester:
             input_values[i, input_lengths[i] :] = 0.0
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(F.isinf(loss).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
         # TODO: backward()
 
@@ -281,7 +277,7 @@ class HubertModelTester:
 
         input_values = input_values[:3]
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], max(max_length_labels).item() - 2), model.config.vocab_size + 100)
 
         with pytest.raises(ValueError):
@@ -549,7 +545,7 @@ class HubertModelIntegrationTest(unittest.TestCase):
 
         logits = model(input_values, attention_mask=attention_mask).logits
 
-        predicted_ids = F.argmax(logits, dim=-1)
+        predicted_ids = ops.argmax(logits, dim=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
@@ -568,14 +564,14 @@ class HubertModelIntegrationTest(unittest.TestCase):
         input_values = inputs.input_values#.half()
         attention_mask = inputs.attention_mask
         outputs = model(input_values, attention_mask=attention_mask)
-        predicted_logits, predicted_ids = F.max(outputs.logits, axis=-1)
+        predicted_logits, predicted_ids = ops.max(outputs.logits, axis=-1)
 
         expected_labels = [2, 6, 10, 9]
         # s3prl logits for the same batch
-        expected_logits = Tensor([7.6692, 17.7795, 11.1562, 11.8232], dtype=ms.float32) # ms.float16
+        expected_logits = Tensor([7.6692, 17.7795, 11.1562, 11.8232], dtype=mindspore.float32) # mindspore.float16
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=3e-2))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=3e-2))
 
     def test_inference_intent_classification(self):
         model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ic").half()
@@ -587,25 +583,25 @@ class HubertModelIntegrationTest(unittest.TestCase):
         attention_mask = inputs.attention_mask
         outputs = model(input_values, attention_mask=attention_mask)
 
-        predicted_logits_action, predicted_ids_action = F.max(outputs.logits[:, :6], axis=-1)
-        predicted_logits_object, predicted_ids_object = F.max(outputs.logits[:, 6:20], axis=-1)
-        predicted_logits_location, predicted_ids_location = F.max(outputs.logits[:, 20:24], axis=-1)
+        predicted_logits_action, predicted_ids_action = ops.max(outputs.logits[:, :6], axis=-1)
+        predicted_logits_object, predicted_ids_object = ops.max(outputs.logits[:, 6:20], axis=-1)
+        predicted_logits_location, predicted_ids_location = ops.max(outputs.logits[:, 20:24], axis=-1)
 
         expected_labels_action = [1, 0, 4, 3]
-        expected_logits_action = Tensor([5.9052, 12.5865, 4.4840, 10.0240], dtype=ms.float16)
+        expected_logits_action = Tensor([5.9052, 12.5865, 4.4840, 10.0240], dtype=mindspore.float16)
         expected_labels_object = [1, 10, 3, 4]
-        expected_logits_object = Tensor([5.5316, 11.7946, 8.1672, 23.2415], dtype=ms.float16)
+        expected_logits_object = Tensor([5.5316, 11.7946, 8.1672, 23.2415], dtype=mindspore.float16)
         expected_labels_location = [0, 0, 0, 1]
-        expected_logits_location = Tensor([5.2053, 8.9577, 10.0447, 8.1481], dtype=ms.float16)
+        expected_logits_location = Tensor([5.2053, 8.9577, 10.0447, 8.1481], dtype=mindspore.float16)
 
         self.assertListEqual(predicted_ids_action.tolist(), expected_labels_action)
         self.assertListEqual(predicted_ids_object.tolist(), expected_labels_object)
         self.assertListEqual(predicted_ids_location.tolist(), expected_labels_location)
 
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits_action, expected_logits_action, atol=3e-1))
-        self.assertTrue(mnp.allclose(predicted_logits_object, expected_logits_object, atol=3e-1))
-        self.assertTrue(mnp.allclose(predicted_logits_location, expected_logits_location, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_action, expected_logits_action, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_object, expected_logits_object, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_location, expected_logits_location, atol=3e-1))
 
     def test_inference_speaker_identification(self):
         # NOTE: 原仓库代码用 float16 的精度也过不了测试 :(
@@ -618,18 +614,18 @@ class HubertModelIntegrationTest(unittest.TestCase):
             input = processor(example, return_tensors="ms", padding=True)
             output = model(input.input_values, attention_mask=None)  #.half()
             output_logits.append(output.logits[0])
-        output_logits = F.stack(output_logits)
-        predicted_logits, predicted_ids = F.max(output_logits, axis=-1)
+        output_logits = ops.stack(output_logits)
+        predicted_logits, predicted_ids = ops.max(output_logits, axis=-1)
 
         expected_labels = [5, 1, 1, 3]
         # s3prl logits for the same batch
         expected_logits = Tensor(
-            [78231.5547, 123166.6094, 122785.4141, 84851.2969], dtype=ms.float32    # ms.float16
+            [78231.5547, 123166.6094, 122785.4141, 84851.2969], dtype=mindspore.float32    # mindspore.float16
         )
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=10))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=10))
 
     def test_inference_emotion_recognition(self):
         model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-er").half()
@@ -640,15 +636,15 @@ class HubertModelIntegrationTest(unittest.TestCase):
         input_values = inputs.input_values.half()
         attention_mask = inputs.attention_mask
         outputs = model(input_values, attention_mask=attention_mask)
-        predicted_logits, predicted_ids = F.max(outputs.logits, axis=-1)
+        predicted_logits, predicted_ids = ops.max(outputs.logits, axis=-1)
 
         expected_labels = [1, 1, 2, 2]
         # s3prl logits for the same batch
-        expected_logits = Tensor([2.8384, 2.3389, 3.8564, 4.5558], dtype=ms.float16)
+        expected_logits = Tensor([2.8384, 2.3389, 3.8564, 4.5558], dtype=mindspore.float16)
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=1e-1))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=1e-1))
 
     def test_inference_distilhubert(self):
         model = HubertModel.from_pretrained("ntu-spml/distilhubert").half()
@@ -683,6 +679,6 @@ class HubertModelIntegrationTest(unittest.TestCase):
         )
         expected_output_sum = -3776.0730
 
-        self.assertTrue(mnp.allclose(outputs[:, :4, :4], expected_outputs_first, atol=5e-3))
-        self.assertTrue(mnp.allclose(outputs[:, -4:, -4:], expected_outputs_last, atol=5e-3))
+        self.assertTrue(ops.allclose(outputs[:, :4, :4], expected_outputs_first, atol=5e-3))
+        self.assertTrue(ops.allclose(outputs[:, -4:, -4:], expected_outputs_last, atol=5e-3))
         self.assertTrue(abs(outputs.sum() - expected_output_sum) < 0.1)

@@ -514,7 +514,6 @@ class CodeGenModelLanguageGenerationTest(unittest.TestCase):
         )
         output_seq_strs = tokenizer.batch_decode(output_seq, skip_special_tokens=True)
         output_seq_tt_strs = tokenizer.batch_decode(output_seq_tt, skip_special_tokens=True)
-        print(output_str)
         EXPECTED_OUTPUT_STR = 'def hello_world():\n    print("Hello World")\n    return True\n\nresult ='
 
         self.assertEqual(output_str, EXPECTED_OUTPUT_STR)

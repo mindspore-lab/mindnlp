@@ -2,22 +2,20 @@
 
 import copy
 import inspect
-import os
-import tempfile
 import unittest
 from typing import Dict, List, Tuple
 
 import numpy as np
-from datasets import Audio, load_dataset
+
 
 from mindnlp.utils.testing_utils import (
     is_mindspore_available,
     require_mindspore,
     slow,
 )
-
 from mindnlp.transformers import EncodecModel, EncodecConfig
 from mindnlp.transformers.models.encodec import EncodecFeatureExtractor
+from datasets import Audio, load_dataset
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -31,8 +29,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-
+    from mindnlp.core import ops
 
 
 def prepare_inputs_dict(
@@ -184,7 +181,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -220,7 +217,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
             inputs = self._prepare_for_class(inputs_dict, model_class)
-            inputs["input_values"] = inputs["input_values"].repeat(1, 1, 10)
+            inputs["input_values"] = ops.tile(inputs["input_values"], (1, 1, 10))
 
             hidden_states_no_chunk = model(**inputs)[0]
 
@@ -468,7 +465,7 @@ class EncodecIntegrationTest(unittest.TestCase):
             )[-1]
 
             # make sure forward and decode gives same result
-            self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec, atol=1e-3))
+            self.assertTrue(np.allclose(input_values_dec.asnumpy(), input_values_enc_dec.asnumpy(), atol=1e-3))
 
             # make sure shape matches
             self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)

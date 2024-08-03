@@ -43,8 +43,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
-
+    from mindnlp.core import nn, ops
     from mindnlp.transformers import GroupViTModel, GroupViTTextModel, GroupViTVisionModel
 
 
@@ -169,7 +168,7 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 
@@ -178,7 +177,7 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -332,14 +331,8 @@ class GroupViTTextModelTester:
             batch_size, seq_length = input_mask.shape
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
-                # input_mask[batch_idx, :start_index] = 1
-                # input_mask[batch_idx, start_index:] = 0
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
-                                      ops.full((int(start_index),), 1))
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
+                input_mask[batch_idx, :int(start_index)] = 1
+                input_mask[batch_idx, int(start_index):] = 0
 
         config = self.get_config()
 

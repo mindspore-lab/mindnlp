@@ -91,23 +91,24 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
 
             </Tip>
 
-        sep_token (`str`, *optional*, defaults to `"</s>"`):
+        sep_token (`str`, *optional*):
             The separator token, which is used when building a sequence from multiple sequences, e.g. two sequences for
             sequence classification or for a text and a question for question answering. It is also used as the last
-            token of a sequence built with special tokens.
-        cls_token (`str`, *optional*, defaults to `"<s>"`):
+            token of a sequence built with special tokens. defaults to `"</s>"`
+        cls_token (`str`, *optional*):
             The classifier token which is used when doing sequence classification (classification of the whole sequence
             instead of per-token classification). It is the first token of the sequence when built with special tokens.
-        unk_token (`str`, *optional*, defaults to `"<unk>"`):
+            defaults to `"<s>"`
+        unk_token (`str`, *optional*):
             The unknown token. A token that is not in the vocabulary cannot be converted to an ID and is set to be this
-            token instead.
-        pad_token (`str`, *optional*, defaults to `"<pad>"`):
-            The token used for padding, for example when batching sequences of different lengths.
-        mask_token (`str`, *optional*, defaults to `"<mask>"`):
+            token instead. defaults to `"<unk>"`
+        pad_token (`str`, *optional*):
+            The token used for padding, for example when batching sequences of different lengths. defaults to `"<pad>"`
+        mask_token (`str`, *optional*):
             The token used for masking values. This is the token used when training this model with masked language
-            modeling. This is the token which the model will try to predict.
-        additional_special_tokens (`List[str]`, *optional*, defaults to `["<s>NOTUSED", "</s>NOTUSED"]`):
-            Additional special tokens used by the tokenizer.
+            modeling. This is the token which the model will try to predict. defaults to `"<mask>"`
+        additional_special_tokens (`List[str]`, *optional*):
+            Additional special tokens used by the tokenizer. defaults to `["<s>NOTUSED", "</s>NOTUSED"]`
     """
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -130,23 +131,23 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         Initialize a BarthezTokenizerFast object.
-        
+
         Args:
-        - vocab_file (str): Path to the vocabulary file. Default is None.
-        - tokenizer_file (str): Path to the tokenizer file. Default is None.
-        - bos_token (str): Beginning of sentence token. Default is '<s>'.
-        - eos_token (str): End of sentence token. Default is '</s>'.
-        - sep_token (str): Separator token. Default is '</s>'.
-        - cls_token (str): Classification token. Default is '<s>'.
-        - unk_token (str): Token for unknown words. Default is '<unk>'.
-        - pad_token (str): Padding token. Default is '<pad>'.
-        - mask_token (str): Mask token. Default is '<mask>'.
-        
+            vocab_file (str): Path to the vocabulary file. Default is None.
+            tokenizer_file (str): Path to the tokenizer file. Default is None.
+            bos_token (str): Beginning of sentence token. Default is '<s>'.
+            eos_token (str): End of sentence token. Default is '</s>'.
+            sep_token (str): Separator token. Default is '</s>'.
+            cls_token (str): Classification token. Default is '<s>'.
+            unk_token (str): Token for unknown words. Default is '<unk>'.
+            pad_token (str): Padding token. Default is '<pad>'.
+            mask_token (str): Mask token. Default is '<mask>'.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - TypeError: If mask_token is not a string.
+            TypeError: If mask_token is not a string.
         """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
@@ -170,15 +171,15 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
     def can_save_slow_tokenizer(self) -> bool:
         """
         Method to check if the slow tokenizer can be saved.
-        
+
         Args:
             self (BarthezTokenizerFast): An instance of the BarthezTokenizerFast class.
                 Represents the current object to check whether the slow tokenizer can be saved.
-                
+
         Returns:
             bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
                 True if the vocab file exists, False if the vocab file does not exist or is not provided.
-        
+
         Raises:
             None.
         """
@@ -234,29 +235,31 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary for a slow tokenizer.
-        
+
         Args:
             self (BarthezTokenizerFast): The instance of the BarthezTokenizerFast class.
             save_directory (str): The directory where the vocabulary will be saved.
             filename_prefix (Optional[str], optional): The prefix to be added to the filename (default: None).
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
             OSError: If the provided save_directory is not a valid directory.
             IOError: If there is an error while copying the vocabulary file.
-        
+
         Note:
             - The fast tokenizer must have the necessary information to save the vocabulary for a slow tokenizer.
             - The save_directory should be a valid directory.
             - The vocabulary file will be copied to the save_directory with an optional filename_prefix.
-        
+
         Example:
+            ```python
             >>> tokenizer = BarthezTokenizerFast()
             >>> tokenizer.save_vocabulary('/path/to/save')
             ('/path/to/save/vocab.txt', )
+            ```
         
         """
         if not self.can_save_slow_tokenizer:

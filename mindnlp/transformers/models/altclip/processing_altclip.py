@@ -52,7 +52,7 @@ class AltCLIPProcessor(ProcessorMixin):
             tokenizer (object, required): An object responsible for tokenizing input data.
         
         Returns:
-            None. This method initializes the AltCLIPProcessor instance.
+            None.
         
         Raises:
             ValueError: If 'image_processor' is not specified.
@@ -103,13 +103,14 @@ class AltCLIPProcessor(ProcessorMixin):
                 - `'jax'`: Return JAX `jnp.ndarray` objects.
 
         Returns:
-            [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
+            [`BatchEncoding`]:
+                A [`BatchEncoding`] with the following fields:
 
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-              `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-              `None`).
-            - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                  `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                  `None`).
+                - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")

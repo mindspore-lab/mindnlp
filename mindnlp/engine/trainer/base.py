@@ -35,18 +35,18 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 import mindspore.experimental
 import mindspore.experimental.optim
 from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 
+from mindnlp.core import nn, ops, optim
+from ...core.serialization import safe_load_file, safe_save_file
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
-from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -130,7 +130,7 @@ class Trainer:
     from ..utils import _get_learning_rate
     def __init__(
         self,
-        model: Union[PreTrainedModel, nn.Cell] = None,
+        model: Union[PreTrainedModel, nn.Module] = None,
         args: TrainingArguments = None,
         map_fn: Optional[Union[Callable, BaseMapFunction]] = None,
         train_dataset: Optional[Dataset] = None,
@@ -139,7 +139,7 @@ class Trainer:
         model_init: Optional[Callable[[], PreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
+        optimizers: Tuple[optim.Optimizer, LearningRateSchedule] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[mindspore.Tensor, mindspore.Tensor], mindspore.Tensor]] = None,
     ):
         """
@@ -147,7 +147,7 @@ class Trainer:
         
         Args:
             self (Trainer): The Trainer object itself.
-            model (Union[PreTrainedModel, nn.Cell]): The pre-trained model or neural network cell to be trained.
+            model (Union[PreTrainedModel, nn.Module]): The pre-trained model or neural network cell to be trained.
             args (TrainingArguments): The training arguments including hyperparameters and output directory.
             map_fn (Optional[Union[Callable, BaseMapFunction]]): Optional map function for data preprocessing.
             train_dataset (Optional[Dataset]): The training dataset.
@@ -375,7 +375,7 @@ class Trainer:
             None: This method does not return any value.
         
         Raises:
-            NotImplementedError: If the model does not have a 'construct' method.
+            NotImplementedError: If the model does not have a 'forward' method.
         """
         if self._signature_columns is None:
             # Inspect model forward signature to keep only the arguments it accepts.
@@ -386,7 +386,7 @@ class Trainer:
                 else:
                     # PeftMixedModel do not provide a `get_base_model` method
                     model_to_inspect = self.model.base_model.model
-            signature = inspect.signature(model_to_inspect.construct)
+            signature = inspect.signature(model_to_inspect.forward)
             self._signature_columns = list(signature.parameters.keys())
 
             # Labels may be named label or label_ids, the default data collator handles that.
@@ -527,7 +527,7 @@ class Trainer:
         #     optimizer_cls = AdamW
         #     optimizer_kwargs.update(adam_kwargs)
         if args.optim == OptimizerNames.ADAMW:
-            from mindspore.experimental.optim import AdamW
+            from mindnlp.core.optim import AdamW
 
             optimizer_cls = AdamW
             optimizer_kwargs.update(adam_kwargs)
@@ -551,7 +551,7 @@ class Trainer:
             num_training_steps (int): The number of training steps to do.
         """
         if self.lr_scheduler is None:
-            from ...modules.optimization import get_scheduler
+            from ...transformers.optimization import get_scheduler
             self.lr_scheduler = get_scheduler(
                 self.args.lr_scheduler_type,
                 optimizer=self.optimizer if optimizer is None else optimizer,
@@ -1351,14 +1351,14 @@ indicating whether to prefer safe tensors.
 
         return inputs
 
-    def training_step(self, model: nn.Cell, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
+    def training_step(self, model: nn.Module, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
         """
         Perform a training step on a batch of inputs.
 
         Subclass and override to inject custom behavior.
 
         Args:
-            model (`nn.Cell`):
+            model (`nn.Module`):
                 The model to train.
             inputs (`Dict[str, Union[mindspore.Tensor, Any]]`):
                 The inputs and targets of the model.
@@ -2090,7 +2090,7 @@ indicating whether to prefer safe tensors.
 
     def prediction_step(
         self,
-        model: nn.Cell,
+        model: nn.Module,
         inputs: Dict[str, Union[mindspore.Tensor, Any]],
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,

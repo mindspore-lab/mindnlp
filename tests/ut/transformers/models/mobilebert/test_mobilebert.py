@@ -26,7 +26,7 @@ import mindspore
 from mindspore import Tensor
 import numpy as np
 
-from mindnlp.transformers.models.mobilebert.mobilebert import MobileBertSelfAttention, MobileBertSelfOutput,\
+from mindnlp.transformers.models.mobilebert.modeling_mobilebert import MobileBertSelfAttention, MobileBertSelfOutput,\
     MobileBertAttention, MobileBertIntermediate, OutputBottleneck, MobileBertOutput,\
     BottleneckLayer, Bottleneck, FFNOutput, FFNLayer, MobileBertLayer, MobileBertEncoder,\
     MobileBertEmbeddings, MobileBertPooler, MobileBertPredictionHeadTransform, \

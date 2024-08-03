@@ -199,25 +199,25 @@ class BertTokenizer(PreTrainedTokenizer):
         This method initializes a BertTokenizer object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - do_lower_case (bool, optional): Whether to convert tokens to lowercase. Default is True.
-        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Default is True.
-        - never_split (list, optional): List of tokens that should not be split further.
-        - unk_token (str, optional): The unknown token representation. Default is '[UNK]'.
-        - sep_token (str, optional): The separator token. Default is '[SEP]'.
-        - pad_token (str, optional): The padding token. Default is '[PAD]'.
-        - cls_token (str, optional): The classification token. Default is '[CLS]'.
-        - mask_token (str, optional): The masking token. Default is '[MASK]'.
-        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Default is True.
-        - strip_accents (str, optional): Method to strip accents. None by default.
-        
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to convert tokens to lowercase. Default is True.
+            do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Default is True.
+            never_split (list, optional): List of tokens that should not be split further.
+            unk_token (str, optional): The unknown token representation. Default is '[UNK]'.
+            sep_token (str, optional): The separator token. Default is '[SEP]'.
+            pad_token (str, optional): The padding token. Default is '[PAD]'.
+            cls_token (str, optional): The classification token. Default is '[CLS]'.
+            mask_token (str, optional): The masking token. Default is '[MASK]'.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Default is True.
+            strip_accents (str, optional): Method to strip accents. None by default.
+
         Returns:
-        None. This method does not return any value.
-        
+            None.
+
         Raises:
-        - ValueError: If the vocab_file path is invalid or the file does not exist.
-        - Exception: Any unexpected errors that may occur during the initialization process.
+            ValueError: If the vocab_file path is invalid or the file does not exist.
+            Exception: Any unexpected errors that may occur during the initialization process.
         """
         if not os.path.isfile(vocab_file):
             raise ValueError(
@@ -254,14 +254,15 @@ class BertTokenizer(PreTrainedTokenizer):
     @property
     def do_lower_case(self):
         """
-        This method 'do_lower_case' is a property in the class 'BertTokenizer' and returns the value of the 'do_lower_case' property of the 'basic_tokenizer' attribute.
-        
+        This method 'do_lower_case' is a property in the class 'BertTokenizer' and returns the value of
+        the 'do_lower_case' property of the 'basic_tokenizer' attribute.
+
         Args:
             self: The instance of the BertTokenizer class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -271,15 +272,15 @@ class BertTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         Method to retrieve the size of the vocabulary used by the BertTokenizer.
-        
+
         Args:
             self (BertTokenizer): The instance of the BertTokenizer class.
                 This parameter is used to access the vocabulary stored within the BertTokenizer instance.
-        
+
         Returns:
             int: The number of unique tokens in the vocabulary of the BertTokenizer.
                 This value represents the size of the vocabulary used by the tokenizer.
-        
+
         Raises:
             None.
         """
@@ -288,14 +289,14 @@ class BertTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Retrieve the vocabulary of the BertTokenizer including any added tokens.
-        
+
         Args:
             self (BertTokenizer): An instance of the BertTokenizer class.
                 It represents the tokenizer object.
-                
+
         Returns:
             dict: A dictionary containing the vocabulary of the BertTokenizer, including any added tokens.
-            
+
         Raises:
             None.
         """
@@ -303,16 +304,20 @@ class BertTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text, split_special_tokens=False):
         """
-        This method _tokenize in the class BertTokenizer tokenizes the input text based on the specified tokenizer configurations.
-        
+        This method _tokenize in the class BertTokenizer tokenizes the input text based on the
+        specified tokenizer configurations.
+
         Args:
             self (object): The instance of the BertTokenizer class.
             text (str): The input text to be tokenized.
-            split_special_tokens (bool): A flag indicating whether special tokens should be split or not. Default is False. If set to True, special tokens will be split.
-        
+            split_special_tokens (bool):
+                A flag indicating whether special tokens should be split or not. Default is False.
+                If set to True, special tokens will be split.
+
         Returns:
-            list: A list of tokens resulting from tokenizing the input text. If the basic tokenization is enabled, the tokens are split further using the wordpiece tokenizer.
-        
+            list: A list of tokens resulting from tokenizing the input text.
+                If the basic tokenization is enabled, the tokens are split further using the wordpiece tokenizer.
+
         Raises:
             None
         """
@@ -427,30 +432,32 @@ class BertTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary of the tokenizer to a file.
-        
+
         Args:
             self: An instance of the BertTokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved. It can be an existing directory or a file path.
             filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary file name. Default is None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             OSError: If there is an issue with accessing or writing to the save_directory.
             UnicodeEncodeError: If there is an issue encoding the vocabulary file with 'utf-8'.
-        
+
         The method saves the vocabulary of the tokenizer to a file in the specified save_directory. If save_directory is a directory, the vocabulary file will be saved with the default name (or with the
-filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
-        
+        filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
+
         The vocabulary is saved in a newline-separated format, where each line contains a token from the vocabulary. The tokens are sorted based on their token_index in the vocabulary dictionary. If the token
-indices are not consecutive, a warning message is logged.
-        
-        Example Usage:
-            tokenizer = BertTokenizer()
-            save_directory = '/path/to/save'
-            filename_prefix = 'my-vocab'
-            saved_file = tokenizer.save_vocabulary(save_directory, filename_prefix)
+        indices are not consecutive, a warning message is logged.
+
+        Example:
+            ```python
+            >>> tokenizer = BertTokenizer()
+            >>> save_directory = '/path/to/save'
+            >>> filename_prefix = 'my-vocab'
+            >>> saved_file = tokenizer.save_vocabulary(save_directory, filename_prefix)
+            ```
         """
         index = 0
         if os.path.isdir(save_directory):
@@ -514,7 +521,7 @@ class BasicTokenizer():
             do_split_on_punc (bool, optional): Indicates whether to split on punctuation characters. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -661,10 +668,11 @@ class WordpieceTokenizer():
             self: The instance of the WordpieceTokenizer class.
             vocab (list): A list of strings representing the vocabulary.
             unk_token (str): A string representing the unknown token.
-            max_input_chars_per_word (int): An integer representing the maximum number of characters allowed per word. Defaults to 100.
+            max_input_chars_per_word (int): An integer representing the maximum number of characters allowed per word.
+                Defaults to 100.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is not a positive integer.

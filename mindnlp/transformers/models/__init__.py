@@ -51,6 +51,7 @@ from . import (
     canine,
     clap,
     clip,
+    clipseg,
     codegen,
     cohere,
     cogvlm,
@@ -66,10 +67,15 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    deepseek_v2,
     detr,
+    deta,
     deit,
+    dinov2,
     distilbert,
+    donut,
     dpr,
+    dpt,
     efficientnet,
     efficientformer,
     electra,
@@ -84,6 +90,7 @@ from . import (
     chatglm3,
     flava,
     focalnet,
+    fnet,
     funnel,
     gemma,
     git,
@@ -99,10 +106,14 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    instructblip,
     ibert,
+    jamba,
     jetmoe,
+    kosmos2,
     layoutlm,
     layoutlmv2,
+    layoutlmv3,
     led,
     lilt,
     llama,
@@ -110,12 +121,17 @@ from . import (
     llava_next,
     longformer,
     luke,
+    lxmert,
     mamba,
     marian,
+    markuplm,
+    m2m_100,
     mask2former,
     mbart,
+    mbart50,
     mctct,
     megatron_bert,
+    mgp_str,
     minicpm,
     mistral,
     mixtral,
@@ -125,10 +141,12 @@ from . import (
     mobilevit,
     mpnet,
     mpt,
+    mluke,
     musicgen,
     musicgen_melody,
     mvp,
     nezha,
+    nougat,
     nystromformer,
     olmo,
     oneformer,
@@ -136,8 +154,11 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    perceiver,
+    persimmon,
     phi,
     phi3,
+    plbart,
     poolformer,
     pop2piano,
     qdqbert,
@@ -172,6 +193,12 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    trocr,
+    udop,
+    upernet,
+    umt5,
+    unispeech_sat,
+    univnet,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -179,6 +206,7 @@ from . import (
     visual_bert,
     vit,
     vit_hybrid,
+    vit_mae,
     vit_msn,
     vitdet,
     wav2vec2,
@@ -191,7 +219,11 @@ from . import (
     xlm,
     xlm_roberta,
     xlm_roberta_xl,
+    xlm_prophetnet,
     xlnet,
+    xmod,
+    vilt,
+    yolos,
 )
 
 from .owlv2 import *
@@ -228,6 +260,7 @@ from .camembert import *
 from .canine import *
 from .clap import *
 from .clip import *
+from .clipseg import *
 from .codegen import *
 from .cohere import *
 from .cogvlm import *
@@ -243,10 +276,15 @@ from .data2vec import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .deepseek_v2 import *
 from .detr import *
+from .deta import *
 from .deit import *
+from .dinov2 import *
 from .distilbert import *
+from .donut import *
 from .dpr import *
+from .dpt import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -260,6 +298,7 @@ from .chatglm3 import *
 from .falcon import *
 from .flava import *
 from .focalnet import *
+from .fnet import *
 from .funnel import *
 from .fastspeech2_conformer import *
 from .gemma import *
@@ -277,9 +316,13 @@ from .groupvit import *
 from .ibert import *
 from .hubert import *
 from .imagegpt import *
+from .instructblip import *
+from .jamba import *
 from .jetmoe import *
+from .kosmos2 import *
 from .layoutlm import *
 from .layoutlmv2 import *
+from .layoutlmv3 import *
 from .led import *
 from .lilt import *
 from .llama import *
@@ -287,12 +330,17 @@ from .llava import *
 from .llava_next import *
 from .longformer import *
 from .luke import *
+from .lxmert import *
+from .m2m_100 import *
 from .mamba import *
 from .marian import *
+from .markuplm import *
 from .mask2former import *
 from .mbart import *
+from .mbart50 import *
 from .mctct import *
 from .megatron_bert import *
+from .mgp_str import *
 from .minicpm import *
 from .mistral import *
 from .mixtral import *
@@ -301,11 +349,13 @@ from .mobilenet_v1 import *
 from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
+from .mluke import *
 from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nougat import *
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -313,8 +363,11 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .perceiver import *
+from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .plbart import *
 from .poolformer import *
 from .pop2piano import *
 from .qdqbert import *
@@ -349,13 +402,20 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .trocr import *
+from .udop import *
+from .upernet import *
+from .unispeech_sat import *
+from .univnet import *
 from .videomae import *
+from .vilt import *
 from .vipllava import *
 from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
 from .vit_hybrid import *
+from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
 from .whisper import *
@@ -368,7 +428,13 @@ from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
+from .xlm_prophetnet import *
 from .xlnet import *
+from .umt5 import *
+from .xmod import *
+from .yolos import *
+
+
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -404,6 +470,7 @@ __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
+__all__.extend(clipseg.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
@@ -419,10 +486,15 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
+__all__.extend(dinov2.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
+__all__.extend(deta.__all__)
 __all__.extend(dpr.__all__)
+__all__.extend(dpt.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
@@ -433,6 +505,7 @@ __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
@@ -450,12 +523,16 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
-__all__.extend(ibert.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(ibert.__all__)
 __all__.extend(imagegpt.__all__)
+__all__.extend(instructblip.__all__)
+__all__.extend(jamba.__all__)
 __all__.extend(jetmoe.__all__)
+__all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+__all__.extend(layoutlmv3.__all__)
 __all__.extend(led.__all__)
 __all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
@@ -463,15 +540,21 @@ __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(lxmert.__all__)
+__all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
+__all__.extend(markuplm.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
+__all__.extend(mbart50.__all__)
 __all__.extend(mctct.__all__)
 __all__.extend(megatron_bert.__all__)
+__all__.extend(mgp_str.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
+__all__.extend(mluke.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilenet_v2.__all__)
@@ -482,6 +565,7 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -489,8 +573,11 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(perceiver.__all__)
+__all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
@@ -525,13 +612,20 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(trocr.__all__)
+__all__.extend(udop.__all__)
+__all__.extend(upernet.__all__)
+__all__.extend(unispeech_sat.__all__)
+__all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
+__all__.extend(vilt.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(vit_hybrid.__all__)
+__all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
@@ -544,4 +638,8 @@ __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
+__all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
+__all__.extend(umt5.__all__)
+__all__.extend(xmod.__all__)
+__all__.extend(yolos.__all__)

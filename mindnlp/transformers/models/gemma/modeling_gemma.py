@@ -21,11 +21,12 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
@@ -44,7 +45,8 @@ def _get_unpad_data(attention_mask):
     This function retrieves un-padded data from the attention_mask.
     
     Args:
-        attention_mask (ndarray): An array representing the attention mask. Each element indicates whether a token is a valid input (1) or a padding token (0).
+        attention_mask (ndarray): An array representing the attention mask.
+            Each element indicates whether a token is a valid input (1) or a padding token (0).
     
     Returns:
         indices (ndarray): An array of indices corresponding to the non-padding tokens in the attention_mask.
@@ -58,7 +60,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -66,14 +68,15 @@ def _get_unpad_data(attention_mask):
     )
 
 
-class GemmaRMSNorm(nn.Cell):
+class GemmaRMSNorm(nn.Module):
 
     """
-    This class represents a custom implementation of Root Mean Square Normalization (RMSNorm) called GemmaRMSNorm, which is designed for neural network operations. 
-    It inherits from the nn.Cell class. 
-    The GemmaRMSNorm class initializes with parameters for dimension and epsilon value, and includes methods for calculating the normalized output based on the input data and weight parameters.
+    This class represents a custom implementation of Root Mean Square Normalization (RMSNorm) called GemmaRMSNorm,
+    which is designed for neural network operations.
+    It inherits from the nn.Module class. The GemmaRMSNorm class initializes with parameters for dimension and epsilon
+    value, and includes methods for calculating the normalized output based on the input data and weight parameters.
     The _norm method calculates the normalized output based on the input data and epsilon value.
-    The construct method applies the normalization and weight parameters to the input data to generate the final output.
+    The forward method applies the normalization and weight parameters to the input data to generate the final output.
     """
     def __init__(self, dim: int, eps: float = 1e-6):
         """
@@ -85,7 +88,7 @@ class GemmaRMSNorm(nn.Cell):
             eps (float, optional): The epsilon value for numerical stability. Defaults to 1e-06.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -100,45 +103,53 @@ class GemmaRMSNorm(nn.Cell):
         
         Args:
             self (GemmaRMSNorm): An instance of the GemmaRMSNorm class.
-            x (Tensor): The input tensor to be normalized.
+            x (Tensor):
+                The input tensor to be normalized.
+
                 - Shape: (batch_size, ..., features)
                 - dtype: torch.float32 or torch.float64
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If the input tensor 'x' is not a valid tensor.
             RuntimeError: If an error occurs during the calculation.
-        
+
         Notes:
             - The RMS normalization method divides each element of the input tensor 'x' by the root mean square of the tensor.
             - The root mean square of 'x' is calculated as follows:
+
                 - square each element of 'x'
                 - calculate the mean across the last dimension of the tensor (features)
                 - take the square root of the mean
+
             - The resulting normalized tensor has the same shape as the input tensor 'x'.
-            - The 'keep_dims' argument in the mean operation ensures that the mean is calculated along the last dimension and the resulting tensor has the same number of dimensions as the input tensor.
-        
+            - The 'keep_dims' argument in the mean operation ensures that the mean is calculated along the last
+            dimension and the resulting tensor has the same number of dimensions as the input tensor.
+
         Example:
+            ```python
             >>> norm = GemmaRMSNorm()
             >>> x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
             >>> norm._norm(x)
             >>> # x is now normalized using the RMS normalization method.
+            ```
         """
         return x * ops.rsqrt(x.pow(2).mean(-1, keep_dims=True) + self.eps)
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a normalized tensor using the GemmaRMSNorm algorithm.
-        
+
         Args:
             self (GemmaRMSNorm): An instance of the GemmaRMSNorm class.
             x (Tensor): The input tensor to be normalized. It should have a numeric data type.
-            
+
         Returns:
-            None: This method does not return any value. The normalized tensor is stored internally within the GemmaRMSNorm instance.
-        
+            None: This method does not return any value.
+                The normalized tensor is stored internally within the GemmaRMSNorm instance.
+
         Raises:
             TypeError: If the input tensor `x` is not of numeric data type.
         """
@@ -149,55 +160,63 @@ class GemmaRMSNorm(nn.Cell):
 ALL_LAYERNORM_LAYERS.append(GemmaRMSNorm)
 
 
-class GemmaRotaryEmbedding(nn.Cell):
+class GemmaRotaryEmbedding(nn.Module):
 
     """
-    This class represents a GemmaRotaryEmbedding module, which is a custom embedding layer used in neural networks. It inherits from the nn.Cell class.
-    
-    The GemmaRotaryEmbedding module is designed to construct rotary embeddings for input data sequences. It creates embeddings based on the positions in the input sequence, using a sinusoidal function. The
-embeddings are computed as the cosine and sine of the frequency values derived from the positions.
-    
+    This class represents a GemmaRotaryEmbedding module, which is a custom embedding layer used in neural networks.
+    It inherits from the nn.Module class.
+
+    The GemmaRotaryEmbedding module is designed to forward rotary embeddings for input data sequences.
+    It creates embeddings based on the positions in the input sequence, using a sinusoidal function.
+    The embeddings are computed as the cosine and sine of the frequency values derived from the positions.
+
     Attributes:
         dim (int): The dimension of the embeddings.
         max_position_embeddings (int): The maximum number of positions in the input sequence. Defaults to 2048.
         base (int): The base value used in the frequency calculation. Defaults to 10000.
         inv_freq (ndarray or None): An array storing the precomputed inverse frequencies. Defaults to None.
-    
+
     Methods:
         __init__(self, dim, max_position_embeddings=2048, base=10000):
             Initializes the GemmaRotaryEmbedding module with the given parameters.
-            
+
             Args:
-                dim (int): The dimension of the embeddings.
-                max_position_embeddings (int, optional): The maximum number of positions in the input sequence. Defaults to 2048.
-                base (int, optional): The base value used in the frequency calculation. Defaults to 10000.
-            
-        construct(self, x, position_ids, seq_len=None):
+
+            - dim (int): The dimension of the embeddings.
+            - max_position_embeddings (int, optional): The maximum number of positions in the input sequence.
+            Defaults to 2048.
+            - base (int, optional): The base value used in the frequency calculation. Defaults to 10000.
+
+        forward(self, x, position_ids, seq_len=None):
             Constructs the rotary embeddings based on the input data and position IDs.
-            
+
             Args:
-                x (Tensor): The input data tensor.
-                position_ids (Tensor): The tensor containing the position IDs corresponding to each element in the input sequence.
-                seq_len (int, optional): The length of the input sequence. Defaults to None.
-            
+
+            - x (Tensor): The input data tensor.
+            - position_ids (Tensor): The tensor containing the position IDs corresponding to each element in the
+            input sequence.
+            - seq_len (int, optional): The length of the input sequence. Defaults to None.
+
             Returns:
-                Tensor: The constructed rotary embeddings as the cosine and sine of the frequency values, casted to the same data type as the input tensor.
+
+            - Tensor: The forwarded rotary embeddings as the cosine and sine of the frequency values,
+            casted to the same data type as the input tensor.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         Initialize GemmaRotaryEmbedding object with specified parameters.
-        
+
         Args:
             self (object): The instance of the class.
             dim (int): The dimension of the embedding.
             max_position_embeddings (int, optional): Maximum number of positions for the embeddings. Default is 2048.
             base (int, optional): Base value used for calculations. Default is 10000.
-        
+
         Returns:
-            None. This method initializes the GemmaRotaryEmbedding object with the provided parameters.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
 
@@ -206,19 +225,19 @@ embeddings are computed as the cosine and sine of the frequency values derived f
         self.base = base
         self.inv_freq = None
 
-    def construct(self, x, position_ids, seq_len=None):
+    def forward(self, x, position_ids, seq_len=None):
         """
         Constructs GemmaRotaryEmbedding for positional encoding.
-        
+
         Args:
             self (GemmaRotaryEmbedding): The instance of the GemmaRotaryEmbedding class.
             x (Tensor): The input tensor.
             position_ids (Tensor): The tensor containing positional IDs.
             seq_len (int): The length of the input sequence.
-        
+
         Returns:
-            None. The method returns the concatenated cosine and sine embeddings of the positional encoding.
-        
+            The concatenated cosine and sine embeddings of the positional encoding.
+
         Raises:
             ValueError: If self.inv_freq is not initialized.
             TypeError: If the input tensors x and position_ids are not of the correct data type.
@@ -230,10 +249,10 @@ embeddings are computed as the cosine and sine of the frequency values derived f
                 self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim)
             )
 
-        inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
+        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
         freqs = (inv_freq_expanded @ position_ids_expanded).swapaxes(1, 2)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         return emb.cos().to(dtype=x.dtype), emb.sin().to(dtype=x.dtype)
 
 
@@ -243,7 +262,7 @@ def rotate_half(x):
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2 :]
     x1, x2 = x.tensor_split(2, axis=-1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -264,6 +283,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -275,11 +295,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralMLP with Mistral->Gemma
-class GemmaMLP(nn.Cell):
+class GemmaMLP(nn.Module):
 
     """
-    GemmaMLP is a class representing a multi-layer perceptron (MLP) model for neural network operations. It inherits from nn.Cell and implements functionality for constructing the MLP.
-    
+    GemmaMLP is a class representing a multi-layer perceptron (MLP) model for neural network operations.
+    It inherits from nn.Module and implements functionality for forwarding the MLP.
+
     Attributes:
         config: A configuration object containing parameters for the MLP.
         hidden_size: The size of the hidden layers in the MLP.
@@ -288,51 +309,53 @@ class GemmaMLP(nn.Cell):
         up_proj: A dense layer for projecting input to the intermediate size with no bias.
         down_proj: A dense layer for projecting from intermediate size to hidden size with no bias.
         act_fn: The activation function to be used in the hidden layers.
-    
+
     Methods:
-        construct(x): Constructs the multi-layer perceptron using the given input x by applying the specified operations.
+        forward(x): Constructs the multi-layer perceptron using the given input x by applying the specified operations.
     """
     def __init__(self, config):
         """
         Initializes a GemmaMLP instance with the provided configuration.
-        
+
         Args:
             self (GemmaMLP): The GemmaMLP instance to be initialized.
-            config (Config): An object containing configuration parameters for the GemmaMLP model.
+            config (Config):
+                An object containing configuration parameters for the GemmaMLP model.
+
                 - hidden_size (int): The size of the hidden layers in the model.
                 - intermediate_size (int): The size of the intermediate layers in the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If config is not provided or is not of type Config.
-            - ValueError: If hidden_size or intermediate_size are not valid integer values.
-            - RuntimeError: If there is an issue initializing the gate_proj, up_proj, down_proj, or act_fn attributes.
+            TypeError: If config is not provided or is not of type Config.
+            ValueError: If hidden_size or intermediate_size are not valid integer values.
+            RuntimeError: If there is an issue initializing the gate_proj, up_proj, down_proj, or act_fn attributes.
         """
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a multi-layer perceptron using the GemmaMLP class.
-        
+
         Args:
             self (object): The instance of the GemmaMLP class.
             x (object): Input tensor or data to be processed by the MLP.
-        
+
         Returns:
-            None. The method modifies the internal state of the GemmaMLP instance.
-        
+            None: The method modifies the internal state of the GemmaMLP instance.
+
         Raises:
-            - TypeError: If any of the input parameters are of incorrect types.
-            - ValueError: If there are issues during the execution of the method.
+            TypeError: If any of the input parameters are of incorrect types.
+            ValueError: If there are issues during the execution of the method.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -346,66 +369,54 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class GemmaAttention(nn.Cell):
+class GemmaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     # Ignore copy
     def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
         """
         Initializes a new instance of the GemmaAttention class.
-        
+
         Args:
             self: The object itself.
             config (GemmaConfig): The configuration object for the attention layer.
             layer_idx (Optional[int]): The index of the layer. Defaults to None.
-        
+
         Returns:
             None.
-        
+
         Raises:
             ValueError: If the `hidden_size` is not divisible by `num_heads`.
-        
+
         Note:
-            If `layer_idx` is not provided, a warning message will be logged to indicate potential errors during the forward call if caching is used.
-        
-            The GemmaAttention class performs attention calculations in the transformer model. It takes in a configuration object and initializes various attributes based on the provided configuration.
-        
-            The attention_dropout attribute determines the dropout rate for attention weights.
-        
-            The hidden_size attribute specifies the dimensionality of the hidden state.
-        
-            The num_heads attribute specifies the number of attention heads.
-        
-            The head_dim attribute specifies the dimensionality of each attention head.
-        
-            The num_key_value_heads attribute specifies the number of key-value attention heads.
-        
-            The num_key_value_groups attribute specifies the number of groups for key-value attention heads.
-        
-            The max_position_embeddings attribute specifies the maximum number of position embeddings.
-        
-            The rope_theta attribute specifies the base value for the rotary position encoding.
-        
-            The is_causal attribute is set to True to indicate causal attention.
-        
-            The q_proj attribute is a linear projection layer for the query values.
-        
-            The k_proj attribute is a linear projection layer for the key values.
-        
-            The v_proj attribute is a linear projection layer for the value values.
-        
-            The o_proj attribute is a linear projection layer for the output values.
-        
-            The rotary_emb attribute is a GemmaRotaryEmbedding object for rotary position encoding.
-        
-            If the hidden_size is not divisible by num_heads, a ValueError will be raised.
-        
+            - If `layer_idx` is not provided, a warning message will be logged to indicate potential errors during the
+            forward call if caching is used.
+            - The GemmaAttention class performs attention calculations in the transformer model. It takes in a
+            configuration object and initializes various attributes based on the provided configuration.
+            - The attention_dropout attribute determines the dropout rate for attention weights.
+            - The hidden_size attribute specifies the dimensionality of the hidden state.
+            - The num_heads attribute specifies the number of attention heads.
+            - The head_dim attribute specifies the dimensionality of each attention head.
+            - The num_key_value_heads attribute specifies the number of key-value attention heads.
+            - The num_key_value_groups attribute specifies the number of groups for key-value attention heads.
+            - The max_position_embeddings attribute specifies the maximum number of position embeddings.
+            - The rope_theta attribute specifies the base value for the rotary position encoding.
+            - The is_causal attribute is set to True to indicate causal attention.
+            - The q_proj attribute is a linear projection layer for the query values.
+            - The k_proj attribute is a linear projection layer for the key values.
+            - The v_proj attribute is a linear projection layer for the value values.
+            - The o_proj attribute is a linear projection layer for the output values.
+            - The rotary_emb attribute is a GemmaRotaryEmbedding object for rotary position encoding.
+            - If the hidden_size is not divisible by num_heads, a ValueError will be raised.
+
         Example:
-            config = GemmaConfig(hidden_size=768, num_attention_heads=12)
-            attention = GemmaAttention(config)
+            ```python
+            >>> config = GemmaConfig(hidden_size=768, num_attention_heads=12)
+            >>> attention = GemmaAttention(config)
+            ```
         """
         super().__init__()
         self.config = config
@@ -433,17 +444,17 @@ class GemmaAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.attention_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.attention_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.rotary_emb = GemmaRotaryEmbedding(
             self.head_dim,
             max_position_embeddings=self.max_position_embeddings,
             base=self.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -455,25 +466,32 @@ class GemmaAttention(nn.Cell):
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method constructs attention output using the given hidden states and optional attention mask, position ids, past key value, and other parameters.
-        
+        This method forwards attention output using the given hidden states and optional attention mask, position ids,
+        past key value, and other parameters.
+
         Args:
             self: The object instance.
             hidden_states (mindspore.Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional attention mask of shape (batch_size, sequence_length, sequence_length) to mask the attention scores. Default is None.
-            position_ids (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) containing the position indices of the input tokens.
-            past_key_value (Optional[Cache]): An optional cache of previous key and value states. Default is None.
+            attention_mask (Optional[mindspore.Tensor]):
+                An optional attention mask of shape (batch_size, sequence_length, sequence_length) to mask the
+                attention scores. Default is None.
+            position_ids (Optional[mindspore.Tensor]):
+                An optional tensor of shape (batch_size, sequence_length) containing the position indices of the input tokens.
+            past_key_value (Optional[Cache]):
+                An optional cache of previous key and value states. Default is None.
             output_attentions (bool): A flag indicating whether to output the attention weights. Default is False.
             use_cache (bool): A flag indicating whether to use cache for previous key and value states. Default is False.
             cache_position (Optional[mindspore.Tensor]): An optional cache position tensor. Default is None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), optional
-attention weights tensor, and optional tuple of key and value cache states.
-        
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size),
+                optional attention weights tensor, and optional tuple of key and value cache states.
+
         Raises:
-            ValueError: If the shape of `attn_output` does not match the expected shape (batch_size, num_heads, sequence_length, head_dim).
+            ValueError: If the shape of `attn_output` does not match the expected shape
+                (batch_size, num_heads, sequence_length, head_dim).
         '''
         bsz, q_len, _ = hidden_states.shape
 
@@ -507,8 +525,8 @@ attention weights tensor, and optional tuple of key and value cache states.
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -534,51 +552,55 @@ GEMMA_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with LLAMA->GEMMA,Llama->Gemma
-class GemmaDecoderLayer(nn.Cell):
+class GemmaDecoderLayer(nn.Module):
 
     """
-    The GemmaDecoderLayer class represents a single layer of the Gemma decoder. It inherits from the nn.Cell class and provides methods for constructing the decoder layer.
-    
+    The GemmaDecoderLayer class represents a single layer of the Gemma decoder.
+    It inherits from the nn.Module class and provides methods for forwarding the decoder layer.
+
     Attributes:
         hidden_size (int): The size of the hidden states in the layer.
         self_attn (GemmaAttention): The attention mechanism used in the layer.
         mlp (GemmaMLP): The multi-layer perceptron used in the layer.
         input_layernorm (GemmaRMSNorm): The layer normalization applied to the input.
         post_attention_layernorm (GemmaRMSNorm): The layer normalization applied after the attention mechanism.
-    
+
     Methods:
-        construct(hidden_states, attention_mask, position_ids, past_key_value, output_attentions, use_cache, cache_position, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor,
-mindspore.Tensor]]]:
-            Constructs the decoder layer using the given input and optional arguments. Returns the resulting hidden states and optionally the attention weights and present key value.
-    
+        forward:
+            Constructs the decoder layer using the given input and optional arguments.
+            Returns the resulting hidden states and optionally the attention weights and present key value.
+
     Args:
         hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-        attention_mask (mindspore.Tensor, optional): Attention mask of size (batch_size, sequence_length) if flash attention is used or (batch_size, 1, query_sequence_length, key_sequence_length) if default
-attention is used.
+        attention_mask (mindspore.Tensor, optional): Attention mask of size (batch_size, sequence_length)
+            if flash attention is used or (batch_size, 1, query_sequence_length, key_sequence_length) if default
+            attention is used.
         output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
         use_cache (bool, optional): If set to True, past key value states are returned and can be used to speed up decoding.
         past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
         cache_position (mindspore.Tensor, optional): Position of the cache.
         **kwargs: Additional keyword arguments.
-    
+
     Raises:
-        DeprecationWarning: If 'padding_mask' is passed, a warning is issued indicating that it is deprecated and will be removed in a future version.
-    
+        DeprecationWarning: If 'padding_mask' is passed, a warning is issued indicating that it is deprecated and will
+            be removed in a future version.
+
     Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The resulting hidden states and optionally the attention weights and present key value.
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+            The resulting hidden states and optionally the attention weights and present key value.
     """
     def __init__(self, config: GemmaConfig, layer_idx: int):
         """
         Initializes a new instance of the GemmaDecoderLayer class.
-        
+
         Args:
             self: The object itself.
             config (GemmaConfig): The configuration object containing various settings.
             layer_idx (int): The index of the decoder layer.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -591,7 +613,7 @@ attention is used.
         self.input_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -658,24 +680,27 @@ attention is used.
 class GemmaPreTrainedModel(PreTrainedModel):
 
     """
-    The `GemmaPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for natural language processing tasks. It provides methods for initializing weights, setting up
-cache, and resetting cache.
-    
+    The `GemmaPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for
+    natural language processing tasks. It provides methods for initializing weights, setting up cache, and
+    resetting cache.
+
     Methods:
-        - `_init_weights(self, cell)`: Initializes the weights of the given `cell`, which can be either a dense layer or an embedding layer.
-        - `_setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None)`: Sets up the cache for the model using the specified cache class, maximum batch size, and maximum cache length.
-        - `_reset_cache(self)`: Resets the cache for the model.
-    
-    Example usage:
-    
-    
-    model = GemmaPreTrainedModel()
-    model._init_weights(cell)
-    model._setup_cache(cache_cls, max_batch_size, max_cache_len)
-    model._reset_cache()
-    
-    
-    Note: The `GemmaPreTrainedModel` class inherits from `PreTrainedModel`. Refer to the documentation of `PreTrainedModel` for more information.
+        `_init_weights`: Initializes the weights of the given `cell`, which can be either a dense layer or an embedding layer.
+        `_setup_cache`: Sets up the cache for the model using the specified cache class, maximum batch size,
+            and maximum cache length.
+        `_reset_cache`: Resets the cache for the model.
+
+    Example:
+        ```python
+        >>> model = GemmaPreTrainedModel()
+        >>> model._init_weights(cell)
+        >>> model._setup_cache(cache_cls, max_batch_size, max_cache_len)
+        >>> model._reset_cache()
+        ```
+
+    Note:
+        The `GemmaPreTrainedModel` class inherits from `PreTrainedModel`. Refer to the documentation of `PreTrainedModel`
+        for more information.
     """
     config_class = GemmaConfig
     base_model_prefix = "model"
@@ -686,10 +711,10 @@ cache, and resetting cache.
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -701,20 +726,22 @@ cache, and resetting cache.
     def _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None):
         """
         This method initializes the cache for the GemmaPreTrainedModel.
-        
+
         Args:
             self (object): The instance of the GemmaPreTrainedModel class.
             cache_cls (class): The class representing the cache implementation.
             max_batch_size (int): The maximum batch size for caching.
             max_cache_len (int, Optional): The maximum length of the cache. Defaults to None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If the attention implementation is 'flash_attention_2' and the cache_cls is StaticCache, as these are not compatible. It advises to use 'sdpa' as an alternative and to open an issue at
-https://github.com/huggingface/transformers.
-            ValueError: If the max_cache_len exceeds the length of the model's causal mask. This ensures that the cache length does not exceed the model's capabilities.
+            ValueError: If the attention implementation is 'flash_attention_2' and the cache_cls is StaticCache,
+                as these are not compatible. It advises to use 'sdpa' as an alternative and to open an issue at
+                https://github.com/huggingface/transformers.
+            ValueError: If the max_cache_len exceeds the length of the model's causal mask.
+                This ensures that the cache length does not exceed the model's capabilities.
         """
         if self.config._attn_implementation == "flash_attention_2" and cache_cls == StaticCache:
             raise ValueError(
@@ -735,13 +762,13 @@ https://github.com/huggingface/transformers.
     def _reset_cache(self):
         """
         Resets the cache for the GemmaPreTrainedModel.
-        
+
         Args:
             self: GemmaPreTrainedModel instance. The instance of the GemmaPreTrainedModel for which the cache is to be reset.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -760,23 +787,24 @@ class GemmaModel(GemmaPreTrainedModel):
     def __init__(self, config: GemmaConfig):
         """
         Initializes a GemmaModel instance.
-        
+
         Args:
             self: The instance of the GemmaModel class.
             config (GemmaConfig): An instance of GemmaConfig containing the configuration parameters for the GemmaModel.
-                This includes information such as the vocabulary size, hidden size, number of hidden layers, pad token id, 
+                This includes information such as the vocabulary size, hidden size, number of hidden layers, pad token id,
                 maximum position embeddings, and RMS normalization epsilon.
-                config.pad_token_id (int): The padding token ID.
-                config.vocab_size (int): The size of the vocabulary.
-                config.hidden_size (int): The size of the hidden layers.
-                config.num_hidden_layers (int): The number of hidden layers.
-                config.max_position_embeddings (int): The maximum number of position embeddings.
-                config.rms_norm_eps (float): The epsilon value for RMS normalization.
-        
+
+                - config.pad_token_id (int): The padding token ID.
+                - config.vocab_size (int): The size of the vocabulary.
+                - config.hidden_size (int): The size of the hidden layers.
+                - config.num_hidden_layers (int): The number of hidden layers.
+                - config.max_position_embeddings (int): The maximum number of position embeddings.
+                - config.rms_norm_eps (float): The epsilon value for RMS normalization.
+
         Returns:
-            None. The method initializes various attributes of the GemmaModel instance, such as padding_idx, vocab_size, 
-            embed_tokens, layers, norm, gradient_checkpointing, causal_mask, and invokes the post_init method.
-        
+            None: The method initializes various attributes of the GemmaModel instance, such as padding_idx, vocab_size,
+                embed_tokens, layers, norm, gradient_checkpointing, causal_mask, and invokes the post_init method.
+
         Raises:
             None.
         """
@@ -785,7 +813,7 @@ class GemmaModel(GemmaPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [GemmaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -800,36 +828,36 @@ class GemmaModel(GemmaPreTrainedModel):
     def get_input_embeddings(self):
         """
         Get the input embeddings for the GemmaModel.
-        
+
         Args:
             self (GemmaModel): An instance of the GemmaModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the GemmaModel.
-        
+
         Args:
             self (GemmaModel): The instance of the GemmaModel class.
             value: The input embeddings to set for the model. This should be a tensor of shape (vocab_size, embedding_dim).
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = value
 
     # Ignore copy
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -844,26 +872,34 @@ class GemmaModel(GemmaPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         Constructs GemmaModel.
-        
-        This method constructs the GemmaModel and performs the forward pass of the model. It takes various input parameters and returns the output hidden states, cache values, and attention values.
-        
+
+        This method forwards the GemmaModel and performs the forward pass of the model.
+        It takes various input parameters and returns the output hidden states, cache values, and attention values.
+
         Args:
             self (GemmaModel): The instance of the GemmaModel class.
-            input_ids (mindspore.Tensor, optional): The input tensor containing the tokenized input sequence. Default is None.
-            attention_mask (mindspore.Tensor, optional): The attention mask tensor to avoid attending to padding tokens. Default is None.
-            position_ids (mindspore.Tensor, optional): The position indices tensor to specify the position of each token. Default is None.
-            past_key_values (List[mindspore.Tensor], optional): The list of tensors containing the cached key-value pairs of the previous attention mechanism. Default is None.
+            input_ids (mindspore.Tensor, optional):
+                The input tensor containing the tokenized input sequence. Default is None.
+            attention_mask (mindspore.Tensor, optional):
+                The attention mask tensor to avoid attending to padding tokens. Default is None.
+            position_ids (mindspore.Tensor, optional):
+                The position indices tensor to specify the position of each token. Default is None.
+            past_key_values (List[mindspore.Tensor], optional):
+                The list of tensors containing the cached key-value pairs of the previous attention mechanism.
+                Default is None.
             inputs_embeds (mindspore.Tensor, optional): The input embedding tensor. Default is None.
             use_cache (bool, optional): Whether to use cache mechanism. Default is None.
             output_attentions (bool, optional): Whether to output the attention values. Default is None.
             output_hidden_states (bool, optional): Whether to output the hidden states. Default is None.
             return_dict (bool, optional): Whether to return the output as a dictionary. Default is None.
             cache_position (mindspore.Tensor, optional): The tensor representing the position of each token in the cache. Default is None.
-        
+
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The output of the model. It can be a tuple containing hidden states, cache values, hidden states from all layers, and attention values from all layers; or an
-instance of BaseModelOutputWithPast containing the last hidden state, cache values, hidden states from all layers, and attention values from all layers.
-        
+            Union[Tuple, BaseModelOutputWithPast]: The output of the model.
+                It can be a tuple containing hidden states, cache values, hidden states from all layers,
+                and attention values from all layers; or an instance of BaseModelOutputWithPast containing the
+                last hidden state, cache values, hidden states from all layers, and attention values from all layers.
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified or neither of them is specified.
             Warning: If use_cache is set to True while using gradient checkpointing, it will be set to False as it is not compatible.
@@ -965,15 +1001,15 @@ instance of BaseModelOutputWithPast containing the last hidden state, cache valu
     def _update_causal_mask(self, attention_mask, input_tensor):
         '''
         Updates the causal mask used for self-attention in the GemmaModel class.
-        
+
         Args:
             self (GemmaModel): The instance of the GemmaModel class.
             attention_mask (Tensor, optional): The attention mask tensor. Default is None.
             input_tensor (Tensor): The input tensor used to determine the shape of the causal mask.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         '''
@@ -986,14 +1022,14 @@ instance of BaseModelOutputWithPast containing the last hidden state, cache valu
             self.causal_mask = ops.triu(causal_mask, diagonal=1)
 
         # We use the current dtype to avoid any overflows
-        causal_mask = self.causal_mask[None, None, :, :].repeat(batch_size, 1, 1, 1).to(dtype) * finfo(dtype, 'min')
+        causal_mask = ops.tile(self.causal_mask[None, None, :, :], (batch_size, 1, 1, 1)).to(dtype) * float(ops.finfo(dtype).min)
 
         causal_mask = causal_mask.to(dtype=dtype)
         if attention_mask is not None and attention_mask.dim() == 2:
             mask_length = attention_mask.shape[-1]
             padding_mask = causal_mask[..., :mask_length].eq(0.0).astype(mindspore.int32) * attention_mask[:, None, None, :].eq(0.0).astype(mindspore.int32)
             causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(
-                padding_mask.astype(mindspore.bool_), finfo(dtype, 'min')
+                padding_mask.astype(mindspore.bool_), float(ops.finfo(dtype).min)
             )
 
         return causal_mask
@@ -1003,59 +1039,61 @@ instance of BaseModelOutputWithPast containing the last hidden state, cache valu
 class GemmaForCausalLM(GemmaPreTrainedModel):
 
     """
-    This class represents a model for Causal Language Modeling using the Gemma architecture. It provides methods for setting and getting input and output embeddings, setting the decoder, and generating text
-based on input sequences. The class also includes methods for preparing inputs for text generation and reordering past key values. 
-    
+    This class represents a model for Causal Language Modeling using the Gemma architecture.
+    It provides methods for setting and getting input and output embeddings, setting the decoder, and generating text
+    based on input sequences. The class also includes methods for preparing inputs for text generation
+    and reordering past key values.
+
     The class inherits from GemmaPreTrainedModel and includes the following methods:
-    
-    - __init__(self, config): Initializes the model with the given configuration.
-    - get_input_embeddings(self): Returns the input embeddings.
-    - set_input_embeddings(self, value): Sets the input embeddings to the given value.
-    - get_output_embeddings(self): Returns the output embeddings.
-    - set_output_embeddings(self, new_embeddings): Sets the output embeddings to the new embeddings.
-    - set_decoder(self, decoder): Sets the decoder model.
-    - get_decoder(self): Returns the decoder model.
-    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position): Constructs the model for
-text generation.
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares inputs for text generation.
+
+    - __init__: Initializes the model with the given configuration.
+    - get_input_embeddings): Returns the input embeddings.
+    - set_input_embeddings: Sets the input embeddings to the given value.
+    - get_output_embeddings: Returns the output embeddings.
+    - set_output_embeddings: Sets the output embeddings to the new embeddings.
+    - set_decoder: Sets the decoder model.
+    - get_decoder: Returns the decoder model.
+    - forward: Constructs the model for
+    text generation.
+    - prepare_inputs_for_generation: Prepares inputs for text generation.
     - _reorder_cache(past_key_values, beam_idx): Reorders the cache based on the beam index.
-    
-    Example usage:
-    
-    from transformers import AutoTokenizer, GemmaForCausalLM
-    
-    model = GemmaForCausalLM.from_pretrained("google/gemma-7b")
-    tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
-    
-    prompt = "What is your favorite condiment?"
-    inputs = tokenizer(prompt, return_tensors="pt")
-    
-    # Generate
-    generate_ids = model.generate(inputs.input_ids, max_length=30)
-    tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    "What is your favorite condiment?"
-    
+
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, GemmaForCausalLM
+        ...
+        >>> model = GemmaForCausalLM.from_pretrained("google/gemma-7b")
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
+        ...
+        >>> prompt = "What is your favorite condiment?"
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        ...
+        >>> # Generate
+        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        >>> "What is your favorite condiment?"
+        ```
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes an instance of the GemmaForCausalLM class.
-        
+
         Args:
             self: The object itself.
             config: An instance of the configuration class that holds the model configuration settings.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
         super().__init__(config)
         self.model = GemmaModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1063,56 +1101,58 @@ text generation.
     def get_input_embeddings(self):
         """
         Retrieves the input embeddings from the GemmaForCausalLM model.
-        
+
         Args:
             self (GemmaForCausalLM): An instance of the GemmaForCausalLM class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
-            Set the input embeddings for the GemmaForCausalLM model.
-        
-            Args:
-                self (GemmaForCausalLM): The instance of the GemmaForCausalLM class.
-                value: The input embeddings to be set for the model.
-        
-            Returns:
-                None. This method does not return any value.
-        
-            Raises:
-                None.
-        
-            Description:
-                This method sets the input embeddings for the GemmaForCausalLM model. The input embeddings are used to map
-                input tokens to their corresponding embedding vectors. The `value` parameter should be an object containing
-                the desired input embeddings. The input embeddings are assigned to the `embed_tokens` attribute of the model.
-        
-            Example:
-                >>> model = GemmaForCausalLM()
-                >>> embeddings = Embeddings()
-                >>> model.set_input_embeddings(embeddings)
-            """
+        Set the input embeddings for the GemmaForCausalLM model.
+
+        Args:
+            self (GemmaForCausalLM): The instance of the GemmaForCausalLM class.
+            value: The input embeddings to be set for the model.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+
+        Description:
+            This method sets the input embeddings for the GemmaForCausalLM model. The input embeddings are used to map
+            input tokens to their corresponding embedding vectors. The `value` parameter should be an object containing
+            the desired input embeddings. The input embeddings are assigned to the `embed_tokens` attribute of the model.
+
+        Example:
+            ```python
+            >>> model = GemmaForCausalLM()
+            >>> embeddings = Embeddings()
+            >>> model.set_input_embeddings(embeddings)
+            ```
+        """
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
         """
         Method to retrieve the output embeddings from a GemmaForCausalLM model.
-        
+
         Args:
             self (GemmaForCausalLM): The instance of GemmaForCausalLM class.
                 Represents the model object for which the output embeddings are to be retrieved.
-        
+
         Returns:
             None: This method returns None as it directly provides access to the 'lm_head' attribute
-            containing the output embeddings.
-        
+                containing the output embeddings.
+
         Raises:
             None
         """
@@ -1121,14 +1161,14 @@ text generation.
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the GemmaForCausalLM model.
-        
+
         Args:
             self (GemmaForCausalLM): The GemmaForCausalLM instance.
             new_embeddings (torch.Tensor): The new embeddings to be set as the model's output embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1137,36 +1177,37 @@ text generation.
     def set_decoder(self, decoder):
         """
         Sets the decoder for the GemmaForCausalLM model.
-        
+
         Args:
             self (GemmaForCausalLM): The instance of the GemmaForCausalLM class.
             decoder: The decoder object to be set for the model. It should be compatible with the GemmaForCausalLM model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.model = decoder
 
     def get_decoder(self):
         """
         Returns the decoder model used for causal language modeling in the GemmaForCausalLM class.
-        
+
         Args:
             self: An instance of the GemmaForCausalLM class.
-        
+
         Returns:
-            None. This method returns the decoder model, which is an instance of the model used for causal language modeling.
-        
+            The decoder model:
+                which is an instance of the model used for causal language modeling.
+
         Raises:
             None.
         """
         return self.model
 
     # Ignore copy
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1188,23 +1229,24 @@ text generation.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, GemmaForCausalLM
-
-        >>> model = GemmaForCausalLM.from_pretrained("google/gemma-7b")
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
-
-        >>> prompt = "What is your favorite condiment?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "What is your favorite condiment?"
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, GemmaForCausalLM
+            ...
+            >>> model = GemmaForCausalLM.from_pretrained("google/gemma-7b")
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
+            ...
+            >>> prompt = "What is your favorite condiment?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            ...
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "What is your favorite condiment?"
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1237,7 +1279,7 @@ text generation.
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1256,7 +1298,7 @@ text generation.
     ):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (object): The instance of the GemmaForCausalLM class.
             input_ids (tensor): The input tensor containing token indices for the input sequence.
@@ -1270,11 +1312,11 @@ text generation.
             inputs_embeds (tensor or None): The tensor containing the embedded input embeddings.
                 If provided, it should have the same shape as input_ids.
                 If None, input_ids is used for token embeddings.
-        
+
         Returns:
-            dict or None: A dictionary containing the model inputs including input_ids, position_ids, cache_position, 
+            dict or None: A dictionary containing the model inputs including input_ids, position_ids, cache_position,
                 past_key_values, use_cache, and attention_mask. Returns None if no inputs are provided.
-        
+
         Raises:
             TypeError: If input_ids, attention_mask, or inputs_embeds have invalid types.
             ValueError: If input_ids and attention_mask have incompatible shapes.
@@ -1314,7 +1356,7 @@ text generation.
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1357,17 +1399,17 @@ text generation.
     def _reorder_cache(past_key_values, beam_idx):
         """
         Reorders the cache for the given beam index.
-        
+
         Args:
             past_key_values (tuple): A tuple containing the past key-value states for each layer of the model.
                 Each layer's past key-value state is a tuple of tensors with shape (batch_size, sequence_length, hidden_size).
             beam_idx (torch.Tensor): A tensor of shape (batch_size,) representing the beam index to reorder the cache for.
-        
+
         Returns:
             None: This method does not return any value. The cache is reordered in-place.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1381,68 +1423,71 @@ text generation.
 class GemmaForSequenceClassification(GemmaPreTrainedModel):
 
     """
-    A Python class that represents a Gemma model for sequence classification tasks. This class inherits from the GemmaPreTrainedModel class.
-    
-    This class provides methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification. It also includes methods for computing the loss and
-returning the model outputs.
-    
+    A Python class that represents a Gemma model for sequence classification tasks.
+    This class inherits from the GemmaPreTrainedModel class.
+
+    This class provides methods for initializing the model, getting and setting input embeddings, and forwarding
+    the model for sequence classification. It also includes methods for computing the loss and returning the model outputs.
+
     Attributes:
-        - num_labels (int): The number of labels for the sequence classification task.
-        - model (GemmaModel): The underlying Gemma model.
-        - score (nn.Dense): The dense layer for computing the logits.
-        
+        num_labels (int): The number of labels for the sequence classification task.
+        model (GemmaModel): The underlying Gemma model.
+        score (nn.Linear): The dense layer for computing the logits.
+
     Methods:
-        - __init__(self, config): Initializes the GemmaForSequenceClassification instance with the given configuration.
-        - get_input_embeddings(self): Returns the input embeddings of the model.
-        - set_input_embeddings(self, value): Sets the input embeddings of the model.
-        - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence
-classification and returns the model outputs.
-        
-    Example usage:
-        # Initialize the GemmaForSequenceClassification instance
-        model = GemmaForSequenceClassification(config)
-        
-        # Get the input embeddings
-        embeddings = model.get_input_embeddings()
-        
-        # Set new input embeddings
-        model.set_input_embeddings(embeddings)
-        
-        # Construct the model for sequence classification
-        outputs = model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
-        
-        # Get the logits and past key values
-        logits = outputs.logits
-        past_key_values = outputs.past_key_values
-        
-        # Compute the loss
-        loss = outputs.loss
-        
-        # Return the model outputs
-        return_dict = True
-        output = model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
-    
-    Note: This class assumes that the GemmaPreTrainedModel class is already defined and imported.
+        __init__: Initializes the GemmaForSequenceClassification instance with the given configuration.
+        get_input_embeddings: Returns the input embeddings of the model.
+        set_input_embeddings: Sets the input embeddings of the model.
+        forward: Constructs the model for sequence classification and returns the model outputs.
+
+    Example:
+        ```python
+        >>> # Initialize the GemmaForSequenceClassification instance
+        >>> model = GemmaForSequenceClassification(config)
+        ...
+        >>> # Get the input embeddings
+        >>> embeddings = model.get_input_embeddings()
+        ...
+        >>> # Set new input embeddings
+        >>> model.set_input_embeddings(embeddings)
+        ...
+        >>> # Construct the model for sequence classification
+        >>> outputs = model.forward(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+        ...
+        >>> # Get the logits and past key values
+        >>> logits = outputs.logits
+        >>> past_key_values = outputs.past_key_values
+        ...
+        >>> # Compute the loss
+        >>> loss = outputs.loss
+        ...
+        >>> # Return the model outputs
+        >>> return_dict = True
+        >>> output = model.forward(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+        ```
+
+    Note:
+        This class assumes that the GemmaPreTrainedModel class is already defined and imported.
     """
     def __init__(self, config):
         """
         Initializes a new instance of the GemmaForSequenceClassification class.
-        
+
         Args:
             self: The object itself.
             config (class): A configuration class that contains the necessary parameters for initializing the model.
                 This includes the number of labels for classification.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = GemmaModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1450,36 +1495,36 @@ classification and returns the model outputs.
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings from the GemmaForSequenceClassification model.
-        
+
         Args:
             self: The instance of the GemmaForSequenceClassification class.
-        
+
         Returns:
-            None. This method returns the input embeddings from the model.
-        
+            embed_tokens: This method returns the input embeddings from the model.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the GemmaForSequenceClassification model.
-        
+
         Args:
             self (GemmaForSequenceClassification): The instance of the GemmaForSequenceClassification class.
-            value (object): The input embeddings to be set for the model. This should be an object that represents the 
-                            embeddings, such as a tensor or a list of tensors.
-        
+            value (object): The input embeddings to be set for the model. This should be an object that represents the
+                embeddings, such as a tensor or a list of tensors.
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1493,10 +1538,11 @@ classification and returns the model outputs.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1545,13 +1591,13 @@ classification and returns the model outputs.
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

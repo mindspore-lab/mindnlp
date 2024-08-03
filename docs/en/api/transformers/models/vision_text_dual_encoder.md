@@ -1,0 +1,3 @@
+:::mindnlp.transformers.models.vision_text_dual_encoder.configuration_vision_text_dual_encoder
+:::mindnlp.transformers.models.vision_text_dual_encoder.modeling_vision_text_dual_encoder
+:::mindnlp.transformers.models.vision_text_dual_encoder.processing_vision_text_dual_encoder

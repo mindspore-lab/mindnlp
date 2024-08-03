@@ -111,16 +111,16 @@ class RobertaTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import RobertaTokenizer
-
-    >>> tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import RobertaTokenizer
+        ...
+        >>> tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -203,7 +203,7 @@ class RobertaTokenizer(PreTrainedTokenizer):
     ):
         """
         This method initializes an instance of the RobertaTokenizer class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str): The path to the vocabulary file.
@@ -218,10 +218,10 @@ class RobertaTokenizer(PreTrainedTokenizer):
             mask_token (str, optional): The mask token. Defaults to '<mask>'.
             add_prefix_space (bool, optional): Whether to add prefix space. Defaults to False.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             FileNotFoundError: If vocab_file or merges_file is not found.
             ValueError: If an invalid argument is provided for any token parameter.
@@ -276,13 +276,13 @@ class RobertaTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         Returns the size of the vocabulary used by the RobertaTokenizer instance.
-        
+
         Args:
             self (RobertaTokenizer): The instance of the RobertaTokenizer class.
-            
+
         Returns:
             int: The number of unique tokens in the vocabulary of the tokenizer.
-        
+
         Raises:
             None.
         """
@@ -291,26 +291,30 @@ class RobertaTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Returns a vocabulary dictionary containing both the base encoder and any additional tokens added to the tokenizer.
-        
+
         Args:
             self (RobertaTokenizer): An instance of the RobertaTokenizer class.
-        
+
         Returns:
-            dict or None: The vocabulary dictionary containing the base encoder and any additional tokens added to the tokenizer. If the tokenizer has not been initialized with a base encoder or any additional
-tokens, None is returned.
-        
+            dict or None:
+                The vocabulary dictionary containing the base encoder and any additional tokens added to the tokenizer.
+                If the tokenizer has not been initialized with a base encoder or any additional tokens, None is returned.
+
         Raises:
             None.
-        
+
         Note:
-            The vocabulary dictionary is created by copying the base encoder dictionary and updating it with the added_tokens_encoder dictionary. The base encoder dictionary contains the original encoding for
-the tokenizer, while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
-        
+            The vocabulary dictionary is created by copying the base encoder dictionary and updating it with the
+            added_tokens_encoder dictionary. The base encoder dictionary contains the original encoding for the tokenizer,
+            while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
+
         Example:
+            ```python
             >>> tokenizer = RobertaTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<s>': 0, '<pad>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4}
+            ```
         """
         vocab = dict(self.encoder).copy()
         vocab.update(self.added_tokens_encoder)
@@ -319,14 +323,16 @@ the tokenizer, while the added_tokens_encoder dictionary contains any additional
     def bpe(self, token):
         """
         This method is a part of the RobertaTokenizer class and implements Byte-Pair Encoding (BPE) for tokenizing input tokens.
-        
+
         Args:
             self (RobertaTokenizer): The instance of the RobertaTokenizer class.
-            token (str): The input token to be tokenized using BPE. It is a string representing a single token to be processed. Must not be None.
-        
+            token (str): The input token to be tokenized using BPE. It is a string representing a single token to
+                be processed. Must not be None.
+
         Returns:
-            str: The token after applying the Byte-Pair Encoding process. Returns the token as a string after processing it through the BPE algorithm.
-        
+            str: The token after applying the Byte-Pair Encoding process. Returns the token as a string after processing
+                it through the BPE algorithm.
+
         Raises:
             ValueError: If the input token is None or empty.
             TypeError: If the input token is not a string.
@@ -401,28 +407,32 @@ the tokenizer, while the added_tokens_encoder dictionary contains any additional
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Saves the vocabulary and merge files of the RobertaTokenizer.
-        
+
         Args:
             self (RobertaTokenizer): An instance of the RobertaTokenizer class.
             save_directory (str): The directory where the vocabulary and merge files will be saved.
             filename_prefix (Optional[str], optional): The prefix to be added to the filenames. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the paths of the saved vocabulary and merge files.
-        
+
         Raises:
             OSError: If the save_directory is not a valid directory.
-        
-        This method saves the vocabulary file and merge file used by the RobertaTokenizer. The vocabulary file contains the encoder dictionary in JSON format, while the merge file contains the BPE merge
-indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to the filenames.
-        
+
+        This method saves the vocabulary file and merge file used by the RobertaTokenizer.
+        The vocabulary file contains the encoder dictionary in JSON format, while the merge file contains the BPE merge
+        indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to
+        the filenames.
+
         Note:
             If the save_directory does not exist, the method will raise an OSError.
-        
+
         Example:
+            ```python
             >>> tokenizer = RobertaTokenizer()
             >>> tokenizer.save_vocabulary('/path/to/save')
             ('/path/to/save/vocab.txt', '/path/to/save/merges.txt')
+            ```
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -530,32 +540,36 @@ indices and tokens. The files are saved in the specified save_directory with opt
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
         """
         Prepares the given text for tokenization by adding a prefix space if necessary.
-        
+
         Args:
             self (RobertaTokenizer): The instance of the RobertaTokenizer class.
             text (str): The input text to be prepared for tokenization.
-            is_split_into_words (bool, optional): A flag indicating whether the text is already split into words. Defaults to False.
+            is_split_into_words (bool, optional): A flag indicating whether the text is already split into words.
+                Defaults to False.
             **kwargs: Additional keyword arguments.
-                add_prefix_space (bool, optional): A flag indicating whether a prefix space should be added to the text. 
-                    If not provided, the value from the self.add_prefix_space attribute will be used.
-        
+                add_prefix_space (bool, optional):
+
+                A flag indicating whether a prefix space should be added to the text.
+                If not provided, the value from the self.add_prefix_space attribute will be used.
+
         Returns:
             str: The prepared text after adding a prefix space if required.
-        
+
         Raises:
             None
-        
+
         Note:
-            - If is_split_into_words is True or add_prefix_space is True, and the text is not empty and does not start with a space,
-              a prefix space will be added to the text.
+            - If is_split_into_words is True or add_prefix_space is True, and the text is not empty and does not start
+            with a space, a prefix space will be added to the text.
             - The original kwargs dictionary is modified by removing the 'add_prefix_space' key using the pop() method.
-        
+
         Example:
-            tokenizer = RobertaTokenizer()
-            prepared_text = tokenizer.prepare_for_tokenization("Hello world!", is_split_into_words=True)
-            print(prepared_text)
-            # Output: " Hello world!"
-        
+            ```python
+            >>> tokenizer = RobertaTokenizer()
+            >>> prepared_text = tokenizer.prepare_for_tokenization("Hello world!", is_split_into_words=True)
+            >>> print(prepared_text)
+            >>> # Output: " Hello world!"
+            ```
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):

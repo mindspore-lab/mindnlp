@@ -18,10 +18,12 @@ Moss model
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
-from mindspore.nn import CrossEntropyLoss
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, Zero, One
-from mindnlp.transformers.activations import ACT2FN
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss
+from ...activations import ACT2FN
 from .moss_configuration import MossConfig
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -47,7 +49,7 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> Tensor:
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2) * 1.0 / dim))
     sinusoid_inp = ops.einsum(
         "i , j -> i j", ops.arange(num_pos, dtype=mindspore.float32), inv_freq).float()
-    res = ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    res = ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
     return res
 
 
@@ -57,7 +59,7 @@ def rotate_every_two(input_tensor: Tensor) -> Tensor:
     """
     tensor1 = input_tensor[:, :, :, ::2]
     tensor2 = input_tensor[:, :, :, 1::2]
-    out_tensor = ops.stack((-tensor2, tensor1), axis=-1)
+    out_tensor = ops.stack((-tensor2, tensor1), dim=-1)
     return ops.flatten(out_tensor, start_dim=-2)
 
 
@@ -70,7 +72,7 @@ def apply_rotary_pos_emb(tensor: Tensor, sin: Tensor, cos: Tensor) -> Tensor:
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
-class MossAttention(nn.Cell):
+class MossAttention(nn.Module):
     """
     Moss attention layer
     """
@@ -80,17 +82,19 @@ class MossAttention(nn.Cell):
         
         Args:
             self (MossAttention): The current instance of MossAttention.
-            config (object): A configuration object containing the following attributes:
+            config (object):
+                A configuration object containing the following attributes:
+
                 - max_position_embeddings (int): The maximum number of positions for positional embeddings.
                 - attn_pdrop (float): The dropout probability for attention weights.
                 - resid_pdrop (float): The dropout probability for residual connections.
                 - hidden_size (int): The dimension of the hidden state.
                 - num_attention_heads (int): The number of attention heads for multi-head attention.
                 - rotary_dim (int): The dimension for rotary position embeddings.
-        
+
         Returns:
-            None. This method initializes the MossAttention object.
-        
+            None.
+
         Raises:
             ValueError: If the `embed_dim` is not divisible by `num_attention_heads`.
         """
@@ -120,11 +124,11 @@ class MossAttention(nn.Cell):
         self.scale_attn = ops.sqrt(Tensor(self.head_dim, dtype=mindspore.float32)).to(
             mindspore.float32
         )
-        self.qkv_proj = nn.Dense(
-            self.embed_dim, self.embed_dim * 3, has_bias=False)
+        self.qkv_proj = nn.Linear(
+            self.embed_dim, self.embed_dim * 3, bias=False)
 
-        self.out_proj = nn.Dense(
-            self.embed_dim, self.embed_dim, has_bias=False)
+        self.out_proj = nn.Linear(
+            self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(
@@ -133,17 +137,17 @@ class MossAttention(nn.Cell):
     def _split_heads(self, input_tensor, n_head, dim_head, mp_num):
         """
         Splits the input tensor into multiple heads for multi-head attention in the MossAttention class.
-        
+
         Args:
             self (MossAttention): An instance of the MossAttention class.
             input_tensor (tensor): The input tensor to be split into heads.
             n_head (int): The total number of heads in the attention mechanism.
             dim_head (int): The dimensionality of each head.
             mp_num (int): The number of parallel processes.
-        
+
         Returns:
-            None. This method modifies the input tensor in-place.
-        
+            None: This method modifies the input tensor in-place.
+
         Raises:
             None.
         """
@@ -177,7 +181,7 @@ class MossAttention(nn.Cell):
     ):
         """
         Method _attn in the MossAttention class.
-        
+
         Args:
             self: The instance of the MossAttention class.
             query (Tensor): The query tensor for attention calculation.
@@ -190,13 +194,13 @@ class MossAttention(nn.Cell):
                 If provided, its shape should match the shape of the attention weights.
             head_mask (Tensor, optional): Mask tensor to be applied to the attention weights.
                 If provided, its shape should match the shape of the attention weights.
-        
+
         Returns:
             Tuple[Tensor, Tensor]: A tuple containing the attention output tensor and the attention weights tensor.
                 The attention output tensor has the same shape as the value tensor.
                 The attention weights tensor represents the importance assigned to each element in the value tensor
                 based on the query and key similarities.
-        
+
         Raises:
             ValueError: If query, key, or value tensors have incompatible shapes.
             TypeError: If the input tensors are not of the expected data type.
@@ -226,7 +230,7 @@ class MossAttention(nn.Cell):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = nn.Softmax(axis=-1)(attn_weights)
+        attn_weights = nn.Softmax(dim=-1)(attn_weights)
         attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -238,7 +242,7 @@ class MossAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
+    def forward(
             self,
             hidden_states: Optional[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -254,7 +258,7 @@ class MossAttention(nn.Cell):
     ]:
         """
         Constructs the attention mechanism for the MossAttention class.
-        
+
         Args:
             self: The object instance.
             hidden_states (Optional[Tensor]): The input hidden states.
@@ -264,14 +268,14 @@ class MossAttention(nn.Cell):
             head_mask (Optional[Tensor]): Mask for attention heads.
             use_cache (Optional[bool]): Flag to indicate cache usage.
             output_attentions (Optional[bool]): Flag to output attention weights.
-        
+
         Returns:
             Union[Tuple[Tensor, Tuple[Tensor]], Optional[Tuple[Tensor, Tuple[Tensor], Tuple[Tensor, ...]]]]:
-            A tuple containing the attention output tensor and the present state, or None if use_cache is False.
-            If output_attentions is True, also includes the attention weights tensor.
-        
+                A tuple containing the attention output tensor and the present state, or None if use_cache is False.
+                If output_attentions is True, also includes the attention weights tensor.
+
         Raises:
-            N/A
+            None.
         """
         qkv = self.qkv_proj(hidden_states)
         # TODO(enijkamp): factor out number of logical TPU-v4 cores or make forward pass agnostic
@@ -279,7 +283,7 @@ class MossAttention(nn.Cell):
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
 
         local_dim = self.head_dim * self.num_attention_heads // mp_num
-        query, value, key = ops.split(qkv_split, local_dim, axis=-1)
+        query, value, key = ops.split(qkv_split, local_dim, dim=-1)
 
         query = self._split_heads(
             query, self.num_attention_heads, self.head_dim, mp_num=mp_num)
@@ -308,8 +312,8 @@ class MossAttention(nn.Cell):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -319,8 +323,8 @@ class MossAttention(nn.Cell):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)
@@ -343,47 +347,47 @@ class MossAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class MossMLP(nn.Cell):
+class MossMLP(nn.Module):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJMLP with GPTJ->Moss
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         """
         Initializes an instance of the MossMLP class.
-        
+
         Args:
             self: The current instance of the class.
             intermediate_size (int): The size of the intermediate layer.
             config: The configuration object for the model.
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         """
         super().__init__()
         embed_dim = config.n_embd
 
-        self.fc_in = nn.Dense(embed_dim, intermediate_size)
-        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+        self.fc_in = nn.Linear(embed_dim, intermediate_size)
+        self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tensor]) -> Tensor:
+    def forward(self, hidden_states: Optional[Tensor]) -> Tensor:
         """
         Constructs the forward pass of the MossMLP neural network.
-        
+
         Args:
             self (MossMLP): The instance of the MossMLP class.
             hidden_states (Optional[Tensor]): The input hidden states tensor. Default is None.
                 A tensor representing the hidden states to be processed by the network.
-        
+
         Returns:
             Tensor: The processed hidden states tensor after passing through the network layers.
                 The final output tensor of the forward pass.
-        
+
         Raises:
             None.
         """
@@ -394,36 +398,37 @@ class MossMLP(nn.Cell):
         return hidden_states
 
 
-class MossBlock(nn.Cell):
+class MossBlock(nn.Module):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJBlock with GPTJ->Moss
     """
     def __init__(self, config):
         """
         Initializes a MossBlock instance with the provided configuration.
-        
+
         Args:
             self (MossBlock): The instance of MossBlock.
             config (object): An object containing configuration parameters for the MossBlock.
                 This object should have the following attributes:
+
                 - n_inner (int or None): The inner dimension size. If None, defaults to 4 times the embedding size.
                 - n_embd (int): The embedding size.
                 - layer_norm_epsilon (float): The epsilon value for LayerNorm.
-        
+
         Returns:
-            None. This method initializes the MossBlock instance with the specified configuration parameters.
-        
+            None: This method initializes the MossBlock instance with the specified configuration parameters.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
         self.ln_1 = nn.LayerNorm(
-            [config.n_embd], epsilon=config.layer_norm_epsilon)
+            [config.n_embd], eps=config.layer_norm_epsilon)
         self.attn = MossAttention(config)
         self.mlp = MossMLP(inner_dim, config)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Optional[Tensor],
             layer_past: Optional[Tuple[Tensor]] = None,
@@ -435,7 +440,7 @@ class MossBlock(nn.Cell):
     ) -> Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]:
         """
         Constructs a MossBlock by applying self-attention and feed-forward layers to the given hidden states.
-        
+
         Args:
             self (MossBlock): The current MossBlock instance.
             hidden_states (Optional[Tensor]): Input tensor of shape (batch_size, sequence_length, hidden_size).
@@ -445,14 +450,16 @@ class MossBlock(nn.Cell):
             head_mask (Optional[Tensor]): Mask tensor to specify which attention heads to mask. Defaults to None.
             use_cache (Optional[bool]): Whether to use caching for the self-attention layer. Defaults to False.
             output_attentions (Optional[bool]): Whether to output the attention weights. Defaults to False.
-        
+
         Returns:
-            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]: A tuple containing the output tensor after applying the self-attention and feed-forward layers. If `use_cache` is True, the tuple
-includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
-        
+            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]:
+                A tuple containing the output tensor after applying the self-attention and feed-forward layers.
+                If `use_cache` is True, the tuple includes the hidden states and the past hidden states for the
+                self-attention layer. Otherwise, the tuple only includes the hidden states.
+
         Raises:
             None
-        
+
         """
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -494,7 +501,7 @@ class MossPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weight."""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
             # cf https://github.com/MindSpore/MindSpore/pull/5617
             # cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -520,7 +527,7 @@ class MossPreTrainedModel(PreTrainedModel):
     def _set_gradient_checkpointing(self, cell, value=False):
         """
         Sets the gradient checkpointing flag for a given cell in the MossPreTrainedModel.
-        
+
         Args:
             self (MossPreTrainedModel): The instance of the MossPreTrainedModel class.
             cell (object): The cell for which the gradient checkpointing flag needs to be set.
@@ -528,10 +535,10 @@ class MossPreTrainedModel(PreTrainedModel):
             value (bool): The value to be set for the gradient checkpointing flag.
                 If True, gradient checkpointing is enabled for the specified cell.
                 If False, gradient checkpointing is disabled for the specified cell.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -540,7 +547,7 @@ class MossPreTrainedModel(PreTrainedModel):
 
 
 MOSS_START_DOCSTRING = r"""
-    This model is a MindSpore [mindspore.nn.Cell](https://MindSpore.org/docs/stable/nn.html#mindspore.nn.Cell) sub-class. Use
+    This model is a MindSpore [mindspore.nn.Module](https://MindSpore.org/docs/stable/nn.html#mindspore.nn.Module) sub-class. Use
     it as a regular MindSpore Cell and refer to the MindSpore documentation for all matter related to general usage and
     behavior.
 
@@ -607,22 +614,25 @@ class MossModel(MossPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MossModel class.
-        
+
         Args:
             self: The current instance of the class.
-            config: An object containing configuration parameters for the model. It should have the following attributes:
+            config: An object containing configuration parameters for the model.
+                It should have the following attributes:
+
                 - n_embd (int): The embedding dimension.
                 - vocab_size (int): The size of the vocabulary.
                 - embd_pdrop (float): The dropout probability for the embedding layer.
                 - n_layer (int): The number of MossBlocks to be used in the model.
                 - layer_norm_epsilon (float): A small value added to the variance to avoid division by zero in LayerNorm.
-                - rotary_dim (int): The dimension of the rotary positional encoding. It should be less than or equal to n_ctx // num_attention_heads.
+                - rotary_dim (int): The dimension of the rotary positional encoding.
+                It should be less than or equal to n_ctx // num_attention_heads.
                 - n_ctx (int): The length of the input sequence.
                 - num_attention_heads (int): The number of attention heads in each MossBlock.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -632,8 +642,8 @@ class MossModel(MossPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([MossBlock(config) for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([MossBlock(config) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
         self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.num_attention_heads)
 
         self.gradient_checkpointing = False
@@ -653,7 +663,7 @@ class MossModel(MossPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[Tensor] = None,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -829,16 +839,18 @@ class MossForCausalLM(MossPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MossForCausalLM class.
-        
+
         Args:
             self (MossForCausalLM): The current instance of the MossForCausalLM class.
-            config (object): An object containing configuration parameters.
+            config (object):
+                An object containing configuration parameters.
+
                 - wbits (int): Number of bits for weight quantization. Default is 32.
                 - groupsize (int): Size of the weight quantization group. Default is 128.
-        
+
         Returns:
-            None. This method initializes the MossForCausalLM instance.
-        
+            None.
+
         Raises:
             None.
         """
@@ -862,7 +874,7 @@ class MossForCausalLM(MossPreTrainedModel):
             self._init_weights = False
             # torch.set_default_dtype(mindspore.half)
         self.transformer = MossModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
         if config.wbits in [4, 8]:
             # torch.set_default_dtype(mindspore.float32)
             self._init_weights = True
@@ -911,7 +923,7 @@ class MossForCausalLM(MossPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[Tensor] = None,
             past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
@@ -927,10 +939,11 @@ class MossForCausalLM(MossPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Tuple]:
         r"""
-        labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

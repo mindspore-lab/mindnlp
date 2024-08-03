@@ -29,7 +29,7 @@ from ....utils import TensorType, is_mindspore_available, logging
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, nn
 
 logger = logging.get_logger(__name__)
 
@@ -106,10 +106,11 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            ValueError: If the provided feature size, sampling rate, hop length, chunk length, n_fft, or num_chroma is invalid.
+            ValueError: If the provided feature size, sampling rate, hop length, chunk length, n_fft, or num_chroma
+                is invalid.
             TypeError: If the provided padding value is not a float.
             TypeError: If the provided return_attention_mask is not a boolean.
             TypeError: If stem_indices is not a list.
@@ -151,7 +152,7 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         raw_chroma = ops.einsum("cf, ...ft->...ct", self.chroma_filters, spec)
 
         # normalise with max value
-        norm_chroma = raw_chroma / ops.norm(raw_chroma, ord=float("inf"), dim=-2, keepdim=True)
+        norm_chroma = nn.functional.normalize(raw_chroma, p=float("inf"), dim=-2, eps=1e-6)
 
         # transpose time and chroma dimension -> (batch, time, chroma)
         norm_chroma = norm_chroma.swapaxes(1, 2)
@@ -159,14 +160,14 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         # replace max value alongside chroma dimension with 1 and replace the rest with 0
         idx = norm_chroma.argmax(-1, keepdims=True)
         norm_chroma[:] = 0
-        norm_chroma = ops.tensor_scatter_elements(norm_chroma, idx, ops.ones_like(idx, dtype=norm_chroma.dtype), axis=-1)
+        norm_chroma = ops.scatter(norm_chroma, -1, idx, ops.ones_like(idx, dtype=norm_chroma.dtype))
 
         return norm_chroma
 
     def _extract_stem_indices(self, audio, sampling_rate=None):
         """
-        Extracts stems from the output of the [Demucs](https://github.com/adefossez/demucs/tree/main) audio separation model,
-        then converts to mono-channel and resample to the feature extractor sampling rate.
+        Extracts stems from the output of the [Demucs](https://github.com/adefossez/demucs/tree/main) audio separation
+        model, then converts to mono-channel and resample to the feature extractor sampling rate.
 
         Args:
             audio (`mindspore.Tensor` of shape `(batch_size, num_stems, channel_size, audio_length)`):
@@ -216,10 +217,12 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         Main method to featurize and prepare for the model one or several sequence(s).
 
         Args:
-            audio (`mindspore.Tensor`, `np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[mindspore.Tensor]`, `List[List[float]]`):
-                The sequence or batch of sequences to be padded. Each sequence can be a mindspore tensor, a numpy array, a list of float
-                values, a list of numpy arrays, a list of mindspore tensors, or a list of list of float values.
-                If `audio` is the output of Demucs, it has to be a mindspore tensor of shape `(batch_size, num_stems, channel_size, audio_length)`.
+            audio (`mindspore.Tensor`, `np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[mindspore.Tensor]`,
+                `List[List[float]]`):
+                The sequence or batch of sequences to be padded. Each sequence can be a mindspore tensor, a numpy array,
+                a list of float values, a list of numpy arrays, a list of mindspore tensors, or a list of list of float
+                values. If `audio` is the output of Demucs, it has to be a mindspore tensor of shape
+                `(batch_size, num_stems, channel_size, audio_length)`.
                 Otherwise, it must be mono or stereo channel audio.
             truncation (`bool`, *optional*, default to `True`):
                 Activates truncation to cut input sequences longer than *max_length* to *max_length*.
@@ -249,11 +252,11 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
                 index) among:
 
                 - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
+                sequence if provided).
                 - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
+                acceptable input length for the model if that argument is not provided.
                 - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+                lengths).
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
             sampling_rate (`int`, *optional*):

@@ -94,19 +94,19 @@ class EncodecConfig(PretrainedConfig):
             an identity function will be used, giving a generic residual connection.
 
     Example:
-
-    ```python
-    >>> from transformers import EncodecModel, EncodecConfig
-
-    >>> # Initializing a "facebook/encodec_24khz" style configuration
-    >>> configuration = EncodecConfig()
-
-    >>> # Initializing a model (with random weights) from the "facebook/encodec_24khz" style configuration
-    >>> model = EncodecModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import EncodecModel, EncodecConfig
+        ...
+        >>> # Initializing a "facebook/encodec_24khz" style configuration
+        >>> configuration = EncodecConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the "facebook/encodec_24khz" style configuration
+        >>> model = EncodecModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "encodec"
     #pylint: disable=W0102
     def __init__(
@@ -166,7 +166,7 @@ class EncodecConfig(PretrainedConfig):
             use_conv_shortcut (bool): Flag indicating whether to use convolution shortcut. Default is True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If norm_type is not 'weight_norm' or 'time_group_norm'.

@@ -81,19 +81,19 @@ class OPTConfig(PretrainedConfig):
             Whether or not if the layer norms should have learnable parameters.
 
     Example:
-
-    ```python
-    >>> from transformers import OPTConfig, OPTModel
-
-    >>> # Initializing a OPT facebook/opt-large style configuration
-    >>> configuration = OPTConfig()
-
-    >>> # Initializing a model (with random weights) from the facebook/opt-large style configuration
-    >>> model = OPTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import OPTConfig, OPTModel
+        ...
+        >>> # Initializing a OPT facebook/opt-large style configuration
+        >>> configuration = OPTConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the facebook/opt-large style configuration
+        >>> model = OPTModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "opt"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -130,7 +130,8 @@ class OPTConfig(PretrainedConfig):
             num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
             ffn_dim (int, optional): The size of the feed-forward network. Defaults to 3072.
             max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 2048.
-            do_layer_norm_before (bool, optional): Whether to apply layer normalization before the attention layer. Defaults to True.
+            do_layer_norm_before (bool, optional): Whether to apply layer normalization before the attention layer.
+                Defaults to True.
             _remove_final_layer_norm (bool, optional): Whether to remove the final layer normalization. Defaults to False.
             word_embed_proj_dim (int, optional): The dimension of word embedding projection. Defaults to None.
             dropout (float, optional): The dropout rate. Defaults to 0.1.
@@ -144,13 +145,14 @@ class OPTConfig(PretrainedConfig):
             bos_token_id (int, optional): The ID for beginning of sequence token. Defaults to 2.
             eos_token_id (int, optional): The ID for end of sequence token. Defaults to 2.
             enable_bias (bool, optional): Whether to enable bias. Defaults to True.
-            layer_norm_elementwise_affine (bool, optional): Whether to apply element-wise affine transformation for layer normalization. Defaults to True.
+            layer_norm_elementwise_affine (bool, optional): Whether to apply element-wise affine transformation for
+                layer normalization. Defaults to True.
         
         Returns:
             None. 
         
         Raises:
-            No specific exceptions are raised.
+            None.
         '''
         super().__init__(
             pad_token_id=pad_token_id,

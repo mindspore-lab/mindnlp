@@ -23,52 +23,54 @@ class BgeM3Config(PretrainedConfig):
     """
     A class representing the configuration for a BgeM3 model. 
     
-    This class inherits from the PretrainedConfig class and defines the configuration parameters for a BgeM3 model, including vocabulary size, hidden size, number of hidden layers, number of attention heads,
-intermediate size, activation function, dropout probabilities, maximum position embeddings, type vocabulary size, initializer range, layer normalization epsilon, padding token ID, beginning of sequence token
-ID, end of sequence token ID, position embedding type, cache usage, classifier dropout, Colbert dimension, sentence pooling method, and unused tokens.
-    
+    This class inherits from the PretrainedConfig class and defines the configuration parameters for a BgeM3 model,
+    including vocabulary size, hidden size, number of hidden layers, number of attention heads, intermediate size,
+    activation function, dropout probabilities, maximum position embeddings, type vocabulary size, initializer range,
+    layer normalization epsilon, padding token ID, beginning of sequence token ID, end of sequence token ID,
+    position embedding type, cache usage, classifier dropout, Colbert dimension, sentence pooling method, and unused tokens.
+
     Parameters:
-    - vocab_size (int): The size of the vocabulary.
-    - hidden_size (int): The size of the hidden layers.
-    - num_hidden_layers (int): The number of hidden layers in the model.
-    - num_attention_heads (int): The number of attention heads in the model.
-    - intermediate_size (int): The size of the intermediate layer in the model.
-    - hidden_act (str): The activation function used in the hidden layers.
-    - hidden_dropout_prob (float): The dropout probability for the hidden layers.
-    - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-    - max_position_embeddings (int): The maximum position embeddings in the model.
-    - type_vocab_size (int): The size of the type vocabulary.
-    - initializer_range (float): The range for parameter initialization.
-    - layer_norm_eps (float): The epsilon value for layer normalization.
-    - pad_token_id (int): The ID for padding tokens.
-    - bos_token_id (int): The ID for the beginning of sequence tokens.
-    - eos_token_id (int): The ID for the end of sequence tokens.
-    - position_embedding_type (str): The type of position embedding used.
-    - use_cache (bool): Flag indicating whether caching is used.
-    - classifier_dropout (float): The dropout rate for the classifier layer.
-    - colbert_dim (int): The dimension of Colbert.
-    - sentence_pooling_method (str): The method used for sentence pooling.
-    - unused_tokens (list): A list of unused tokens.
-    
+        vocab_size (int): The size of the vocabulary.
+        hidden_size (int): The size of the hidden layers.
+        num_hidden_layers (int): The number of hidden layers in the model.
+        num_attention_heads (int): The number of attention heads in the model.
+        intermediate_size (int): The size of the intermediate layer in the model.
+        hidden_act (str): The activation function used in the hidden layers.
+        hidden_dropout_prob (float): The dropout probability for the hidden layers.
+        attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+        max_position_embeddings (int): The maximum position embeddings in the model.
+        type_vocab_size (int): The size of the type vocabulary.
+        initializer_range (float): The range for parameter initialization.
+        layer_norm_eps (float): The epsilon value for layer normalization.
+        pad_token_id (int): The ID for padding tokens.
+        bos_token_id (int): The ID for the beginning of sequence tokens.
+        eos_token_id (int): The ID for the end of sequence tokens.
+        position_embedding_type (str): The type of position embedding used.
+        use_cache (bool): Flag indicating whether caching is used.
+        classifier_dropout (float): The dropout rate for the classifier layer.
+        colbert_dim (int): The dimension of Colbert.
+        sentence_pooling_method (str): The method used for sentence pooling.
+        unused_tokens (list): A list of unused tokens.
+
     Attributes:
-    - vocab_size (int): The size of the vocabulary.
-    - hidden_size (int): The size of the hidden layers.
-    - num_hidden_layers (int): The number of hidden layers in the model.
-    - num_attention_heads (int): The number of attention heads in the model.
-    - hidden_act (str): The activation function used in the hidden layers.
-    - intermediate_size (int): The size of the intermediate layer in the model.
-    - hidden_dropout_prob (float): The dropout probability for the hidden layers.
-    - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-    - max_position_embeddings (int): The maximum position embeddings in the model.
-    - type_vocab_size (int): The size of the type vocabulary.
-    - initializer_range (float): The range for parameter initialization.
-    - layer_norm_eps (float): The epsilon value for layer normalization.
-    - position_embedding_type (str): The type of position embedding used.
-    - use_cache (bool): Flag indicating whether caching is used.
-    - classifier_dropout (float): The dropout rate for the classifier layer.
-    - colbert_dim (int): The dimension of Colbert.
-    - sentence_pooling_method (str): The method used for sentence pooling.
-    - unused_tokens (list): A list of unused tokens.
+        vocab_size (int): The size of the vocabulary.
+        hidden_size (int): The size of the hidden layers.
+        num_hidden_layers (int): The number of hidden layers in the model.
+        num_attention_heads (int): The number of attention heads in the model.
+        hidden_act (str): The activation function used in the hidden layers.
+        intermediate_size (int): The size of the intermediate layer in the model.
+        hidden_dropout_prob (float): The dropout probability for the hidden layers.
+        attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+        max_position_embeddings (int): The maximum position embeddings in the model.
+        type_vocab_size (int): The size of the type vocabulary.
+        initializer_range (float): The range for parameter initialization.
+        layer_norm_eps (float): The epsilon value for layer normalization.
+        position_embedding_type (str): The type of position embedding used.
+        use_cache (bool): Flag indicating whether caching is used.
+        classifier_dropout (float): The dropout rate for the classifier layer.
+        colbert_dim (int): The dimension of Colbert.
+        sentence_pooling_method (str): The method used for sentence pooling.
+        unused_tokens (list): A list of unused tokens.
     """
     model_type = "bge-m3"
 
@@ -126,7 +128,7 @@ ID, end of sequence token ID, position embedding type, cache usage, classifier d
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If any of the parameters are invalid or out of range.

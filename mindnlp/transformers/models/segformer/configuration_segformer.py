@@ -74,19 +74,19 @@ class SegformerConfig(PretrainedConfig):
             The index that is ignored by the loss function of the semantic segmentation model.
 
     Example:
-
-    ```python
-    >>> from transformers import SegformerModel, SegformerConfig
-
-    >>> # Initializing a SegFormer nvidia/segformer-b0-finetuned-ade-512-512 style configuration
-    >>> configuration = SegformerConfig()
-
-    >>> # Initializing a model from the nvidia/segformer-b0-finetuned-ade-512-512 style configuration
-    >>> model = SegformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import SegformerModel, SegformerConfig
+        ...
+        >>> # Initializing a SegFormer nvidia/segformer-b0-finetuned-ade-512-512 style configuration
+        >>> configuration = SegformerConfig()
+        ...
+        >>> # Initializing a model from the nvidia/segformer-b0-finetuned-ade-512-512 style configuration
+        >>> model = SegformerModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "segformer"
 
     def __init__(
@@ -129,7 +129,8 @@ class SegformerConfig(PretrainedConfig):
             hidden_dropout_prob (float): The dropout probability for the hidden layers. Defaults to 0.0.
             attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Defaults to 0.0.
             classifier_dropout_prob (float): The dropout probability for the classifier. Defaults to 0.1.
-            initializer_range (float): The standard deviation of the truncated_normal_initializer for initializing all weight matrices. Defaults to 0.02.
+            initializer_range (float): The standard deviation of the truncated_normal_initializer for initializing all
+                weight matrices. Defaults to 0.02.
             drop_path_rate (float): The dropout rate for stochastic depth. Defaults to 0.1.
             layer_norm_eps (float): The epsilon value for layer normalization. Defaults to 1e-06.
             decoder_hidden_size (int): The hidden size of the decoder.
@@ -137,10 +138,11 @@ class SegformerConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            FutureWarning: If 'reshape_last_stage' is set to False in the kwargs, a warning about the deprecation of this argument will be raised.
+            FutureWarning: If 'reshape_last_stage' is set to False in the kwargs, a warning about the deprecation of
+                this argument will be raised.
         '''
         super().__init__(**kwargs)
 

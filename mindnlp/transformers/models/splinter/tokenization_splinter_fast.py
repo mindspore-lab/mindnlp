@@ -57,7 +57,7 @@ class SplinterTokenizerFast(PreTrainedTokenizerFast):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
         question_token (`str`, *optional*, defaults to `"[QUESTION]"`):
-            The token used for constructing question representations.
+            The token used for forwarding question representations.
         clean_text (`bool`, *optional*, defaults to `True`):
             Whether or not to clean the text before tokenization by removing any control characters and replacing all
             whitespaces by the classic one.

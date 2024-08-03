@@ -24,10 +24,10 @@ logger = logging.get_logger(__name__)
 
 class LlavaNextConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`LlavaNextForConditionalGeneration`]. It is used to instantiate an
-    Llava-NeXT model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the [llava-hf/llava-v1.6-mistral-7b-hf](https://huggingface.co/llava-hf/llava-v1.6-mistral-7b-hf)
-    model.
+    This is the configuration class to store the configuration of a [`LlavaNextForConditionalGeneration`].
+    It is used to instantiate an Llava-NeXT model according to the specified arguments, defining the model architecture.
+    Instantiating a configuration with the defaults will yield a similar configuration to that of the
+    [llava-hf/llava-v1.6-mistral-7b-hf](https://huggingface.co/llava-hf/llava-v1.6-mistral-7b-hf) model.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -54,25 +54,25 @@ class LlavaNextConfig(PretrainedConfig):
             of the form `(height, width)`.
 
     Example:
-
-    ```python
-    >>> from transformers import LlavaNextForConditionalGeneration, LlavaNextConfig, CLIPVisionConfig, LlamaConfig
-
-    >>> # Initializing a CLIP-vision config
-    >>> vision_config = CLIPVisionConfig()
-
-    >>> # Initializing a Llama config
-    >>> text_config = LlamaConfig()
-
-    >>> # Initializing a Llava-Next llava-hf/llava-v1.6-mistral-7b-hf style configuration
-    >>> configuration = LlavaNextConfig(vision_config, text_config)
-
-    >>> # Initializing a model from the llava-hf/llava-v1.6-mistral-7b-hf style configuration
-    >>> model = LlavaNextForConditionalGeneration(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import LlavaNextForConditionalGeneration, LlavaNextConfig, CLIPVisionConfig, LlamaConfig
+        ...
+        >>> # Initializing a CLIP-vision config
+        >>> vision_config = CLIPVisionConfig()
+        ...
+        >>> # Initializing a Llama config
+        >>> text_config = LlamaConfig()
+        ...
+        >>> # Initializing a Llava-Next llava-hf/llava-v1.6-mistral-7b-hf style configuration
+        >>> configuration = LlavaNextConfig(vision_config, text_config)
+        ...
+        >>> # Initializing a model from the llava-hf/llava-v1.6-mistral-7b-hf style configuration
+        >>> model = LlavaNextForConditionalGeneration(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "llava_next"
     is_composition = False
 
@@ -90,23 +90,28 @@ class LlavaNextConfig(PretrainedConfig):
     ):
         """
         This method initializes an instance of the LlavaNextConfig class with the provided parameters.
-        
+
         Args:
-        - self: The instance of the class.
-        - vision_config (dict, optional): Configuration settings for the vision model. If not provided, default settings will be used.
-        - text_config (dict, optional): Configuration settings for the text model. If not provided, default settings will be used.
-        - ignore_index (int, optional): Index to ignore during computation. Default is -100.
-        - image_token_index (int, optional): Index for image token. Default is 32000.
-        - projector_hidden_act (str, optional): Activation function for hidden layers in projector. Default is 'gelu'.
-        - vision_feature_select_strategy (str): Strategy for selecting vision features. Should be one of 'default' or 'full'.
-        - vision_feature_layer (int, optional): Layer to extract features from in the vision model.
-        - image_grid_pinpoints (list of lists, optional): Coordinates for image grid pinpoints. Default is [[336, 672], [672, 336], [672, 672], [1008, 336], [336, 1008].
-        
+            self: The instance of the class.
+            vision_config (dict, optional): Configuration settings for the vision model.
+                If not provided, default settings will be used.
+            text_config (dict, optional): Configuration settings for the text model.
+                If not provided, default settings will be used.
+            ignore_index (int, optional): Index to ignore during computation. Default is -100.
+            image_token_index (int, optional): Index for image token. Default is 32000.
+            projector_hidden_act (str, optional): Activation function for hidden layers in projector.
+                Default is 'gelu'.
+            vision_feature_select_strategy (str): Strategy for selecting vision features.
+                Should be one of 'default' or 'full'.
+            vision_feature_layer (int, optional): Layer to extract features from in the vision model.
+            image_grid_pinpoints (list of lists, optional): Coordinates for image grid pinpoints.
+                Default is [[336, 672], [672, 336], [672, 672], [1008, 336], [336, 1008].
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - ValueError: If vision_feature_select_strategy is not 'default' or 'full'.
+            ValueError: If vision_feature_select_strategy is not 'default' or 'full'.
         """
         self.ignore_index = ignore_index
         self.image_token_index = image_token_index

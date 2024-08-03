@@ -35,7 +35,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         BigBirdPegasusForCausalLM,
@@ -180,8 +180,8 @@ class BigBirdPegasusModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(mindspore.bool_)], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(mindspore.bool_)], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -715,7 +715,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -738,7 +738,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         model = BigBirdPegasusDecoder(config=config).set_train(False)
 
         # create attention mask
-        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
 
         half_seq_length = input_ids.shape[-1] // 2
         attn_mask[:, half_seq_length:] = 0
@@ -755,10 +755,10 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            dim=1,
         )
 
         # get two different outputs

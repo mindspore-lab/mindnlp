@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -44,7 +45,7 @@ from .configuration_lilt import LiltConfig
 logger = logging.get_logger(__name__)
 
 
-class LiltTextEmbeddings(nn.Cell):
+class LiltTextEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.word_embeddings = nn.Embedding(
@@ -60,7 +61,7 @@ class LiltTextEmbeddings(nn.Cell):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -80,7 +81,7 @@ class LiltTextEmbeddings(nn.Cell):
             padding_idx=self.padding_idx,
         )
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         token_type_ids=None,
@@ -128,7 +129,7 @@ class LiltTextEmbeddings(nn.Cell):
         """
         # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask)) * mask
+        incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask)) * mask
         return incremental_indices.long() + padding_idx
 
     def create_position_ids_from_inputs_embeds(self, inputs_embeds):
@@ -149,7 +150,7 @@ class LiltTextEmbeddings(nn.Cell):
         return position_ids.unsqueeze(0).broadcast_to((input_shape))
 
 
-class LiltLayoutEmbeddings(nn.Cell):
+class LiltLayoutEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
         # we divide the hidden_size by 6 here as there are 6 different layout embeddings,
@@ -173,17 +174,17 @@ class LiltLayoutEmbeddings(nn.Cell):
             config.hidden_size // config.channel_shrink_ratio,
             padding_idx=self.padding_idx,
         )
-        self.box_linear_embeddings = nn.Dense(
-            in_channels=config.hidden_size,
-            out_channels=config.hidden_size // config.channel_shrink_ratio,
+        self.box_linear_embeddings = nn.Linear(
+            config.hidden_size,
+            config.hidden_size // config.channel_shrink_ratio,
         )
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size // config.channel_shrink_ratio],
-            epsilon=config.layer_norm_eps,
+            eps=config.layer_norm_eps,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, bbox=None, position_ids=None):
+    def forward(self, bbox=None, position_ids=None):
         try:
             left_position_embeddings = self.x_position_embeddings(bbox[:, :, 0])
             upper_position_embeddings = self.y_position_embeddings(bbox[:, :, 1])
@@ -210,7 +211,7 @@ class LiltLayoutEmbeddings(nn.Cell):
                 h_position_embeddings,
                 w_position_embeddings,
             ],
-            axis=-1,
+            dim=-1,
         )
         spatial_position_embeddings = self.box_linear_embeddings(
             spatial_position_embeddings
@@ -227,7 +228,7 @@ class LiltLayoutEmbeddings(nn.Cell):
         return spatial_position_embeddings
 
 
-class LiltSelfAttention(nn.Cell):
+class LiltSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
@@ -242,19 +243,19 @@ class LiltSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.layout_query = nn.Dense(
+        self.layout_query = nn.Linear(
             config.hidden_size // config.channel_shrink_ratio,
             self.all_head_size // config.channel_shrink_ratio,
         )
-        self.layout_key = nn.Dense(
+        self.layout_key = nn.Linear(
             config.hidden_size // config.channel_shrink_ratio,
             self.all_head_size // config.channel_shrink_ratio,
         )
-        self.layout_value = nn.Dense(
+        self.layout_value = nn.Linear(
             config.hidden_size // config.channel_shrink_ratio,
             self.all_head_size // config.channel_shrink_ratio,
         )
@@ -279,7 +280,7 @@ class LiltSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         layout_inputs,
@@ -350,7 +351,7 @@ class LiltSelfAttention(nn.Cell):
             layout_attention_scores = layout_attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        layout_attention_probs = nn.Softmax(axis=-1)(layout_attention_scores)
+        layout_attention_probs = nn.Softmax(dim=-1)(layout_attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -373,7 +374,7 @@ class LiltSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -399,16 +400,16 @@ class LiltSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class LiltSelfOutput(nn.Cell):
+class LiltSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor
     ) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -417,7 +418,7 @@ class LiltSelfOutput(nn.Cell):
         return hidden_states
 
 
-class LiltAttention(nn.Cell):
+class LiltAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = LiltSelfAttention(
@@ -446,7 +447,7 @@ class LiltAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -455,7 +456,7 @@ class LiltAttention(nn.Cell):
         )
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layout_inputs: mindspore.Tensor,
@@ -479,32 +480,32 @@ class LiltAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class LiltIntermediate(nn.Cell):
+class LiltIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
-class LiltOutput(nn.Cell):
+class LiltOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor
     ) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -513,7 +514,7 @@ class LiltOutput(nn.Cell):
         return hidden_states
 
 
-class LiltLayer(nn.Cell):
+class LiltLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -533,7 +534,7 @@ class LiltLayer(nn.Cell):
         config.hidden_size = ori_hidden_size
         config.intermediate_size = ori_intermediate_size
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layout_inputs: mindspore.Tensor,
@@ -583,17 +584,17 @@ class LiltLayer(nn.Cell):
         return layer_output
 
 
-class LiltEncoder(nn.Cell):
+class LiltEncoder(nn.Module):
     # Copied from transformers.models.bert.modeling_bert.BertEncoder.__init__ with Bert->Lilt
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [LiltLayer(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layout_inputs: mindspore.Tensor,
@@ -657,13 +658,13 @@ class LiltEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class LiltPooler(nn.Cell):
+class LiltPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -686,7 +687,7 @@ class LiltPreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(
                 initializer(
                     Normal(0.0, self.config.initializer_range),
@@ -694,7 +695,7 @@ class LiltPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -741,7 +742,7 @@ class LiltModel(LiltPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         bbox: Optional[mindspore.Tensor] = None,
@@ -883,7 +884,7 @@ class LiltForSequenceClassification(LiltPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         bbox: Optional[mindspore.Tensor] = None,
@@ -956,15 +957,15 @@ class LiltForSequenceClassification(LiltPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -991,12 +992,12 @@ class LiltForTokenClassification(LiltPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         bbox: Optional[mindspore.Tensor] = None,
@@ -1059,7 +1060,7 @@ class LiltForTokenClassification(LiltPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1074,21 +1075,21 @@ class LiltForTokenClassification(LiltPreTrainedModel):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaClassificationHead with Roberta->Lilt
-class LiltClassificationHead(nn.Cell):
+class LiltClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         classifier_dropout = (
             config.classifier_dropout
             if config.classifier_dropout is not None
             else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
@@ -1105,12 +1106,12 @@ class LiltForQuestionAnswering(LiltPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.lilt = LiltModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         bbox: Optional[mindspore.Tensor] = None,
@@ -1197,8 +1198,8 @@ class LiltForQuestionAnswering(LiltPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

@@ -20,10 +20,10 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
-
-from mindnlp.modules.functional import finfo
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -65,14 +65,14 @@ def router_z_loss_func(router_logits: mindspore.Tensor) -> float:
         Scalar router z-loss.
     """
     num_groups, tokens_per_group, _ = router_logits.shape
-    log_z = ops.logsumexp(router_logits, axis=-1)
+    log_z = ops.logsumexp(router_logits, dim=-1)
     z_loss = log_z**2
     return ops.sum(z_loss) / (num_groups * tokens_per_group)
 
 
 def load_balancing_loss_func(router_probs: mindspore.Tensor, expert_indices: mindspore.Tensor) -> float:
     r"""
-    Computes auxiliary load balancing loss as in Switch Transformer - implemented in Pytorch.
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in MindSpore.
 
     See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
     function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between
@@ -96,20 +96,20 @@ def load_balancing_loss_func(router_probs: mindspore.Tensor, expert_indices: min
     if len(expert_indices.shape) == 2:
         expert_indices = expert_indices.unsqueeze(2)
 
-    expert_mask = ops.one_hot(expert_indices, num_experts)
+    expert_mask = F.one_hot(expert_indices, num_experts)
 
     # For a given token, determine if it was routed to a given expert.
-    expert_mask = ops.max(expert_mask, axis=-2)[0]
+    expert_mask = ops.max(expert_mask, dim=-2)[0]
 
     # cast to float32 otherwise mean will fail
     expert_mask = mindspore.Tensor(expert_mask, mindspore.float32)
-    tokens_per_group_and_expert = ops.mean(expert_mask, axis=-2)
+    tokens_per_group_and_expert = ops.mean(expert_mask, dim=-2)
 
-    router_prob_per_group_and_expert = ops.mean(router_probs, axis=-2)
+    router_prob_per_group_and_expert = ops.mean(router_probs, dim=-2)
     return ops.mean(tokens_per_group_and_expert * router_prob_per_group_and_expert) * (num_experts**2)
 
 
-class SwitchTransformersTop1Router(nn.Cell):
+class SwitchTransformersTop1Router(nn.Module):
     """
     Router using tokens choose top-1 experts assignment.
 
@@ -124,7 +124,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         super().__init__()
         self.num_experts = config.num_experts
         self.expert_capacity = config.expert_capacity
-        self.classifier = nn.Dense(config.hidden_size, self.num_experts, has_bias=config.router_bias)
+        self.classifier = nn.Linear(config.hidden_size, self.num_experts, bias=config.router_bias)
         self.jitter_noise = config.router_jitter_noise
         self.ignore_padding_tokens = config.router_ignore_padding_tokens
         self.dtype = getattr(mindspore, config.router_dtype)
@@ -136,6 +136,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         Args:
             hidden_states (`mindspore.Tensor`):
                 (batch_size, sequence_length, hidden_dim) from which router probabilities are computed.
+
         Returns:
             router_probabilities (`mindspore.Tensor`):
                 Tensor of shape (batch_size, sequence_length, num_experts) corresponding to the probabilities for each
@@ -163,7 +164,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         router_logits = self.classifier(hidden_states)
 
         # Apply Softmax and cast back to the original `dtype`
-        router_probabilities = ops.softmax(router_logits, axis=-1, dtype=self.dtype).astype(self.input_dtype)
+        router_probabilities = ops.softmax(router_logits, dim=-1, dtype=self.dtype).astype(self.input_dtype)
         return router_probabilities, router_logits
 
     def _cast_classifier(self):
@@ -174,7 +175,7 @@ class SwitchTransformersTop1Router(nn.Cell):
         if not (hasattr(self.classifier, "SCB") or hasattr(self.classifier, "CB")):
             self.classifier = self.classifier.to_float(self.dtype)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> Tuple:
+    def forward(self, hidden_states: mindspore.Tensor) -> Tuple:
         r"""
         Generic forward function for every Router class. Each Router expects to have the same input hidden states
         (`hidden_states`) corresponding to the hidden states for each token, the `expert_capacity` corresponding to the
@@ -187,9 +188,10 @@ class SwitchTransformersTop1Router(nn.Cell):
         Args:
             hidden_states (`mindspore.Tensor`) :
                 [num_groups, tokens_per_group, hidden_dim] inputs to send to experts.
+
         Returns:
-            Tuple[`mindspore.Tensor`, `mindspore.Tensor`, `mindspore.Tensor`] Tuple containing the expert index, the router probs
-            and the router logits. The router probabilities and logits are required to compute the loss.
+            Tuple[`mindspore.Tensor`, `mindspore.Tensor`, `mindspore.Tensor`] Tuple containing the expert index,
+                the router probs and the router logits. The router probabilities and logits are required to compute the loss.
         """
         router_probs, router_logits = self._compute_router_probabilities(hidden_states)
 
@@ -197,17 +199,17 @@ class SwitchTransformersTop1Router(nn.Cell):
         expert_index = ops.one_hot(expert_index, self.num_experts)
 
         # Mask tokens outside expert capacity. Sum over each sequence
-        token_priority = ops.cumsum(expert_index, axis=-2)
+        token_priority = ops.cumsum(expert_index, dim=-2)
         # mask if the token routed to to the expert will overflow
         expert_capacity_mask = token_priority <= self.expert_capacity
         expert_index = expert_index * expert_capacity_mask
 
-        router_probs = ops.max(router_probs, axis=-1)[0].unsqueeze(-1)
+        router_probs = ops.max(router_probs, dim=-1)[0].unsqueeze(-1)
         return expert_index, router_probs, router_logits
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerNorm with T5->SwitchTransformers
-class SwitchTransformersLayerNorm(nn.Cell):
+class SwitchTransformersLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Construct a layernorm module in the SwitchTransformers style. No bias and no subtraction of mean.
@@ -216,7 +218,7 @@ class SwitchTransformersLayerNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size), 'weight')
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # SwitchTransformers uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
         # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
         # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
@@ -236,15 +238,15 @@ ALL_LAYERNORM_LAYERS.append(SwitchTransformersLayerNorm)
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseActDense with T5->SwitchTransformers
-class SwitchTransformersDenseActDense(nn.Cell):
+class SwitchTransformersDenseActDense(nn.Module):
     def __init__(self, config: SwitchTransformersConfig):
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -258,30 +260,29 @@ class SwitchTransformersDenseActDense(nn.Cell):
         return hidden_states
 
 
-class SwitchTransformersSparseMLP(nn.Cell):
+class SwitchTransformersSparseMLP(nn.Module):
     r"""
     Implementation of the Switch Transformers Sparse MLP module.
     """
 
-    def __init__(self, config: SwitchTransformersConfig, expert_class: nn.Cell = SwitchTransformersDenseActDense):
+    def __init__(self, config: SwitchTransformersConfig, expert_class: nn.Module = SwitchTransformersDenseActDense):
         super().__init__()
         # Step 1: Get the correct router according to its class
         self.router = SwitchTransformersTop1Router(config)
 
         # Step 2: Get the experts
-        self.experts = nn.CellDict()
+        self.experts = nn.ModuleDict()
         for idx in range(config.num_experts):
             self.experts[f"expert_{idx}"] = expert_class(config)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         r"""
         Hold on, this will be slightly tricky to understand In the correct order, a MoE layer does the following:
 
-        1- Gets the `router_mask` from the router. The shape of the mask is `(batch_size, sequence_length, num_expert)`
+        1. Gets the `router_mask` from the router. The shape of the mask is `(batch_size, sequence_length, num_expert)`
         and corresponds to the argmax of the `router_probs`. The probabilities are needed in the computation of the
         hidden states : they are broadcasted to the hidden states values (can be interpreted as a scaling factor).
-
-        2- Dispatch the tokens to its associated experts. We do a classic for loop over the experts and assign for each
+        2. Dispatch the tokens to its associated experts. We do a classic for loop over the experts and assign for each
         expert the corresponding hidden states.
 
         """
@@ -301,7 +302,7 @@ class SwitchTransformersSparseMLP(nn.Cell):
         return hidden_states, (router_logits, expert_index)
 
 
-class SwitchTransformersLayerFF(nn.Cell):
+class SwitchTransformersLayerFF(nn.Module):
     r"""
     Switch Transformers Feed Forward layer module. This is a wrapper around the Mixture of Experts module.
 
@@ -326,7 +327,7 @@ class SwitchTransformersLayerFF(nn.Cell):
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(self, hidden_states, output_router_logits):
+    def forward(self, hidden_states, output_router_logits):
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.mlp(forwarded_states)
 
@@ -344,7 +345,7 @@ class SwitchTransformersLayerFF(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5Attention with T5->SwitchTransformers
-class SwitchTransformersAttention(nn.Cell):
+class SwitchTransformersAttention(nn.Module):
     def __init__(self, config: SwitchTransformersConfig, has_relative_attention_bias=False):
         super().__init__()
         self.is_decoder = config.is_decoder
@@ -358,10 +359,10 @@ class SwitchTransformersAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -378,7 +379,7 @@ class SwitchTransformersAttention(nn.Cell):
         self.q = prune_linear_layer(self.q, index)
         self.k = prune_linear_layer(self.k, index)
         self.v = prune_linear_layer(self.v, index)
-        self.o = prune_linear_layer(self.o, index, axis=1)
+        self.o = prune_linear_layer(self.o, index, dim=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.inner_dim = self.key_value_proj_dim * self.n_heads
@@ -447,7 +448,7 @@ class SwitchTransformersAttention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -501,7 +502,7 @@ class SwitchTransformersAttention(nn.Cell):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -555,10 +556,10 @@ class SwitchTransformersAttention(nn.Cell):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float(), axis=-1).astype(
+        attn_weights = ops.softmax(scores.float(), dim=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -578,7 +579,7 @@ class SwitchTransformersAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerSelfAttention with T5->SwitchTransformers
-class SwitchTransformersLayerSelfAttention(nn.Cell):
+class SwitchTransformersLayerSelfAttention(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
         super().__init__()
         self.SelfAttention = SwitchTransformersAttention(
@@ -587,7 +588,7 @@ class SwitchTransformersLayerSelfAttention(nn.Cell):
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -613,14 +614,14 @@ class SwitchTransformersLayerSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerCrossAttention with T5->SwitchTransformers
-class SwitchTransformersLayerCrossAttention(nn.Cell):
+class SwitchTransformersLayerCrossAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.EncDecAttention = SwitchTransformersAttention(config, has_relative_attention_bias=False)
         self.layer_norm = SwitchTransformersLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -649,12 +650,12 @@ class SwitchTransformersLayerCrossAttention(nn.Cell):
         return outputs
 
 
-class SwitchTransformersBlock(nn.Cell):
+class SwitchTransformersBlock(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False, is_sparse=False):
         super().__init__()
         self.is_decoder = config.is_decoder
         self.is_sparse = is_sparse
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(
             SwitchTransformersLayerSelfAttention(config, has_relative_attention_bias=has_relative_attention_bias)
         )
@@ -663,7 +664,7 @@ class SwitchTransformersBlock(nn.Cell):
 
         self.layer.append(SwitchTransformersLayerFF(config, is_sparse=self.is_sparse))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -710,7 +711,7 @@ class SwitchTransformersBlock(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
@@ -737,7 +738,7 @@ class SwitchTransformersBlock(nn.Cell):
 
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
@@ -757,7 +758,7 @@ class SwitchTransformersBlock(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -907,7 +908,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
 
         sparse_step = config.decoder_sparse_step if self.is_decoder else config.encoder_sparse_step
         config.num_layers = config.num_decoder_layers if self.is_decoder else config.num_layers
-        self.block = nn.CellList()
+        self.block = nn.ModuleList()
         for i in range(config.num_layers):
             is_sparse = (i % sparse_step == 1 or sparse_step == 1) if sparse_step > 0 else False
 
@@ -930,7 +931,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1184,7 +1185,7 @@ class SwitchTransformersModel(SwitchTransformersPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1204,29 +1205,31 @@ class SwitchTransformersModel(SwitchTransformersPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqMoEModelOutput]:
         r"""
+
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqMoEModelOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersModel.from_pretrained("google/switch-base-8")
-
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
-
-        >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for SwitchTransformersModel.
-        >>> # This is not needed for torch's SwitchTransformersForConditionalGeneration as it does this internally using labels arg.
-        >>> decoder_input_ids = model._shift_right(decoder_input_ids)
-
-        >>> # forward pass
-        >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersModel.from_pretrained("google/switch-base-8")
+            ...
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            ...
+            >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for SwitchTransformersModel.
+            >>> # This is not needed for torch's SwitchTransformersForConditionalGeneration as it does this internally using labels arg.
+            >>> decoder_input_ids = model._shift_right(decoder_input_ids)
+            ...
+            >>> # forward pass
+            >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1322,7 +1325,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = SwitchTransformersStack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         self.router_z_loss_coef = config.router_z_loss_coef
         self.router_aux_loss_coef = config.router_aux_loss_coef
@@ -1358,7 +1361,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1379,36 +1382,38 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqMoEOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
-            labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
+                labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqMoEOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersForConditionalGeneration
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8")
-
-        >>> # training
-        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
-        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
-        >>> outputs = model(input_ids=input_ids, labels=labels)
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-
-        >>> # inference
-        >>> input_ids = tokenizer(
-        ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model.generate(input_ids)
-        >>> # . To, let’s say you have a dog. To summarize:
-        >>> # Since the model has been trained on MLM, this will output gibberish
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersForConditionalGeneration
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8")
+            ...
+            >>> # training
+            >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
+            >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
+            >>> outputs = model(input_ids=input_ids, labels=labels)
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ...
+            >>> # inference
+            >>> input_ids = tokenizer(
+            ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model.generate(input_ids)
+            >>> # . To, let’s say you have a dog. To summarize:
+            >>> # Since the model has been trained on MLM, this will output gibberish
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1482,7 +1487,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
             if self.encoder.config.encoder_sparse_step > 1:
                 encoder_router_logits, encoder_expert_indexes = self._unpack_router_logits(encoder_outputs[-1])
                 encoder_z_loss = router_z_loss_func(encoder_router_logits)
-                encoder_router_probs = nn.Softmax(axis=-1)(encoder_router_logits)
+                encoder_router_probs = nn.Softmax(dim=-1)(encoder_router_logits)
                 encoder_aux_loss = load_balancing_loss_func(encoder_router_probs, encoder_expert_indexes)
             else:
                 encoder_z_loss = 0
@@ -1491,14 +1496,14 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
             if self.decoder.config.decoder_sparse_step > 1:
                 decoder_router_logits, decoder_expert_indexes = self._unpack_router_logits(decoder_outputs[-1])
                 decoder_z_loss = router_z_loss_func(decoder_router_logits)
-                decoder_router_probs = nn.Softmax(axis=-1)(decoder_router_logits)
+                decoder_router_probs = nn.Softmax(dim=-1)(decoder_router_logits)
                 decoder_aux_loss = load_balancing_loss_func(decoder_router_probs, decoder_expert_indexes)
             else:
                 decoder_z_loss = 0
                 decoder_aux_loss = 0
 
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
 
             if output_router_logits:
                 z_loss = self.router_z_loss_coef * (encoder_z_loss + decoder_z_loss)
@@ -1539,7 +1544,7 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
                 router_logits, expert_indexes = router_output
                 total_router_logits.append(router_logits)
                 total_expert_indexes.append(expert_indexes)
-        return ops.cat(total_router_logits, axis=1), ops.cat(total_expert_indexes, axis=1)
+        return ops.cat(total_router_logits, dim=1), ops.cat(total_expert_indexes, dim=1)
 
     def prepare_inputs_for_generation(
         self,
@@ -1656,7 +1661,7 @@ class SwitchTransformersEncoderModel(SwitchTransformersPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1668,21 +1673,23 @@ class SwitchTransformersEncoderModel(SwitchTransformersPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MoEModelOutput]:
         r"""
+
         Returns:
+            `Union[Tuple[mindspore.Tensor], MoEModelOutput]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, SwitchTransformersEncoderModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
-        >>> model = SwitchTransformersEncoderModel.from_pretrained("google/switch-base-8")
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model(input_ids=input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, SwitchTransformersEncoderModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/switch-base-8")
+            >>> model = SwitchTransformersEncoderModel.from_pretrained("google/switch-base-8")
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model(input_ids=input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         encoder_outputs = self.encoder(

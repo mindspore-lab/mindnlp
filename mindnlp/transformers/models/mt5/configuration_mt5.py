@@ -37,8 +37,10 @@ class MT5Config(PretrainedConfig):
         d_model (`int`, *optional*, defaults to 512):
             Size of the encoder layers and the pooler layer.
         d_kv (`int`, *optional*, defaults to 64):
-            Size of the key, query, value projections per attention head. In the conventional context, it is typically expected that `d_kv` has to be equal to `d_model // num_heads`.
-            But in the architecture of mt5-small, `d_kv` is not equal to `d_model //num_heads`. The `inner_dim` of the projection layer will be defined as `num_heads * d_kv`.
+            Size of the key, query, value projections per attention head. In the conventional context,
+            it is typically expected that `d_kv` has to be equal to `d_model // num_heads`.
+            But in the architecture of mt5-small, `d_kv` is not equal to `d_model //num_heads`.
+            The `inner_dim` of the projection layer will be defined as `num_heads * d_kv`.
         d_ff (`int`, *optional*, defaults to 1024):
             Size of the intermediate feed forward layer in each `T5Block`.
         num_layers (`int`, *optional*, defaults to 8):
@@ -97,33 +99,33 @@ class MT5Config(PretrainedConfig):
         Initialize a new MT5Config object.
         
         Args:
-        - vocab_size (int): The size of the vocabulary.
-        - d_model (int): The dimension of the model.
-        - d_kv (int): The dimension of the key and value vectors in the attention mechanism.
-        - d_ff (int): The dimension of the feed-forward network.
-        - num_layers (int): The total number of layers in the model.
-        - num_decoder_layers (int): The number of decoder layers. If None, it defaults to the total number of layers.
-        - num_heads (int): The number of attention heads in the multi-head attention mechanism.
-        - relative_attention_num_buckets (int): The number of buckets for relative position embeddings.
-        - relative_attention_max_distance (int): The maximum distance for relative position embeddings.
-        - dropout_rate (float): The dropout rate for regularization.
-        - layer_norm_epsilon (float): The epsilon value for layer normalization.
-        - initializer_factor (float): The factor for initializing parameters.
-        - feed_forward_proj (str): The type of feed-forward projection function.
-        - is_encoder_decoder (bool): Indicates whether the model is an encoder-decoder architecture.
-        - use_cache (bool): Indicates whether caching is enabled.
-        - tokenizer_class (str): The class name of the tokenizer.
-        - tie_word_embeddings (bool): Indicates whether word embeddings are tied in the model.
-        - pad_token_id (int): The token ID for padding.
-        - eos_token_id (int): The token ID for end-of-sequence.
-        - decoder_start_token_id (int): The token ID for the decoder start token.
-        - classifier_dropout (float): The dropout rate for the classifier.
-        
+            vocab_size (int): The size of the vocabulary.
+            d_model (int): The dimension of the model.
+            d_kv (int): The dimension of the key and value vectors in the attention mechanism.
+            d_ff (int): The dimension of the feed-forward network.
+            num_layers (int): The total number of layers in the model.
+            num_decoder_layers (int): The number of decoder layers. If None, it defaults to the total number of layers.
+            num_heads (int): The number of attention heads in the multi-head attention mechanism.
+            relative_attention_num_buckets (int): The number of buckets for relative position embeddings.
+            relative_attention_max_distance (int): The maximum distance for relative position embeddings.
+            dropout_rate (float): The dropout rate for regularization.
+            layer_norm_epsilon (float): The epsilon value for layer normalization.
+            initializer_factor (float): The factor for initializing parameters.
+            feed_forward_proj (str): The type of feed-forward projection function.
+            is_encoder_decoder (bool): Indicates whether the model is an encoder-decoder architecture.
+            use_cache (bool): Indicates whether caching is enabled.
+            tokenizer_class (str): The class name of the tokenizer.
+            tie_word_embeddings (bool): Indicates whether word embeddings are tied in the model.
+            pad_token_id (int): The token ID for padding.
+            eos_token_id (int): The token ID for end-of-sequence.
+            decoder_start_token_id (int): The token ID for the decoder start token.
+            classifier_dropout (float): The dropout rate for the classifier.
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - ValueError: If the feed_forward_proj format is invalid or not supported.
+            ValueError: If the feed_forward_proj format is invalid or not supported.
         """
         super().__init__(
             is_encoder_decoder=is_encoder_decoder,
@@ -171,12 +173,13 @@ class MT5Config(PretrainedConfig):
     def hidden_size(self):
         """
         Returns the hidden size of the MT5Config.
-        
+
         Args:
             self: An instance of the MT5Config class.
-        
+
         Returns:
-            int: The hidden size (d_model) of the MT5Config.
+            int:
+                The hidden size (d_model) of the MT5Config.
         
         Raises:
             None.
@@ -186,16 +189,17 @@ class MT5Config(PretrainedConfig):
     @property
     def num_attention_heads(self):
         """
-        This method, num_attention_heads, is a property method within the MT5Config class, and it takes one parameter, self.
+        This method, num_attention_heads, is a property method within the MT5Config class, and it takes one parameter,
+        self.
         
         Args:
             self (object): A reference to the instance of the class.
             
         Returns:
-            None: This method returns the value of 'num_heads' attribute.
+            num_heads: This method returns the value of 'num_heads' attribute.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.num_heads
 
@@ -211,7 +215,7 @@ class MT5Config(PretrainedConfig):
             None
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         '''
         return self.num_layers
 

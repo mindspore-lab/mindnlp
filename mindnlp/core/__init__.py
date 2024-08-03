@@ -13,31 +13,25 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-import functools
+import contextlib
 import mindspore
-from .tensor import Tensor
+from mindspore.common.api import _pynative_executor
+from . import optim, ops, nn
+from .utils import get_default_dtype, set_default_dtype
 
 
-def core_patch_decorator(autocast_instance, func):
-    @functools.wraps(func)
-    def decorate_autocast(*args, **kwargs):
-        with autocast_instance:
-            return func(*args, **kwargs)
+class no_grad(contextlib.ContextDecorator):
+    """
+    Context Manager to disable gradient calculation. When enter this context, we will disable calculate
+    gradient. When exit this context, we will resume its prev state.
+    Currently, it can only use in Pynative mode. It also can be used as decorator.
+    """
 
-    return decorate_autocast
-
-class CorePatch:
     def __enter__(self):
-        # Replace StubTensor with Tensor
-        self.original_stub_tensor = mindspore.common._stub_tensor.StubTensor
-        mindspore.common._stub_tensor.StubTensor = Tensor
-        return self
+        if mindspore.get_context("mode") == mindspore.GRAPH_MODE:
+            raise RuntimeError("For no_grad feature, currently only support Pynative mode, but got Graph mode.")
+        _pynative_executor.set_enable_grad(False)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Restore original StubTensor
-        mindspore.common._stub_tensor.StubTensor = self.original_stub_tensor
-
-    def __call__(self, func):
-        return core_patch_decorator(self, func)
-
-__all__ = ['Tensor', 'CorePatch']
+        _pynative_executor.set_enable_grad(True)
+        return False

@@ -104,20 +104,26 @@ class SegformerImageProcessor(BaseImageProcessor):
         Args:
             self: The SegformerImageProcessor object.
             do_resize (bool, optional): Whether to resize the image. Defaults to True.
-            size (Dict[str, int], optional): The desired height and width of the image. Defaults to {'height': 512, 'width': 512}.
-            resample (PILImageResampling, optional): The resampling method to use during resizing. Defaults to PILImageResampling.BILINEAR.
+            size (Dict[str, int], optional): The desired height and width of the image.
+                Defaults to {'height': 512, 'width': 512}.
+            resample (PILImageResampling, optional): The resampling method to use during resizing.
+                Defaults to PILImageResampling.BILINEAR.
             do_rescale (bool, optional): Whether to rescale the image. Defaults to True.
             rescale_factor (Union[int, float], optional): The rescale factor to apply to the image. Defaults to 1 / 255.
             do_normalize (bool, optional): Whether to normalize the image. Defaults to True.
-            image_mean (Optional[Union[float, List[float]]], optional): The mean values used for image normalization. Defaults to None, which uses IMAGENET_DEFAULT_MEAN.
-            image_std (Optional[Union[float, List[float]]], optional): The standard deviation values used for image normalization. Defaults to None, which uses IMAGENET_DEFAULT_STD.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean values used for image normalization.
+                Defaults to None, which uses IMAGENET_DEFAULT_MEAN.
+            image_std (Optional[Union[float, List[float]]], optional):
+                The standard deviation values used for image normalization. Defaults to None, which uses
+                IMAGENET_DEFAULT_STD.
             do_reduce_labels (bool, optional): Whether to reduce the number of labels. Defaults to False.
         
         Returns:
             None
         
         Raises:
-            FutureWarning: If the 'reduce_labels' parameter is used. This parameter is deprecated and will be removed in a future version. Please use 'do_reduce_labels' instead.
+            FutureWarning: If the 'reduce_labels' parameter is used. This parameter is deprecated and will be removed
+                in a future version. Please use 'do_reduce_labels' instead.
         """
         if "reduce_labels" in kwargs:
             warnings.warn(
@@ -191,12 +197,14 @@ class SegformerImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -221,14 +229,14 @@ class SegformerImageProcessor(BaseImageProcessor):
     def reduce_label(self, label: ImageInput) -> np.ndarray:
         """
         Reduces the label values in the input image for Segformer image processing.
-        
+
         Args:
             self: Instance of the SegformerImageProcessor class.
             label (ImageInput): Input label image to be processed. It should be in a compatible format for processing.
-            
+
         Returns:
             np.ndarray: A NumPy array representing the processed label image with reduced values.
-        
+
         Raises:
             None.
         """
@@ -255,7 +263,7 @@ class SegformerImageProcessor(BaseImageProcessor):
     ):
         """
         Preprocesses an input image according to specified options.
-        
+
         Args:
             self: The instance of the SegformerImageProcessor class.
             image (ImageInput): The input image to be preprocessed.
@@ -263,19 +271,23 @@ class SegformerImageProcessor(BaseImageProcessor):
             do_resize (bool): Whether to resize the image.
             do_rescale (bool): Whether to rescale the image.
             do_normalize (bool): Whether to normalize the image.
-            size (Optional[Dict[str, int]]): Optional dictionary specifying the target size for resizing the image. Default is None.
+            size (Optional[Dict[str, int]]): Optional dictionary specifying the target size for resizing the image.
+                Default is None.
             resample (PILImageResampling): The resampling method to be used during resizing. Default is None.
             rescale_factor (Optional[float]): Optional scaling factor for rescaling the image. Default is None.
-            image_mean (Optional[Union[float, List[float]]]): Optional mean value(s) to be used for normalization. Default is None.
-            image_std (Optional[Union[float, List[float]]]): Optional standard deviation value(s) to be used for normalization. Default is None.
-            input_data_format (Optional[Union[str, ChannelDimension]]): Optional data format of the input image. Default is None.
-        
+            image_mean (Optional[Union[float, List[float]]]): Optional mean value(s) to be used for normalization.
+                Default is None.
+            image_std (Optional[Union[float, List[float]]]): Optional standard deviation value(s) to be used for
+                normalization. Default is None.
+            input_data_format (Optional[Union[str, ChannelDimension]]): Optional data format of the input image.
+                Default is None.
+
         Returns:
-            None. This method modifies the input image in-place.
-        
+            None: This method modifies the input image in-place.
+
         Raises:
             None.
-        
+
         """
         if do_reduce_labels:
             image = self.reduce_label(image)
@@ -427,18 +439,21 @@ class SegformerImageProcessor(BaseImageProcessor):
                 ADE20k). The background label will be replaced by 255.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
-                    - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                    - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -513,7 +528,8 @@ class SegformerImageProcessor(BaseImageProcessor):
     # Copied from transformers.models.beit.image_processing_beit.BeitImageProcessor.post_process_semantic_segmentation with Beit->Segformer
     def post_process_semantic_segmentation(self, outputs, target_sizes: List[Tuple] = None):
         """
-        Converts the output of [`SegformerForSemanticSegmentation`] into semantic segmentation maps. Only supports PyTorch.
+        Converts the output of [`SegformerForSemanticSegmentation`] into semantic segmentation maps.
+        Only supports PyTorch.
 
         Args:
             outputs ([`SegformerForSemanticSegmentation`]):
@@ -524,8 +540,8 @@ class SegformerImageProcessor(BaseImageProcessor):
 
         Returns:
             semantic_segmentation: `List[mindspore.Tensor]` of length `batch_size`, where each item is a semantic
-            segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
-            specified). Each entry of each `mindspore.Tensor` correspond to a semantic class id.
+                segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
+                specified). Each entry of each `mindspore.Tensor` correspond to a semantic class id.
         """
         # TODO: add support for other frameworks
         logits = outputs.logits

@@ -73,7 +73,8 @@ class TinyBertConfig(PretrainedConfig):
             intermediate_size (int, optional): The size of the intermediate layer. Defaults to 3072.
             hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
             hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
-            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities.
+                Defaults to 0.1.
             max_position_embeddings (int, optional): The maximum number of tokens in a sequence. Defaults to 512.
             type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
             initializer_range (float, optional): The range of the initializer. Defaults to 0.02.

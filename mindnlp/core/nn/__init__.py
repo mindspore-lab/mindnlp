@@ -13,4 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """mindnlp nn"""
-from .parameter import Parameter
+from . import utils, functional, init
+from .modules import *

@@ -29,8 +29,8 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 
 if is_mindspore_available():
-    import mindspore as ms
-    from mindspore import nn, ops, context
+    import mindspore
+    from mindnlp.core import nn
 
     from mindnlp.transformers import (
         FocalNetBackbone,
@@ -278,9 +278,9 @@ class FocalNetModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes[:-1]:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def check_hidden_states_output(self, inputs_dict, config, model_class, image_size):
         model = model_class(config)
@@ -379,7 +379,7 @@ class FocalNetModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.cells_and_names():
+            for name, param in model.named_parameters():
                 if "embeddings" not in name and param.requires_grad:
                     self.assertIn(
                         ((param.data.mean() * 1e9).round() / 1e9).item(),
@@ -412,7 +412,7 @@ class FocalNetModelIntegrationTest(unittest.TestCase):
         expected_shape = ((1, 1000))
         self.assertEqual(outputs.logits.shape, expected_shape)
         print("my:",outputs.logits[0, :3].asnumpy())
-        expected_slice = ms.tensor([0.2166, -0.4368, 0.2191])
+        expected_slice = mindspore.tensor([0.2166, -0.4368, 0.2191])
         self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
         self.assertTrue(outputs.logits.argmax(axis=-1).item(), 281)
 

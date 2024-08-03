@@ -35,16 +35,16 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import GPTNeoXTokenizerFast
-
-    >>> tokenizer = GPTNeoXTokenizerFast.from_pretrained("openai-community/gpt2")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+    Example:
+        ```python
+        >>> from transformers import GPTNeoXTokenizerFast
+        ...
+        >>> tokenizer = GPTNeoXTokenizerFast.from_pretrained("openai-community/gpt2")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -103,7 +103,7 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
         **kwargs,
     ):
         """Initialize a new instance of the GPTNeoXTokenizerFast class.
-        
+
         Args:
             self (GPTNeoXTokenizerFast): The instance of the class.
             vocab_file (str, optional): The file path to the vocabulary file. Defaults to None.
@@ -116,10 +116,10 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
             add_bos_token (bool, optional): Whether to add the beginning of sentence token. Defaults to False.
             add_eos_token (bool, optional): Whether to add the end of sentence token. Defaults to False.
             add_prefix_space (bool, optional): Whether to add prefix space. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -153,17 +153,17 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     def add_eos_token(self):
         """
         Adds an end-of-sequence (EOS) token to the tokenizer.
-        
+
         Args:
             self: The current instance of the GPTNeoXTokenizerFast class.
                 Type: GPTNeoXTokenizerFast
                 Purpose: Represents the tokenizer instance to which the end-of-sequence token is added.
-        
+
         Returns:
-            None. The method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return self._add_eos_token
 
@@ -171,18 +171,19 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     def add_bos_token(self):
         """
         Adds a beginning of sentence (BOS) token to the tokenizer.
-        
+
         Args:
             self: An instance of the GPTNeoXTokenizerFast class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method adds a BOS token to the tokenizer. The BOS token is used to indicate the start of a sentence or a sequence.
-        
+
+        This method adds a BOS token to the tokenizer.
+        The BOS token is used to indicate the start of a sentence or a sequence.
+
         Note:
             The BOS token is specific to the GPTNeoXTokenizerFast class and cannot be used with other tokenizers.
         """
@@ -192,18 +193,18 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     def add_eos_token(self, value):
         """
         Method to set the flag for adding an end-of-sequence token in the GPTNeoXTokenizerFast class.
-        
+
         Args:
             self (GPTNeoXTokenizerFast): An instance of the GPTNeoXTokenizerFast class.
                 Represents the tokenizer object on which the end-of-sequence token flag is being set.
             value (bool): A boolean value indicating whether to add an end-of-sequence token.
                 If True, an end-of-sequence token will be added; if False, it will not be added.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self._add_eos_token = value
         self.update_post_processor()
@@ -212,34 +213,39 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     def add_bos_token(self, value):
         """
         Sets the value of the 'add_bos_token' attribute and updates the post-processor.
-        
+
         Args:
             self (GPTNeoXTokenizerFast): The instance of the GPTNeoXTokenizerFast class.
             value: The new value to be assigned to the 'add_bos_token' attribute.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor
-method.
-        
-            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of
-each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
-        
-            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any
-necessary adjustments to the post-processing logic, if required.
-        
-            Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the resulting tokenized sequences.
-        
-        Example usage:
+            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class.
+            It allows setting a new value for the attribute and automatically triggers the update_post_processor method.
+
+            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization.
+            When 'add_bos_token' is set to True, a BOS token will be added at the beginning of each tokenized sequence.
+            When 'add_bos_token' is set to False, no BOS token will be added.
+
+            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the
+            post-processor based on the new value. The update_post_processor method handles any necessary adjustments
+            to the post-processing logic, if required.
+
+            Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the
+            resulting tokenized sequences.
+
+        Example:
+            ```python
             >>> tokenizer = GPTNeoXTokenizerFast()
             >>> tokenizer.add_bos_token = True
-        
-            In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True, which enables the addition of BOS tokens during tokenization.
+            ```
+            In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True,
+            which enables the addition of BOS tokens during tokenization.
         """
         self._add_bos_token = value
         self.update_post_processor()
@@ -349,9 +355,9 @@ necessary adjustments to the post-processing logic, if required.
             Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
         
         Raises:
-            - IOError: If there are issues with saving the vocabulary files to the specified directory.
-            - ValueError: If the provided save_directory is invalid or inaccessible.
-            - TypeError: If the provided filename_prefix is not a string.
+            IOError: If there are issues with saving the vocabulary files to the specified directory.
+            ValueError: If the provided save_directory is invalid or inaccessible.
+            TypeError: If the provided filename_prefix is not a string.
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

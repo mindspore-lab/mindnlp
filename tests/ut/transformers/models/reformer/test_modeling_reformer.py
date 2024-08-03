@@ -32,7 +32,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, Parameter
+    from mindspore import Parameter
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -262,20 +263,20 @@ class ReformerModelTester:
         # normal padded
         attn_mask = ops.cat(
             [ops.ones_like(half_input_ids), ops.zeros_like(half_input_ids)],
-            axis=-1,
+            dim=-1,
         )
         input_ids_padded = ops.cat(
             [half_input_ids, ids_tensor((self.batch_size, half_seq_len), self.vocab_size)],
-            axis=-1,
+            dim=-1,
         )
 
         # shifted padded
         input_ids_roll = ops.cat(
             [half_input_ids, ids_tensor((self.batch_size, half_seq_len), self.vocab_size)],
-            axis=-1,
+            dim=-1,
         )
-        input_ids_roll = mindspore.numpy.roll(input_ids_roll, roll, axis=-1)
-        attn_mask_roll = mindspore.numpy.roll(attn_mask, roll, axis=-1)
+        input_ids_roll = ops.roll(input_ids_roll, roll, dims=-1)
+        attn_mask_roll = ops.roll(attn_mask, roll, dims=-1)
 
         output_padded = model(input_ids_padded, attention_mask=attn_mask)[0][:, :half_seq_len]
         output_padded_rolled = model(input_ids_roll, attention_mask=attn_mask_roll)[0][:, roll : half_seq_len + roll]

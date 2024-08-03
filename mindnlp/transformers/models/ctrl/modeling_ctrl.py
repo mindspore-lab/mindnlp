@@ -17,21 +17,17 @@
 
 from typing import Optional, Tuple, Union
 
+import math
 import mindspore
-import numpy as np
-from mindspore import nn, ops
-from mindspore.common.initializer import Normal, initializer
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.utils import logging
-
-from ...modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
-    SequenceClassifierOutput,
-)
+from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import Conv1D, find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import logging
 from .configuration_ctrl import CTRLConfig
+
 
 logger = logging.get_logger(__name__)
 
@@ -50,19 +46,21 @@ def positional_encoding(position, d_model_size, dtype):
         ops.arange(d_model_size, dtype=mindspore.int64).to(dtype).unsqueeze(0),
         d_model_size,
     )
-    sines = ops.sin(angle_rads[:, 0::2])
-    cosines = ops.cos(angle_rads[:, 1::2])
 
-    pos_encoding = ops.cat([sines, cosines], axis=-1)
+    # use index_select instead of angle_rads[..., 0::2] to avoid lag
+    sines = ops.sin(ops.index_select(angle_rads, -1, ops.arange(0, angle_rads.shape[-1], 2)))
+    cosines = ops.cos(ops.index_select(angle_rads, -1, ops.arange(1, angle_rads.shape[-1], 2)))
+
+    pos_encoding = ops.cat([sines, cosines], dim=-1)
     return pos_encoding
 
 
 def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=None):
     # calculate attention
-    matmul_qk = ops.matmul(q, k.permute(0, 1, 3, 2))
+    matmul_qk = ops.bmm(q, k.permute(0, 1, 3, 2)) # fix ms 2.2 segment fault
 
     dk = k.shape[-1]
-    scaled_attention_logits = matmul_qk / np.sqrt(dk)
+    scaled_attention_logits = matmul_qk / math.sqrt(dk)
 
     if mask is not None:
         nd, ns = scaled_attention_logits.shape[-2], scaled_attention_logits.shape[-1]
@@ -72,7 +70,7 @@ def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=N
         # Apply the attention mask
         scaled_attention_logits = scaled_attention_logits + attention_mask
 
-    attention_weights = ops.softmax(scaled_attention_logits, axis=-1)
+    attention_weights = ops.softmax(scaled_attention_logits, dim=-1)
 
     # Mask heads if we want to
     if head_mask is not None:
@@ -83,7 +81,7 @@ def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=N
     return output, attention_weights
 
 
-class MultiHeadAttention(nn.Cell):
+class MultiHeadAttention(nn.Module):
     def __init__(self, d_model_size, num_heads):
         super().__init__()
         self.num_heads = num_heads
@@ -91,26 +89,24 @@ class MultiHeadAttention(nn.Cell):
 
         self.depth = int(d_model_size / self.num_heads)
 
-        self.Wq = nn.Dense(d_model_size, d_model_size)
-        self.Wk = nn.Dense(d_model_size, d_model_size)
-        self.Wv = nn.Dense(d_model_size, d_model_size)
+        self.Wq = nn.Linear(d_model_size, d_model_size)
+        self.Wk = nn.Linear(d_model_size, d_model_size)
+        self.Wv = nn.Linear(d_model_size, d_model_size)
 
-        self.dense = nn.Dense(d_model_size, d_model_size)
+        self.dense = nn.Linear(d_model_size, d_model_size)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
         attention_head_size = self.d_model_size // self.num_heads
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(
-            heads, self.num_heads, attention_head_size, self.pruned_heads
-        )
+        heads, index = find_pruneable_heads_and_indices(heads, self.num_heads, attention_head_size, self.pruned_heads)
 
         # Prune linear layers
         self.Wq = prune_linear_layer(self.Wq, index)
         self.Wk = prune_linear_layer(self.Wk, index)
         self.Wv = prune_linear_layer(self.Wv, index)
-        self.dense = prune_linear_layer(self.dense, index, axis=1)
+        self.dense = prune_linear_layer(self.dense, index, dim=1)
 
         # Update hyper params
         self.num_heads = self.num_heads - len(heads)
@@ -118,10 +114,10 @@ class MultiHeadAttention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def split_into_heads(self, x, batch_size):
-        x = x.reshape((batch_size, -1, self.num_heads, self.depth))
+        x = x.reshape(batch_size, -1, self.num_heads, self.depth)
         return x.permute([0, 2, 1, 3])
 
-    def construct(
+    def forward(
         self,
         v,
         k,
@@ -144,8 +140,8 @@ class MultiHeadAttention(nn.Cell):
         v = self.split_into_heads(v, batch_size)
         if layer_past is not None:
             past_key, past_value = layer_past[0], layer_past[1]
-            k = ops.cat((past_key, k), axis=-2)
-            v = ops.cat((past_value, v), axis=-2)
+            k = ops.cat((past_key, k), dim=-2)
+            v = ops.cat((past_value, v), dim=-2)
 
         if use_cache is True:
             present = ops.stack((k, v))
@@ -155,9 +151,7 @@ class MultiHeadAttention(nn.Cell):
         output = scaled_dot_product_attention(q, k, v, mask, attention_mask, head_mask)
         scaled_attention = output[0].permute([0, 2, 1, 3])
         attn = output[1]
-        original_size_attention = scaled_attention.reshape(
-            (batch_size, -1, self.d_model_size)
-        )
+        original_size_attention = scaled_attention.reshape(batch_size, -1, self.d_model_size)
         output = self.dense(original_size_attention)
 
         outputs = (output, present)
@@ -167,33 +161,24 @@ class MultiHeadAttention(nn.Cell):
 
 
 def point_wise_feed_forward_network(d_model_size, dff):
-    return nn.SequentialCell(
-        nn.Dense(d_model_size, dff), nn.ReLU(), nn.Dense(dff, d_model_size)
-    )
+    return nn.Sequential(nn.Linear(d_model_size, dff), nn.ReLU(), nn.Linear(dff, d_model_size))
 
 
-class EncoderLayer(nn.Cell):
+class EncoderLayer(nn.Module):
     def __init__(self, d_model_size, num_heads, dff, rate=0.1):
         super().__init__()
 
         self.multi_head_attention = MultiHeadAttention(d_model_size, num_heads)
         self.ffn = point_wise_feed_forward_network(d_model_size, dff)
 
-        self.layernorm1 = nn.LayerNorm([d_model_size], epsilon=1e-6)
-        self.layernorm2 = nn.LayerNorm([d_model_size], epsilon=1e-6)
+        self.layernorm1 = nn.LayerNorm(d_model_size, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(d_model_size, eps=1e-6)
 
-        self.dropout1 = nn.Dropout(p=rate)
-        self.dropout2 = nn.Dropout(p=rate)
+        self.dropout1 = nn.Dropout(rate)
+        self.dropout2 = nn.Dropout(rate)
 
-    def construct(
-        self,
-        x,
-        mask,
-        layer_past=None,
-        attention_mask=None,
-        head_mask=None,
-        use_cache=False,
-        output_attentions=False,
+    def forward(
+        self, x, mask, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False
     ):
         normed = self.layernorm1(x)
         attn_outputs = self.multi_head_attention(
@@ -229,34 +214,21 @@ class CTRLPreTrainedModel(PreTrainedModel):
     config_class = CTRLConfig
     base_model_prefix = "transformer"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(module, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.has_bias:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(
-                0.0, self.config.initializer_range, cell.weight.shape
-            )
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class CTRLModel(CTRLPreTrainedModel):
@@ -266,24 +238,15 @@ class CTRLModel(CTRLPreTrainedModel):
         self.d_model_size = config.n_embd
         self.num_layers = config.n_layer
 
-        self.pos_encoding = positional_encoding(
-            config.n_positions, self.d_model_size, mindspore.float32
-        )
+        self.pos_encoding = positional_encoding(config.n_positions, self.d_model_size, mindspore.float32)
 
         self.w = nn.Embedding(config.vocab_size, config.n_embd)
 
-        self.dropout = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList(
-            [
-                EncoderLayer(
-                    config.n_embd, config.n_head, config.dff, config.resid_pdrop
-                )
-                for _ in range(config.n_layer)
-            ]
+        self.dropout = nn.Dropout(config.embd_pdrop)
+        self.h = nn.ModuleList(
+            [EncoderLayer(config.n_embd, config.n_head, config.dff, config.resid_pdrop) for _ in range(config.n_layer)]
         )
-        self.layernorm = nn.LayerNorm(
-            [config.n_embd], epsilon=config.layer_norm_epsilon
-        )
+        self.layernorm = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -301,7 +264,7 @@ class CTRLModel(CTRLPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].multi_head_attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -337,25 +300,15 @@ class CTRLModel(CTRLPreTrainedModel):
         >>> list(last_hidden_states.shape)
         [1, 5, 1280]
         ```"""
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time"
-            )
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
@@ -373,9 +326,7 @@ class CTRLModel(CTRLPreTrainedModel):
         else:
             past_length = past_key_values[0][0].shape[-2]
         if position_ids is None:
-            position_ids = ops.arange(
-                past_length, input_shape[-1] + past_length, dtype=mindspore.int64
-            )
+            position_ids = ops.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)
 
         # Attention mask.
@@ -396,9 +347,7 @@ class CTRLModel(CTRLPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * mindspore.Tensor(
-                np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
-            )
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
@@ -406,7 +355,7 @@ class CTRLModel(CTRLPreTrainedModel):
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
             token_type_embeds = self.w(token_type_ids)
-            token_type_embeds *= np.sqrt(self.d_model_size)
+            token_type_embeds *= math.sqrt(self.d_model_size)
         else:
             token_type_embeds = 0
 
@@ -416,7 +365,7 @@ class CTRLModel(CTRLPreTrainedModel):
         seq_len = input_shape[-1]
         mask = ops.triu(ops.ones(seq_len + past_length, seq_len + past_length), 1)
 
-        inputs_embeds *= np.sqrt(self.d_model_size)
+        inputs_embeds *= math.sqrt(self.d_model_size)
 
         # `self.pos_encoding` won't be sent to the correct device along the model, so we do it manually.
         pos_embeds = self.pos_encoding[position_ids, :]
@@ -452,11 +401,7 @@ class CTRLModel(CTRLPreTrainedModel):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(
-                v
-                for v in [hidden_states, presents, all_hidden_states, all_attentions]
-                if v is not None
-            )
+            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_attentions] if v is not None)
 
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
@@ -472,7 +417,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = CTRLModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=True)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -483,9 +428,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, use_cache=None, **kwargs
-    ):
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, use_cache=None, **kwargs):
         # only last tokens for inputs_ids if past is defined in kwargs
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -499,13 +442,9 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
 
             input_ids = input_ids[:, remove_prefix_length:]
 
-        return {
-            "input_ids": input_ids,
-            "past_key_values": past_key_values,
-            "use_cache": use_cache,
-        }
+        return {"input_ids": input_ids, "past_key_values": past_key_values, "use_cache": use_cache}
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -521,7 +460,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
@@ -553,9 +492,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         >>> list(outputs.logits.shape)
         [1, 5, 246534]
         ```"""
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -581,9 +518,8 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(
-                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1)
-            )
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -612,17 +548,18 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         )
 
 
+
 class CTRLForSequenceClassification(CTRLPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = CTRLModel(config)
-        self.classifier = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.classifier = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -638,7 +575,7 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -710,15 +647,13 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
 
         >>> num_labels = len(model.config.id2label)
         >>> labels = torch.nn.functional.one_hot(torch.tensor([predicted_class_id]), num_classes=num_labels).to(
-        ...     torch.float
+        ...     mindspore.float32
         ... )
         >>> loss = model(**inputs, labels=labels).loss
         >>> loss.backward()  # doctest: +IGNORE_RESULT
         ```"""
 
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -743,51 +678,46 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
             batch_size, sequence_length = inputs_embeds.shape[:2]
 
         if self.config.pad_token_id is None and batch_size != 1:
-            raise ValueError(
-                "Cannot handle batch sizes > 1 if no padding token is defined."
-            )
+            raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
 
         if self.config.pad_token_id is None:
             sequence_lengths = -1
         else:
             if input_ids is not None:
                 # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
-                sequence_lengths = (
-                    ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
-                )
+                sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
             else:
                 sequence_lengths = -1
-                logger.warning(
+                logger.warning_once(
                     f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        pooled_logits = logits[tuple(range(batch_size)), sequence_lengths]
 
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (
-                    labels.dtype in (mindspore.int32, mindspore.int64)
-                ):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
-                    pooled_logits.view(-1, self.num_labels), labels.view(-1)
-                )
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -798,7 +728,6 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
-
 
 __all__ = [
     "CTRLForSequenceClassification",
