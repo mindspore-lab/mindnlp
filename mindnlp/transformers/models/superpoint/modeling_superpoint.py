@@ -13,8 +13,10 @@
 # limitations under the License.
 # ============================================================================
 """PyTorch SuperPoint model."""
-import mindspore
+
 from dataclasses import dataclass
+from typing import Optional, Tuple, Union
+import mindspore
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -22,7 +24,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from typing import Optional, Tuple, Union
+
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
