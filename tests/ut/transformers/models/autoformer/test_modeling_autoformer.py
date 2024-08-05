@@ -249,6 +249,10 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester.check_encoder_decoder_model_standalone(
             *config_and_inputs)
 
+    @unittest.skip(reason="Model does not have input embeddings")
+    def test_model_get_set_embeddings(self):
+        pass
+
     @unittest.skip(reason="Model has no tokens embeddings")
     def test_resize_tokens_embeddings(self):
         pass

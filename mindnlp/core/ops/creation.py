@@ -5,6 +5,7 @@ from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import USE_PYBOOST
+from ..utils import get_default_dtype
 
 def as_strided(self, size, stride, storage_offset=None):
     if len(size) != len(stride):
@@ -93,8 +94,10 @@ def eye(n, m=None, *, dtype=None):
 
 # empty
 def empty(*size, dtype=None):
+    if isinstance(size[0], (tuple, list)):
+        size = size[0]
     if dtype is None:
-        dtype = mindspore.float32
+        dtype = get_default_dtype()
     return CTensor(dtype, size)
 
 # empty_like
@@ -111,6 +114,8 @@ def full(size, fill_value, *, dtype=None):
 
 # full_like
 def full_like(input, fill_value, *, dtype=None):
+    if dtype is None:
+        dtype = input.dtype
     return full(input.shape, fill_value, dtype=dtype)
 
 # quantize_per_tensor

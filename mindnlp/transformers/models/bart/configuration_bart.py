@@ -1,5 +1,4 @@
 # coding=utf-8
-# Copyright 2023 Huawei Technologies Co., Ltd
 # Copyright 2021 The Fairseq Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" BART model configuration"""
+"""BART model configuration"""
+
 import warnings
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-BART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/bart-large": "https://hf-mirror.com/facebook/bart-large/resolve/main/config.json",
-    # See all BART models at https://hf-mirror.com/models?filter=bart
-}
 
 
 class BartConfig(PretrainedConfig):
@@ -34,7 +28,7 @@ class BartConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BartModel`]. It is used to instantiate a BART
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the BART
-    [facebook/bart-large](https://hf-mirror.com/facebook/bart-large) architecture.
+    [facebook/bart-large](https://huggingface.co/facebook/bart-large) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -91,19 +85,20 @@ class BartConfig(PretrainedConfig):
             `eos_token_id`.
 
     Example:
-        ```python
-        >>> from transformers import BartConfig, BartModel
 
-        >>> # Initializing a BART facebook/bart-large style configuration
-        >>> configuration = BartConfig()
+    ```python
+    >>> from transformers import BartConfig, BartModel
 
-        >>> # Initializing a model (with random weights) from the facebook/bart-large style configuration
-        >>> model = BartModel(configuration)
+    >>> # Initializing a BART facebook/bart-large style configuration
+    >>> configuration = BartConfig()
 
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+    >>> # Initializing a model (with random weights) from the facebook/bart-large style configuration
+    >>> model = BartModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "bart"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -138,43 +133,6 @@ class BartConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
-        """
-        Initializes a new instance of BartConfig.
-        
-        Args:
-            vocab_size (int, optional): The size of the vocabulary. Defaults to 50265.
-            max_position_embeddings (int, optional): The maximum position index. Defaults to 1024.
-            encoder_layers (int, optional): The number of encoder layers. Defaults to 12.
-            encoder_ffn_dim (int, optional): The dimension of the encoder's feedforward network. Defaults to 4096.
-            encoder_attention_heads (int, optional): The number of encoder attention heads. Defaults to 16.
-            decoder_layers (int, optional): The number of decoder layers. Defaults to 12.
-            decoder_ffn_dim (int, optional): The dimension of the decoder's feedforward network. Defaults to 4096.
-            decoder_attention_heads (int, optional): The number of decoder attention heads. Defaults to 16.
-            encoder_layerdrop (float, optional): The probability of dropping an encoder layer. Defaults to 0.0.
-            decoder_layerdrop (float, optional): The probability of dropping a decoder layer. Defaults to 0.0.
-            activation_function (str, optional): The activation function. Defaults to 'gelu'.
-            d_model (int, optional): The model dimension. Defaults to 1024.
-            dropout (float, optional): The dropout probability. Defaults to 0.1.
-            attention_dropout (float, optional): The attention dropout probability. Defaults to 0.0.
-            activation_dropout (float, optional): The activation dropout probability. Defaults to 0.0.
-            init_std (float, optional): The standard deviation for weight initialization. Defaults to 0.02.
-            classifier_dropout (float, optional): The classifier dropout probability. Defaults to 0.0.
-            scale_embedding (bool, optional): Whether to scale embeddings. Defaults to False.
-            use_cache (bool, optional): Whether to use cache. Defaults to True.
-            num_labels (int, optional): The number of labels. Defaults to 3.
-            pad_token_id (int, optional): The id of the padding token. Defaults to 1.
-            bos_token_id (int, optional): The id of the beginning-of-sequence token. Defaults to 0.
-            eos_token_id (int, optional): The id of the end-of-sequence token. Defaults to 2.
-            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder. Defaults to True.
-            decoder_start_token_id (int, optional): The id of the decoder start token. Defaults to 2.
-            forced_eos_token_id (int, optional): The id of the forced end-of-sequence token. Defaults to 2.
-        
-        Returns:
-            None.
-        
-        Raises:
-            Warning: If the config does not include forced_bos_token_id in future versions.
-        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model
@@ -208,7 +166,7 @@ class BartConfig(PretrainedConfig):
         )
 
         # ensure backward compatibility for BART CNN models
-        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False):
+        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False): # pylint: disable=access-member-before-definition
             self.forced_bos_token_id = self.bos_token_id
             warnings.warn(
                 f"Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions. "

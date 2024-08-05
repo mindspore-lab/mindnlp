@@ -60,7 +60,7 @@ class Conv1D(nn.Module):
         
         Args:
             self (Conv1D): An instance of the Conv1D class.
-            x (torch.Tensor): The input tensor on which the convolution operation is applied. 
+            x (mindspore.Tensor): The input tensor on which the convolution operation is applied. 
                 Should have a shape of (batch_size, sequence_length, input_channels).
                 
         Returns:

@@ -1,11 +1,91 @@
 # mypy: allow-untyped-defs
 """This file contains utilities for initializing neural network parameters."""
 import math
+import numbers
 import warnings
-
+import numpy as np
+import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Initializer, _init_random_uniform, _assignment, \
+from mindspore.common.initializer import Initializer, _INITIALIZER_ALIAS, _init_random_uniform, _assignment, \
     Normal, Constant, TruncatedNormal, Dirac, Orthogonal, Sparse
+
+
+def initializer(init, shape=None, dtype=mindspore.float32):
+    """
+    Create and initialize a tensor.
+
+    Args:
+        init (Union[Tensor, str, Initializer, numbers.Number]): Initialize value.
+
+            - `str`: The `init` should be the alias of the class inheriting from `Initializer` and the corresponding
+              class will be called in practice. The value of `init` can be ``"normal"``, ``"ones"`` or
+              ``"zeros"``, etc.
+
+            - `Initializer`: The `init` should be the class inheriting from `Initializer` to initialize tensor.
+
+            - `numbers.Number`: The `Constant` will be called to initialize tensor.
+
+            - `Tensor`: The tensor will be called to initialize tensor.
+
+        shape (Union[tuple, list, int]): The shape of the initialized tensor. Default: ``None`` .
+        dtype (:class:`mindspore.dtype`): The type of data in initialized tensor. Default: ``mstype.float32`` .
+
+    Returns:
+        Tensor, return is Tensor object.
+
+    Raises:
+        TypeError: The type of the argument 'init' is not correct.
+        ValueError: The shape of the tensor which is passed through 'init' is not the same as that passed by 'shape'.
+
+
+    Examples:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindspore.common.initializer import initializer, One
+        >>> from mindspore import Parameter
+        >>> data = Tensor(np.zeros([1, 2, 3]), mindspore.float32)
+        >>> w1 = Parameter(initializer(data, [1, 2, 3], mindspore.float32))
+        >>> w2 = Parameter(initializer('ones', [1, 2, 3], mindspore.float32))
+        >>> w3 = Parameter(initializer(One(), [1, 2, 3], mindspore.float32))
+        >>> w4 = Parameter(initializer(0, [1, 2, 3], mindspore.float32))
+    """
+    if not isinstance(init, (Tensor, numbers.Number, str, Initializer)):
+        raise TypeError("For 'initializer', the type of the 'init' argument should be 'Tensor', 'number', 'string' "
+                        "or 'initializer', but got {}.".format(type(init)))
+
+    if isinstance(init, Tensor):
+        init_shape = init.shape
+        shape = shape if isinstance(shape, (tuple, list)) else [shape]
+        if shape is not None and init_shape != tuple(shape):
+            raise ValueError("For 'initializer', the shape of the 'init' argument should be same as "
+                             "the argument 'shape', but got the "
+                             "'init' shape {} and the 'shape' {}.".format(list(init.shape), shape))
+        return init
+
+    if isinstance(shape, list):
+        shape = tuple(shape)
+    elif isinstance(shape, numbers.Number):
+        shape = (shape,)
+
+    for value in shape if shape is not None else ():
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError(f"For 'initializer', the argument 'shape' is invalid, the value of 'shape' "
+                             f"must be positive integer, "
+                             f"but got {shape}")
+
+    if isinstance(init, str):
+        class_name = _INITIALIZER_ALIAS.get(init.lower())
+        if class_name is None:
+            raise ValueError(f"For 'initializer', the class corresponding to '{init}' was not found.")
+        init = class_name()
+    elif isinstance(init, numbers.Number):
+        init = Constant(init)
+    shape = shape if shape is not None else init.shape
+    data = np.ndarray(shape, dtype=mindspore.dtype_to_nptype(dtype))
+    init(data)
+    tensor = Tensor(data)
+    return tensor
 
 
 class Uniform(Initializer):
@@ -124,6 +204,7 @@ def uniform_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Uniform(a, b), tensor.shape, tensor.dtype))
     return tensor
 
@@ -145,6 +226,7 @@ def normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.normal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Normal(std, mean), tensor.shape, tensor.dtype))
     return tensor
 
@@ -175,6 +257,7 @@ def trunc_normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.trunc_normal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(TruncatedNormal(std, mean, a, b), tensor.shape, tensor.dtype))
     return tensor
 
@@ -190,6 +273,7 @@ def constant_(tensor: Tensor, val: float) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.constant_(w, 0.3)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Constant(val), tensor.shape, tensor.dtype))
     return tensor
 
@@ -204,6 +288,7 @@ def ones_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.ones_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer('ones', tensor.shape, tensor.dtype))
     return tensor
 
@@ -218,6 +303,7 @@ def zeros_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.zeros_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer('zeros', tensor.shape, tensor.dtype))
     return tensor
 
@@ -238,12 +324,13 @@ def dirac_(tensor, groups=1):
         >>> w = torch.empty(3, 24, 5, 5)
         >>> nn.init.dirac_(w, 3)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Dirac(groups), tensor.shape, tensor.dtype))
     return tensor
 
 
 def _calculate_fan_in_and_fan_out(tensor):
-    dimensions = tensor.dim()
+    dimensions = tensor.ndim
     if dimensions < 2:
         raise ValueError(
             "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
@@ -252,7 +339,7 @@ def _calculate_fan_in_and_fan_out(tensor):
     num_input_fmaps = tensor.shape[1]
     num_output_fmaps = tensor.shape[0]
     receptive_field_size = 1
-    if tensor.dim() > 2:
+    if tensor.ndim > 2:
         # math.prod is not always available, accumulate the product manually
         # we could use functools.reduce but that is not supported by TorchScript
         for s in tensor.shape[2:]:
@@ -475,6 +562,7 @@ def orthogonal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.orthogonal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Orthogonal(gain), tensor.shape, tensor.dtype))
     return tensor
 
@@ -501,6 +589,7 @@ def sparse_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.sparse_(w, sparsity=0.1)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Sparse(sparsity, std), tensor.shape, tensor.dtype))
     return tensor
 

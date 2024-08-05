@@ -971,8 +971,8 @@ class NearestConvUpsampler(nn.Module):
             # TODO:self.conv_up2(ops.interpolate(sequence_output, scale_factor=2.0, mode="nearest", recompute_scale_factor=True))
             self.conv_up2(ops.interpolate(sequence_output, scale_factor=2, mode="nearest", recompute_scale_factor=True))
         )
-        reforwardion = self.final_convolution(self.lrelu(self.conv_hr(sequence_output)))
-        return reforwardion
+        reconstruction = self.final_convolution(self.lrelu(self.conv_hr(sequence_output)))
+        return reconstruction
 
 
 class PixelShuffleAuxUpsampler(nn.Module):
@@ -998,9 +998,9 @@ class PixelShuffleAuxUpsampler(nn.Module):
             self.upsample(sequence_output)[:, :, : height * self.upscale, : width * self.upscale]
             + bicubic[:, :, : height * self.upscale, : width * self.upscale]
         )
-        reforwardion = self.final_convolution(sequence_output)
+        reconstruction = self.final_convolution(sequence_output)
 
-        return reforwardion, aux
+        return reconstruction, aux
 
 
 
@@ -1064,7 +1064,7 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
          >>> with torch.no_grad():
          ...     outputs = model(**inputs)
 
-         >>> output = outputs.reforwardion.data.squeeze().float().cpu().clamp_(0, 1).numpy()
+         >>> output = outputs.reconstruction.data.squeeze().float().cpu().clamp_(0, 1).numpy()
          >>> output = np.moveaxis(output, source=0, destination=-1)
          >>> output = (output * 255.0).round().astype(np.uint8)  # float32 to uint8
          >>> # you can visualize `output` with `Image.fromarray`
@@ -1094,27 +1094,27 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
         sequence_output = outputs[0]
 
         if self.upsampler in ["pixelshuffle", "pixelshuffledirect", "nearest+conv"]:
-            reforwardion = self.upsample(sequence_output)
+            reconstruction = self.upsample(sequence_output)
         elif self.upsampler == "pixelshuffle_aux":
-            reforwardion, aux = self.upsample(sequence_output, bicubic, height, width)
+            reconstruction, aux = self.upsample(sequence_output, bicubic, height, width)
             aux = aux / self.swin2sr.img_range + self.swin2sr.mean
         else:
-            reforwardion = pixel_values + self.final_convolution(sequence_output)
+            reconstruction = pixel_values + self.final_convolution(sequence_output)
 
-        reforwardion = reforwardion / self.swin2sr.img_range + self.swin2sr.mean
-        reforwardion = reforwardion[:, :, : height * self.upscale, : width * self.upscale]
+        reconstruction = reconstruction / self.swin2sr.img_range + self.swin2sr.mean
+        reconstruction = reconstruction[:, :, : height * self.upscale, : width * self.upscale]
 
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not supported at the moment")
 
         if not return_dict:
-            output = (reforwardion,) + outputs[1:]
+            output = (reconstruction,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return ImageSuperResolutionOutput(
             loss=loss,
-            reforwardion=reforwardion,
+            reconstruction=reconstruction,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
