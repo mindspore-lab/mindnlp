@@ -18,8 +18,8 @@ import math
 from typing import Dict, List, Optional, Tuple, Union
 import mindspore
 
-from mindnlp.mindnlp.core import nn,ops,no_grad
-from mindnlp.mindnlp.core.nn import functional as F
+from mindnlp.core import nn,ops,no_grad
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN,get_activation
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -1622,7 +1622,7 @@ class Pix2StructForConditionalGeneration(Pix2StructPreTrainedModel):
         flattened_patches: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         decoder_input_ids: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[ops.BoolTensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         decoder_head_mask: Optional[mindspore.Tensor] = None,
         cross_attn_head_mask: Optional[mindspore.Tensor] = None,
@@ -1764,7 +1764,7 @@ class Pix2StructForConditionalGeneration(Pix2StructPreTrainedModel):
         input_ids,
         flattened_patches: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[ops.BoolTensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
         past_key_values=None,
         head_mask=None,
         decoder_head_mask=None,

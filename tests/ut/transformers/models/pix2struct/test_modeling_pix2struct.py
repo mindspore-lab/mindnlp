@@ -26,11 +26,11 @@ import requests
 #from modelscope.utils.test_utils import require_torch
 import mindspore
 
-from mindnlp.mindnlp.core import no_grad
-from mindnlp.mindnlp.transformers import Pix2StructConfig
-from mindnlp.mindnlp.transformers.models.pix2struct.configuration_pix2struct import Pix2StructVisionConfig,Pix2StructTextConfig
-from mindnlp.mindnlp.utils import is_vision_available
-from mindnlp.mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available
+from mindnlp.core import no_grad
+from mindnlp.transformers import Pix2StructConfig
+from mindnlp.transformers.models.pix2struct.configuration_pix2struct import Pix2StructVisionConfig,Pix2StructTextConfig
+from mindnlp.utils import is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
     ModelTesterMixin,
@@ -44,9 +44,9 @@ mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.mindnlp.core import nn,ops
+    from mindnlp.core import nn,ops
 
-    from mindnlp.mindnlp.transformers import (
+    from mindnlp.transformers import (
         Pix2StructForConditionalGeneration,
         Pix2StructProcessor,
         Pix2StructTextModel,
