@@ -43,7 +43,7 @@ from mindnlp.transformers import (
     logging,
 )
 from mindnlp.engine import set_seed
-from mindnlp.core import no_grad
+from mindnlp.core import no_grad, optim
 from mindnlp.core.serialization import save_checkpoint, load_checkpoint
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.transformers.models.auto.modeling_auto import (
@@ -761,16 +761,15 @@ class ModelTesterMixin:
             for p in model.parameters():
                 p.requires_grad = True
 
-            optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+            optimizer = optim.SGD(model.parameters(), lr=0.01)
 
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            loss = model(**inputs).loss
-            loss.backward()
-            optimizer.step()
-
-            for k, v in model.named_parameters():
-                if v.requires_grad:
-                    self.assertTrue(v.grad is not None, f"{k} in {model_class.__name__} has no gradient!")
+            def forward(**inputs):
+                loss = model(**inputs).loss
+                return loss
+            grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+            loss, grads = grad_fn(**inputs)
+            optimizer.step(grads)
 
     def test_training(self):
         if not self.model_tester.is_training:

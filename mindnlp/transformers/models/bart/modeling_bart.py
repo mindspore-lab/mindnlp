@@ -507,7 +507,7 @@ class BartPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = 0
+                module.weight[module.padding_idx] = 0
 
     @property
     def dummy_inputs(self):
@@ -977,7 +977,6 @@ class BartModel(BartPreTrainedModel):
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
         self.shared = nn.Embedding(vocab_size, config.d_model, padding_idx)
-
         self.encoder = BartEncoder(config, self.shared)
         self.decoder = BartDecoder(config, self.shared)
 
@@ -1099,7 +1098,7 @@ class BartForConditionalGeneration(BartPreTrainedModel):
     def __init__(self, config: BartConfig):
         super().__init__(config)
         self.model = BartModel(config)
-        self.register_buffer("final_logits_bias", ops.zeros((1, self.model.shared.num_embeddings)))
+        self.register_buffer("final_logits_bias", ops.zeros(1, self.model.shared.num_embeddings))
         self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing

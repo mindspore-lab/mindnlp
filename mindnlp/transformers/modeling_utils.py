@@ -32,11 +32,12 @@ from zipfile import is_zipfile
 
 import mindspore
 from mindspore import Tensor
+from mindspore._c_expression import typing # pylint: disable=no-name-in-module, import-error
 from mindnlp.configs import GENERATOR_SEED
 from mindnlp.core import nn, ops, set_default_dtype, get_default_dtype
 from mindnlp.core.serialization import load, save_checkpoint, load_checkpoint, safe_save_file, safe_load_file
 from mindnlp.core.nn import CrossEntropyLoss, Identity
-from mindnlp.utils.serialization import split_torch_state_dict_into_shards
+from mindnlp.utils.serialization import split_state_dict_into_shards
 
 from .activations import get_activation
 from .configuration_utils import PretrainedConfig
@@ -283,10 +284,6 @@ def shard_checkpoint(
         weights_name (`str`, *optional*, defaults to `"pytorch_model.bin"`):
             The name of the model save file.
     """
-    logger.warning(
-        "Note that `shard_checkpoint` is deprecated and will be removed in v4.44. We recommend you using "
-        "split_torch_state_dict_into_shards from huggingface_hub library"
-    )
     max_shard_size = convert_file_size_to_int(max_shard_size)
 
     sharded_state_dicts = [{}]
@@ -1037,7 +1034,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
             config, ms_dtype=get_default_dtype(), check_device_map=False
         )
         self.config = config
-
         self.name_or_path = config.name_or_path
         self.warnings_issued = {}
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
@@ -1197,7 +1193,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         Note `set_default_dtype` currently only works with floating-point types and asserts if for example,
         `torch.int64` is passed. So if a non-float `dtype` is passed this functions will throw an exception.
         """
-        if not dtype.is_floating_point:
+        if not isinstance(dtype, typing.Float):
             raise ValueError(
                 f"Can't instantiate {cls.__name__} model under dtype={dtype} since it is not a floating point dtype"
             )
@@ -1235,7 +1231,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         """
 
         def make_inputs_require_grads(module, input, output):
-            output.requires_grad_(True)
+            output.requires_grad = True
 
         self._require_grads_hook = self.get_input_embeddings().register_forward_hook(make_inputs_require_grads)
 
@@ -2063,7 +2059,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
             weights_name = ADAPTER_SAFE_WEIGHTS_NAME if safe_serialization else ADAPTER_WEIGHTS_NAME
 
         filename_pattern = weights_name.replace(".bin", "{suffix}.bin").replace(".safetensors", "{suffix}.safetensors")
-        state_dict_split = split_torch_state_dict_into_shards(
+        state_dict_split = split_state_dict_into_shards(
             state_dict, filename_pattern=filename_pattern, max_shard_size=max_shard_size
         )
         # Save index if sharded
@@ -2834,7 +2830,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
             #    weights entry that is of a floating type - we assume all floating dtype weights are of the same dtype
             # we also may have config.ms_dtype available, but we won't rely on it till v5
             dtype_orig = None
-
             if ms_dtype is not None:
                 if isinstance(ms_dtype, str):
                     if ms_dtype == "auto":
@@ -2883,7 +2878,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         with ContextManagers(init_contexts):
             # Let's make sure we don't run the init function of buffer modules
             model = cls(config, *model_args, **model_kwargs)
-
         # make sure we use the model's config since the __init__ call might have copied it
         config = model.config
 

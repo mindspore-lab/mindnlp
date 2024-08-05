@@ -677,7 +677,7 @@ class BatchEncoding(UserDict):
             tensor_type = TensorType(tensor_type)
 
         # Get a function reference for the correct framework
-        if tensor_type == TensorType.M:
+        if tensor_type == TensorType.MINDSPORE:
             from mindnlp.core import ops
 
             is_tensor = ops.is_tensor

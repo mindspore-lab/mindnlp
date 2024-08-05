@@ -42,6 +42,7 @@ from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_
 import safetensors
 import safetensors.numpy
 
+from mindnlp.configs import USE_PYBOOST
 from .nn import Module
 from ..utils import logging
 
@@ -1218,8 +1219,19 @@ def safe_load_file(filename):
         FileNotFoundError: If the specified file 'filename' does not exist.
         ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
     """
+    with safetensors.safe_open(filename, 'np') as f:
+        for key in f.keys():
+            dtype = f.get_tensor(key).dtype
+            break
+
     state_dict = safetensors.numpy.load_file(filename)
-    return {k: mindspore.Parameter(v) for k, v in state_dict.items()}
+    if USE_PYBOOST or dtype != bfloat16:
+        out_states = {k: mindspore.Parameter(v) for k, v in state_dict.items()}
+        return out_states
+    else:
+        out_states = {k: mindspore.Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
+        return out_states
+
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """
