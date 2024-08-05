@@ -11,8 +11,6 @@ from .reduction import any
 from .comparison import eq
 from .creation import arange
 
-from .creation import arange
-
 # atleast_2d
 
 
