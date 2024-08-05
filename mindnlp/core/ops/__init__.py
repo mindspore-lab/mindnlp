@@ -1,4 +1,5 @@
 """core ops like torch funcional api"""
+from . import optim
 from .array import *
 from .blas import *
 from .comparison import *
@@ -9,3 +10,4 @@ from .reduction import *
 from .other import *
 from .tensor import *
 from .fft_op import *
+from ._inner import assign

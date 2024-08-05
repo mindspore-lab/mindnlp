@@ -211,8 +211,8 @@ def parse_size_to_int(size_as_str: str) -> int:
 
     return int(value * multiplier)
 
-def split_torch_state_dict_into_shards(
-    state_dict: Dict[str, "torch.Tensor"],
+def split_state_dict_into_shards(
+    state_dict: Dict[str, "mindspore.Tensor"],
     *,
     filename_pattern: str = FILENAME_PATTERN,
     max_shard_size: Union[int, str] = MAX_SHARD_SIZE,
@@ -279,7 +279,7 @@ def split_torch_state_dict_into_shards(
     )
 
 
-def get_storage_id(tensor: "torch.Tensor"):
+def get_storage_id(tensor: "mindspore.Tensor"):
     """
     Return unique identifier to a tensor storage.
 

@@ -191,6 +191,8 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
 def pad(input, pad, mode='constant', value=0.0):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.pad(input, pad, mode, value)
+    if mode in ['reflect', 'circular']:
+        return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
