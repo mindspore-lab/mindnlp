@@ -20,7 +20,6 @@ import os
 import warnings
 from collections import OrderedDict
 from typing import Dict, Optional, Union
-
 # Build the list of all image processors
 from mindnlp.utils import logging, get_file_from_repo
 from mindnlp.configs import CONFIG_NAME, IMAGE_PROCESSOR_NAME
@@ -91,7 +90,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
         ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
         # ("pvt_v2", "PvtImageProcessor"),
