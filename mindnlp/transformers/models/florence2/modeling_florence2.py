@@ -14,29 +14,21 @@
 # limitations under the License.
 
 """ MindNLP Florence-2 model."""
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-import math
-
-from einops import rearrange
-import mindspore
-mindspore.set_context(pynative_synchronize=True)
+from collections import OrderedDict
 from mindspore import Tensor
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import CrossEntropyLoss
-from collections import OrderedDict
 from mindnlp.core.nn.init import trunc_normal_
 from mindnlp.transformers.modeling_utils import PreTrainedModel
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from .configuration_florence2 import Florence2Config 
-from .configuration_florence2 import Florence2LanguageConfig
-from .configuration_florence2 import Florence2VisionConfig
-
 
 from mindnlp.transformers.activations import ACT2FN
 from mindnlp.transformers.modeling_attn_mask_utils import (
@@ -49,6 +41,14 @@ from mindnlp.transformers.modeling_outputs import (
     Seq2SeqLMOutput,
     Seq2SeqModelOutput,
 )
+
+import mindspore
+
+from .configuration_florence2 import Florence2Config
+from .configuration_florence2 import Florence2LanguageConfig
+from .configuration_florence2 import Florence2VisionConfig
+
+from einops import rearrange
 
 
 logger = logging.get_logger(__name__)
@@ -925,8 +925,11 @@ class Florence2SdpaAttention(Florence2Attention):
         if output_attentions or layer_head_mask is not None:
             # TODO: Improve this warning with e.g. `model.config._attn_implementation = "manual"` once this is implemented.
             logger.warning(
-                "Florence2Model is using Florence2SdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True` or `layer_head_mask` not None. Falling back to the manual attention"
-                ' implementation, but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
+                "Florence2Model is using Florence2SdpaAttention, but `torch.nn.functional."
+                "scaled_dot_product_attention` does not support `output_attentions=True` or `layer_head_mask` not None."
+                "Falling back to the manual attention implementation, but specifying the manual implementation will "
+                "be required from Transformers version v5.0.0 onwards."
+                ' This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
             )
             return super().forward(
                 hidden_states,

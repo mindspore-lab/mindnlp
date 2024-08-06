@@ -93,7 +93,9 @@ class Florence2Processor(ProcessorMixin):
                     tokenizer.additional_special_tokens + \
                     ['<od>', '</od>', '<ocr>', '</ocr>'] + \
                     [f'<loc_{x}>' for x in range(1000)] + \
-                    ['<cap>', '</cap>', '<ncap>', '</ncap>','<dcap>', '</dcap>', '<grounding>', '</grounding>', '<seg>','</seg>', '<sep>', '<region_cap>', '</region_cap>', '<region_to_desciption>', '</region_to_desciption>', '<proposal>', '</proposal>', '<poly>', '</poly>', '<and>']
+                    ['<cap>', '</cap>', '<ncap>', '</ncap>', '<dcap>', '</dcap>', '<grounding>', '</grounding>',
+                     '<seg>', '</seg>', '<sep>', '<region_cap>', '</region_cap>', '<region_to_desciption>',
+                     '</region_to_desciption>', '<proposal>', '</proposal>', '<poly>', '</poly>', '<and>']
             }
         tokenizer.add_special_tokens(tokens_to_add)
 
@@ -137,7 +139,6 @@ class Florence2Processor(ProcessorMixin):
         }
 
         self.post_processor = Florence2PostProcesser(tokenizer=tokenizer)
-
         super().__init__(image_processor, tokenizer)
     
     def _construct_prompts(self, text):
@@ -380,7 +381,7 @@ class Florence2Processor(ProcessorMixin):
         return final_answer 
 
 
-class BoxQuantizer(object):
+class BoxQuantizer:
     def __init__(self, mode, bins):
         self.mode = mode
         self.bins = bins
@@ -442,7 +443,7 @@ class BoxQuantizer(object):
         return dequantized_boxes
 
 
-class CoordinatesQuantizer(object):
+class CoordinatesQuantizer:
     """
     Quantize coornidates (Nx2)
     """
@@ -501,7 +502,7 @@ class CoordinatesQuantizer(object):
         return dequantized_coordinates
 
 
-class Florence2PostProcesser(object):
+class Florence2PostProcesser:
     """
     Florence-2 post process for converting text prediction to various tasks results. 
 
@@ -743,8 +744,8 @@ class Florence2PostProcesser(object):
             ).reshape(-1).tolist()
 
             if area_threshold > 0:
-                x_coords = [i for i in quad_box[0::2]]
-                y_coords = [i for i in quad_box[1::2]]
+                x_coords = list(quad_box[0::2])
+                y_coords = list(quad_box[1::2])
 
                 # apply the Shoelace formula
                 area = 0.5 * abs(sum(x_coords[i] * y_coords[i + 1] - x_coords[i + 1] * y_coords[i] for i in range(4 - 1)))
@@ -833,7 +834,7 @@ class Florence2PostProcesser(object):
         text = text.replace('<pad>', '')
 
         if allow_empty_phrase:
-            pattern = rf"(?:(?:<loc_\d+>){{4,}})"
+            pattern = r"(?:(?:<loc_\d+>){{4,}})"
         else:
             pattern = r"([^<]+(?:<loc_\d+>){4,})"
         phrases = re.findall(pattern, text)
