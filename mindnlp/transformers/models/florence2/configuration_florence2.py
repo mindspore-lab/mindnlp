@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Florence-2 configuration"""
-import warnings
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
 

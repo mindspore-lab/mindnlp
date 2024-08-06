@@ -321,7 +321,7 @@ class ConvEmbed(nn.Module):
         )
 
         dim_norm = in_chans if pre_norm else embed_dim
-        self.norm = norm_layer(dim_norm) if norm_layer else None
+        self.norm = norm_layer(dim_norm)
 
         self.pre_norm = pre_norm
 
