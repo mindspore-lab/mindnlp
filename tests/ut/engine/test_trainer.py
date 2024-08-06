@@ -46,7 +46,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.modules.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,

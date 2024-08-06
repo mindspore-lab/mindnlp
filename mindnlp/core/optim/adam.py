@@ -1,4 +1,4 @@
-"""adamw optimizer"""
+"""adam"""
 # pylint: disable=unneeded-not, use-dict-literal
 # mypy: allow-untyped-defs
 from typing import Tuple, Union
@@ -12,18 +12,18 @@ from .optimizer import (
     ParamsT,
 )
 
-__all__ = ["AdamW"]
+__all__ = ["Adam"]
 
 
 
-class AdamW(Optimizer):
+class Adam(Optimizer):
     def __init__(
         self,
         params: ParamsT,
         lr: Union[float, Tensor] = 1e-3,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8,
-        weight_decay: float = 1e-2,
+        weight_decay: float = 0,
         amsgrad: bool = False,
         *,
         maximize: bool = False,
@@ -38,6 +38,7 @@ class AdamW(Optimizer):
             raise ValueError(f"Invalid beta parameter at index 1: {betas[1]}")
         if not 0.0 <= weight_decay:
             raise ValueError(f"Invalid weight_decay value: {weight_decay}")
+
         defaults = dict(
             lr=lr,
             betas=betas,
@@ -48,14 +49,12 @@ class AdamW(Optimizer):
         )
         super().__init__(params, defaults)
 
+
     def __setstate__(self, state):
         super().__setstate__(state)
         for group in self.param_groups:
             group.setdefault("amsgrad", False)
             group.setdefault("maximize", False)
-            group.setdefault("foreach", None)
-            group.setdefault("capturable", False)
-            group.setdefault("differentiable", False)
             fused = group.setdefault("fused", None)
             for p in group["params"]:
                 p_state = self.state.get(p, [])
@@ -77,6 +76,8 @@ class AdamW(Optimizer):
             closure (Callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
+
+        loss = None
 
         start = 0
         for group in self.param_groups:
@@ -108,7 +109,24 @@ class AdamW(Optimizer):
                 state['step'] += 1
 
                 if group['weight_decay'] != 0:
-                    ops.assign(p, (1 - group['lr'] * group['weight_decay']) * p)
+                    grad = grad.add(p, alpha=group['weight_decay'])
+                # # Decay the first and second moment running average coefficient
+                # exp_avg.mul_(beta1).add_(grad, 1 - beta1)
+                # exp_avg_sq.mul_(beta2).addcmul_(grad, grad, 1 - beta2)
+                # if amsgrad:
+                #     # Maintains the maximum of all 2nd moment running avg. till now
+                #     torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
+                #     # Use the max. for normalizing running avg. of gradient
+                #     denom = max_exp_avg_sq.sqrt().add_(group['eps'])
+                # else:
+                #     denom = exp_avg_sq.sqrt().add_(group['eps'])
+
+                # bias_correction1 = 1 - beta1 ** state['step']
+                # bias_correction2 = 1 - beta2 ** state['step']
+                # step_size = group['lr'] * math.sqrt(bias_correction2) / bias_correction1
+
+                # p.addcdiv_(exp_avg, denom, -step_size)
+
                 beta1_power = beta1 ** state['step']
                 beta2_power = beta2 ** state['step']
                 if amsgrad:

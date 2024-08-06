@@ -484,10 +484,10 @@ class GenerationMixin:
 
         is_pad_token_in_inputs = (pad_token_id is not None) and (
             ops.isin(elements=inputs, test_elements=pad_token_id).any()
-        )
+        ).item()
         is_pad_token_not_equal_to_eos_token_id = (eos_token_id is None) or ~(
             ops.isin(elements=eos_token_id, test_elements=pad_token_id).any()
-        )
+        ).item()
         can_infer_attention_mask = is_pad_token_in_inputs & is_pad_token_not_equal_to_eos_token_id
         attention_mask_from_padding = inputs.ne(pad_token_id).long()
 
@@ -665,14 +665,14 @@ class GenerationMixin:
             if "attention_mask" in model_kwargs:
                 attention_mask = model_kwargs["attention_mask"]
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                    [attention_mask, ops.ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], dim=-1
                 )
         else:
             # update decoder attention mask
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 model_kwargs["decoder_attention_mask"] = ops.cat(
-                    [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
+                    [decoder_attention_mask, ops.ones((decoder_attention_mask.shape[0], 1), dtype=decoder_attention_mask.dtype)],
                     dim=-1,
                 )
 
@@ -681,7 +681,7 @@ class GenerationMixin:
         else:
             past_positions = model_kwargs.pop("cache_position")
             new_positions = ops.arange(
-                past_positions[-1] + 1, past_positions[-1] + num_new_tokens + 1, dtype=past_positions.dtype
+                past_positions[-1].item() + 1, past_positions[-1].item() + num_new_tokens + 1, dtype=past_positions.dtype
             )
             model_kwargs["cache_position"] = ops.cat((past_positions, new_positions))
         return model_kwargs
@@ -1384,9 +1384,9 @@ class GenerationMixin:
         """Calculates `cache_position` for the pre-fill stage based on `input_ids` and optionally past length"""
         # `torch.compile`-friendly `ops.arange` from a shape -- the lines below are equivalent to `ops.arange`
         if "inputs_embeds" in model_kwargs:
-            cache_position = ops.ones_like(model_kwargs["inputs_embeds"][0, :, 0], dtype=mindspore.int64).cumsum(0) - 1
+            cache_position = ops.cumsum(ops.ones_like(model_kwargs["inputs_embeds"][0, :, 0], dtype=mindspore.int32), 0) - 1
         else:
-            cache_position = ops.ones_like(input_ids[0, :], dtype=mindspore.int64).cumsum(0) - 1
+            cache_position = ops.cumsum(ops.ones_like(input_ids[0, :], dtype=mindspore.int32), 0) - 1
 
         past_length = 0
         if model_kwargs.get("past_key_values") is not None:
@@ -2903,9 +2903,11 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(batch_size, dtype=mindspore.int64)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
+        import time
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
         ):
+            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2957,7 +2959,6 @@ class GenerationMixin:
             # finished sentences should have their next token be a padding token
             if has_eos_stopping_criteria:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
-
             # update generated ids, model inputs, and length for next step
             input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             if streamer is not None:
@@ -2975,6 +2976,8 @@ class GenerationMixin:
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
+            t = time.time()
+            print(t - s)
 
         if streamer is not None:
             streamer.end()
@@ -3954,7 +3957,7 @@ class GenerationMixin:
                 candidate_kwargs["cache_position"] = ops.cat(
                     (
                         candidate_kwargs["cache_position"],
-                        ops.arange(cur_len, cur_len + candidate_length, dtype=mindspore.int64),
+                        ops.arange(cur_len, cur_len + candidate_length, dtype=candidate_kwargs["cache_position"].dtype),
                     ),
                     dim=0,
                 )

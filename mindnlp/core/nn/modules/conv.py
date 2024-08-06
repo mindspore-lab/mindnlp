@@ -7,6 +7,7 @@ from .module import Module
 from ..common_types import _size_2_t, _size_1_t
 from ._utils import _single, _pair, _reverse_repeat_tuple
 from .. import init
+from .. import functional as F
 from ... import ops
 
 
@@ -205,7 +206,7 @@ class Conv1d(_ConvNd):
 
     def forward(self, input):
         if self.padding_mode != 'zeros':
-            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
+            input = F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
         input = input.expand_dims(2)
         output = self.conv2d(input, self.weight.expand_dims(2))
 

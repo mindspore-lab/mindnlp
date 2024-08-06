@@ -603,6 +603,9 @@ class PretrainedConfig:
         original_kwargs = copy.deepcopy(kwargs)
         # Get config dict associated with the base config file
         config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+        if 'torch_dtype' in config_dict:
+            config_dict['ms_dtype'] = config_dict.pop('torch_dtype')
+
         if "_commit_hash" in config_dict:
             original_kwargs["_commit_hash"] = config_dict["_commit_hash"]
 
@@ -631,7 +634,7 @@ class PretrainedConfig:
         from_pipeline = kwargs.pop("_from_pipeline", None)
         from_auto_class = kwargs.pop("_from_auto", False)
         commit_hash = kwargs.pop("_commit_hash", None)
-        mirror = kwargs.pop('mirror', 'huggingface')
+        mirror = kwargs.get('mirror', 'huggingface')
 
         gguf_file = kwargs.get("gguf_file", None)
 

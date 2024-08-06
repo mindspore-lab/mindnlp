@@ -32,7 +32,6 @@ from enum import Enum
 from typing import Dict, Union, Optional, Any, OrderedDict
 from functools import reduce
 from dataclasses import dataclass
-from ml_dtypes import bfloat16
 
 import numpy as np
 import mindspore
@@ -42,8 +41,15 @@ from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_
 import safetensors
 import safetensors.numpy
 
+from mindnlp.configs import SUPPORT_BF16
 from .nn import Module
 from ..utils import logging
+
+
+if SUPPORT_BF16:
+    from mindspore.common.np_dtype import bfloat16
+else:
+    from ml_dtypes import bfloat16
 
 logger = logging.get_logger(__name__)
 
@@ -718,7 +724,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         num_elemets = reduce(operator.mul, size)
     array = storage[storage_offset: storage_offset + num_elemets]
 
-    if array.dtype == bfloat16:
+    if array.dtype == bfloat16 and not SUPPORT_BF16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
 
@@ -1050,7 +1056,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         else:
             order = "C"
             array = array.reshape(size, order=order)
-        if array.dtype == bfloat16:
+        if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
         new_result[k] = mindspore.Parameter(array, requires_grad=v.requires_grad)
@@ -1218,8 +1224,19 @@ def safe_load_file(filename):
         FileNotFoundError: If the specified file 'filename' does not exist.
         ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
     """
+    with safetensors.safe_open(filename, 'np') as f:
+        for key in f.keys():
+            dtype = f.get_tensor(key).dtype
+            break
+
     state_dict = safetensors.numpy.load_file(filename)
-    return {k: mindspore.Parameter(v) for k, v in state_dict.items()}
+    if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
+        out_states = {k: mindspore.Parameter(v) for k, v in state_dict.items()}
+        return out_states
+
+    out_states = {k: mindspore.Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
+    return out_states
+
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """
