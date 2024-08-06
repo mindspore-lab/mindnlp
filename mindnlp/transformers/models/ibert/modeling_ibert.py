@@ -74,7 +74,7 @@ class IBertEmbeddings(nn.Module):
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer(
-            "position_ids", ops.arange(config.max_position_embeddings).expand((1, -1)), persistent=False
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
         )
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
@@ -166,7 +166,7 @@ class IBertEmbeddings(nn.Module):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
 class IBertSelfAttention(nn.Module):

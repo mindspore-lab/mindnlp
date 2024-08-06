@@ -37,7 +37,7 @@ if is_mindspore_available():
         FunnelForPreTraining,
         FunnelForQuestionAnswering,
         FunnelForSequenceClassification,
-        FunnelForTokenClasfvsification,
+        FunnelForTokenClassification,
         FunnelModel,
     )
     from mindnlp.transformers.models.funnel.modeling_funnel import FUNNEL_PRETRAINED_MODEL_ARCHIVE_LIST

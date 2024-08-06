@@ -23,7 +23,7 @@ if os.environ.get('HF_ENDPOINT', None) is None:
 os.environ["MS_DEV_FORCE_ACL"] = '1'
 
 from mindspore import context
-from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module
+from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()

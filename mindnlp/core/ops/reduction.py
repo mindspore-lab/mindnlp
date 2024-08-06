@@ -1,7 +1,8 @@
 """reduction op"""
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 
 # argmax
 def argmax(input, dim=None, keepdim=False):
@@ -110,6 +111,15 @@ def nanquantile(input, q, dim=None, keepdim=False, *, interpolation='linear'):
 
 # std
 def std(input, dim=None, *, correction=1, keepdim=False):
+    if DEVICE_TARGET == 'GPU':
+        unbiased = bool(correction)
+        if dim is None:
+            dim = ()
+        if isinstance(dim, int):
+            dim = (dim,)
+        _std = _get_cache_prim(ops.ReduceStd)(dim, unbiased, keepdim)
+        _std.set_device('CPU')
+        return _std(input)[0]
     return ops.std(input, dim, correction, keepdim)
 
 # std_mean
@@ -125,6 +135,8 @@ def sum(input, dim=None, keepdim=False, *, dtype=None):
 
 # unique
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
+    if USE_PYBOOST:
+        return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
     return ops.unique(input)
 
 # unique_consecutive

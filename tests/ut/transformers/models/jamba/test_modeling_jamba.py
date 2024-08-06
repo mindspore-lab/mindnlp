@@ -48,7 +48,6 @@ if is_mindspore_available():
         HybridMambaAttentionDynamicCache,
     )
 
-
 class JambaModelTester:
     def __init__(
         self,
@@ -239,8 +238,8 @@ class JambaModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
@@ -339,7 +338,7 @@ class JambaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         # loss(input_ids, attention_mask=None) == loss(input_ids + padding, attention_mask=attention_mask_with_padding)
         pad_length = 1000
         # Add padding tokens to input_ids
-        padding_block = config.pad_token_id * ops.ones(input_ids.shape[0], pad_length, dtype=mindspore.int32)
+        padding_block = config.pad_token_id * ops.ones(input_ids.shape[0], pad_length, dtype=input_ids.dtype)
         padded_input_ids = ops.cat((padding_block, input_ids), dim=1)  # this is to simulate padding to the left
         padded_attention_mask = padded_input_ids.ne(config.pad_token_id)
 
@@ -465,7 +464,7 @@ class JambaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
             model_kwargs = {"input_ids": input_ids, "attention_mask": attention_mask}
             if "position_ids" in signature:
                 position_ids = ops.cumsum(attention_mask, dim=-1) - 1
-                position_ids.masked_fill_(attention_mask == 0, 1)
+                position_ids = position_ids.masked_fill(attention_mask == 0, 1)
                 model_kwargs["position_ids"] = position_ids
             if "cache_position" in signature:
                 cache_position = ops.arange(input_ids.shape[-1])

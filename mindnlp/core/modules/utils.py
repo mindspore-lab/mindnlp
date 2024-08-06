@@ -2,7 +2,7 @@
 from typing import List, Sequence, TypeVar
 
 import mindspore
-from mindspore._c_expression import typing # pylint: disable=no-name-in-module
+from mindspore._c_expression import typing # pylint: disable=no-name-in-module, import-error
 from mindnlp.core import ops, nn
 
 T = TypeVar("T")
