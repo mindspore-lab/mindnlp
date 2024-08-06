@@ -330,14 +330,14 @@ class ConvEmbed(nn.Module):
         if len(x.shape) == 3:
             if self.norm and self.pre_norm:
                 x = self.norm(x)
-            x = Tensor(rearrange(
-                x.asnumpy(), 'b (h w) c -> b c h w',
+            x = rearrange(
+                x, 'b (h w) c -> b c h w',
                 h=H, w=W
-            ))
+            )
         x = self.proj(x)
 
         _, _, H, W = x.shape
-        x = Tensor(rearrange(x.asnumpy(), 'b c h w -> b (h w) c'))
+        x = rearrange(x, 'b c h w -> b (h w) c')
         if self.norm and not self.pre_norm:
             x = self.norm(x)
 
