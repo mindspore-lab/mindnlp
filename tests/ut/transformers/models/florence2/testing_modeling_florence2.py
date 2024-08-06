@@ -1,10 +1,8 @@
-from mindnlp.transformers.models.florence2 import Florence2ForConditionalGeneration, Florence2Processor
 import requests
 from PIL import Image
 
+from mindnlp.transformers.models.florence2 import Florence2ForConditionalGeneration, Florence2Processor
 import mindspore
-mindspore.set_context(pynative_synchronize=True)
-
 
 model = Florence2ForConditionalGeneration.from_pretrained("microsoft/Florence-2-large", ms_dtype=mindspore.float32)
 processor = Florence2Processor.from_pretrained("microsoft/Florence-2-large")
