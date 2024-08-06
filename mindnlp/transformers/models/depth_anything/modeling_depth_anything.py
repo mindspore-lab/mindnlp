@@ -16,27 +16,26 @@
 
 from typing import List, Optional, Tuple, Union
 
-import torch
-import torch.utils.checkpoint
-from torch import nn
+import mindspore
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...file_utils import (
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-    replace_return_docstrings,
-)
+# from ...file_utils import (
+#     add_start_docstrings,
+#     add_start_docstrings_to_model_forward,
+#     replace_return_docstrings,
+# )
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
-from ...utils import logging
-from ...utils.backbone_utils import load_backbone
+from ....utils import logging
+from ...backbone_utils import load_backbone
 from .configuration_depth_anything import DepthAnythingConfig
-
 
 logger = logging.get_logger(__name__)
 
 # General docstring
 _CONFIG_FOR_DOC = "DepthAnythingConfig"
-
 
 DEPTH_ANYTHING_START_DOCSTRING = r"""
     This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
@@ -51,7 +50,7 @@ DEPTH_ANYTHING_START_DOCSTRING = r"""
 
 DEPTH_ANYTHING_INPUTS_DOCSTRING = r"""
     Args:
-        pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
+        pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`DPTImageProcessor.__call__`]
             for details.
 
@@ -111,10 +110,11 @@ class DepthAnythingReassembleStage(nn.Module):
         for channels, factor in zip(config.neck_hidden_sizes, config.reassemble_factors):
             self.layers.append(DepthAnythingReassembleLayer(config, channels=channels, factor=factor))
 
-    def forward(self, hidden_states: List[torch.Tensor], patch_height=None, patch_width=None) -> List[torch.Tensor]:
+    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
+        mindspore.Tensor]:
         """
         Args:
-            hidden_states (`List[torch.FloatTensor]`, each of shape `(batch_size, sequence_length + 1, hidden_size)`):
+            hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length + 1, hidden_size)`):
                 List of hidden states from the backbone.
         """
         out = []
@@ -124,7 +124,7 @@ class DepthAnythingReassembleStage(nn.Module):
             hidden_state = hidden_state[:, 1:]
             batch_size, _, num_channels = hidden_state.shape
             hidden_state = hidden_state.reshape(batch_size, patch_height, patch_width, num_channels)
-            hidden_state = hidden_state.permute(0, 3, 1, 2).contiguous()
+            hidden_state = hidden_state.permute(0, 3, 1, 2)
             hidden_state = self.layers[i](hidden_state)
             out.append(hidden_state)
 
@@ -163,7 +163,7 @@ class DepthAnythingPreActResidualLayer(nn.Module):
             bias=True,
         )
 
-    def forward(self, hidden_state: torch.Tensor) -> torch.Tensor:
+    def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         residual = hidden_state
         hidden_state = self.activation1(hidden_state)
         hidden_state = self.convolution1(hidden_state)
@@ -192,7 +192,7 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
     def forward(self, hidden_state, residual=None, size=None):
         if residual is not None:
             if hidden_state.shape != residual.shape:
-                residual = nn.functional.interpolate(
+                residual = F.interpolate(
                     residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=False
                 )
             hidden_state = hidden_state + self.residual_layer1(residual)
@@ -201,7 +201,7 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
 
         modifier = {"scale_factor": 2} if size is None else {"size": size}
 
-        hidden_state = nn.functional.interpolate(
+        hidden_state = F.interpolate(
             hidden_state,
             **modifier,
             mode="bilinear",
@@ -258,12 +258,12 @@ class DepthAnythingPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.data.zero_()
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class DepthAnythingNeck(nn.Module):
@@ -291,10 +291,11 @@ class DepthAnythingNeck(nn.Module):
         # fusion
         self.fusion_stage = DepthAnythingFeatureFusionStage(config)
 
-    def forward(self, hidden_states: List[torch.Tensor], patch_height=None, patch_width=None) -> List[torch.Tensor]:
+    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
+        mindspore.Tensor]:
         """
         Args:
-            hidden_states (`List[torch.FloatTensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or `(batch_size, hidden_size, height, width)`):
+            hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or `(batch_size, hidden_size, height, width)`):
                 List of hidden states from the backbone.
         """
         if not isinstance(hidden_states, (tuple, list)):
@@ -334,11 +335,11 @@ class DepthAnythingDepthEstimationHead(nn.Module):
         self.conv3 = nn.Conv2d(config.head_hidden_size, 1, kernel_size=1, stride=1, padding=0)
         self.activation2 = nn.ReLU()
 
-    def forward(self, hidden_states: List[torch.Tensor], patch_height, patch_width) -> torch.Tensor:
+    def forward(self, hidden_states: List[mindspore.Tensor], patch_height, patch_width) -> mindspore.Tensor:
         hidden_states = hidden_states[self.head_in_index]
 
         predicted_depth = self.conv1(hidden_states)
-        predicted_depth = nn.functional.interpolate(
+        predicted_depth = F.interpolate(
             predicted_depth,
             (int(patch_height * self.patch_size), int(patch_width * self.patch_size)),
             mode="bilinear",
@@ -348,17 +349,17 @@ class DepthAnythingDepthEstimationHead(nn.Module):
         predicted_depth = self.activation1(predicted_depth)
         predicted_depth = self.conv3(predicted_depth)
         predicted_depth = self.activation2(predicted_depth)
-        predicted_depth = predicted_depth.squeeze(dim=1)  # shape (batch_size, height, width)
+        predicted_depth = predicted_depth.squeeze(axis=1)  # shape (batch_size, height, width)
 
         return predicted_depth
 
 
-@add_start_docstrings(
-    """
-    Depth Anything Model with a depth estimation head on top (consisting of 3 convolutional layers) e.g. for KITTI, NYUv2.
-    """,
-    DEPTH_ANYTHING_START_DOCSTRING,
-)
+# @add_start_docstrings(
+#     """
+#     Depth Anything Model with a depth estimation head on top (consisting of 3 convolutional layers) e.g. for KITTI, NYUv2.
+#     """,
+#     DEPTH_ANYTHING_START_DOCSTRING,
+# )
 class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
     _no_split_modules = ["DPTViTEmbeddings"]
 
@@ -372,18 +373,18 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @add_start_docstrings_to_model_forward(DEPTH_ANYTHING_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=DepthEstimatorOutput, config_class=_CONFIG_FOR_DOC)
+    # @add_start_docstrings_to_model_forward(DEPTH_ANYTHING_INPUTS_DOCSTRING)
+    # @replace_return_docstrings(output_type=DepthEstimatorOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        pixel_values: torch.FloatTensor,
-        labels: Optional[torch.LongTensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[torch.Tensor], DepthEstimatorOutput]:
+            self,
+            pixel_values: mindspore.Tensor,
+            labels: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], DepthEstimatorOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, height, width)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):
             Ground truth depth estimation maps for computing the loss.
 
         Returns:
@@ -405,12 +406,12 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         >>> # prepare image for the model
         >>> inputs = image_processor(images=image, return_tensors="pt")
 
-        >>> with torch.no_grad():
+        >>> with no_grad():
         ...     outputs = model(**inputs)
         ...     predicted_depth = outputs.predicted_depth
 
         >>> # interpolate to original size
-        >>> prediction = torch.nn.functional.interpolate(
+        >>> prediction = F.interpolate(
         ...     predicted_depth.unsqueeze(1),
         ...     size=image.size[::-1],
         ...     mode="bicubic",
@@ -459,3 +460,9 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
             hidden_states=outputs.hidden_states if output_hidden_states else None,
             attentions=outputs.attentions,
         )
+
+
+__all__ = [
+    "DepthAnythingForDepthEstimation",
+    "DepthAnythingPreTrainedModel",
+]

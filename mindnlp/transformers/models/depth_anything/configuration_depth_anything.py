@@ -24,7 +24,7 @@ from ..auto.configuration_auto import CONFIG_MAPPING
 
 logger = logging.get_logger(__name__)
 
-
+__all__ = ['DepthAnythingConfig']
 class DepthAnythingConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`DepthAnythingModel`]. It is used to instantiate an DepthAnything
