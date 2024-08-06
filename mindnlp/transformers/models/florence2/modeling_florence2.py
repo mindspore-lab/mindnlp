@@ -18,8 +18,11 @@ import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+
 from collections import OrderedDict
 from mindspore import Tensor
+from einops import rearrange
+import mindspore
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import CrossEntropyLoss
@@ -42,13 +45,10 @@ from mindnlp.transformers.modeling_outputs import (
     Seq2SeqModelOutput,
 )
 
-import mindspore
 
 from .configuration_florence2 import Florence2Config
 from .configuration_florence2 import Florence2LanguageConfig
 from .configuration_florence2 import Florence2VisionConfig
-
-from einops import rearrange
 
 
 logger = logging.get_logger(__name__)
@@ -411,9 +411,9 @@ def window_partition(x, window_size: int):
 
 
 def window_reverse(windows, batch_size: int, window_size: int, H: int, W: int):
-    B = batch_size 
+    B = batch_size
     # this will cause onnx conversion failed for dynamic axis, because treated as constant
-    # int(windows.shape[0] / (H * W / window_size / window_size)) 
+    # int(windows.shape[0] / (H * W / window_size / window_size))
     x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
     x = x.permute(0, 1, 3, 2, 4, 5).view(B, H, W, -1)
     return x
@@ -673,7 +673,7 @@ class DaViT(nn.Module):
         x = self.forward_features(x)
         x = self.head(x)
         return x
-    
+
     @classmethod
     def from_config(cls, config):
         return cls(
@@ -990,7 +990,7 @@ class Florence2SdpaAttention(Florence2Attention):
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
         # The tgt_len > 1 is necessary to match with AttentionMaskConverter.to_causal_4d that does not create a causal mask in case tgt_len == 1.
-        is_causal = True if self.is_causal and attention_mask is None and tgt_len > 1 else False
+        is_causal = self.is_causal and attention_mask is not None and tgt_len > 1
 
         # NOTE: SDPA with memory-efficient backend is currently (torch==2.1.2) bugged when using non-contiguous inputs and a custom attn_mask,
         # but we are fine here as `_shape` do call ``. Reference: https://github.com/pytorch/pytorch/issues/112577
@@ -2162,7 +2162,7 @@ class Florence2VisionModel(Florence2PreTrainedModel):
         self.vision_tower = DaViT.from_config(config=config)
 
         self.post_init()
-    
+
     def forward(self, pixel_values):
         print("Florence2VisionModel")
         if len(pixel_values.shape) == 4:
@@ -2181,7 +2181,7 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
         self._build_image_projection_layers(config)
 
         self.post_init()
-    
+
     def _build_image_projection_layers(self, config):
         image_dim_out = config.dim_embed[-1]
         dim_projection = config.projection_dim
@@ -2218,7 +2218,7 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
             x = self.vision_tower.forward_features_unpool(pixel_values)
         else:
             raise ValueError(f'invalid image shape {pixel_values.shape}')
-        
+
         if self.image_pos_embed is not None:
             x = x.view(batch_size * T, -1, x.shape[-1])
             num_tokens = x.shape[-2]
@@ -2263,7 +2263,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         super().__init__(config)
         assert config.vision_config.model_type == 'davit', 'only DaViT is supported for now'
         self.vision_tower = DaViT.from_config(config=config.vision_config)
-        # remove unused layers 
+        # remove unused layers
         del self.vision_tower.head
         del self.vision_tower.norms
 
@@ -2279,7 +2279,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
 
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else -1
         self.post_init()
-    
+
     def _build_image_projection_layers(self, config):
         image_dim_out = config.vision_config.dim_embed[-1]
         dim_projection = config.vision_config.projection_dim
@@ -2324,7 +2324,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         self.config.vocab_size = model_embeds.num_embeddings
         self.vocab_size = model_embeds.num_embeddings
         return model_embeds
-    
+
     def _encode_image(self, pixel_values):
         if len(pixel_values.shape) == 4:
             batch_size, C, H, W = pixel_values.shape
@@ -2332,7 +2332,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             x = self.vision_tower.forward_features_unpool(pixel_values)
         else:
             raise ValueError(f'invalid image shape {pixel_values.shape}')
-        
+
         if self.image_pos_embed is not None:
             x = x.view(batch_size * T, -1, x.shape[-1])
             num_tokens = x.shape[-2]
@@ -2369,10 +2369,10 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         x = x @ self.image_projection
         x = self.image_proj_norm(x)
 
-        return x 
+        return x
 
     def _merge_input_ids_with_image_features(
-        self, image_features, inputs_embeds 
+        self, image_features, inputs_embeds
     ):
         batch_size, image_token_length = image_features.shape[:-1]
         image_attention_mask = ops.ones(batch_size, image_token_length)
@@ -2495,7 +2495,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             if pixel_values is not None:
                 image_features = self._encode_image(pixel_values)
                 inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
-        
+
         return self.language_model.generate(
             input_ids=None,
             inputs_embeds=inputs_embeds,
@@ -2528,7 +2528,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
                 remove_prefix_length = decoder_input_ids.shape[1] - 1
 
             decoder_input_ids = decoder_input_ids[:, remove_prefix_length:]
-        
+
         return {
             "input_ids": None,  # encoder_outputs is defined. input_ids not needed
             "encoder_outputs": encoder_outputs,
@@ -2542,7 +2542,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             "cross_attn_head_mask": cross_attn_head_mask,
             "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
         }
-    
+
     def prepare_decoder_input_ids_from_labels(self, labels: Tensor):
         return self.language_model.shift_tokens_right(labels)
 

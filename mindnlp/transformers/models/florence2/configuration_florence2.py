@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Florence-2 configuration"""
+import warnings
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
-
-import warnings
 
 logger = logging.get_logger(__name__)
 
@@ -257,14 +256,6 @@ class Florence2LanguageConfig(PretrainedConfig):
             forced_eos_token_id=forced_eos_token_id,
             **kwargs,
         )
-
-        # ensure backward compatibility for BART CNN models
-        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False):
-            self.forced_bos_token_id = self.bos_token_id
-            warnings.warn(
-                f"Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions. "
-                "The config can simply be saved and uploaded again to be fixed."
-            )
 
 
 class Florence2Config(PretrainedConfig):

@@ -140,7 +140,7 @@ class Florence2Processor(ProcessorMixin):
 
         self.post_processor = Florence2PostProcesser(tokenizer=tokenizer)
         super().__init__(image_processor, tokenizer)
-    
+
     def _construct_prompts(self, text):
         # replace the task tokens with the task prompts if task token is in the text
         prompts = []
@@ -151,7 +151,7 @@ class Florence2Processor(ProcessorMixin):
                     assert _text == task_token, f"Task token {task_token} should be the only token in the text."
                     _text = task_prompt
                     break
-            # 2. task prompts with additional inputs 
+            # 2. task prompts with additional inputs
             for task_token, task_prompt in self.task_prompts_with_input.items():
                 if task_token in _text:
                     _text = task_prompt.format(input=_text.replace(task_token, ''))
@@ -378,7 +378,7 @@ class Florence2Processor(ProcessorMixin):
 
         final_answer = {
             task: final_answer}
-        return final_answer 
+        return final_answer
 
 
 class BoxQuantizer:
@@ -586,7 +586,7 @@ class Florence2PostProcesser:
             )
 
         return black_list
-    
+
     def _create_default_config(self):
         config = {
             'NUM_BBOX_HEIGHT_BINS': 1000,
@@ -641,7 +641,7 @@ class Florence2PostProcesser:
             box_quantization_mode,
             (num_bbox_width_bins, num_bbox_height_bins),
         )
-        
+
         num_bbox_height_bins = self.config['COORDINATES_HEIGHT_BINS'] if 'COORDINATES_HEIGHT_BINS' in self.config else self.config.get('NUM_BBOX_HEIGHT_BINS', 1000)
         num_bbox_width_bins = self.config['COORDINATES_WIDTH_BINS'] if 'COORDINATES_WIDTH_BINS' in self.config else self.config.get('NUM_BBOX_WIDTH_BINS', 1000)
         box_quantization_mode = self.config.get('COORDINATES_QUANTIZATION_MODE') if 'COORDINATES_QUANTIZATION_MODE' in self.config else self.config.get('BOX_QUANTIZATION_MODE', 'floor')
@@ -681,7 +681,7 @@ class Florence2PostProcesser:
             spans.append(span)
 
         # Text format:
-        # 1. T5Tokenizer/T5TokenizerFast: 
+        # 1. T5Tokenizer/T5TokenizerFast:
         #      "<loc_1><loc_2><loc_3><loc_4> transplanting dog<loc_1><loc_2><loc_3><loc_4> cat</s>"
         #    Equivalent to t5_tokenizer.decode(input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False, spaces_between_special_tokens=False)
         # 2. BartTokenizer (need to double check):
@@ -710,7 +710,7 @@ class Florence2PostProcesser:
             instance['bbox'] = self.box_quantizer.dequantize(
                 boxes=mindspore.tensor(bbox_bins),
                 size=image_size
-            ).tolist()  
+            ).tolist()
 
             if phrase_centric:
                 instance['cat_name'] = parsed[i].group(1).lower().strip()
@@ -720,11 +720,11 @@ class Florence2PostProcesser:
 
         return instances
 
-    def parse_ocr_from_text_and_spans(self, 
-                                    text, 
-                                     pattern, 
-                                     image_size,
-                                     area_threshold=-1.0,
+    def parse_ocr_from_text_and_spans(self,
+                                      text,
+                                      pattern,
+                                      image_size,
+                                      area_threshold=-1.0,
         ):
         bboxes = []
         labels = []
@@ -764,7 +764,7 @@ class Florence2PostProcesser:
     def parse_phrase_grounding_from_text_and_spans(self, text, pattern, image_size):
         # ignore <s> </s> and <pad>
         cur_span = 0
-        if text.startswith('<s>'):   
+        if text.startswith('<s>'):
             cur_span += 3
 
         text = text.replace('<s>', '')
@@ -773,7 +773,7 @@ class Florence2PostProcesser:
 
         pattern = r"([^<]+(?:<loc_\d+>){4,})"
         phrases = re.findall(pattern, text)
-    
+
         # pattern should be text pattern and od pattern
         pattern = r'^\s*(.*?)(?=<od>|</od>|<box>|</box>|<bbox>|</bbox>|<loc_)'
         box_pattern = r'<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
@@ -790,7 +790,7 @@ class Florence2PostProcesser:
             # Prepare instance.
             instance = {}
 
-            # parse phrase, get string 
+            # parse phrase, get string
             phrase = re.search(pattern, phrase_text_strip)
             if phrase is None:
                 cur_span += len(pharse_text)
@@ -810,12 +810,12 @@ class Florence2PostProcesser:
                 cur_span += len(pharse_text)
                 continue
 
-            # a list of list 
+            # a list of list
             bbox_bins = [[int(_bboxes_parsed.group(j)) for j in range(1, 5)] for _bboxes_parsed in bboxes_parsed]
             instance['bbox'] = self.box_quantizer.dequantize(
                 boxes=mindspore.tensor(bbox_bins),
                 size=image_size
-            ).tolist()  
+            ).tolist()
 
             # exclude non-ascii characters
             phrase = phrase.encode('ascii',errors='ignore').decode('ascii')
@@ -838,7 +838,7 @@ class Florence2PostProcesser:
         else:
             pattern = r"([^<]+(?:<loc_\d+>){4,})"
         phrases = re.findall(pattern, text)
-    
+
         # pattern should be text pattern and od pattern
         pattern = r'^\s*(.*?)(?=<od>|</od>|<box>|</box>|<bbox>|</bbox>|<loc_)'
         box_pattern = r'<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
@@ -851,7 +851,7 @@ class Florence2PostProcesser:
             if phrase_text_strip == '' and not allow_empty_phrase:
                 continue
 
-            # parse phrase, get string 
+            # parse phrase, get string
             phrase = re.search(pattern, phrase_text_strip)
             if phrase is None:
                 continue
@@ -865,13 +865,13 @@ class Florence2PostProcesser:
             if len(bboxes_parsed) == 0:
                 continue
 
-            # a list of list 
+            # a list of list
             bbox_bins = [[int(_bboxes_parsed.group(j)) for j in range(1, 5)] for _bboxes_parsed in bboxes_parsed]
 
             bboxes = self.box_quantizer.dequantize(
                 boxes=mindspore.tensor(bbox_bins),
                 size=image_size
-            ).tolist()  
+            ).tolist()
 
             phrase = phrase.encode('ascii',errors='ignore').decode('ascii')
             for _bboxes in bboxes:
@@ -884,14 +884,14 @@ class Florence2PostProcesser:
 
         return instances
 
-    def parse_description_with_polygons_from_text_and_spans(self, text, pattern, image_size, 
+    def parse_description_with_polygons_from_text_and_spans(self, text, pattern, image_size,
                                                             allow_empty_phrase=False,
                                                             polygon_sep_token='<sep>',
                                                             polygon_start_token='<poly>',
                                                             polygon_end_token='</poly>',
                                                             with_box_at_start=False,
                                                             ):
-        
+
         # ref_seg format: '<expression><x1><y1><x2><y2><><><sep><><><><>'
         # ignore <s> </s> and <pad>
 
@@ -902,7 +902,7 @@ class Florence2PostProcesser:
         if allow_empty_phrase:
             pattern = rf"(?:(?:<loc_\d+>|{re.escape(polygon_sep_token)}|{re.escape(polygon_start_token)}|{re.escape(polygon_end_token)}){{4,}})"
         else:
-            # [^<]+: This part matches one or more characters that are not the < symbol. 
+            # [^<]+: This part matches one or more characters that are not the < symbol.
             # The ^ inside the square brackets [] is a negation, meaning it matches anything except <.
             #
             pattern = rf"([^<]+(?:<loc_\d+>|{re.escape(polygon_sep_token)}|{re.escape(polygon_start_token)}|{re.escape(polygon_end_token)}){{4,}})"
@@ -913,7 +913,7 @@ class Florence2PostProcesser:
 
         # one polygons instance is separated by polygon_start_token and polygon_end_token
         polygons_instance_pattern = rf'{re.escape(polygon_start_token)}(.*?){re.escape(polygon_end_token)}'
-    
+
         instances = []
         for phrase_text in phrases:
 
@@ -927,7 +927,7 @@ class Florence2PostProcesser:
             if phrase_text_strip == '' and not allow_empty_phrase:
                 continue
 
-            # parse phrase, get string 
+            # parse phrase, get string
             phrase = re.search(phrase_string_pattern, phrase_text_strip)
             if phrase is None:
                 continue
@@ -948,7 +948,7 @@ class Florence2PostProcesser:
                 instance = {}
 
                 # polygons_parsed= list(re.finditer(box_pattern, phrase_text))
-                if isinstance(_polygons_instances_parsed, str): 
+                if isinstance(_polygons_instances_parsed, str):
                     polygons_parsed= list(re.finditer(box_pattern, _polygons_instances_parsed))
                 else:
                     polygons_parsed= list(re.finditer(box_pattern, _polygons_instances_parsed.group(1)))
@@ -970,10 +970,10 @@ class Florence2PostProcesser:
                             _polygon = _polygon[4:]
                         else:
                             bbox = [0, 0, 0, 0]
-                    # abandon last element if is not paired 
+                    # abandon last element if is not paired
                     if len(_polygon) % 2 == 1:
                         _polygon = _polygon[:-1]
-                    
+
                     # reshape into (n, 2)
                     _polygon = self.coordinates_quantizer.dequantize(
                         mindspore.tensor(np.array(_polygon).reshape(-1, 2)),
@@ -988,7 +988,7 @@ class Florence2PostProcesser:
                     instance['bbox'] = self.box_quantizer.dequantize(
                         boxes=mindspore.tensor([bbox]),
                         size=image_size
-                    ).tolist()[0]  
+                    ).tolist()[0]
 
                 instances.append(instance)
 
@@ -1012,8 +1012,8 @@ class Florence2PostProcesser:
                 parse_tasks = [parse_tasks]
             for _parse_task in parse_tasks:
                 assert _parse_task in self.parse_tasks, f'parse task {_parse_task} not supported'
-        
-        # sequence or text should be provided 
+
+        # sequence or text should be provided
         assert text is not None, 'text should be provided'
 
         parsed_dict = {
@@ -1035,30 +1035,30 @@ class Florence2PostProcesser:
                 )
                 parsed_dict['ocr'] = instances
             elif task == 'phrase_grounding':
-                instances = self.parse_phrase_grounding_from_text_and_spans( 
+                instances = self.parse_phrase_grounding_from_text_and_spans(
                     text,
                     pattern=pattern,
                     image_size=image_size,
                 )
                 parsed_dict['phrase_grounding'] = instances
             elif task == 'pure_text':
-                parsed_dict['pure_text'] = text 
+                parsed_dict['pure_text'] = text
             elif task == 'description_with_bboxes':
-                instances = self.parse_description_with_bboxes_from_text_and_spans( 
+                instances = self.parse_description_with_bboxes_from_text_and_spans(
                     text,
                     pattern=pattern,
                     image_size=image_size,
                 )
                 parsed_dict['description_with_bboxes'] = instances
             elif task == 'description_with_polygons':
-                instances = self.parse_description_with_polygons_from_text_and_spans( 
+                instances = self.parse_description_with_polygons_from_text_and_spans(
                     text,
                     pattern=pattern,
                     image_size=image_size,
                 )
                 parsed_dict['description_with_polygons'] = instances
             elif task == 'polygons':
-                instances = self.parse_description_with_polygons_from_text_and_spans( 
+                instances = self.parse_description_with_polygons_from_text_and_spans(
                     text,
                     pattern=pattern,
                     image_size=image_size,
@@ -1066,7 +1066,7 @@ class Florence2PostProcesser:
                 )
                 parsed_dict['polygons'] = instances
             elif task == 'bboxes':
-                instances = self.parse_description_with_bboxes_from_text_and_spans( 
+                instances = self.parse_description_with_bboxes_from_text_and_spans(
                     text,
                     pattern=pattern,
                     image_size=image_size,
@@ -1076,13 +1076,13 @@ class Florence2PostProcesser:
             elif task == 'description_with_bboxes_or_polygons':
                 if '<poly>' in text:
                     # only support either polygons or bboxes, not both at the same time
-                    instances = self.parse_description_with_polygons_from_text_and_spans( 
+                    instances = self.parse_description_with_polygons_from_text_and_spans(
                         text,
                         pattern=pattern,
                         image_size=image_size,
                     )
                 else:
-                    instances = self.parse_description_with_bboxes_from_text_and_spans( 
+                    instances = self.parse_description_with_bboxes_from_text_and_spans(
                         text,
                         pattern=pattern,
                         image_size=image_size,
