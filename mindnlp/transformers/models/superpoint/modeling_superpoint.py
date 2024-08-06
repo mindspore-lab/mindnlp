@@ -374,24 +374,12 @@ class SuperPointPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
-            )
+            nn.init.normal_(module.weight,mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.set_data(
-                    initializer("zero", module.bias.shape, module.bias.dtype)
-                )
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
-            module.gamma.set_data(
-                initializer("ones", module.gamma.shape, module.gamma.dtype)
-            )
-            module.beta.set_data(
-                initializer("zeros", module.beta.shape, module.beta.dtype)
-            )
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
     def extract_one_channel_pixel_values(
         self, pixel_values: mindspore.Tensor
