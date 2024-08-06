@@ -1587,8 +1587,8 @@ class GenerationTesterMixin:
             set_seed(0)
             random_embeds = ops.rand_like(inputs_embeds)
             outputs_from_rand_embeds = model.generate(input_ids, inputs_embeds=random_embeds)
-            # with self.assertRaises(AssertionError):
-            self.assertListEqual(outputs_from_rand_embeds.tolist(), outputs_from_embeds.tolist())
+            with self.assertRaises(AssertionError):
+                self.assertListEqual(outputs_from_rand_embeds.tolist(), outputs_from_embeds.tolist())
 
             # input_ids is not a required input -- if we don't pass it, the newly generated tokens will be the same
             outputs_from_embeds_wo_ids = model.generate(

@@ -18,7 +18,7 @@ import inspect
 import tempfile
 import unittest
 import numpy
-from mindnlp.utils.serialization import load
+from mindnlp.core.serialization import load
 from huggingface_hub import hf_hub_download
 from parameterized import parameterized
 from mindnlp.utils.testing_utils import (

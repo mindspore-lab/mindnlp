@@ -26,7 +26,7 @@ from mindspore import ops
 from mindnlp.transformers import XCLIPConfig, XCLIPTextConfig, XCLIPVisionConfig
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
 from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor, random_attention_mask

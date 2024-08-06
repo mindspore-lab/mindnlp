@@ -514,7 +514,9 @@ class Module:
                                 input_param.requires_grad = param.requires_grad
                         setattr(self, name, input_param)
                     else:
+                        dtype = param.dtype
                         param.assign_value(input_param)
+                        param.set_dtype(dtype)
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '

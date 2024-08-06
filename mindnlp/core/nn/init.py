@@ -204,6 +204,7 @@ def uniform_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Uniform(a, b), tensor.shape, tensor.dtype))
     return tensor
 
@@ -225,6 +226,7 @@ def normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.normal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Normal(std, mean), tensor.shape, tensor.dtype))
     return tensor
 
@@ -255,6 +257,7 @@ def trunc_normal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.trunc_normal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(TruncatedNormal(std, mean, a, b), tensor.shape, tensor.dtype))
     return tensor
 
@@ -270,6 +273,7 @@ def constant_(tensor: Tensor, val: float) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.constant_(w, 0.3)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Constant(val), tensor.shape, tensor.dtype))
     return tensor
 
@@ -284,6 +288,7 @@ def ones_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.ones_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer('ones', tensor.shape, tensor.dtype))
     return tensor
 
@@ -298,6 +303,7 @@ def zeros_(tensor: Tensor) -> Tensor:
         >>> w = torch.empty(3, 5)
         >>> nn.init.zeros_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer('zeros', tensor.shape, tensor.dtype))
     return tensor
 
@@ -318,12 +324,13 @@ def dirac_(tensor, groups=1):
         >>> w = torch.empty(3, 24, 5, 5)
         >>> nn.init.dirac_(w, 3)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Dirac(groups), tensor.shape, tensor.dtype))
     return tensor
 
 
 def _calculate_fan_in_and_fan_out(tensor):
-    dimensions = tensor.dim()
+    dimensions = tensor.ndim
     if dimensions < 2:
         raise ValueError(
             "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
@@ -332,7 +339,7 @@ def _calculate_fan_in_and_fan_out(tensor):
     num_input_fmaps = tensor.shape[1]
     num_output_fmaps = tensor.shape[0]
     receptive_field_size = 1
-    if tensor.dim() > 2:
+    if tensor.ndim > 2:
         # math.prod is not always available, accumulate the product manually
         # we could use functools.reduce but that is not supported by TorchScript
         for s in tensor.shape[2:]:
@@ -555,6 +562,7 @@ def orthogonal_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.orthogonal_(w)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Orthogonal(gain), tensor.shape, tensor.dtype))
     return tensor
 
@@ -581,6 +589,7 @@ def sparse_(
         >>> w = torch.empty(3, 5)
         >>> nn.init.sparse_(w, sparsity=0.1)
     """
+    tensor.data_sync(True)
     tensor.assign_value(initializer(Sparse(sparsity, std), tensor.shape, tensor.dtype))
     return tensor
 
