@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """FLAVA model configurations"""
-from typing import Any, Dict, Union
 import warnings
 import os
+from typing import Any, Dict, Union
 
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
