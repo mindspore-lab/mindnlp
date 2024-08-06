@@ -475,10 +475,10 @@ class _BaseAutoModelClass:
 
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
-            # ensure not to pollute the config object with torch_dtype="auto" - since it's
+            # ensure not to pollute the config object with ms_dtype="auto" - since it's
             # meaningless in the context of the config object - torch.dtype values are acceptable
-            if kwargs.get("torch_dtype", None) == "auto":
-                _ = kwargs.pop("torch_dtype")
+            if kwargs.get("ms_dtype", None) == "auto":
+                _ = kwargs.pop("ms_dtype")
             # to not overwrite the quantization_config if config has a quantization_config
             if kwargs.get("quantization_config", None) is not None:
                 _ = kwargs.pop("quantization_config")
@@ -492,9 +492,9 @@ class _BaseAutoModelClass:
                 **kwargs,
             )
 
-            # if torch_dtype=auto was passed here, ensure to pass it on
-            if kwargs_orig.get("torch_dtype", None) == "auto":
-                kwargs["torch_dtype"] = "auto"
+            # if ms_dtype=auto was passed here, ensure to pass it on
+            if kwargs_orig.get("ms_dtype", None) == "auto":
+                kwargs["ms_dtype"] = "auto"
             if kwargs_orig.get("quantization_config", None) is not None:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 

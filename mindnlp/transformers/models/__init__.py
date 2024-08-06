@@ -88,6 +88,7 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    chatglm4,
     flava,
     focalnet,
     fnet,
@@ -257,6 +258,7 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .chatglm4 import *
 from .clap import *
 from .clip import *
 from .clipseg import *
@@ -501,6 +503,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(fnet.__all__)

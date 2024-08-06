@@ -411,7 +411,7 @@ def _prepare_attention_mask(model_kwargs: Dict[str, Any], new_length: int, is_en
     if mask_length_diff < 0:
         model_kwargs[mask_key] = mask[:, :mask_length_diff]
     elif mask_length_diff > 0:
-        model_kwargs[mask_key] = ops.cat([mask, mask.new_ones((mask.shape[0], mask_length_diff))], dim=-1)
+        model_kwargs[mask_key] = ops.cat([mask, ops.ones((mask.shape[0], mask_length_diff), dtype=mask.dtype)], dim=-1)
     return model_kwargs
 
 

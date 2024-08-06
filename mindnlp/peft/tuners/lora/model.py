@@ -130,7 +130,7 @@ class LoraModel(BaseTuner):
         ...     pad_token_id=tokenizer.eos_token_id,
         ...     use_cache=False,
         ...     device_map={"": rank},
-        ...     torch_dtype=torch.float16,
+        ...     ms_dtype=torch.float16,
         ...     quantization_config=quantization_config,
         ... )
         >>> model = prepare_model_for_kbit_training(model)
