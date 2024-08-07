@@ -1,8 +1,9 @@
 """array op"""
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, GENERATOR_SEED
 
 # adjoint
 
@@ -59,8 +60,20 @@ def gather_nd(input, indices):
 def hstack(tensors):
     return ops.hstack(tensors)
 
-# index_add
 
+# index_fill
+def index_fill(input, dim, index, value):
+    return ops.index_fill(input, dim, index, value)
+
+# index_add
+def index_add(input, dim, index, source, *, alpha=1):
+    if USE_PYBOOST:
+        return mindspore.ops.auto_generate.gen_ops_prim.index_add_ext_op(input, index, source, dim, alpha)
+    return ops.index_add(input, index, source, dim)
+
+def inplace_index_add(input, dim, index, source):
+    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
+    return _inplace(input, index, source)
 
 # index_copy
 
@@ -96,7 +109,14 @@ def narrow(input, dim, start, length):
 def nonzero(input, *, as_tuple=False):
     if USE_PYBOOST:
         return mindspore.mint.nonzero(input, as_tuple)
-    return ops.nonzero(input, as_tuple)
+    if GENERATOR_SEED:
+        return ops.nonzero(input, as_tuple)
+    out = ops.nonzero(input)
+    if as_tuple:
+        if 0 in out.shape:
+            return (out, out)
+        return unbind(out, 1)
+    return out
 
 # permute
 def permute(input, dims):
@@ -127,6 +147,8 @@ def select(input, dim, index):
 def scatter(input, dim, index, src):
     if USE_PYBOOST:
         return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 0)
+    if not isinstance(src, mindspore.Tensor):
+        src = ops.full(index.shape, src, dtype=input.dtype)
     return ops.tensor_scatter_elements(input, index, src, dim)
 
 # diagonal_scatter
@@ -150,6 +172,10 @@ def scatter_add(input, dim, index, src):
 # scatter_nd_update
 def scatter_nd_update(input, indices, update):
     return ops.scatter_nd_update(input, indices, update)
+
+
+def scatter_update(input, indices, updates):
+    return ops.scatter_update(input, indices, updates)
 
 # split
 def split(tensor, split_size_or_sections, dim=0):

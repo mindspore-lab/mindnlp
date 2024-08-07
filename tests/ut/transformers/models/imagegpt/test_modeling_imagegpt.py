@@ -26,7 +26,7 @@ import numpy as np
 from mindnlp.transformers import ImageGPTConfig
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
-from mindnlp.utils.serialization import safe_save_file, safe_load_file
+from mindnlp.core.serialization import safe_save_file, safe_load_file
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -42,7 +42,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         ImageGPTForCausalImageModeling,

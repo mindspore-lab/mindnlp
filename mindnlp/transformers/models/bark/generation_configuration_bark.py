@@ -12,66 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" BARK model generation configuration"""
+"""BARK model generation configuration"""
+
 import copy
 from typing import Dict
 
-from mindnlp.utils import logging
 from ...generation.configuration_utils import GenerationConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
 
 
 class BarkSemanticGenerationConfig(GenerationConfig):
-
-    """
-    Class that holds a generation configuration for `BarkSemanticModel`.
-    
-    This configuration inherit from `GenerationConfig` and can be used to control the model generation. Read the
-    documentation from `GenerationConfig` for more information.
-    
-    Args:
-        eos_token_id (`int`, *optional*, defaults to 10_000):
-            The id of the *end-of-sequence* token.
-        renormalize_logits (`bool`, *optional*, defaults to `True`):
-            Whether to renormalize the logits after applying all the logits processors or warpers (including the
-            custom ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the
-            score logits are normalized but some logit processors or warpers break the normalization.
-        max_new_tokens (`int`, *optional*, defaults to 768):
-            The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.
-        output_scores (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the prediction scores. See `scores` under returned tensors for more details.
-        return_dict_in_generate (`bool`, *optional*, defaults to `False`):
-            Whether or not to return a `~utils.ModelOutput` instead of a plain tuple.
-        output_hidden_states (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-            for more details.
-        output_attentions (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-            returned tensors for more details.
-        temperature (`float`, *optional*, defaults to 1.0):
-            The value used to modulate the next token probabilities.
-        do_sample (`bool`, *optional*, defaults to `False`):
-            Whether or not to use sampling ; use greedy decoding otherwise.
-        text_encoding_offset (`int`, *optional*, defaults to 10_048):
-            Text encoding offset.
-        text_pad_token (`int`, *optional*, defaults to 129_595):
-            Text pad token.
-        semantic_infer_token (`int`, *optional*, defaults to 129_599):
-            Semantic infer token.
-        semantic_vocab_size (`int`, *optional*, defaults to 10_000):
-            Semantic vocab size.
-        max_input_semantic_length (`int`, *optional*, defaults to 256):
-            Max length of semantic input vector.
-        semantic_rate_hz (`float`, *optional*, defaults to 49.9):
-            Semantic rate in Hertz.
-        min_eos_p (`float`, *optional*):
-            Minimum threshold of the probability of the EOS token for it to be sampled. This is an early stopping
-            strategy to mitigate potential unwanted generations at the end of a prompt. The original implementation
-            suggests a default value of 0.2.
-    """
     model_type = "semantic"
 
     def __init__(
@@ -163,47 +116,6 @@ class BarkSemanticGenerationConfig(GenerationConfig):
 
 
 class BarkCoarseGenerationConfig(GenerationConfig):
-
-    """
-    Class that holds a generation configuration for `BarkCoarseModel`.
-    
-    This configuration inherits from `GenerationConfig` and can be used to control the model generation. Read the
-    documentation from `GenerationConfig` for more information.
-    
-    Args:
-        renormalize_logits (`bool`, *optional*, defaults to `True`):
-            Whether to renormalize the logits after applying all the logits processors or warpers (including the
-            custom ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the
-            score logits are normalized but some logit processors or warpers break the normalization.
-        output_scores (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the prediction scores. See `scores` under returned tensors for more details.
-        return_dict_in_generate (`bool`, *optional*, defaults to `False`):
-            Whether or not to return a `utils.ModelOutput` instead of a plain tuple.
-        output_hidden_states (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-            for more details.
-        output_attentions (`bool`, *optional*, defaults to `False`):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-            returned tensors for more details.
-        temperature (`float`, *optional*, defaults to 1.0):
-            The value used to modulate the next token probabilities.
-        do_sample (`bool`, *optional*, defaults to `False`):
-            Whether or not to use sampling; use greedy decoding otherwise.
-        coarse_semantic_pad_token (`int`, *optional*, defaults to 12_048):
-            Coarse semantic pad token.
-        coarse_rate_hz (`int`, *optional*, defaults to 75):
-            Coarse rate in Hertz.
-        n_coarse_codebooks (`int`, *optional*, defaults to 2):
-            Number of coarse codebooks.
-        coarse_infer_token (`int`, *optional*, defaults to 12_050):
-            Coarse infer token.
-        max_coarse_input_length (`int`, *optional*, defaults to 256):
-            Max length of input coarse vector.
-        max_coarse_history (`int`, *optional*, defaults to 630):
-            Max length of the output of the coarse acoustics model used in the fine generation step.
-        sliding_window_len (`int`, *optional*, defaults to 60):
-            The coarse generation step uses a sliding window to generate raw audio.
-    """
     model_type = "coarse_acoustics"
 
     def __init__(
@@ -284,26 +196,6 @@ class BarkCoarseGenerationConfig(GenerationConfig):
 
 
 class BarkFineGenerationConfig(GenerationConfig):
-
-    """
-    Class that holds a generation configuration for `BarkFineModel`.
-    
-    `BarkFineModel` is an autoencoder model, so should not usually be used for generation. However, under the hood, it uses `temperature` when used by `BarkModel`.
-    
-    This configuration inherits from `GenerationConfig` and can be used to control the model generation. Read the documentation from `GenerationConfig` for more information.
-    
-    Args:
-        temperature (`float`, *optional`):
-            The value used to modulate the next token probabilities.
-        max_fine_history_length (`int`, *optional*, defaults to 512):
-            Max length of the fine history vector.
-        max_fine_input_length (`int`, *optional*, defaults to 1024):
-            Max length of fine input vector.
-        n_fine_codebooks (`int`, *optional*, defaults to 8):
-            Number of codebooks used.
-    
-    Overrides GenerationConfig.validate because `BarkFineGenerationConfig` don't use any parameters outside temperature.
-    """
     model_type = "fine_acoustics"
 
     def __init__(
@@ -343,29 +235,13 @@ class BarkFineGenerationConfig(GenerationConfig):
         Overrides GenerationConfig.validate because BarkFineGenerationConfig don't use any parameters outside
         temperature.
         """
-class BarkGenerationConfig(GenerationConfig):
 
-    """
-    Class that represents a generation configuration for BarkModel.
-    
-    This class is used to generate speeches with a nested BarkGenerationConfig, which includes
-    BarkSemanticGenerationConfig, BarkCoarseGenerationConfig, and BarkFineGenerationConfig.
-    It inherits from GenerationConfig and allows control over the model generation.
-    
-    Attributes:
-        semantic_config (BarkSemanticGenerationConfig): Semantic generation configuration.
-        coarse_acoustics_config (BarkCoarseGenerationConfig): Coarse generation configuration.
-        fine_acoustics_config (BarkFineGenerationConfig): Fine generation configuration.
-        sample_rate (int): Sample rate for the generation process.
-        codebook_size (int): Vector length for each codebook.
-    
-    Methods:
-        __init__: Initializes the BarkGenerationConfig instance with provided configurations or defaults.
-        from_sub_model_configs: Instantiates a BarkGenerationConfig from Bark sub-models generation configurations.
-        to_dict: Serializes the instance to a Python dictionary, including all configuration attributes.
-    """
+
+class BarkGenerationConfig(GenerationConfig):
     model_type = "bark"
     is_composition = True
+
+    # TODO (joao): nested from_dict
 
     def __init__(
         self,
