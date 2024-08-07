@@ -39,7 +39,10 @@ from .errors import (
     LocalEntryNotFoundError,
     RepositoryNotFoundError,
     ModelNotFoundError,
-    GatedRepoError
+    GatedRepoError,
+    OfflineModeIsEnabled,
+    RevisionNotFoundError,
+    raise_for_status
 )
 from . import logging
 
@@ -894,6 +897,8 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    if revision is None:
+        revision = 'main'
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
                          '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
@@ -905,3 +910,139 @@ def build_download_url(
         logger.warning(f'`revision` is not support when use "{mirror}" website. '
                     f'If you want use specific revision, please use "modelscope", "huggingface" or "gitee".')
     return MIRROR_MAP[mirror].format(repo_id, filename)
+
+
+REGEX_COMMIT_HASH = re.compile(r"^[0-9a-f]{40}$")
+
+def extract_commit_hash(resolved_file: Optional[str], commit_hash: Optional[str]) -> Optional[str]:
+    """
+    Extracts the commit hash from a resolved filename toward a cache file.
+    """
+    if resolved_file is None or commit_hash is not None:
+        return commit_hash
+    resolved_file = str(Path(resolved_file).as_posix())
+    search = re.search(r"snapshots/([^/]+)/", resolved_file)
+    if search is None:
+        return None
+    commit_hash = search.groups()[0]
+    return commit_hash if REGEX_COMMIT_HASH.match(commit_hash) else None
+
+def has_file(
+    path_or_repo: Union[str, os.PathLike],
+    filename: str,
+    revision: Optional[str] = None,
+    proxies: Optional[Dict[str, str]] = None,
+    token: Optional[Union[bool, str]] = None,
+    mirror: str = 'huggingface',
+    *,
+    local_files_only: bool = False,
+    cache_dir: Union[str, Path, None] = None,
+    repo_type: Optional[str] = None,
+    **deprecated_kwargs,
+):
+    """
+    Checks if a repo contains a given file without downloading it. Works for remote repos and local folders.
+
+    If offline mode is enabled, checks if the file exists in the cache.
+
+    <Tip warning={false}>
+
+    This function will raise an error if the repository `path_or_repo` is not valid or if `revision` does not exist for
+    this repo, but will return False for regular connection errors.
+
+    </Tip>
+    """
+
+    # If path to local directory, check if the file exists
+    if os.path.isdir(path_or_repo):
+        return os.path.isfile(os.path.join(path_or_repo, filename))
+
+    # Else it's a repo => let's check if the file exists in local cache or on the Hub
+
+    # Check if file exists in cache
+    # This information might be outdated so it's best to also make a HEAD call (if allowed).
+    cached_path = try_to_load_from_cache(
+        repo_id=path_or_repo,
+        filename=filename,
+        revision=revision,
+        repo_type=repo_type,
+        cache_dir=cache_dir,
+    )
+    has_file_in_cache = isinstance(cached_path, str)
+
+    # If local_files_only, don't try the HEAD call
+    if local_files_only:
+        return has_file_in_cache
+
+    # Check if the file exists
+    try:
+        url = build_download_url(path_or_repo, filename, revision, repo_type=repo_type, mirror=mirror)
+        if token:
+            headers = {
+                'authorization': f"Bearer {token}",
+            }
+        else:
+            headers = {}
+        response = requests.head(url, timeout=10, allow_redirects=False, proxies=proxies, headers=headers)
+
+    except OfflineModeIsEnabled:
+        return has_file_in_cache
+
+    try:
+        raise_for_status(response)
+        return True
+    except GatedRepoError as e:
+        logger.error(e)
+        raise EnvironmentError(
+            f"{path_or_repo} is a gated repository. Make sure to request access at "
+            f"https://huggingface.co/{path_or_repo} and pass a token having permission to this repo either by "
+            "logging in with `huggingface-cli login` or by passing `token=<your_token>`."
+        ) from e
+    except RepositoryNotFoundError as e:
+        logger.error(e)
+        raise EnvironmentError(
+            f"{path_or_repo} is not a local folder or a valid repository name on 'https://hf.co'."
+        ) from e
+    except RevisionNotFoundError as e:
+        logger.error(e)
+        raise EnvironmentError(
+            f"{revision} is not a valid git identifier (branch name, tag name or commit id) that exists for this "
+            f"model name. Check the model page at 'https://huggingface.co/{path_or_repo}' for available revisions."
+        ) from e
+    except EntryNotFoundError:
+        return False  # File does not exist
+    except requests.HTTPError:
+        # Any authentication/authorization error will be caught here => default to cache
+        return has_file_in_cache
+
+def convert_file_size_to_int(size: Union[int, str]):
+    """
+    Converts a size expressed as a string with digits an unit (like `"5MB"`) to an integer (in bytes).
+
+    Args:
+        size (`int` or `str`): The size to convert. Will be directly returned if an `int`.
+
+    Example:
+    ```py
+    >>> convert_file_size_to_int("1MiB")
+    1048576
+    ```
+    """
+    if isinstance(size, int):
+        return size
+    if size.upper().endswith("GIB"):
+        return int(size[:-3]) * (2**30)
+    if size.upper().endswith("MIB"):
+        return int(size[:-3]) * (2**20)
+    if size.upper().endswith("KIB"):
+        return int(size[:-3]) * (2**10)
+    if size.upper().endswith("GB"):
+        int_size = int(size[:-2]) * (10**9)
+        return int_size // 8 if size.endswith("b") else int_size
+    if size.upper().endswith("MB"):
+        int_size = int(size[:-2]) * (10**6)
+        return int_size // 8 if size.endswith("b") else int_size
+    if size.upper().endswith("KB"):
+        int_size = int(size[:-2]) * (10**3)
+        return int_size // 8 if size.endswith("b") else int_size
+    raise ValueError("`size` is not in a valid format. Use an integer followed by the unit, e.g., '5GB'.")

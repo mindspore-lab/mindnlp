@@ -2,7 +2,7 @@
 import mindspore
 from mindspore import ops
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, GENERATOR_SEED
 
 # adjoint
 
@@ -96,7 +96,14 @@ def narrow(input, dim, start, length):
 def nonzero(input, *, as_tuple=False):
     if USE_PYBOOST:
         return mindspore.mint.nonzero(input, as_tuple)
-    return ops.nonzero(input, as_tuple)
+    if GENERATOR_SEED:
+        return ops.nonzero(input, as_tuple)
+    out = ops.nonzero(input)
+    if as_tuple:
+        if 0 in out.shape:
+            return (out, out)
+        return unbind(out, 1)
+    return out
 
 # permute
 def permute(input, dims):
@@ -127,6 +134,8 @@ def select(input, dim, index):
 def scatter(input, dim, index, src):
     if USE_PYBOOST:
         return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 0)
+    if not isinstance(src, mindspore.Tensor):
+        src = ops.full(index.shape, src, dtype=input.dtype)
     return ops.tensor_scatter_elements(input, index, src, dim)
 
 # diagonal_scatter

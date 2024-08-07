@@ -16,20 +16,21 @@
 
 import math
 import unittest
-import numpy as np
+
 from mindnlp.transformers import BloomConfig
-from mindnlp.utils.testing_utils import is_mindspore_available, require_mindspore, slow
+from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
-        BLOOM_PRETRAINED_MODEL_ARCHIVE_LIST,
         BloomForCausalLM,
         BloomForQuestionAnswering,
         BloomForSequenceClassification,
@@ -37,7 +38,6 @@ if is_mindspore_available():
         BloomModel,
         BloomTokenizerFast,
     )
-
 
 @require_mindspore
 class BloomModelTester:
@@ -136,8 +136,7 @@ class BloomModelTester:
 
     def create_and_check_bloom_model(self, config, input_ids, input_mask, *args):
         model = BloomModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids)
 
@@ -147,7 +146,7 @@ class BloomModelTester:
     def create_and_check_bloom_model_past(self, config, input_ids, input_mask, *args):
         model = BloomModel(config=config)
 
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, attention_mask=ops.ones_like(input_ids), use_cache=True)
@@ -174,15 +173,14 @@ class BloomModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_bloom_model_attention_mask_past(self, config, input_ids, input_mask, *args):
         model = BloomModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
-        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
         half_seq_length = self.seq_length // 2
         attn_mask[:, half_seq_length:] = 0
 
@@ -200,7 +198,7 @@ class BloomModelTester:
         # append to next input_ids and attn_mask
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
             dim=1,
         )
 
@@ -214,12 +212,11 @@ class BloomModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_bloom_model_past_large_inputs(self, config, input_ids, input_mask, *args):
         model = BloomModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, attention_mask=input_mask, use_cache=True)
@@ -246,12 +243,11 @@ class BloomModelTester:
         output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_lm_head_model(self, config, input_ids, input_mask, *args):
         model = BloomForCausalLM(config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
@@ -260,44 +256,50 @@ class BloomModelTester:
     def create_and_check_sequence_classification_model(self, config, input_ids, input_mask, *args):
         config.num_labels = self.num_labels
         model = BloomForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, attention_mask=input_mask)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_token_classification_model(self, config, input_ids, input_mask, *args):
         model = BloomForTokenClassification(config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, attention_mask=input_mask)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
     def create_and_check_question_answering_model(self, config, input_ids, input_mask, *args):
         model = BloomForQuestionAnswering(config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, attention_mask=input_mask)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
-    def create_and_check_forward(
+    def create_and_check_forward_and_backwards(
         self, config, input_ids, input_mask, *args, gradient_checkpointing=False
     ):
         model = BloomForCausalLM(config)
+        if gradient_checkpointing:
+            model.gradient_checkpointing_enable()
 
-        result = model(input_ids, labels=input_ids)
-        self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        def forward(input_ids):
+            result = model(input_ids, labels=input_ids)
+            loss = result.loss
+            logits = result.logits
+            return loss, logits
+
+        grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+        (loss, logits), grad = grad_fn(input_ids)
+        self.parent.assertEqual(loss.shape, ())
+        self.parent.assertEqual(logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
     def create_and_check_bloom_weight_initialization(self, config, *args):
         model = BloomModel(config)
         model_std = model.config.initializer_range / math.sqrt(2 * model.config.n_layer)
-        for key in model.parameters_dict().keys():
+        for key in model.state_dict().keys():
             if "c_proj" in key and "weight" in key:
-                self.parent.assertLessEqual(abs(ops.std(model.parameters_dict()[key]) - model_std), 0.001)
-                self.parent.assertLessEqual(abs(ops.mean(model.parameters_dict()[key]) - 0.0), 0.01)
+                self.parent.assertLessEqual(abs(ops.std(model.state_dict()[key]) - model_std), 0.001)
+                self.parent.assertLessEqual(abs(ops.mean(model.state_dict()[key]) - 0.0), 0.01)
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -375,21 +377,26 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_token_classification_model(*config_and_inputs)
 
+    def test_bloom_gradient_checkpointing(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_forward_and_backwards(*config_and_inputs, gradient_checkpointing=True)
+
     def test_bloom_weight_initialization(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_bloom_weight_initialization(*config_and_inputs)
 
-    @unittest.skip("Bloom has a non-standard KV cache format.")
+    @unittest.skip(reason="Bloom has a non-standard KV cache format.")
     def test_past_key_values_format(self):
         pass
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BLOOM_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = BloomModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "bigscience/bigscience-small-testing"
+        model = BloomModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     @slow
+    @require_mindspore
     def test_simple_generation(self):
         # This test is a bit flaky. For some GPU architectures, pytorch sets by default allow_fp16_reduced_precision_reduction = True and some operations
         # do not give the same results under this configuration, especially torch.baddmm and torch.bmm. https://pytorch.org/docs/stable/notes/numerical_accuracy.html#fp16-on-mi200
@@ -411,8 +418,8 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         # >=1b1 + allow_fp16_reduced_precision_reduction = False  + torch.bmm  ==> PASS
 
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
-        model = model.set_train(False)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, revision="gs555750")
+        model = model.eval()
         tokenizer = BloomTokenizerFast.from_pretrained(path_560m)
 
         input_sentence = "I enjoy walking with my cute dog"
@@ -424,14 +431,15 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
 
         input_ids = tokenizer.encode(input_sentence, return_tensors="ms")
         greedy_output = model.generate(input_ids, max_length=50)
-
+        print(greedy_output[0])
         self.assertEqual(tokenizer.decode(greedy_output[0], skip_special_tokens=True), EXPECTED_OUTPUT)
 
     @slow
+    @require_mindspore
     def test_batch_generation(self):
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
-        model = model.set_train(False)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, revision="gs555750")
+        model = model.eval()
         tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentence = ["I enjoy walking with my cute dog", "I enjoy walking with my cute dog"]
@@ -447,10 +455,11 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         )
 
     @slow
+    @require_mindspore
     def test_batch_generation_padd(self):
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
-        model = model.set_train(False)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, revision="gs555750")
+        model = model.eval()
         tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentence = ["I enjoy walking with my cute dog", "Hello my name is"]
@@ -475,11 +484,12 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         )
 
     @slow
+    @require_mindspore
     def test_batch_generated_text(self):
         path_560m = "bigscience/bloom-560m"
 
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
-        model = model.set_train(False)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, revision="gs555750")
+        model = model.eval()
         tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentences = [
@@ -494,8 +504,8 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
 
         # these generations match those of the PyTorch model
         EXPECTED_GENERATIONS = [
-            "Hello what is the best way to get the data from the database? I have tried",
-            "Running a quick test with the following code, it works fine:\n$(document).ready(",
+            "Hello what is the best way to get the data from the server? I have tried",
+            "Running a quick test with the following command:\nsudo apt-get install python3\nsudo apt-get install python2",
         ]
 
         self.assertListEqual(generated_text, EXPECTED_GENERATIONS)
@@ -516,10 +526,10 @@ class BloomEmbeddingTest(unittest.TestCase):
 
 
     You need to install tokenizers following this readme:
-        - https://hf-mirror.com/bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
+        - https://huggingface.co/bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
 
     Tokenizer used during training:
-        - https://hf-mirror.com/bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
+        - https://huggingface.co/bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
 
     # TODO change the script (or just add skip) when building the env with tokenizers 0.12.0
     """
@@ -530,9 +540,9 @@ class BloomEmbeddingTest(unittest.TestCase):
 
     @require_mindspore
     def test_embeddings(self):
-        # The config in this checkpoint has `bfloat16` as `torch_dtype` -> model in `bfloat16`
+        # The config in this checkpoint has `bfloat16` as `ms_dtype` -> model in `bfloat16`
         model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, ms_dtype="auto")
-        model.set_train(False)
+        model.eval()
 
         EMBEDDINGS_DS_BEFORE_LN_BF_16_MEAN = {
             3478: 0.0002307891845703125,
@@ -733,23 +743,24 @@ class BloomEmbeddingTest(unittest.TestCase):
         }
 
         tensor_ids = mindspore.Tensor([EXAMPLE_IDS])
-        embeddings = model.transformer.word_embeddings(tensor_ids)
-        embeddings_ln = model.transformer.word_embeddings_layernorm(embeddings)  #
+        with no_grad():
+            embeddings = model.transformer.word_embeddings(tensor_ids)
+            embeddings_ln = model.transformer.word_embeddings_layernorm(embeddings)  #
         # first check the embeddings before LN
         output_dict = {"min": {}, "max": {}, "mean": {}, "sum": {"value": embeddings.sum().item()}}
         for i, idx in enumerate(EXAMPLE_IDS):
-            output_dict["min"][idx] = embeddings.min(axis=-1)[0][i].item()
-            output_dict["max"][idx] = embeddings.max(axis=-1)[0][i].item()
-            output_dict["mean"][idx] = embeddings.mean(axis=-1)[0][i].item()
+            output_dict["min"][idx] = ops.min(embeddings, dim=-1)[0][0][i].item()
+            output_dict["max"][idx] = ops.max(embeddings, dim=-1)[0][0][i].item()
+            output_dict["mean"][idx] = ops.mean(embeddings, dim=-1)[0][i].item()
 
         for key in TEST_EMBEDDINGS[str(model.dtype).lower()].keys():
             self.assertDictEqual(TEST_EMBEDDINGS[str(model.dtype).lower()][key], output_dict[key])
 
         output_dict_norm = {"min": {}, "max": {}, "mean": {}}
         for i, idx in enumerate(EXAMPLE_IDS):
-            output_dict_norm["min"][idx] = embeddings_ln.min(axis=-1)[0][i].item()
-            output_dict_norm["max"][idx] = embeddings_ln.max(axis=-1)[0][i].item()
-            output_dict_norm["mean"][idx] = embeddings_ln.mean(axis=-1)[0][i].item()
+            output_dict_norm["min"][idx] = ops.min(embeddings_ln, dim=-1)[0][0][i].item()
+            output_dict_norm["max"][idx] = ops.max(embeddings_ln, dim=-1)[0][0][i].item()
+            output_dict_norm["mean"][idx] = ops.mean(embeddings_ln, dim=-1)[0][i].item()
 
         # This test does not pass when places = 2
         for i, key in enumerate(output_dict_norm.keys()):
@@ -759,7 +770,7 @@ class BloomEmbeddingTest(unittest.TestCase):
     @require_mindspore
     def test_hidden_states_transformers(self):
         model = BloomModel.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto")
-        model.set_train(False)
+        model.eval()
 
         EXAMPLE_IDS = [3478, 368, 109586, 35433, 2, 77, 132619, 3478, 368, 109586, 35433, 2, 2175, 23714, 73173, 144252, 2, 77, 132619, 3478]  # fmt: skip
 
@@ -767,20 +778,24 @@ class BloomEmbeddingTest(unittest.TestCase):
         MIN_MAX_DICT = {"min": -2.0625, "max": 2.75}
         tensor_ids = mindspore.Tensor([EXAMPLE_IDS])
 
-        logits = model(tensor_ids)
+        with no_grad():
+            logits = model(tensor_ids)
         output_dict = {
-            "min": logits.last_hidden_state.min(axis=-1)[0][0].item(),
-            "max": logits.last_hidden_state.max(axis=-1)[0][0].item(),
+            "min": ops.min(logits.last_hidden_state, dim=-1)[0][0][0].item(),
+            "max": ops.max(logits.last_hidden_state, dim=-1)[0][0][0].item(),
         }
 
-        self.assertAlmostEqual(MEAN_VALUE_LAST_LM, logits.last_hidden_state.mean().item(), places=2)
+        if mindspore.get_context('device_target') == 'GPU':
+            self.assertAlmostEqual(MEAN_VALUE_LAST_LM, logits.last_hidden_state.mean().item(), places=4)
+        else:
+            self.assertAlmostEqual(MEAN_VALUE_LAST_LM, logits.last_hidden_state.mean().item(), places=3)
 
-        # self.assertDictEqual(MIN_MAX_DICT, output_dict)
+        self.assertDictEqual(MIN_MAX_DICT, output_dict)
 
     @require_mindspore
     def test_logits(self):
-        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto")# load in bf16
-        model.set_train(False)
+        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto")
+        model.eval()
 
         EXAMPLE_IDS = [3478, 368, 109586, 35433, 2, 77, 132619, 3478, 368, 109586, 35433, 2, 2175, 23714, 73173, 144252, 2, 77, 132619, 3478]  # fmt: skip
 
@@ -788,8 +803,13 @@ class BloomEmbeddingTest(unittest.TestCase):
         MEAN_LOGITS_GPU_2 = 1.9431114196777344e-05
 
         tensor_ids = mindspore.Tensor([EXAMPLE_IDS])
-        output = model(tensor_ids).logits
+        with no_grad():
+            output = model(tensor_ids).logits
 
-        output_gpu_1, output_gpu_2 = output.split(125440, axis=-1)
-        self.assertAlmostEqual(output_gpu_1.mean().item(), MEAN_LOGITS_GPU_1, places=6)  # 1e-06 precision!!
-        self.assertAlmostEqual(output_gpu_2.mean().item(), MEAN_LOGITS_GPU_2, places=6)
+        output_gpu_1, output_gpu_2 = ops.split(output, 125440, dim=-1)
+        if mindspore.get_context('device_target') == 'GPU':
+            self.assertAlmostEqual(output_gpu_1.mean().item(), MEAN_LOGITS_GPU_1, places=6)
+            self.assertAlmostEqual(output_gpu_2.mean().item(), MEAN_LOGITS_GPU_2, places=6)
+        else:
+            self.assertAlmostEqual(output_gpu_1.mean().item(), MEAN_LOGITS_GPU_1, places=6)  # 1e-06 precision!!
+            self.assertAlmostEqual(output_gpu_2.mean().item(), MEAN_LOGITS_GPU_2, places=6)

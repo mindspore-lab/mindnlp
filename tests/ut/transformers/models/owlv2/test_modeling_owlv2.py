@@ -29,7 +29,7 @@ from mindnlp.utils.testing_utils import (
     slow,
 )
 from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
     ModelTesterMixin,

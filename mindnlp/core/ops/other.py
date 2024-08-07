@@ -4,11 +4,11 @@ import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore.common.initializer import initializer
+from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
-from .pointwise import div
 from .creation import arange
 
 # atleast_2d
@@ -43,7 +43,7 @@ def broadcast_to(input, shape):
 
 # cdist
 def cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
-    return ops.cdist(x1, x2, p)
+    return ops.cdist(x1, x2, float(p))
 
 # clone
 def clone(input):
@@ -565,6 +565,9 @@ def meshgrid(*tensors, indexing=None):
 
 # repeat_interleave
 def repeat_interleave(input, repeats, dim=None):
+    if input.dtype == mindspore.bool_:
+        input = input.int()
+        return input.repeat(repeats, dim).bool()
     return input.repeat(repeats, dim)
 
 # roll
@@ -612,7 +615,8 @@ def unflatten(x, dim, sizes):
 # resolve_neg
 
 def masked_fill(input, mask, value):
-    return ops.masked_fill(input, mask, value)
+    masked_fill_ = _get_cache_prim(ops.MaskedFill)()
+    return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
 
 def finfo(dtype):
     return np.finfo(mindspore.dtype_to_nptype(dtype))
@@ -672,7 +676,7 @@ def unfold(input, dimension, size, step):
     sizedim = shape[dimension]
 
     low_indices = arange(0, sizedim, step)
-    min_length = div(sizedim - size, step, rounding_mode="floor") + 1
+    min_length = sizedim - size // step + 1
     indices = arange(size) + low_indices[:min_length][:, None]
 
     s = [slice(None)] * rank
