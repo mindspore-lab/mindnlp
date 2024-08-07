@@ -17,15 +17,9 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops, no_grad
+from mindnlp.core import nn, no_grad
 from mindnlp.core.nn import functional as F
-from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-# from ...file_utils import (
-#     add_start_docstrings,
-#     add_start_docstrings_to_model_forward,
-#     replace_return_docstrings,
-# )
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
@@ -34,7 +28,6 @@ from .configuration_depth_anything import DepthAnythingConfig
 
 logger = logging.get_logger(__name__)
 
-# General docstring
 _CONFIG_FOR_DOC = "DepthAnythingConfig"
 
 DEPTH_ANYTHING_START_DOCSTRING = r"""

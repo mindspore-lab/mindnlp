@@ -16,10 +16,8 @@
 
 import unittest
 
-import mindnlp
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
-from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow,is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available
 from mindnlp.core import no_grad
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -28,7 +26,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn,ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import DepthAnythingForDepthEstimation
 
@@ -58,7 +56,7 @@ class DepthAnythingModelTester:
         out_features=["stage1", "stage2"],
         apply_layernorm=False,
         reshape_hidden_states=False,
-        neck_hidden_sizes=[2, 2],
+        neck_hidden_sizes=[2,2],
         fusion_hidden_size=6,
     ):
         self.parent = parent
@@ -260,10 +258,10 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
             predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
-        expected_shape = ops.size([1, 518, 686])
+        expected_shape = ([1, 518, 686])
         self.assertEqual(predicted_depth.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor(
+        expected_slice = mindspore.tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         ).to()
 
