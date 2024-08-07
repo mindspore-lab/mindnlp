@@ -860,6 +860,7 @@ class RagModelIntegrationTests(unittest.TestCase):
             rag_config,
             question_encoder_tokenizer=rag_question_encoder_tokenizer,
             generator_tokenizer=rag_decoder_tokenizer,
+            trust_remote_code=True
         )
 
         rag_sequence = self.sequence_model
@@ -907,6 +908,7 @@ class RagModelIntegrationTests(unittest.TestCase):
         tokenizer = RagTokenizer.from_pretrained("facebook/rag-sequence-nq", timeout=100)
         retriever = RagRetriever.from_pretrained(
             "facebook/rag-sequence-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417",
+            trust_remote_code=True,
             timeout=100
         )
         rag_sequence = RagSequenceForGeneration.from_pretrained("facebook/rag-sequence-nq", retriever=retriever,
@@ -950,6 +952,7 @@ class RagModelIntegrationTests(unittest.TestCase):
             index_name="exact",
             use_dummy_dataset=True,
             dataset_revision="b24a417",
+            trust_remote_code=True
         )
         rag_sequence = RagSequenceForGeneration.from_pretrained("facebook/rag-sequence-nq", retriever=retriever)
 
@@ -999,7 +1002,8 @@ class RagModelIntegrationTests(unittest.TestCase):
 
         tokenizer = RagTokenizer.from_pretrained("facebook/rag-token-nq")
         retriever = RagRetriever.from_pretrained(
-            "facebook/rag-token-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417"
+            "facebook/rag-token-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417",
+            trust_remote_code=True
         )
         rag_token = RagTokenForGeneration.from_pretrained("facebook/rag-token-nq", retriever=retriever)
 
