@@ -26,10 +26,12 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
+
     from mindnlp.core import ops
 
     from mindnlp.transformers import DepthAnythingForDepthEstimation
 
+mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     from PIL import Image
