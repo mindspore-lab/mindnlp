@@ -3,7 +3,6 @@ from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 from mindspore._c_expression import _framework_profiler_step_start
 from mindspore._c_expression import _framework_profiler_step_end
 
-
 model_id = "LLM-Research/Meta-Llama-3-8B-Instruct"
 
 tokenizer = AutoTokenizer.from_pretrained(model_id, mirror='modelscope')
