@@ -24,7 +24,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from mindnlp.transformers import BartTokenizer, T5Tokenizer
+
+from mindnlp.transformers import BartTokenizer, T5Tokenizer, AutoModelForSeq2SeqLM, AutoModel
 from mindnlp.transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
 from mindnlp.transformers.models.dpr.tokenization_dpr import DPRContextEncoderTokenizer, DPRQuestionEncoderTokenizer
 from mindnlp.transformers.models.rag.retrieval_rag import is_datasets_available, is_faiss_available
@@ -65,7 +66,8 @@ if is_mindspore_available() and is_datasets_available() and is_faiss_available()
     )
     from mindnlp.transformers.modeling_outputs import BaseModelOutput
 
-
+# mindspore.set_context(pynative_synchronize=True)
+# mindspore.set_context(device_target="CPU")
 def _assert_tensors_equal(a_, b_, atol=1e-12, prefix=""):
     """If tensors not close, or a and b arent both tensors, raise a nice Assertion error."""
     if a_ is None and b_ is None:
@@ -329,7 +331,7 @@ class RagTestMixin:
             context_attention_mask = context_attention_mask.to(input_ids.dtype)
 
             # compute doc_scores
-            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), retrieved_doc_embeds.swapaxes(1, 2)).squeeze(
+            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), ops.transpose(retrieved_doc_embeds,1, 2)).squeeze(
                 1
             )
 
@@ -397,7 +399,7 @@ class RagTestMixin:
             context_attention_mask = context_attention_mask.to(input_ids.dtype)
 
             # compute doc_scores
-            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), retrieved_doc_embeds.swapaxes(1, 2)).squeeze(
+            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), ops.transpose(retrieved_doc_embeds,1, 2)).squeeze(
                 1
             )
 
@@ -457,7 +459,7 @@ class RagTestMixin:
             context_attention_mask = context_attention_mask.to(input_ids.dtype)
 
             # compute doc_scores
-            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), retrieved_doc_embeds.swapaxes(1, 2)).squeeze(
+            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), ops.transpose(retrieved_doc_embeds,1, 2)).squeeze(
                 1
             )
 
@@ -526,7 +528,7 @@ class RagTestMixin:
             context_attention_mask = context_attention_mask.to(input_ids.dtype)
 
             # compute doc_scores
-            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), retrieved_doc_embeds.swapaxes(1, 2)).squeeze(
+            doc_scores = ops.bmm(question_hidden_states.unsqueeze(1), ops.transpose(retrieved_doc_embeds,1, 2)).squeeze(
                 1
             )
 
@@ -680,7 +682,7 @@ class RagDPRT5Test(RagTestMixin, unittest.TestCase):
 @require_retrieval
 @require_sentencepiece
 @require_tokenizers
-@require_mindspore_gpu
+# @require_mindspore_gpu
 class RagModelIntegrationTests(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
@@ -692,9 +694,7 @@ class RagModelIntegrationTests(unittest.TestCase):
         return (
             RagSequenceForGeneration.from_pretrained_question_encoder_generator(
                 "facebook/dpr-question_encoder-single-nq-base", "facebook/bart-large-cnn"
-            )
-
-            .eval()
+            ).eval()
         )
 
     @cached_property
@@ -702,9 +702,7 @@ class RagModelIntegrationTests(unittest.TestCase):
         return (
             RagTokenForGeneration.from_pretrained_question_encoder_generator(
                 "facebook/dpr-question_encoder-single-nq-base", "facebook/bart-large-cnn"
-            )
-
-            .eval()
+            ).eval()
         )
 
     def get_rag_config(self):
@@ -733,161 +731,162 @@ class RagModelIntegrationTests(unittest.TestCase):
             dataset_revision="b24a417",
         )
 
-    # @slow
-    # def test_rag_sequence_inference(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     rag_sequence = self.sequence_model
-    #     rag_sequence.set_retriever(rag_retriever)
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #     decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
-    #
-    #     input_ids = input_ids
-    #     decoder_input_ids = decoder_input_ids
-    #
-    #     with mindspore._no_grad():
-    #         output = rag_sequence(
-    #             input_ids,
-    #             labels=decoder_input_ids,
-    #         )
-    #
-    #     expected_shape = np.shape([5, 5, 50264])
-    #     self.assertEqual(output.logits.shape, expected_shape)
-    #
-    #     expected_doc_scores = mindspore.tensor([[75.0286, 74.4998, 74.0804, 74.0306, 73.9504]])
-    #     _assert_tensors_equal(expected_doc_scores, output.doc_scores, atol=TOLERANCE)
-    #
-    #     expected_loss = mindspore.tensor([36.7368])
-    #     _assert_tensors_equal(expected_loss, output.loss, atol=TOLERANCE)
+    @slow
+    def test_rag_sequence_inference(self):
 
-    # @slow
-    # def test_rag_token_inference(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     rag_token = self.token_model
-    #     rag_token.set_retriever(rag_retriever)
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #     decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
-    #
-    #     input_ids = input_ids
-    #     decoder_input_ids = decoder_input_ids
-    #
-    #     with mindspore._no_grad():
-    #         output = rag_token(
-    #             input_ids,
-    #             labels=decoder_input_ids,
-    #         )
-    #
-    #     expected_shape = np.shape([5, 5, 50264])
-    #     self.assertEqual(output.logits.shape, expected_shape)
-    #
-    #     expected_doc_scores = mindspore.tensor([[75.0286, 74.4998, 74.0804, 74.0306, 73.9504]])
-    #     _assert_tensors_equal(expected_doc_scores, output.doc_scores, atol=TOLERANCE)
-    #
-    #     expected_loss = mindspore.tensor([36.3557])
-    #     _assert_tensors_equal(expected_loss, output.loss, atol=TOLERANCE)
-    #
-    # @slow
-    # def test_rag_token_generate_beam(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     rag_token = self.token_model
-    #     rag_token.set_retriever(rag_retriever)
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #
-    #     input_ids = input_ids
-    #
-    #     output_ids = rag_token.generate(
-    #         input_ids,
-    #         decoder_start_token_id=rag_token.generator.config.decoder_start_token_id,
-    #         num_beams=2,
-    #         num_return_sequences=2,
-    #     )
-    #     # sequence generate test
-    #     output_text_1 = rag_decoder_tokenizer.decode(output_ids[0], skip_special_tokens=True)
-    #     output_text_2 = rag_decoder_tokenizer.decode(output_ids[1], skip_special_tokens=True)
-    #
-    #     # Expected outputs as given by model at integration time.
-    #     EXPECTED_OUTPUT_TEXT_1 = "\"She's My Kind of Girl"
-    #     EXPECTED_OUTPUT_TEXT_2 = "\"She's My Kind of Love"
-    #
-    #     self.assertEqual(output_text_1, EXPECTED_OUTPUT_TEXT_1)
-    #     self.assertEqual(output_text_2, EXPECTED_OUTPUT_TEXT_2)
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base"
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
 
-    # @slow
-    # def test_rag_sequence_generate_beam(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     rag_sequence = self.sequence_model
-    #     rag_sequence.set_retriever(rag_retriever)
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #
-    #     input_ids = input_ids
-    #
-    #     output_ids = rag_sequence.generate(
-    #         input_ids,
-    #         decoder_start_token_id=rag_sequence.generator.config.decoder_start_token_id,
-    #         num_beams=2,
-    #         num_return_sequences=2,
-    #     )
-    #     # sequence generate test
-    #     output_text_1 = rag_decoder_tokenizer.decode(output_ids[0], skip_special_tokens=True)
-    #     output_text_2 = rag_decoder_tokenizer.decode(output_ids[1], skip_special_tokens=True)
-    #
-    #     # Expected outputs as given by model at integration time.
-    #     EXPECTED_OUTPUT_TEXT_1 = """\"She's My Kind of Girl\" was released through Epic Records in Japan in March 1972, giving the duo a Top 10 hit. Two more singles were released in Japan, \"En Carousel\" and \"Love Has Its Ways\" Ulvaeus and Andersson persevered with their songwriting and experimented with new sounds and vocal arrangements."""
-    #     EXPECTED_OUTPUT_TEXT_2 = """In September 2018, Björn Ulvaeus revealed that the two new songs, \"I Still Have Faith In You\" and \"Don't Shut Me Down\", would be released no earlier than March 2019. The two new tracks will feature in a TV special set to air later in the year."""
-    #
-    #     self.assertEqual(output_text_1, EXPECTED_OUTPUT_TEXT_1)
-    #     self.assertEqual(output_text_2, EXPECTED_OUTPUT_TEXT_2)
+        rag_sequence = self.sequence_model
+        rag_sequence.set_retriever(rag_retriever)
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+        decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
+
+        with mindspore._no_grad():
+            output = rag_sequence(
+                input_ids,
+                labels=decoder_input_ids,
+            )
+
+        expected_shape = (5, 5, 50264)
+        self.assertEqual(output.logits.shape, expected_shape)
+
+        expected_doc_scores = mindspore.tensor([[75.0286, 74.4998, 74.0804, 74.0306, 73.9504]])
+        _assert_tensors_equal(expected_doc_scores, output.doc_scores, atol=TOLERANCE)
+
+        # expected_loss = mindspore.tensor([36.7368])
+        # _assert_tensors_equal(expected_loss, output.loss, atol=TOLERANCE)
+
+    @slow
+    def test_rag_token_inference(self):
+
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base"
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
+
+        rag_token = self.token_model
+        rag_token.set_retriever(rag_retriever)
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+        decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
+
+        input_ids = input_ids
+        decoder_input_ids = decoder_input_ids
+
+        with mindspore._no_grad():
+            output = rag_token(
+                input_ids,
+                labels=decoder_input_ids,
+            )
+
+        expected_shape = (5, 5, 50264)
+        self.assertEqual(output.logits.shape, expected_shape)
+
+        expected_doc_scores = mindspore.tensor([[75.0286, 74.4998, 74.0804, 74.0306, 73.9504]])
+        _assert_tensors_equal(expected_doc_scores, output.doc_scores, atol=TOLERANCE)
+
+        # expected_loss = mindspore.tensor([36.3557])
+        # _assert_tensors_equal(expected_loss, output.loss, atol=TOLERANCE)
+
+    @slow
+    def test_rag_token_generate_beam(self):
+
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base"
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
+
+        rag_token = self.token_model
+        rag_token.set_retriever(rag_retriever)
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+
+        input_ids = input_ids
+
+        output_ids = rag_token.generate(
+            input_ids,
+            decoder_start_token_id=rag_token.generator.config.decoder_start_token_id,
+            num_beams=2,
+            num_return_sequences=2,
+        )
+        # sequence generate test
+        output_text_1 = rag_decoder_tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        output_text_2 = rag_decoder_tokenizer.decode(output_ids[1], skip_special_tokens=True)
+
+        # Expected outputs as given by model at integration time.
+        EXPECTED_OUTPUT_TEXT_1 = "\"She's My Kind of Girl"
+        EXPECTED_OUTPUT_TEXT_2 = "\"She's My Kind of Love"
+
+        self.assertEqual(output_text_1, EXPECTED_OUTPUT_TEXT_1)
+        self.assertEqual(output_text_2, EXPECTED_OUTPUT_TEXT_2)
+
+    @slow
+    def test_rag_sequence_generate_beam(self):
+
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base"
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
+
+        rag_sequence = self.sequence_model
+        rag_sequence.set_retriever(rag_retriever)
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+
+        input_ids = input_ids
+
+        output_ids = rag_sequence.generate(
+            input_ids,
+            decoder_start_token_id=rag_sequence.generator.config.decoder_start_token_id,
+            num_beams=2,
+            num_return_sequences=2,
+        )
+        # sequence generate test
+        output_text_1 = rag_decoder_tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        output_text_2 = rag_decoder_tokenizer.decode(output_ids[1], skip_special_tokens=True)
+
+        # Expected outputs as given by model at integration time.
+        EXPECTED_OUTPUT_TEXT_1 = """\"She's My Kind of Girl\" was released through Epic Records in Japan in March 1972, giving the duo a Top 10 hit. Two more singles were released in Japan, \"En Carousel\" and \"Love Has Its Ways\" Ulvaeus and Andersson persevered with their songwriting and experimented with new sounds and vocal arrangements."""
+        EXPECTED_OUTPUT_TEXT_2 = """In September 2018, Björn Ulvaeus revealed that the two new songs, \"I Still Have Faith In You\" and \"Don't Shut Me Down\", would be released no earlier than March 2019. The two new tracks will feature in a TV special set to air later in the year."""
+
+        self.assertEqual(output_text_1, EXPECTED_OUTPUT_TEXT_1)
+        self.assertEqual(output_text_2, EXPECTED_OUTPUT_TEXT_2)
 
     @property
     def test_data_questions(self):
@@ -903,7 +902,8 @@ class RagModelIntegrationTests(unittest.TestCase):
         ]
 
     @slow
-    def test_rag_sequence_generate_batch(self):
+    def test_rag_sequence_generate_batch(self): # success
+
         tokenizer = RagTokenizer.from_pretrained("facebook/rag-sequence-nq", timeout=100)
         retriever = RagRetriever.from_pretrained(
             "facebook/rag-sequence-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417",
@@ -921,6 +921,7 @@ class RagModelIntegrationTests(unittest.TestCase):
 
         input_ids = input_dict.input_ids
         attention_mask = input_dict.attention_mask
+
         breakpoint()
         output_ids = rag_sequence.generate(
             input_ids,
@@ -941,93 +942,96 @@ class RagModelIntegrationTests(unittest.TestCase):
         ]
         self.assertListEqual(outputs, EXPECTED_OUTPUTS)
 
-    # @slow
-    # def test_rag_sequence_generate_batch_from_context_input_ids(self):
-    #     tokenizer = RagTokenizer.from_pretrained("facebook/rag-sequence-nq")
-    #     retriever = RagRetriever.from_pretrained(
-    #         "facebook/rag-sequence-nq",
-    #         index_name="exact",
-    #         use_dummy_dataset=True,
-    #         dataset_revision="b24a417",
-    #     )
-    #     rag_sequence = RagSequenceForGeneration.from_pretrained("facebook/rag-sequence-nq", retriever=retriever)
-    #
-    #     input_dict = tokenizer(
-    #         self.test_data_questions,
-    #         return_tensors="ms",
-    #         padding=True,
-    #         truncation=True,
-    #     )
-    #
-    #     input_ids = input_dict.input_ids
-    #     attention_mask = input_dict.attention_mask
-    #
-    #     question_hidden_states = rag_sequence.question_encoder(input_ids, attention_mask=attention_mask)[0]
-    #     docs_dict = retriever(
-    #         input_ids.numpy(), question_hidden_states.numpy(), return_tensors="ms"
-    #     )
-    #     doc_scores = ops.bmm(
-    #         question_hidden_states.unsqueeze(1),
-    #         docs_dict["retrieved_doc_embeds"].float().swapaxes(1, 2),
-    #     ).squeeze(1)
-    #
-    #     output_ids = rag_sequence.generate(
-    #         context_input_ids=docs_dict["context_input_ids"],
-    #         context_attention_mask=docs_dict["context_attention_mask"],
-    #         doc_scores=doc_scores,
-    #         do_deduplication=True,
-    #     )
-    #
-    #     outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-    #
-    #     EXPECTED_OUTPUTS = [
-    #         " albert einstein",
-    #         " june 22, 2018",
-    #         " amplitude modulation",
-    #         " tim besley ( chairman )",
-    #         " june 20, 2018",
-    #         " 1980",
-    #         " 7.0",
-    #         " 8",
-    #     ]
-    #     self.assertListEqual(outputs, EXPECTED_OUTPUTS)
+    @slow
+    def test_rag_sequence_generate_batch_from_context_input_ids(self):
 
-    # @slow
-    # def test_rag_token_generate_batch(self):
-    #     tokenizer = RagTokenizer.from_pretrained("facebook/rag-token-nq")
-    #     retriever = RagRetriever.from_pretrained(
-    #         "facebook/rag-token-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417"
-    #     )
-    #     rag_token = RagTokenForGeneration.from_pretrained("facebook/rag-token-nq", retriever=retriever)
-    #
-    #     input_dict = tokenizer(
-    #         self.test_data_questions,
-    #         return_tensors="ms",
-    #         padding=True,
-    #         truncation=True,
-    #     )
-    #
-    #     input_ids = input_dict.input_ids
-    #     attention_mask = input_dict.attention_mask
-    #
-    #     output_ids = rag_token.generate(
-    #         input_ids,
-    #         attention_mask=attention_mask,
-    #     )
-    #
-    #     outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-    #
-    #     EXPECTED_OUTPUTS = [
-    #         " albert einstein",
-    #         " september 22, 2017",
-    #         " amplitude modulation",
-    #         " stefan persson",
-    #         " april 20, 2018",
-    #         " the 1970s",
-    #         " 7.1. 2",
-    #         " 13",
-    #     ]
-    #     self.assertListEqual(outputs, EXPECTED_OUTPUTS)
+        tokenizer = RagTokenizer.from_pretrained("facebook/rag-sequence-nq")
+        retriever = RagRetriever.from_pretrained(
+            "facebook/rag-sequence-nq",
+            index_name="exact",
+            use_dummy_dataset=True,
+            dataset_revision="b24a417",
+        )
+        rag_sequence = RagSequenceForGeneration.from_pretrained("facebook/rag-sequence-nq", retriever=retriever)
+
+        input_dict = tokenizer(
+            self.test_data_questions,
+            return_tensors="ms",
+            padding=True,
+            truncation=True,
+        )
+
+        input_ids = input_dict.input_ids
+        attention_mask = input_dict.attention_mask
+
+        question_hidden_states = rag_sequence.question_encoder(input_ids, attention_mask=attention_mask)[0]
+        docs_dict = retriever(
+            input_ids.numpy(), question_hidden_states.numpy(), return_tensors="ms"
+        )
+        doc_scores = ops.bmm(
+            question_hidden_states.unsqueeze(1),
+            ops.transpose(docs_dict["retrieved_doc_embeds"],1, 2),
+        ).squeeze(1)
+
+
+        output_ids = rag_sequence.generate(
+            context_input_ids=docs_dict["context_input_ids"],
+            context_attention_mask=docs_dict["context_attention_mask"],
+            doc_scores=doc_scores,
+            do_deduplication=True,
+        )
+
+        outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+
+        EXPECTED_OUTPUTS = [
+            " albert einstein",
+            " june 22, 2018",
+            " amplitude modulation",
+            " tim besley ( chairman )",
+            " june 20, 2018",
+            " 1980",
+            " 7.0",
+            " 8",
+        ]
+        self.assertListEqual(outputs, EXPECTED_OUTPUTS)
+
+    @slow
+    def test_rag_token_generate_batch(self):
+
+        tokenizer = RagTokenizer.from_pretrained("facebook/rag-token-nq")
+        retriever = RagRetriever.from_pretrained(
+            "facebook/rag-token-nq", index_name="exact", use_dummy_dataset=True, dataset_revision="b24a417"
+        )
+        rag_token = RagTokenForGeneration.from_pretrained("facebook/rag-token-nq", retriever=retriever)
+
+        input_dict = tokenizer(
+            self.test_data_questions,
+            return_tensors="ms",
+            padding=True,
+            truncation=True,
+        )
+
+        input_ids = input_dict.input_ids
+        attention_mask = input_dict.attention_mask
+
+        output_ids = rag_token.generate(
+            input_ids,
+            attention_mask=attention_mask,
+        )
+
+        outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+
+        EXPECTED_OUTPUTS = [
+            " albert einstein",
+            " september 22, 2017",
+            " amplitude modulation",
+            " stefan persson",
+            " april 20, 2018",
+            " the 1970s",
+            " 7.1. 2",
+            " 13",
+        ]
+        self.assertListEqual(outputs, EXPECTED_OUTPUTS)
 
 
 @require_mindspore
@@ -1064,122 +1068,125 @@ class RagModelSaveLoadTests(unittest.TestCase):
             dataset_revision="b24a417",
         )
 
-    # @slow
-    # def test_rag_sequence_from_pretrained(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #     decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
-    #
-    #     input_ids = input_ids
-    #     decoder_input_ids = decoder_input_ids
-    #
-    #     with tempfile.TemporaryDirectory() as tmp_dirname:
-    #         rag_sequence = RagSequenceForGeneration.from_pretrained_question_encoder_generator(
-    #             "facebook/dpr-question_encoder-single-nq-base",
-    #             "facebook/bart-large-cnn",
-    #             retriever=rag_retriever,
-    #             config=rag_config,
-    #         )
-    #         # check that the from pretrained methods work
-    #         rag_sequence.save_pretrained(tmp_dirname)
-    #         rag_sequence.from_pretrained(tmp_dirname, retriever=rag_retriever)
-    #
-    #
-    #         with mindspore._no_grad():
-    #             output = rag_sequence(
-    #                 input_ids,
-    #                 labels=decoder_input_ids,
-    #             )
-    #
-    #         loss_pretrained = output.loss
-    #         del rag_sequence
-    #
-    #     question_encoder = AutoModel.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
-    #     generator = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
-    #     rag_sequence = RagSequenceForGeneration(
-    #         config=rag_config, question_encoder=question_encoder, generator=generator, retriever=rag_retriever
-    #     )
-    #
-    #
-    #     with mindspore._no_grad():
-    #         output = rag_sequence(
-    #             input_ids,
-    #             labels=decoder_input_ids,
-    #         )
-    #
-    #     loss_init = output.loss
-    #
-    #     self.assertAlmostEqual(loss_pretrained.item(), loss_init.item(), places=4)
-    #
-    # @slow
-    # def test_rag_token_from_pretrained(self):
-    #     rag_config = self.get_rag_config()
-    #     rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    #     rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
-    #         "facebook/dpr-question_encoder-single-nq-base"
-    #     )
-    #     rag_retriever = RagRetriever(
-    #         rag_config,
-    #         question_encoder_tokenizer=rag_question_encoder_tokenizer,
-    #         generator_tokenizer=rag_decoder_tokenizer,
-    #     )
-    #
-    #     input_ids = rag_question_encoder_tokenizer(
-    #         "who sings does he love me with reba", return_tensors="ms"
-    #     ).input_ids
-    #     decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
-    #
-    #     with tempfile.TemporaryDirectory() as tmp_dirname:
-    #         rag_token = RagTokenForGeneration.from_pretrained_question_encoder_generator(
-    #             "facebook/dpr-question_encoder-single-nq-base",
-    #             "facebook/bart-large-cnn",
-    #             retriever=rag_retriever,
-    #             config=rag_config,
-    #             question_encoder_max_length=200,
-    #             generator_max_length=200,
-    #         )
-    #         # check that the from pretrained methods work
-    #         rag_token.save_pretrained(tmp_dirname)
-    #         rag_token.from_pretrained(tmp_dirname, retriever=rag_retriever)
-    #
-    #
-    #         self.assertTrue(rag_token.question_encoder.config.max_length == 200)
-    #         self.assertTrue(rag_token.generator.config.max_length == 200)
-    #
-    #         with mindspore._no_grad():
-    #             output = rag_token(
-    #                 input_ids,
-    #                 labels=decoder_input_ids,
-    #             )
-    #
-    #         loss_pretrained = output.loss
-    #         del rag_token
-    #
-    #     question_encoder = AutoModel.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
-    #     generator = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
-    #     rag_token = RagTokenForGeneration(
-    #         config=rag_config, question_encoder=question_encoder, generator=generator, retriever=rag_retriever
-    #     )
-    #
-    #
-    #     with mindspore._no_grad():
-    #         output = rag_token(
-    #             input_ids,
-    #             labels=decoder_input_ids,
-    #         )
-    #
-    #     loss_init = output.loss
-    #
-    #     self.assertAlmostEqual(loss_pretrained.item(), loss_init.item(), places=4)
+    @slow
+    def test_rag_sequence_from_pretrained(self):
+
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base"
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+        decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
+
+        input_ids = input_ids
+        decoder_input_ids = decoder_input_ids
+
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            rag_sequence = RagSequenceForGeneration.from_pretrained_question_encoder_generator(
+                "facebook/dpr-question_encoder-single-nq-base",
+                "facebook/bart-large-cnn",
+                retriever=rag_retriever,
+                config=rag_config,
+            )
+            # check that the from pretrained methods work
+            rag_sequence.save_pretrained(tmp_dirname)
+            rag_sequence.from_pretrained(tmp_dirname, retriever=rag_retriever)
+
+
+            with mindspore._no_grad():
+                output = rag_sequence(
+                    input_ids,
+                    labels=decoder_input_ids,
+                )
+
+            loss_pretrained = output.loss
+            del rag_sequence
+
+        question_encoder = AutoModel.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
+        generator = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
+        rag_sequence = RagSequenceForGeneration(
+            config=rag_config, question_encoder=question_encoder, generator=generator, retriever=rag_retriever
+        )
+
+
+        with mindspore._no_grad():
+            output = rag_sequence(
+                input_ids,
+                labels=decoder_input_ids,
+            )
+
+        loss_init = output.loss
+
+        self.assertAlmostEqual(loss_pretrained.item(), loss_init.item(), places=4)
+
+    @slow
+    def test_rag_token_from_pretrained(self):
+
+        rag_config = self.get_rag_config()
+        rag_decoder_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        rag_question_encoder_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base", timeout = 100
+        )
+        rag_retriever = RagRetriever(
+            rag_config,
+            question_encoder_tokenizer=rag_question_encoder_tokenizer,
+            generator_tokenizer=rag_decoder_tokenizer,
+        )
+
+        input_ids = rag_question_encoder_tokenizer(
+            "who sings does he love me with reba", return_tensors="ms"
+        ).input_ids
+        decoder_input_ids = rag_decoder_tokenizer("Linda Davis", return_tensors="ms").input_ids
+
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            rag_token = RagTokenForGeneration.from_pretrained_question_encoder_generator(
+                "facebook/dpr-question_encoder-single-nq-base",
+                "facebook/bart-large-cnn",
+                retriever=rag_retriever,
+                config=rag_config,
+                question_encoder_max_length=200,
+                generator_max_length=200,
+                timeout = 100,
+            )
+            # check that the from pretrained methods work
+            rag_token.save_pretrained(tmp_dirname)
+            rag_token.from_pretrained(tmp_dirname, retriever=rag_retriever)
+
+
+            self.assertTrue(rag_token.question_encoder.config.max_length == 200)
+            self.assertTrue(rag_token.generator.config.max_length == 200)
+
+            with mindspore._no_grad():
+                output = rag_token(
+                    input_ids,
+                    labels=decoder_input_ids,
+                )
+
+            loss_pretrained = output.loss
+            del rag_token
+
+        question_encoder = AutoModel.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
+        generator = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
+        rag_token = RagTokenForGeneration(
+            config=rag_config, question_encoder=question_encoder, generator=generator, retriever=rag_retriever
+        )
+
+
+        with mindspore._no_grad():
+            output = rag_token(
+                input_ids,
+                labels=decoder_input_ids,
+            )
+
+        loss_init = output.loss
+
+        self.assertAlmostEqual(loss_pretrained.item(), loss_init.item(), places=4)

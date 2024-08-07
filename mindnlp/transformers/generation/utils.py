@@ -3222,7 +3222,9 @@ class GenerationMixin:
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
         this_peer_finished = False  # used by synced_gpus only
+
         while True:
+            # breakpoint()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             outputs = self(
@@ -3704,7 +3706,7 @@ class GenerationMixin:
                 An derived instance of [`BeamScorer`] that defines how beam hypotheses are forwarded, stored and
                 sorted during generation. For more information, the documentation of [`BeamScorer`] should be read.
             logits_processor (`LogitsProcessorList`, *optional*):
-                An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
+                An instance of [`LogitshuProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
                 used to modify the prediction scores of the language modeling head applied at each generation step.
             stopping_criteria (`StoppingCriteriaList`, *optional*):
                 An instance of [`StoppingCriteriaList`]. List of instances of class derived from [`StoppingCriteria`]

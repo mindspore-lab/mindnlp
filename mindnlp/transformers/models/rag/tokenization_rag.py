@@ -59,6 +59,7 @@ class RagTokenizer:
         return cls(question_encoder=question_encoder, generator=generator)
 
     def __call__(self, *args, **kwargs):
+
         return self.current_tokenizer(*args, **kwargs)
 
     def batch_decode(self, *args, **kwargs):

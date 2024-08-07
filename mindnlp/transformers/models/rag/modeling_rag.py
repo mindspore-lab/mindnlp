@@ -447,9 +447,9 @@ class RagModel(RagPreTrainedModel):
 
         # whether retriever has to be used
         has_to_retrieve = (
-                self.retriever is not None
-                and (context_input_ids is None or context_attention_mask is None or doc_scores is None)
-                and encoder_outputs is None
+            self.retriever is not None
+            and (context_input_ids is None or context_attention_mask is None or doc_scores is None)
+            and encoder_outputs is None
         )
         # encoder_outputs are pre-computed during RAG-token generation
         if encoder_outputs is None:
@@ -542,11 +542,11 @@ class RagModel(RagPreTrainedModel):
 
         # Decoder input without context documents
         if decoder_input_ids is not None:
-            decoder_input_ids = decoder_input_ids.repeat_interleave(n_docs, dim=0)
+            decoder_input_ids = ops.repeat_interleave(decoder_input_ids,n_docs, dim=0)
 
         if decoder_attention_mask is not None:
             decoder_attention_mask = decoder_attention_mask.astype(mindspore.int32)
-            decoder_attention_mask = decoder_attention_mask.repeat_interleave(n_docs, dim=0)
+            decoder_attention_mask = ops.repeat_interleave(decoder_attention_mask,n_docs, dim=0)
 
         gen_outputs = self.generator(
             input_ids=context_input_ids,
@@ -660,6 +660,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         Returns:
 
         """
+
         n_docs = n_docs if n_docs is not None else self.config.n_docs
         exclude_bos_score = exclude_bos_score if exclude_bos_score is not None else self.config.exclude_bos_score
         reduce_loss = reduce_loss if reduce_loss is not None else self.config.reduce_loss
@@ -795,6 +796,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
             finished early due to the `eos_token_id`.
         """
 
+
         n_docs = n_docs if n_docs is not None else self.config.n_docs
         do_deduplication = do_deduplication if do_deduplication is not None else self.config.do_deduplication
         num_doc_return_sequences = (
@@ -830,7 +832,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         for index in range(batch_size):
             # first, generate beams from documents:
             generator_input_ids = context_input_ids[index * n_docs: (index + 1) * n_docs]  # (n_docs, max_len)
-
+            # breakpoint()
             output_sequences = self.generator.generate(
                 generator_input_ids,
                 **model_kwargs,
@@ -892,7 +894,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
                                     dtype=target[0].dtype)
         target = ops.cat(
             # [target[:, 1:], target.new(target.shape[0], 1).fill_(self.config.generator.pad_token_id)], 1
-            [new_fill], 1
+            [target[:, 1:], new_fill], 1
         )
 
         n_docs = n_docs if n_docs is not None else self.config.n_docs
@@ -924,25 +926,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         target = ops.tile(target.unsqueeze(1).unsqueeze(-1), (1, n_docs, 1, 1))
         assert target.dim() == rag_logprobs.dim()
 
-        def gather_np(params, indices, axis):
-            params_np = params.asnumpy()
-            indices_np = indices.asnumpy()
-            if axis < 0:
-                axis += params_np.ndim
-            idx = [np.arange(s) for s in params_np.shape]
-            idx[axis] = indices_np
-            expanded_idx = []
-            for i in range(params_np.ndim):
-                if i == axis:
-                    expanded_idx.append(idx[i])
-                else:
-                    expanded_shape = [1] * params_np.ndim
-                    expanded_shape[i] = params_np.shape[i]
-                    expanded_idx.append(idx[i].reshape(expanded_shape))
-            gathered = params_np[tuple(expanded_idx)]
-            return mindspore.Tensor(gathered)
-
-        ll = gather_np(rag_logprobs, target, -1)
+        ll = ops.gather(rag_logprobs, dim=-1, index=target)
         # ll = rag_logprobs.gather_nd(dim=-1, index=target)
         smooth_obj = rag_logprobs.sum(axis=-1, keepdims=True)  # total sum of all (normalised) logits
 
@@ -1408,7 +1392,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
             last_hidden_state, num_beams=generation_config.num_beams
         )
 
-        doc_scores = doc_scores.repeat_interleave(generation_config.num_beams, dim=0)
+        doc_scores = ops.repeat_interleave(doc_scores,generation_config.num_beams, dim=0)
 
         # define start_len & additional parameters
         model_kwargs["doc_scores"] = doc_scores
@@ -1494,7 +1478,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
         new_fill = mindspore.Tensor((np.full((target.shape[0], 1), self.config.generator.pad_token_id)),
                                     dtype=target[0].dtype)
         target = ops.cat(
-            [new_fill], 1
+            [target[:, 1:],new_fill], 1
             # [target[:, 1:], target.new(target.shape[0], 1).fill_(self.config.generator.pad_token_id)], 1
         )
 
@@ -1510,27 +1494,11 @@ class RagTokenForGeneration(RagPreTrainedModel):
         target = target.unsqueeze(-1)
         assert target.dim() == rag_logprobs.dim()
 
-        def gather_np(params, indices, axis):
-            params_np = params.asnumpy()
-            indices_np = indices.asnumpy()
-            if axis < 0:
-                axis += params_np.ndim
-            idx = [np.arange(s) for s in params_np.shape]
-            idx[axis] = indices_np
-            expanded_idx = []
-            for i in range(params_np.ndim):
-                if i == axis:
-                    expanded_idx.append(idx[i])
-                else:
-                    expanded_shape = [1] * params_np.ndim
-                    expanded_shape[i] = params_np.shape[i]
-                    expanded_idx.append(idx[i].reshape(expanded_shape))
-            gathered = params_np[tuple(expanded_idx)]
-            return mindspore.Tensor(gathered)
-
         # ll = rag_logprobs.gather_nd(dim=-1, index=target)
-        ll = gather_np(rag_logprobs, target, 1)
+
+        ll = ops.gather(rag_logprobs,dim=-1, index=target)
         smooth_obj = rag_logprobs.sum(axis=-1, keepdims=True)  # total sum of all (normalised) logits
+
         ll, smooth_obj = _mask_pads(ll, smooth_obj)
         ll = ll.sum(1)  # sum over tokens
         smooth_obj = smooth_obj.sum(1)
