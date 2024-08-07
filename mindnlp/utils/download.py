@@ -897,6 +897,8 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    if revision is None:
+        revision = 'main'
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
                          '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
