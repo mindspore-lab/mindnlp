@@ -47,7 +47,7 @@ from ..utils import logging
 
 
 if SUPPORT_BF16:
-    from mindspore.common.np_dtype import bfloat16
+    from mindspore.common.np_dtype import bfloat16 # pylint: disable=import-error
 else:
     from ml_dtypes import bfloat16
 
