@@ -2372,7 +2372,7 @@ class Blip2Model(Blip2PreTrainedModel):
             ...
             ...
             >>> processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
-            >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16)
+            >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b", ms_dtype=torch.float16)
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
@@ -2713,7 +2713,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             ...
             >>> processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
             >>> model = Blip2ForConditionalGeneration.from_pretrained(
-            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, torch_dtype=torch.float16
+            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, ms_dtype=torch.float16
             ... )  # doctest: +IGNORE_RESULT
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
@@ -2748,7 +2748,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
             ```python
             >>> model = Blip2ForConditionalGeneration.from_pretrained(
-            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, torch_dtype=torch.bfloat16
+            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, ms_dtype=torch.bfloat16
             ... )  # doctest: +IGNORE_RESULT
             ...
             >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=torch.bfloat16)

@@ -707,11 +707,6 @@ class Optimizer:
                     "optimizer can only optimize Tensors, "
                     "but one of the params is " + type(param)
                 )
-            if not self.defaults.get("differentiable", None) and not (
-                param.is_leaf or param.retains_grad
-            ):
-                raise ValueError("can't optimize a non-leaf Tensor")
-
         for name, default in self.defaults.items():
             if default is required and name not in param_group:
                 raise ValueError(

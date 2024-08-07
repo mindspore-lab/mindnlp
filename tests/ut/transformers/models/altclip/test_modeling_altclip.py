@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch AltCLIP model. """
+""" Testing suite for the MindSpore AltCLIP model. """
 
 
 import inspect
@@ -181,6 +181,10 @@ class AltCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     def test_training_gradient_checkpointing(self):
+        pass
+
+    @unittest.skip(reason="CLIPModel does not have input/output embeddings")
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(
@@ -449,6 +453,10 @@ class AltCLIPModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
+
+    @unittest.skip(reason="CLIPModel does not have input/output embeddings")
+    def test_model_get_set_embeddings(self):
+        pass
 
     @unittest.skip(reason="Hidden_states is tested in individual model tests")
     def test_hidden_states_output(self):
