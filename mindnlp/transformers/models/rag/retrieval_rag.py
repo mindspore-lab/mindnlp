@@ -30,7 +30,7 @@ from ...tokenization_utils_base import BatchEncoding
 
 def is_datasets_available():
     try:
-        import datasets
+        import datasets # pylint: disable=unused-import
         return True
     except ImportError:
         raise ImportError("datasets has not been installed. Please install datasets first.")
@@ -38,7 +38,7 @@ def is_datasets_available():
 
 def is_faiss_available():
     try:
-        import faiss
+        import faiss # pylint: disable=unused-import
         return True
     except ImportError:
         raise ImportError("faiss has not been installed. Please install faiss first.")
