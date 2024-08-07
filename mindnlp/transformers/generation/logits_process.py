@@ -653,7 +653,7 @@ class TypicalLogitsWarper(LogitsWarper):
         # shift and sort
         shifted_scores = ops.abs((-normalized) - ent)
         sorted_scores, sorted_indices = ops.sort(shifted_scores, descending=False)
-        sorted_logits = scores.gather(-1, sorted_indices)
+        sorted_logits = ops.gather(scores, -1, sorted_indices)
         cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative mass above the threshold
