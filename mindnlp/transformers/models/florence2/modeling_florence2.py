@@ -21,7 +21,6 @@ from typing import List, Optional, Tuple, Union
 
 from collections import OrderedDict
 from mindspore import Tensor
-from einops import rearrange
 import mindspore
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
@@ -31,6 +30,7 @@ from mindnlp.transformers.modeling_utils import PreTrainedModel
 from mindnlp.utils import (
     ModelOutput,
     logging,
+    is_einops_available
 )
 
 from mindnlp.transformers.activations import ACT2FN
@@ -49,6 +49,9 @@ from mindnlp.transformers.modeling_outputs import (
 from .configuration_florence2 import Florence2Config
 from .configuration_florence2 import Florence2LanguageConfig
 from .configuration_florence2 import Florence2VisionConfig
+
+if is_einops_available():
+    from einops import rearrange
 
 
 logger = logging.get_logger(__name__)

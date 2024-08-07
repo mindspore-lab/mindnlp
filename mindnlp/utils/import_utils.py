@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_einops_available = _is_package_available('einops')
 _bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
@@ -109,11 +110,17 @@ except importlib_metadata.PackageNotFoundError:
 _levenshtein_available = _is_package_available("Levenshtein")
 _nltk_available = _is_package_available("nltk")
 
+
 def is_levenshtein_available():
     return _levenshtein_available
 
+
 def is_nltk_available():
     return _nltk_available
+
+
+def is_einops_available():
+    return _einops_available
 
 
 def is_sudachi_available():
