@@ -3,12 +3,13 @@ import os
 import base64
 from typing import List, Optional, Union, Dict
 
-import tiktoken
 import regex as re
 from ...tokenization_utils import PreTrainedTokenizer
-from ....utils import PaddingStrategy
+from ....utils import PaddingStrategy, is_tiktoken_available
 from ...tokenization_utils_base import EncodedInput, BatchEncoding
 
+if is_tiktoken_available():
+    import tiktoken
 
 class ChatGLM4Tokenizer(PreTrainedTokenizer):
     vocab_files_names = {"vocab_file": "tokenizer.model"}

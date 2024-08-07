@@ -55,6 +55,9 @@ def softplus(input, beta=1, threshold=20):
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
+def logsigmoid(input):
+    return ops.logsigmoid(input)
+
 def leaky_relu(input, alpha=0.2):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
@@ -194,6 +197,11 @@ def pad(input, pad, mode='constant', value=0.0):
     if mode in ['reflect', 'circular']:
         return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
+
+def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)
+    return ops.nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
