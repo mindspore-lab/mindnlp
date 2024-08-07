@@ -308,7 +308,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("electra", "ElectraForCausalLM"),
         ("ernie", "ErnieForCausalLM"),
         ("falcon", "FalconForCausalLM"),
-        ("fuyu","FuyuForCausalLM"),
+        ("fuyu", "FuyuForCausalLM"),
         ("gemma", "GemmaForCausalLM"),
         ("git", "GitForCausalLM"),
         ("gpt2", "GPT2LMHeadModel"),
