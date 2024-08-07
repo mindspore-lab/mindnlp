@@ -2591,16 +2591,31 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 elif not use_safetensors and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant))
                 ):
-                    # Load from a PyTorch checkpoint
+                    # Load from a MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
                     )
                 elif not use_safetensors and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant))
                 ):
-                    # Load from a sharded PyTorch checkpoint
+                    # Load from a sharded MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
+                elif not use_safetensors and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_NAME, variant))
+                ):
+                    # Load from a PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_NAME, variant)
+                    )
+                elif not use_safetensors and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant))
+                ):
+                    # Load from a sharded PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant)
                     )
                     is_sharded = True
                 elif use_safetensors:
@@ -2610,7 +2625,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                     )
                 else:
                     raise EnvironmentError(
-                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(SAFE_WEIGHTS_NAME, variant)},"
+                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}, {_add_variant(SAFE_WEIGHTS_NAME, variant)},"
                         f" found in directory {pretrained_model_name_or_path}."
                     )
             elif os.path.isfile(os.path.join(subfolder, pretrained_model_name_or_path)):
