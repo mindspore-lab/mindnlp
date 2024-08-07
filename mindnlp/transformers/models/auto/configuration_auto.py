@@ -55,6 +55,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertConfig"),
         ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
+        ("chatglm4", "ChatGLM4Config"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
         ("clipseg", "CLIPSegConfig"),
@@ -82,7 +83,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("donut-swin", "DonutSwinConfig"),
         ("dpt", "DPTConfig"),
         ("efficientformer", "EfficientFormerConfig"),
+        ("electra", "ElectraConfig"),
         ("encodec", "EncodecConfig"),
+        ("ernie", "ErnieConfig"),
+        ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
@@ -447,6 +451,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("canine", "CANINE"),
         ("chinese_clip", "Chinese-CLIP"),
         ("chatglm", "ChatGLM"),
+        ("chatglm4", "ChatGLM4"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
@@ -1352,6 +1357,9 @@ class AutoConfig:
         config_dict, unused_kwargs = PretrainedConfig.get_config_dict(
             pretrained_model_name_or_path, **kwargs
         )
+
+        fix_chatglm_name(config_dict)
+
         if "model_type" in config_dict:
             config_class = CONFIG_MAPPING[config_dict["model_type"]]
             return config_class.from_dict(config_dict, **unused_kwargs)
@@ -1383,3 +1391,23 @@ class AutoConfig:
                 "match!"
             )
         CONFIG_MAPPING.register(model_type, config, exist_ok=exist_ok)
+
+
+def fix_chatglm_name(config):
+    model_type = config.get('model_type', None)
+    if model_type is None or model_type != 'chatglm':
+        return
+    if 'glm-4' in config['_name_or_path']:
+        config['model_type'] = 'chatglm4'
+        new_model_name = 'ChatGLM4'
+    elif 'chatglm3' in config['_name_or_path']:
+        config['model_type'] = 'chatglm3'
+        new_model_name = 'ChatGLM3'
+    elif 'chatglm2' in config['_name_or_path']:
+        config['model_type'] = 'chatglm2'
+        new_model_name = 'ChatGLM2'
+
+    for arch in config['architectures']:
+        arch.replace('ChatGLM', new_model_name)
+    for k, v in config['auto_map'].items():
+        config['auto_map'][k] = v.replace('ChatGLM', new_model_name)

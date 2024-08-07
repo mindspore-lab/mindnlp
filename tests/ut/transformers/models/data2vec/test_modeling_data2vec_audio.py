@@ -16,11 +16,8 @@
 
 import math
 import unittest
-from mindspore import ops
 import numpy as np
 from datasets import load_dataset
-from mindspore import Tensor,nn
-from mindspore.ops import functional as F
 from ...test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 #from tests.ut.transformers.models.data2vec.test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 
@@ -33,6 +30,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         Data2VecAudioForAudioFrameClassification,
@@ -43,7 +41,6 @@ if is_mindspore_available():
         Wav2Vec2Processor,
     )
     from mindnlp.transformers.models.data2vec.modeling_data2vec_audio import _compute_mask_indices
-
 
 class Data2VecAudioModelTester:
     def __init__(
@@ -219,7 +216,7 @@ class Data2VecAudioModelTester:
         model.set_train(False)
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=mindspore.int64)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.int64)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
@@ -581,7 +578,7 @@ class Data2VecAudioUtilsTest(unittest.TestCase):
         mask_length = 1
 
         mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
-        mask = Tensor.from_numpy(mask)
+        mask = ops.from_numpy(mask)
 
         self.assertListEqual(mask.sum(axis=-1).tolist(), [mask_prob * sequence_length for _ in range(batch_size)])
 
@@ -600,7 +597,7 @@ class Data2VecAudioUtilsTest(unittest.TestCase):
 
         for _ in range(n_trials):
             mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
-            mask = Tensor.from_numpy(mask)
+            mask = ops.from_numpy(mask)
 
             num_masks = ops.sum(mask).item()
 
@@ -622,7 +619,7 @@ class Data2VecAudioUtilsTest(unittest.TestCase):
         mask_length = 4
 
         mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
-        mask = Tensor.from_numpy(mask)
+        mask = ops.from_numpy(mask)
 
         # because of overlap mask don't have to add up exactly to `mask_prob * sequence_length`, but have to be smaller or equal
         for batch_sum in mask.sum(axis=-1):
@@ -640,7 +637,7 @@ class Data2VecAudioUtilsTest(unittest.TestCase):
         mask = _compute_mask_indices(
             (batch_size, sequence_length), mask_prob, mask_length, attention_mask=attention_mask
         )
-        mask = Tensor.from_numpy(mask)
+        mask = ops.from_numpy(mask)
 
         for batch_sum in mask.sum(axis=-1):
             self.assertTrue(int(batch_sum) <= mask_prob * sequence_length)

@@ -100,15 +100,17 @@ class CohereRotaryEmbedding(nn.Module):
         # Force float32 since bfloat16 loses precision on long contexts
         # See https://github.com/huggingface/transformers/pull/29285
         freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).swapaxes(1, 2)
-        emb = freqs.repeat_interleave(2, dim=-1)
+        emb = ops.repeat_interleave(freqs, 2, dim=-1)
         cos = emb.cos()
         sin = emb.sin()
         return cos, sin
 
 def rotate_half(x):
     # Split and rotate
-    x1 = x[..., ::2]
-    x2 = x[..., 1::2]
+    # x1 = x[..., ::2]
+    # x2 = x[..., 1::2]
+    x1 = ops.index_select(x, -1, ops.arange(0, x.shape[-1], 2))
+    x2 = ops.index_select(x, -1, ops.arange(1, x.shape[-1], 2))
     rot_x = ops.stack([-x2, x1], dim=-1).flatten(start_dim=-2)
     return rot_x
 
@@ -577,7 +579,7 @@ class CohereModel(CoherePreTrainedModel):
                 causal_mask = ops.triu(causal_mask, diagonal=1)
             causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
 
-            causal_mask = causal_mask[None, None, :, :].expand((input_tensor.shape[0], 1, -1, -1))
+            causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
             if attention_mask is not None:
                 causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]

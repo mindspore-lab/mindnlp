@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch DETA model."""
+"""Testing suite for the MindSpore DETA model."""
 
 import collections
 import inspect
@@ -47,7 +47,6 @@ if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import AutoImageProcessor
-
 
 class DetaModelTester:
     def __init__(
@@ -114,7 +113,7 @@ class DetaModelTester:
             [self.batch_size, self.num_channels, self.image_size, self.image_size]
         )
 
-        pixel_mask = ops.ones([self.batch_size, self.image_size, self.image_size])
+        pixel_mask = ops.ones(self.batch_size, self.image_size, self.image_size)
 
         labels = None
         if self.use_labels:
@@ -576,7 +575,7 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                     ):
                         continue
                     self.assertIn(
-                        ((param.data.mean() * 1e9).round() / 1e9).item(),
+                        ((param.mean() * 1e9).round() / 1e9).item(),
                         [0.0, 1.0],
                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                     )

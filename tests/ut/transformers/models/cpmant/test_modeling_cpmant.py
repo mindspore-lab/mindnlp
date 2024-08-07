@@ -33,7 +33,6 @@ if is_mindspore_available():
         CpmAntTokenizer,
     )
 
-
 @require_mindspore
 class CpmAntModelTester:
     def __init__(

@@ -90,7 +90,7 @@ class DetrModelTester:
     def prepare_config_and_inputs(self):
         pixel_values = floats_tensor([self.batch_size, self.num_channels, self.min_size, self.max_size])
 
-        pixel_mask = ops.ones([self.batch_size, self.min_size, self.max_size])
+        pixel_mask = ops.ones(self.batch_size, self.min_size, self.max_size)
 
         labels = None
         if self.use_labels:
