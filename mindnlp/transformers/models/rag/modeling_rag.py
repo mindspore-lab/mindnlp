@@ -832,7 +832,6 @@ class RagSequenceForGeneration(RagPreTrainedModel):
         for index in range(batch_size):
             # first, generate beams from documents:
             generator_input_ids = context_input_ids[index * n_docs: (index + 1) * n_docs]  # (n_docs, max_len)
-            # breakpoint()
             output_sequences = self.generator.generate(
                 generator_input_ids,
                 **model_kwargs,
@@ -846,7 +845,6 @@ class RagSequenceForGeneration(RagPreTrainedModel):
             ]  # after deduplication, this number can be less than n_docs*n_beam
 
             # then, run model forwards to get nll scores:
-            # breakpoint()
             if input_ids is not None:
 
                 new_input_ids = ops.tile(input_ids[index: index + 1], (num_candidates, 1))
@@ -1439,7 +1437,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
                 num_beam_hyps_to_keep=generation_config.num_return_sequences,
                 max_length=generation_config.max_length,
             )
-            return self.beam_search(
+            return self._beam_search(
                 input_ids,
                 beam_scorer,
                 logits_processor=pre_processor,

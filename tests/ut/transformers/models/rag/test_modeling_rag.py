@@ -922,7 +922,6 @@ class RagModelIntegrationTests(unittest.TestCase):
         input_ids = input_dict.input_ids
         attention_mask = input_dict.attention_mask
 
-        breakpoint()
         output_ids = rag_sequence.generate(
             input_ids,
             attention_mask=attention_mask,
