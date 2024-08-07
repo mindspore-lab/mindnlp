@@ -212,7 +212,7 @@ class GPTNeoXJapaneseAttention(nn.Module):
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         # q, k, v: [bs, num_attention_heads, seq_len, attn_head_size]
         # compute causal mask from causal mask buffer
-        batch_size, num_attention_heads, query_length, attn_head_size = query.shape
+        batch_size, num_attention_heads, query_length, attn_head_size = query.asnumpy().shape
         key_length = key.shape[-2]
 
         causal_mask = self._create_causal_mask(key_length, query_length)
@@ -306,8 +306,9 @@ class RotaryEmbedding(nn.Module):
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    # x1 = x[..., : x.shape[-1] // 2]
+    # x2 = x[..., x.shape[-1] // 2 :]
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
     return ops.cat((-x2, x1), dim=-1)
 
 

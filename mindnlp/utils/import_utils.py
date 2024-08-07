@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_tiktoken_available = _is_package_available('tiktoken')
 _bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
@@ -397,6 +398,10 @@ def is_pytesseract_available():
 
 def is_g2p_en_available():
     return _g2p_en_available
+
+
+def is_tiktoken_available():
+    return _tiktoken_available
 
 
 @lru_cache()

@@ -161,8 +161,12 @@ class AlignVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
+    @unittest.skip(reason="AlignVisionModel does not use inputs_embeds")
+    def test_inputs_embeds_matches_input_ids(self):
+        pass
+
     @unittest.skip(reason="AlignVisionModel does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_forward_signature(self):
@@ -210,9 +214,11 @@ class AlignVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
             check_hidden_states_output(inputs_dict, config, model_class)
 
+    @unittest.skip
     def test_training(self):
         pass
 
+    @unittest.skip
     def test_training_gradient_checkpointing(self):
         pass
 
@@ -348,10 +354,11 @@ class AlignTextModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
-
+    @unittest.skip
     def test_training(self):
         pass
 
+    @unittest.skip
     def test_training_gradient_checkpointing(self):
         pass
 
@@ -369,6 +376,10 @@ class AlignTextModelTest(ModelTesterMixin, unittest.TestCase):
 
     @unittest.skip(reason="ALIGN does not use inputs_embeds")
     def test_inputs_embeds(self):
+        pass
+
+    @unittest.skip(reason="Align does not use inputs_embeds")
+    def test_inputs_embeds_matches_input_ids(self):
         pass
 
     @unittest.skip(reason="AlignTextModel has no base class and is not available in MODEL_MAPPING")
@@ -452,10 +463,6 @@ class AlignModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    @unittest.skip(reason="Start to fail after using torch `cu118`.")
-    def test_multi_gpu_data_parallel_forward(self):
-        super().test_multi_gpu_data_parallel_forward()
-
     @unittest.skip(reason="Hidden_states is tested in individual model tests")
     def test_hidden_states_output(self):
         pass
@@ -464,12 +471,16 @@ class AlignModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
+    @unittest.skip(reason="Align does not use inputs_embeds")
+    def test_inputs_embeds_matches_input_ids(self):
+        pass
+
     @unittest.skip(reason="Retain_grad is tested in individual model tests")
     def test_retain_grad_hidden_states_attentions(self):
         pass
 
     @unittest.skip(reason="AlignModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # override as the `temperature` parameter initilization is different for ALIGN

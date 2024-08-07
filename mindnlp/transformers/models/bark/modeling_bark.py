@@ -218,7 +218,7 @@ class BarkSelfAttention(nn.Module):
             # fill the upper left part of the attention weights with inf
             attn_weights = attn_weights.masked_fill(
                 self.bias[:, :, key_length - query_length : key_length, :key_length] == 0,
-                ops.finfo(attn_weights.dtype).min,
+                float(ops.finfo(attn_weights.dtype).min),
             )
 
         if attention_mask is not None:
