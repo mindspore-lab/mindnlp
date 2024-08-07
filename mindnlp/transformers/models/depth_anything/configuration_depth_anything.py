@@ -20,7 +20,6 @@ from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 from ..auto.configuration_auto import CONFIG_MAPPING
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -85,21 +84,21 @@ class DepthAnythingConfig(PretrainedConfig):
     model_type = "depth_anything"
 
     def __init__(
-        self,
-        backbone_config=None,
-        backbone=None,
-        use_pretrained_backbone=False,
-        use_timm_backbone=False,
-        backbone_kwargs=None,
-        patch_size=14,
-        initializer_range=0.02,
-        reassemble_hidden_size=384,
-        reassemble_factors=[4, 2, 1, 0.5],
-        neck_hidden_sizes=[48, 96, 192, 384],
-        fusion_hidden_size=64,
-        head_in_index=-1,
-        head_hidden_size=32,
-        **kwargs,
+            self,
+            backbone_config=None,
+            backbone=None,
+            use_pretrained_backbone=False,
+            use_timm_backbone=False,
+            backbone_kwargs=None,
+            patch_size=14,
+            initializer_range=0.02,
+            reassemble_hidden_size=384,
+            reassemble_factors=[4, 2, 1, 0.5],
+            neck_hidden_sizes=[48, 96, 192, 384],
+            fusion_hidden_size=64,
+            head_in_index=-1,
+            head_hidden_size=32,
+            **kwargs,
     ):
         super().__init__(**kwargs)
         if backbone_config is None and backbone is None:
