@@ -397,7 +397,7 @@ class BartHeadTests(unittest.TestCase):
         config, input_ids, _ = self._get_config_and_data()
 
         def _get_embs(m):
-            return (m.get_input_embeddings().weight.data.copy(), m.get_output_embeddings().weight.data.copy())
+            return (m.get_input_embeddings().weight.copy(), m.get_output_embeddings().weight.copy())
 
         model = BartForConditionalGeneration(config).set_train(False)
         input, output = _get_embs(model)

@@ -66,8 +66,10 @@ def get_embed_positions(embed_positions, position_ids):
 
 
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
-    x1 = x[:, :, :, ::2]
-    x2 = x[:, :, :, 1::2]
+    # x1 = x[:, :, :, ::2]
+    # x2 = x[:, :, :, 1::2]
+    x1 = ops.index_select(x, -1, ops.arange(0, x.shape[-1], 2))
+    x2 = ops.index_select(x, -1, ops.arange(1, x.shape[-1], 2))
     x = ops.stack((-x2, x1), dim=-1)
 
     return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')

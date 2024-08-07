@@ -1,6 +1,6 @@
 """Container"""
 import operator
-from itertools import islice
+from itertools import chain, islice
 from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Tuple, Union, TypeVar
 from collections import OrderedDict, abc as container_abcs
 from typing_extensions import Self
@@ -11,6 +11,17 @@ from mindspore import Parameter
 from .module import Module
 
 T = TypeVar('T', bound=Module)
+
+def _addindent(s_, numSpaces):
+    s = s_.split('\n')
+    # don't do anything for single-line stuff
+    if len(s) == 1:
+        return s_
+    first = s.pop(0)
+    s = [(numSpaces * ' ') + line for line in s]
+    s = '\n'.join(s)
+    s = first + '\n' + s
+    return s
 
 class Sequential(Module):
     r"""A sequential container.
@@ -211,17 +222,18 @@ class Sequential(Module):
 class ModuleList(Module):
     r"""Holds submodules in a list.
 
-    ModuleList can be indexed like a regular Python list, but modules it
-    contains are properly registered, and will be visible by all Module methods.
+    :class:`~torch.nn.ModuleList` can be indexed like a regular Python list, but
+    modules it contains are properly registered, and will be visible by all
+    :class:`~torch.nn.Module` methods.
 
-    Arguments:
-        modules (list, optional): a list of modules to add
+    Args:
+        modules (iterable, optional): an iterable of modules to add
 
     Example::
 
         class MyModule(nn.Module):
             def __init__(self):
-                super(MyModule, self).__init__()
+                super().__init__()
                 self.linears = nn.ModuleList([nn.Linear(10, 10) for i in range(10)])
 
             def forward(self, x):
@@ -231,8 +243,10 @@ class ModuleList(Module):
                 return x
     """
 
-    def __init__(self, modules=None):
-        super(ModuleList, self).__init__()
+    _modules: Dict[str, Module]  # type: ignore[assignment]
+
+    def __init__(self, modules: Optional[Iterable[Module]] = None) -> None:
+        super().__init__()
         if modules is not None:
             self += modules
 
@@ -244,7 +258,6 @@ class ModuleList(Module):
         if idx < 0:
             idx += len(self)
         return str(idx)
-
 
     def __getitem__(self, idx: Union[int, slice]) -> Union[Module, 'ModuleList']:
         if isinstance(idx, slice):
@@ -262,43 +275,102 @@ class ModuleList(Module):
                 delattr(self, str(k))
         else:
             delattr(self, self._get_abs_string_index(idx))
-        # To preserve numbering, self._modules is being reforwarded with modules after deletion
+        # To preserve numbering, self._modules is being reconstructed with modules after deletion
         str_indices = [str(i) for i in range(len(self._modules))]
         self._modules = OrderedDict(list(zip(str_indices, self._modules.values())))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._modules)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Module]:
         return iter(self._modules.values())
 
-    def __iadd__(self, modules):
+    def __iadd__(self, modules: Iterable[Module]) -> Self:
         return self.extend(modules)
 
-    def append(self, module):
-        r"""Appends a given module at the end of the list.
+    def __add__(self, other: Iterable[Module]) -> 'ModuleList':
+        combined = ModuleList()
+        for i, module in enumerate(chain(self, other)):
+            combined.add_module(str(i), module)
+        return combined
 
-        Arguments:
+    def __repr__(self):
+        """Return a custom repr for ModuleList that compresses repeated module representations."""
+        list_of_reprs = [repr(item) for item in self]
+        if len(list_of_reprs) == 0:
+            return self._get_name() + '()'
+
+        start_end_indices = [[0, 0]]
+        repeated_blocks = [list_of_reprs[0]]
+        for i, r in enumerate(list_of_reprs[1:], 1):
+            if r == repeated_blocks[-1]:
+                start_end_indices[-1][1] += 1
+                continue
+
+            start_end_indices.append([i, i])
+            repeated_blocks.append(r)
+
+        lines = []
+        main_str = self._get_name() + '('
+        for (start_id, end_id), b in zip(start_end_indices, repeated_blocks):
+            local_repr = f"({start_id}): {b}"  # default repr
+
+            if start_id != end_id:
+                n = end_id - start_id + 1
+                local_repr = f"({start_id}-{end_id}): {n} x {b}"
+
+            local_repr = _addindent(local_repr, 2)
+            lines.append(local_repr)
+
+        main_str += '\n  ' + '\n  '.join(lines) + '\n'
+        main_str += ')'
+        return main_str
+
+    def __dir__(self):
+        keys = super().__dir__()
+        keys = [key for key in keys if not key.isdigit()]
+        return keys
+
+    def insert(self, index: int, module: Module) -> None:
+        r"""Insert a given module before a given index in the list.
+
+        Args:
+            index (int): index to insert.
+            module (nn.Module): module to insert
+        """
+        for i in range(len(self._modules), index, -1):
+            self._modules[str(i)] = self._modules[str(i - 1)]
+        self._modules[str(index)] = module
+
+
+    def append(self, module: Module) -> 'ModuleList':
+        r"""Append a given module to the end of the list.
+
+        Args:
             module (nn.Module): module to append
         """
         self.add_module(str(len(self)), module)
         return self
 
-    def extend(self, modules):
-        r"""Appends modules from a Python list at the end.
 
-        Arguments:
-            modules (list): list of modules to append
+    def pop(self, key: Union[int, slice]) -> Module:
+        v = self[key]
+        del self[key]
+        return v
+
+    def extend(self, modules: Iterable[Module]) -> Self:
+        r"""Append modules from a Python iterable to the end of the list.
+
+        Args:
+            modules (iterable): iterable of modules to append
         """
-        if not isinstance(modules, list):
-            raise TypeError("ModuleList.extend should be called with a "
-                            "list, but got " + type(modules).__name__)
+        if not isinstance(modules, container_abcs.Iterable):
+            raise TypeError("ModuleList.extend should be called with an "
+                            "iterable, but got " + type(modules).__name__)
         offset = len(self)
         for i, module in enumerate(modules):
             self.add_module(str(offset + i), module)
         return self
-
-
 
 
 class ModuleDict(Module):

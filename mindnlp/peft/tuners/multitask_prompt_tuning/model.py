@@ -13,7 +13,8 @@
 # limitations under the License.
 """multitask prompt tuning model"""
 import mindspore
-from mindspore import ops, Parameter
+from mindspore import Parameter
+from mindnlp.core import ops
 
 from ..prompt_tuning import PromptEmbedding
 from ...utils import TaskType
@@ -69,15 +70,15 @@ class MultitaskPromptEmbedding(PromptEmbedding):
         self.prefix_task_cols = Parameter(
             ops.normal(
                 mean=0,
-                stddev=0.02,
-                shape=(self.num_tasks, total_virtual_tokens, self.num_ranks),
+                std=0.02,
+                size=(self.num_tasks, total_virtual_tokens, self.num_ranks),
             )
         )
         self.prefix_task_rows = Parameter(
             ops.normal(
                 mean=0,
-                stddev=0.02,
-                shape=(self.num_tasks, self.num_ranks, self.token_dim),
+                std=0.02,
+                size=(self.num_tasks, self.num_ranks, self.token_dim),
             )
         )
 
@@ -93,13 +94,13 @@ class MultitaskPromptEmbedding(PromptEmbedding):
                 )
 
             if config.prompt_tuning_init_state_dict_path.endswith(".safetensors"):
-                from mindnlp.utils.serialization import safe_load_file
+                from mindnlp.core.serialization import safe_load_file
 
                 state_dict: dict = safe_load_file(config.prompt_tuning_init_state_dict_path)
             elif config.prompt_tuning_init_state_dict_path.endswith(".ckpt"):
                 state_dict = mindspore.load_checkpoint(config.prompt_tuning_init_state_dict_path)
             else:
-                from mindnlp.utils.serialization import load
+                from mindnlp.core.serialization import load
                 state_dict: dict = load(
                     config.prompt_tuning_init_state_dict_path,
                 )

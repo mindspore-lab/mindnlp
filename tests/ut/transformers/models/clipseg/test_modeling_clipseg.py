@@ -58,7 +58,6 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-
 class CLIPSegVisionModelTester:
     def __init__(
         self,
@@ -458,7 +457,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
             if model_class.__name__ == "CLIPSegForImageSegmentation":
                 batch_size, _, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [batch_size, height, width], dtype=mindspore.float32
+                    batch_size, height, width, dtype=mindspore.float32
                 )
 
         return inputs_dict
