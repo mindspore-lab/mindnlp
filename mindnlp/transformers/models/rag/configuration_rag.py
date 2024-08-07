@@ -103,6 +103,7 @@ class RagConfig(PretrainedConfig):
         self.do_deduplication = do_deduplication
 
         self.use_cache = use_cache
+        self.forced_eos_token_id = forced_eos_token_id
 
         if self.forced_eos_token_id is None:
             self.forced_eos_token_id = getattr(self.generator, "forced_eos_token_id", None)
