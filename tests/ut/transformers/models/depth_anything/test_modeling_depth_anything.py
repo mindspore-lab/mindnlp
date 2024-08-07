@@ -260,7 +260,7 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
             predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
-        expected_shape = ops.Size([1, 518, 686])
+        expected_shape = ops.size([1, 518, 686])
         self.assertEqual(predicted_depth.shape, expected_shape)
 
         expected_slice = mindspore.Tensor(
