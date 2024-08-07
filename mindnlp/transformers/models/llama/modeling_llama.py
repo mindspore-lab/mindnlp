@@ -25,7 +25,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, SUPPORT_VIEW
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import (
@@ -84,7 +84,10 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
         causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
         if attention_mask is not None:
-            causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
+            if SUPPORT_VIEW:
+                causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
+            else:
+                causal_mask = causal_mask.copy()
             mask_length = attention_mask.shape[-1]
             # padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
             padding_mask = ops.narrow(causal_mask, -1, 0, mask_length) + attention_mask[:, None, None, :]
@@ -92,11 +95,14 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             # causal_mask[:, :, :, :mask_length] = ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(
             #     padding_mask, min_dtype
             # )
-            causal_mask = ops.cat(
-                            [ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(padding_mask, min_dtype),
-                             ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
-                            dim=-1
-                        )
+            if mask_length >= causal_mask.shape[-1]:
+                causal_mask = causal_mask.masked_fill(padding_mask, min_dtype)
+            else:
+                causal_mask = ops.cat(
+                                [ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(padding_mask, min_dtype),
+                                ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
+                                dim=-1
+                            )
 
     return causal_mask
 
