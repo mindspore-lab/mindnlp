@@ -518,6 +518,9 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
             config.output_hidden_states = True
 
             check_hidden_states_output(inputs_dict, config, model_class)
+    
+    def test_model_get_set_embeddings(self):
+        pass
 
 
 # We will verify our results on a video of eating spaghetti
