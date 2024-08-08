@@ -1138,6 +1138,13 @@ MindSpore's `load_checkpoint` function.
                     # Optimizer step
                     self.optimizer.step(grads)
 
+
+                    optimizer_was_run = True
+                    if optimizer_was_run:
+                        # Delay optimizer scheduling until metrics are generated
+                        if not isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+                            self.lr_scheduler.step()
+
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                     self.control = self.callback_handler.on_step_end(args, self.state, self.control)
