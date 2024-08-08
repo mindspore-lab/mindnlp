@@ -20,7 +20,6 @@ from typing import Any, Optional, Union
 
 import mindspore
 from mindspore import Parameter
-from mindspore.common.initializer import HeUniform, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D
@@ -113,7 +112,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
-            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):
@@ -199,7 +198,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             if weight is not None:
                 # the layer is already completely initialized, this is an update
                 if ops.is_floating_point(weight) or ops.is_complex(weight):
-                    for param in self.get_parameters():
+                    for param in self.parameters():
                         param.set_data(param.astype(weight.dtype))
                 break
 
@@ -236,16 +235,16 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             if init_lora_weights is True:
                 # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
-                self.lora_A[adapter_name].weight.initialize(HeUniform(math.sqrt(5)))
+                nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight, a=math.sqrt(5))
             elif init_lora_weights.lower() == "gaussian":
-                self.lora_A[adapter_name].weight.initialize(Normal(1 / self.r[adapter_name]))
+                nn.init.normal_(self.lora_A[adapter_name].weight, std=1 / self.r[adapter_name])
             else:
                 raise ValueError(f"Unknown initialization {init_lora_weights}")
-            self.lora_B[adapter_name].weight.initialize('zeros')
+            nn.init.zeros_(self.lora_B[adapter_name].weight)
         if adapter_name in self.lora_embedding_A.keys():
             # initialize a the same way as the default for nn.Linear and b to zero
-            self.lora_embedding_A[adapter_name].initialize('zeros')
-            self.lora_embedding_B[adapter_name].initialize(Normal(1.0))
+            nn.init.zeros_(self.lora_embedding_A[adapter_name])
+            nn.init.normal_(self.lora_embedding_B[adapter_name])
 
     def _get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
         r"""
