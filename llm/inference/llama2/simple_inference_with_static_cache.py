@@ -2,7 +2,6 @@ import mindspore
 from mindnlp.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache, logging
 from mindnlp.utils.testing_utils import CaptureLogger
 from mindnlp.core import ops, no_grad
-mindspore.set_context(pynative_synchronize=True)
 
 prompts = [
     "Simply put, the theory of relativity states that ",
@@ -11,7 +10,7 @@ prompts = [
 
 NUM_TOKENS_TO_GENERATE = 40
 
-model_id = '/home/lvyufeng/lvyufeng/mindnlp/llm/inference/llama2/.mindnlp/model/shakechen/llama-2-7b-hf'
+model_id = 'shakechen/llama-2-7b-hf'
 tokenizer = LlamaTokenizer.from_pretrained(model_id, mirror='modelscope', pad_token="</s>", padding_side="right")
 model = LlamaForCausalLM.from_pretrained(model_id, mirror='modelscope')
 inputs = tokenizer(prompts, return_tensors="ms", padding=True)

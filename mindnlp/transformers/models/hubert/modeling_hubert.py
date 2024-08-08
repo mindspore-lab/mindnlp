@@ -316,41 +316,7 @@ class HubertLayerNormConvLayer(nn.Module):
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2GroupNormConvLayer with Wav2Vec2->Hubert
 class HubertGroupNormConvLayer(nn.Module):
-
-    """A class representing a Group Normalization Convolutional Layer in the Hubert model.
-
-    This class inherits from nn.Module and is used to define a single layer of the Hubert model.
-    The layer consists of a 1-dimensional convolutional operation followed by group normalization,
-    an activation function, and returns the output hidden states.
-
-    Attributes:
-        in_conv_dim (int): The dimension of the input to the convolutional layer.
-        out_conv_dim (int): The dimension of the output from the convolutional layer.
-        conv (nn.Conv1d): The 1-dimensional convolutional operation.
-        activation (function): The activation function applied to the hidden states.
-        layer_norm (nn.GroupNorm): The group normalization operation.
-
-    Methods:
-        forward(hidden_states): Applies the convolutional operation, group normalization,
-            and activation function to the input hidden states and returns the output.
-
-    """
-    def __init__(self, config: HubertConfig, layer_id=0):
-        """
-        Initializes a HubertGroupNormConvLayer object.
-
-        Args:
-            self (HubertGroupNormConvLayer): The instance of the HubertGroupNormConvLayer class.
-            config (HubertConfig): An instance of HubertConfig class containing configuration parameters.
-            layer_id (int): The ID of the layer, defaults to 0. Used to access specific convolutional layer configuration.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If layer_id is less than 0.
-            KeyError: If the specified feature extraction activation function is not found in the ACT2FN dictionary.
-        """
+    def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
         self.out_conv_dim = config.conv_dim[layer_id]
@@ -363,24 +329,10 @@ class HubertGroupNormConvLayer(nn.Module):
             bias=config.conv_bias,
         )
         self.activation = ACT2FN[config.feat_extract_activation]
-        # NOTE: the naming is confusing, but let it be...
+
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
     def forward(self, hidden_states):
-        """
-        Construct a HubertGroupNormConvLayer by applying a series of operations on the input hidden states.
-
-        Args:
-            self (HubertGroupNormConvLayer): An instance of the HubertGroupNormConvLayer class.
-            hidden_states (tensor): The input hidden states to be processed.
-                Expected shape: (batch_size, channels, height, width).
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         hidden_states = self.conv(hidden_states)
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
