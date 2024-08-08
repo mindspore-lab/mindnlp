@@ -297,6 +297,7 @@ class CanonicalHFIndex(HFIndexBase):
             split=self.dataset_split,
             dummy=self.use_dummy_dataset,
             revision=dataset_revision,
+            trust_remote_code=True
         )
         super().__init__(vector_size, dataset, index_initialized=False)
 
@@ -314,6 +315,7 @@ class CanonicalHFIndex(HFIndexBase):
                 index_name=self.index_name,
                 dummy=self.use_dummy_dataset,
                 revision=self.dataset_revision,
+                trust_remote_code=True
             )
             self.dataset.set_format("numpy", columns=["embeddings"], output_all_columns=True)
         self._index_initialized = True
