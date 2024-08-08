@@ -93,10 +93,10 @@ class MBartConfig(PretrainedConfig):
             forced_eos_token_id (int): The ID for forced end-of-sentence token. Defaults to 2.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

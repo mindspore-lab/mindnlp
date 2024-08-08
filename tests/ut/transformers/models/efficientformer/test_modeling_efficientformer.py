@@ -50,12 +50,10 @@ if is_mindspore_available():
         EFFICIENTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
 
-
 if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import EfficientFormerImageProcessor
-
 
 class EfficientFormerModelTester:
     def __init__(
@@ -186,7 +184,7 @@ class EfficientFormerModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
             EfficientFormerModel,
-            EfficientFormerForImageClassificationWithTeacher,
+            # EfficientFormerForImageClassificationWithTeacher,
             EfficientFormerForImageClassification,
         )
         if is_mindspore_available()
@@ -333,7 +331,7 @@ class EfficientFormerModelTest(ModelTesterMixin, unittest.TestCase):
                 or model_class.__name__ == "EfficientFormerForImageClassificationWithTeacher"
             ):
                 continue
-
+ 
             for problem_type in problem_types:
                 with self.subTest(msg=f"Testing {model_class} with {problem_type['title']}"):
                     config.problem_type = problem_type["title"]

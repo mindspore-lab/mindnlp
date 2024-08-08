@@ -77,19 +77,19 @@ class CpmBeeConfig(PretrainedConfig):
             Decides the model parameters are half-precision or not.
 
     Example:
-
-    ```python
-    >>> from transformers import CpmBeeModel, CpmBeeConfig
-
-    >>> # Initializing a CPMBee cpm-bee-10b style configuration
-    >>> configuration = CpmBeeConfig()
-
-    >>> # Initializing a model from the cpm-bee-10b style configuration
-    >>> model = CpmBeeModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import CpmBeeModel, CpmBeeConfig
+        ...
+        >>> # Initializing a CPMBee cpm-bee-10b style configuration
+        >>> configuration = CpmBeeConfig()
+        ...
+        >>> # Initializing a model from the cpm-bee-10b style configuration
+        >>> model = CpmBeeModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "cpmbee"
 
     def __init__(
@@ -136,7 +136,7 @@ class CpmBeeConfig(PretrainedConfig):
             half (bool): Flag to indicate whether to use half precision. Defaults to False.
         
         Returns:
-            None. The method initializes the CpmBeeConfig instance.
+            None.
         
         Raises:
             None.

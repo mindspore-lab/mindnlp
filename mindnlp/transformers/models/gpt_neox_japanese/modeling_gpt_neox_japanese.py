@@ -18,10 +18,11 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.utils import get_default_dtype, logging
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -47,7 +48,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(
                 initializer(
                     Normal(self.config.initializer_range),
@@ -55,7 +56,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
                     dtype=cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -76,7 +77,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
             )
 
 
-class GPTNeoXJapaneseAttention(nn.Cell):
+class GPTNeoXJapaneseAttention(nn.Module):
     def __init__(self, config, use_bias=False):
         super().__init__()
         self.num_attention_heads = config.num_attention_heads
@@ -95,17 +96,17 @@ class GPTNeoXJapaneseAttention(nn.Cell):
             mindspore.tensor(self.head_size, dtype=mindspore.float32)
         )
 
-        self.query_key_value = nn.Dense(
-            config.hidden_size, 3 * config.hidden_size, has_bias=False
+        self.query_key_value = nn.Linear(
+            config.hidden_size, 3 * config.hidden_size, bias=False
         )
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         # Activate bias if the last layer
         self.use_bias = use_bias
         self.dense_bias = (
             mindspore.Parameter(ops.zeros(config.hidden_size)) if use_bias else None
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask,
@@ -145,15 +146,15 @@ class GPTNeoXJapaneseAttention(nn.Cell):
             seq_len += offset
         cos, sin = self.rotary_emb(value, seq_len=seq_len)
         query, key = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, offset=offset)
-        query = ops.cat((query, query_pass), axis=-1)
-        key = ops.cat((key, key_pass), axis=-1)
+        query = ops.cat((query, query_pass), dim=-1)
+        key = ops.cat((key, key_pass), dim=-1)
 
         # Cache QKV values
         if has_layer_past:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
         present = (key, value) if use_cache else None
 
         # Compute attention
@@ -203,15 +204,15 @@ class GPTNeoXJapaneseAttention(nn.Cell):
     def _create_causal_mask(self, key_length, query_length):
         causal_mask = ops.tril(
             ops.ones(
-                (self.max_positions, self.max_positions), dtype=mindspore.bool_
+                (self.max_positions, self.max_positions), dtype=mindspore.int32
             ).reshape(1, 1, self.max_positions, self.max_positions)
-        )
+        ).to(mindspore.bool_)
         return causal_mask[:, :, key_length - query_length : key_length, :key_length]
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         # q, k, v: [bs, num_attention_heads, seq_len, attn_head_size]
         # compute causal mask from causal mask buffer
-        batch_size, num_attention_heads, query_length, attn_head_size = query.shape
+        batch_size, num_attention_heads, query_length, attn_head_size = query.asnumpy().shape
         key_length = key.shape[-2]
 
         causal_mask = self._create_causal_mask(key_length, query_length)
@@ -247,7 +248,7 @@ class GPTNeoXJapaneseAttention(nn.Cell):
             # Apply the attention mask
             attn_scores = attn_scores + attention_mask
 
-        attn_weights = ops.softmax(attn_scores, axis=-1)
+        attn_weights = ops.softmax(attn_scores, dim=-1)
         attn_weights = self.attention_dropout(attn_weights)
         attn_weights = attn_weights.to(value.dtype)
 
@@ -260,7 +261,7 @@ class GPTNeoXJapaneseAttention(nn.Cell):
 
 
 # Copied from transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXRotaryEmbedding with GPTNeoXRotaryEmbedding->RotaryEmbedding
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     # Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding.__init__
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
@@ -288,11 +289,11 @@ class RotaryEmbedding(nn.Cell):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -305,9 +306,10 @@ class RotaryEmbedding(nn.Cell):
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    # x1 = x[..., : x.shape[-1] // 2]
+    # x2 = x[..., x.shape[-1] // 2 :]
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
@@ -339,41 +341,41 @@ def bias_dropout_add(
     """
     if bias is not None:
         x = x + bias
-    out = ops.dropout(input=x, p=prob, training=training)
+    out = F.dropout(input=x, p=prob, training=training)
     if residual is not None:
         out = residual + out
     return out
 
 
-class GPTNeoXJapaneseMLP(nn.Cell):
+class GPTNeoXJapaneseMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         intermediate_size = int(config.hidden_size * config.intermediate_multiple_size)
-        self.dense_h_to_4h = nn.Dense(
-            config.hidden_size, intermediate_size, has_bias=False
+        self.dense_h_to_4h = nn.Linear(
+            config.hidden_size, intermediate_size, bias=False
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
-            intermediate_size, config.hidden_size, has_bias=False
+        self.dense_4h_to_h = nn.Linear(
+            intermediate_size, config.hidden_size, bias=False
         )
         self.act = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense_h_to_4h(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dense_4h_to_h(hidden_states)
         return hidden_states
 
 
-class GPTNeoXJapaneseLayer(nn.Cell):
+class GPTNeoXJapaneseLayer(nn.Module):
     def __init__(self, config, layer_number):
         super().__init__()
         self.layer_number = layer_number
         self.input_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.post_attention_layernorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         # activate bias only last layer
         self.attention = GPTNeoXJapaneseAttention(
@@ -382,7 +384,7 @@ class GPTNeoXJapaneseLayer(nn.Cell):
         self.mlp = GPTNeoXJapaneseMLP(config)
         self.hidden_dropout = config.hidden_dropout
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -439,14 +441,14 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
         self.config = config
 
         self.embed_in = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 GPTNeoXJapaneseLayer(config=config, layer_number=i)
                 for i in range(config.num_hidden_layers)
             ]
         )
         self.final_layer_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
         # Initialize weights and apply final processing
@@ -458,7 +460,7 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_in = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -471,31 +473,33 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+        Args:
+            past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors
+            of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         Returns:
+            `Union[Tuple, BaseModelOutputWithPast]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, GPTNeoXJapaneseModel
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
-        >>> model = GPTNeoXJapaneseModel.from_pretrained("abeja/gpt-neox-japanese-2.7b")
-
-        >>> inputs = tokenizer("日本語のGPT-neoxがHugging Faceで使えます😀", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, GPTNeoXJapaneseModel
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
+            >>> model = GPTNeoXJapaneseModel.from_pretrained("abeja/gpt-neox-japanese-2.7b")
+            ...
+            >>> inputs = tokenizer("日本語のGPT-neoxがHugging Faceで使えます😀", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
         """
         output_attentions = (
             output_attentions
@@ -611,7 +615,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
         self.config = config
 
         self.gpt_neox_japanese = GPTNeoXJapaneseModel(config)
-        self.embed_out = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -622,7 +626,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.embed_out = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -636,44 +640,45 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
-            only required when the model is used as a decoder in a Sequence to Sequence model.
+        Args:
+            past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or
+                when `config.use_cache=True`):
 
-            Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
-            `past_key_values` input) to speed up sequential decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
+                `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
+                `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
+                only required when the model is used as a decoder in a Sequence to Sequence model.
+                - Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
+                `past_key_values` input) to speed up sequential decoding.
+                - If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         Returns:
+            `Union[Tuple, CausalLMOutputWithPast]`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, GPTNeoXJapaneseForCausalLM, GPTNeoXJapaneseConfig
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
-        >>> config = GPTNeoXJapaneseConfig.from_pretrained("abeja/gpt-neox-japanese-2.7b")
-        >>> config.is_decoder = True
-        >>> model = GPTNeoXJapaneseForCausalLM.from_pretrained("abeja/gpt-neox-japanese-2.7b", config=config)
-
-        >>> inputs = tokenizer("日本語のGPT-neoxがHugging Faceで使えます😀", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.logits
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, GPTNeoXJapaneseForCausalLM, GPTNeoXJapaneseConfig
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
+            >>> config = GPTNeoXJapaneseConfig.from_pretrained("abeja/gpt-neox-japanese-2.7b")
+            >>> config.is_decoder = True
+            >>> model = GPTNeoXJapaneseForCausalLM.from_pretrained("abeja/gpt-neox-japanese-2.7b", config=config)
+            ...
+            >>> inputs = tokenizer("日本語のGPT-neoxがHugging Faceで使えます😀", return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ...
+            >>> prediction_logits = outputs.logits
+            ```
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -701,7 +706,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shift_logits = lm_logits[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(
+            lm_loss = F.cross_entropy(
                 shift_logits.reshape(
                     -1,
                     shift_logits.shape[-1],

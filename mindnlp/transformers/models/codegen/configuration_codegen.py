@@ -90,19 +90,19 @@ class CodeGenConfig(PretrainedConfig):
             model has a output word embedding layer.
 
     Example:
-
-    ```python
-    >>> from transformers import CodeGenConfig, CodeGenModel
-
-    >>> # Initializing a CodeGen 6B configuration
-    >>> configuration = CodeGenConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = CodeGenModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import CodeGenConfig, CodeGenModel
+        ...
+        >>> # Initializing a CodeGen 6B configuration
+        >>> configuration = CodeGenConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = CodeGenModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "codegen"
     attribute_map = {
         "max_position_embeddings": "n_positions",
@@ -158,10 +158,10 @@ class CodeGenConfig(PretrainedConfig):
             tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to False.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx

@@ -19,9 +19,7 @@ from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
 
-
 logger = logging.get_logger(__name__)
-
 
 class MvpConfig(PretrainedConfig):
     r"""
@@ -172,10 +170,11 @@ class MvpConfig(PretrainedConfig):
             **kwargs,
         )
 
-        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False):
+        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False): # pylint: disable=access-member-before-definition
             self.forced_bos_token_id = self.bos_token_id
             warnings.warn(
                 f"Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions. "
                 "The config can simply be saved and uploaded again to be fixed."
             )
+
 __all__ = ["MvpConfig"]

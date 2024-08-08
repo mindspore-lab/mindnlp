@@ -72,26 +72,29 @@ BARK_SUBMODELCONFIG_START_DOCSTRING = """
 class BarkSubModelConfig(PretrainedConfig):
 
     """
-    BarkSubModelConfig represents the configuration class for the Bark sub-model. It inherits from PretrainedConfig and provides configuration parameters for the specific Bark sub-model.
+    BarkSubModelConfig represents the configuration class for the Bark sub-model.
+    It inherits from PretrainedConfig and provides configuration parameters for the specific Bark sub-model.
     
     Attributes:
-    - block_size (int): The block size for the model.
-    - input_vocab_size (int): The size of the input vocabulary.
-    - output_vocab_size (int): The size of the output vocabulary.
-    - num_layers (int): The number of layers in the model.
-    - num_heads (int): The number of attention heads.
-    - hidden_size (int): The size of the hidden layers.
-    - dropout (float): The dropout probability.
-    - bias (bool): Indicates whether bias is used in the model.
-    - use_cache (bool): Indicates whether caching is enabled.
-    - initializer_range (float): The range for parameter initialization.
-    
+        block_size (int): The block size for the model.
+        input_vocab_size (int): The size of the input vocabulary.
+        output_vocab_size (int): The size of the output vocabulary.
+        num_layers (int): The number of layers in the model.
+        num_heads (int): The number of attention heads.
+        hidden_size (int): The size of the hidden layers.
+        dropout (float): The dropout probability.
+        bias (bool): Indicates whether bias is used in the model.
+        use_cache (bool): Indicates whether caching is enabled.
+        initializer_range (float): The range for parameter initialization.
+
     Methods:
-    - from_pretrained(cls, pretrained_model_name_or_path, cache_dir, force_download, local_files_only, **kwargs): Method to create a BarkSubModelConfig instance from a pretrained model or path.
-    
+        from_pretrained(cls, pretrained_model_name_or_path, cache_dir, force_download, local_files_only, **kwargs):
+            Method to create a BarkSubModelConfig instance from a pretrained model or path.
+
     Note:
-    The from_pretrained method allows creating a BarkSubModelConfig instance from a pretrained model or path, with options to specify the cache directory, force download, and use of local files. The method
-also handles the configuration dictionary and checks for model type compatibility.
+        The from_pretrained method allows creating a BarkSubModelConfig instance from a pretrained model or path,
+        with options to specify the cache directory, force download, and use of local files.
+        The method also handles the configuration dictionary and checks for model type compatibility.
     """
     model_type = "bark_module"
     keys_to_ignore_at_inference = ["past_key_values"]
@@ -119,7 +122,7 @@ also handles the configuration dictionary and checks for model type compatibilit
     ):
         """
         Initializes a BarkSubModelConfig object.
-        
+
         Args:
             block_size (int): The size of the block. Default is 1024.
             input_vocab_size (int): The size of the input vocabulary. Default is 10048.
@@ -131,12 +134,12 @@ also handles the configuration dictionary and checks for model type compatibilit
             bias (bool): Indicates whether bias is used. Default is True.
             initializer_range (float): The range for weight initialization. Default is 0.02.
             use_cache (bool): Indicates whether cache is used. Default is True.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         self.block_size = block_size
         self.input_vocab_size = input_vocab_size
@@ -162,18 +165,21 @@ also handles the configuration dictionary and checks for model type compatibilit
     ) -> "PretrainedConfig":
         """
         This method is used to instantiate a 'BarkSubModelConfig' object from a pretrained model.
-        
+
         Args:
             cls (class): The class object representing the 'BarkSubModelConfig' class.
             pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
             cache_dir (Optional[Union[str, os.PathLike]]): The directory to cache the downloaded files. Default is None.
-            force_download (bool): Whether to force download the model files even if they already exist in the cache directory. Default is False.
-            local_files_only (bool): Whether to use only the local files and not download any files if they are not available locally. Default is False.
+            force_download (bool):
+                Whether to force download the model files even if they already exist in the cache directory. Default is False.
+            local_files_only (bool):
+                Whether to use only the local files and not download any files if they are not available locally. Default is False.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            PretrainedConfig: An object of type 'PretrainedConfig' representing the instantiated 'BarkSubModelConfig'.
-        
+            PretrainedConfig:
+                An object of type 'PretrainedConfig' representing the instantiated 'BarkSubModelConfig'.
+
         Raises:
             None.
         """
@@ -199,9 +205,9 @@ also handles the configuration dictionary and checks for model type compatibilit
 class BarkSemanticConfig(BarkSubModelConfig):
 
     """
-    Represents a configuration class for semantic segmentation models in the Bark framework. 
+    Represents a configuration class for semantic segmentation models in the Bark framework.
     This class inherits properties and methods from the BarkSubModelConfig class.
-    
+
     Attributes:
         model_name (str): The name of the semantic segmentation model.
         num_classes (int): The number of classes in the semantic segmentation task.
@@ -211,30 +217,30 @@ class BarkSemanticConfig(BarkSubModelConfig):
         normalization (str): The type of normalization applied to the input data.
         loss_function (str): The loss function used for training the model.
         optimizer (str): The optimizer used during model training.
-    
+
     Methods:
-        set_model_name(model_name: str) -> None:
+        set_model_name:
             Sets the name of the semantic segmentation model.
-        
-        set_num_classes(num_classes: int) -> None:
+
+        set_num_classes:
             Sets the number of classes in the semantic segmentation task.
-        
-        set_input_shape(input_shape: tuple) -> None:
+
+        set_input_shape:
             Sets the input shape of the model.
-        
-        set_backbone(backbone: str) -> None:
+
+        set_backbone:
             Sets the backbone architecture used in the model.
-        
-        set_pretrained_backbone(pretrained: bool) -> None:
+
+        set_pretrained_backbone:
             Sets whether a pretrained backbone is used.
-        
-        set_normalization(normalization: str) -> None:
+
+        set_normalization:
             Sets the type of normalization applied to the input data.
-        
-        set_loss_function(loss_function: str) -> None:
+
+        set_loss_function:
             Sets the loss function used for training the model.
-        
-        set_optimizer(optimizer: str) -> None:
+
+        set_optimizer:
             Sets the optimizer used during model training.
     """
     model_type = "semantic"
@@ -243,36 +249,39 @@ class BarkSemanticConfig(BarkSubModelConfig):
 class BarkCoarseConfig(BarkSubModelConfig):
 
     """
-    BarkCoarseConfig is a Python class that represents the configuration settings for the coarse behavior model in the Bark autonomous driving simulation framework. This class inherits from the
-BarkSubModelConfig class.
-    
-    The BarkCoarseConfig class provides a set of parameters and options that can be used to configure the behavior of the coarse model. These parameters include settings related to the behavior model itself,
-such as the desired velocity, acceleration limits, and time horizons, as well as settings for the perception model, such as sensor range and field of view.
-    
+    BarkCoarseConfig is a Python class that represents the configuration settings for the coarse behavior model
+    in the Bark autonomous driving simulation framework.
+    This class inherits from the BarkSubModelConfig class.
+
+    The BarkCoarseConfig class provides a set of parameters and options that can be used to configure the behavior of the coarse model.
+    These parameters include settings related to the behavior model itself, such as the desired velocity,
+    acceleration limits, and time horizons, as well as settings for the perception model,
+    such as sensor range and field of view.
+
     Attributes:
-        - desired_velocity (float): The desired velocity of the ego vehicle.
-        - max_acceleration (float): The maximum acceleration limit for the ego vehicle.
-        - min_acceleration (float): The minimum acceleration limit for the ego vehicle.
-        - horizon_time (float): The time horizon for the behavior planning.
-        - perception_range (float): The range of the perception sensor.
-        - field_of_view (float): The field of view of the perception sensor.
-    
+        desired_velocity (float): The desired velocity of the ego vehicle.
+        max_acceleration (float): The maximum acceleration limit for the ego vehicle.
+        min_acceleration (float): The minimum acceleration limit for the ego vehicle.
+        horizon_time (float): The time horizon for the behavior planning.
+        perception_range (float): The range of the perception sensor.
+        field_of_view (float): The field of view of the perception sensor.
+
     Methods:
-        - __init__(self, desired_velocity, max_acceleration, min_acceleration, horizon_time, perception_range, field_of_view): Initializes a new instance of the BarkCoarseConfig class with the specified
-parameters.
-        - get_desired_velocity(self): Returns the desired velocity of the ego vehicle.
-        - set_desired_velocity(self, desired_velocity): Sets the desired velocity of the ego vehicle.
-        - get_max_acceleration(self): Returns the maximum acceleration limit for the ego vehicle.
-        - set_max_acceleration(self, max_acceleration): Sets the maximum acceleration limit for the ego vehicle.
-        - get_min_acceleration(self): Returns the minimum acceleration limit for the ego vehicle.
-        - set_min_acceleration(self, min_acceleration): Sets the minimum acceleration limit for the ego vehicle.
-        - get_horizon_time(self): Returns the time horizon for the behavior planning.
-        - set_horizon_time(self, horizon_time): Sets the time horizon for the behavior planning.
-        - get_perception_range(self): Returns the range of the perception sensor.
-        - set_perception_range(self, perception_range): Sets the range of the perception sensor.
-        - get_field_of_view(self): Returns the field of view of the perception sensor.
-        - set_field_of_view(self, field_of_view): Sets the field of view of the perception sensor.
-    
+        __init__(self, desired_velocity, max_acceleration, min_acceleration, horizon_time, perception_range, field_of_view):
+            Initializes a new instance of the BarkCoarseConfig class with the specified parameters.
+        get_desired_velocity(self): Returns the desired velocity of the ego vehicle.
+        set_desired_velocity(self, desired_velocity): Sets the desired velocity of the ego vehicle.
+        get_max_acceleration(self): Returns the maximum acceleration limit for the ego vehicle.
+        set_max_acceleration(self, max_acceleration): Sets the maximum acceleration limit for the ego vehicle.
+        get_min_acceleration(self): Returns the minimum acceleration limit for the ego vehicle.
+        set_min_acceleration(self, min_acceleration): Sets the minimum acceleration limit for the ego vehicle.
+        get_horizon_time(self): Returns the time horizon for the behavior planning.
+        set_horizon_time(self, horizon_time): Sets the time horizon for the behavior planning.
+        get_perception_range(self): Returns the range of the perception sensor.
+        set_perception_range(self, perception_range): Sets the range of the perception sensor.
+        get_field_of_view(self): Returns the field of view of the perception sensor.
+        set_field_of_view(self, field_of_view): Sets the field of view of the perception sensor.
+
     """
     model_type = "coarse_acoustics"
 
@@ -280,33 +289,33 @@ parameters.
 class BarkFineConfig(BarkSubModelConfig):
 
     """
-    BarkFineConfig represents the configuration settings for a fine-tuning model within the Bark framework. 
-    This class inherits from BarkSubModelConfig and provides parameters for configuring the fine-tuning process, including options for tying word embeddings, specifying the total number of codes, and the
-number of codes given.
-    
+    BarkFineConfig represents the configuration settings for a fine-tuning model within the Bark framework.
+    This class inherits from BarkSubModelConfig and provides parameters for configuring the fine-tuning process,
+    including options for tying word embeddings, specifying the total number of codes, and the number of codes given.
+
     Parameters:
-    - tie_word_embeddings (bool): Flag indicating whether to tie word embeddings during fine-tuning.
-    - n_codes_total (int): The total number of codes used in the fine-tuning model.
-    - n_codes_given (int): The number of codes given as input to the fine-tuning model.
-    
+        tie_word_embeddings (bool): Flag indicating whether to tie word embeddings during fine-tuning.
+        n_codes_total (int): The total number of codes used in the fine-tuning model.
+        n_codes_given (int): The number of codes given as input to the fine-tuning model.
+
     Inherits from BarkSubModelConfig and initializes the configuration settings for the fine-tuning model based on the provided parameters.
     """
     model_type = "fine_acoustics"
 
     def __init__(self, tie_word_embeddings=True, n_codes_total=8, n_codes_given=1, **kwargs):
         """Initializes a new instance of the BarkFineConfig class.
-        
+
         Args:
             self (BarkFineConfig): The object instance.
             tie_word_embeddings (bool): Whether to tie the word embeddings of the model. Defaults to True.
             n_codes_total (int): The total number of codes. Defaults to 8.
             n_codes_given (int): The number of given codes. Defaults to 1.
-        
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.n_codes_total = n_codes_total
         self.n_codes_given = n_codes_given
@@ -326,45 +335,44 @@ class BarkConfig(PretrainedConfig):
     documentation from [`PretrainedConfig`] for more information.
 
     Args:
-    semantic_config ([`BarkSemanticConfig`], *optional*):
-        Configuration of the underlying semantic sub-model.
-    coarse_acoustics_config ([`BarkCoarseConfig`], *optional*):
-        Configuration of the underlying coarse acoustics sub-model.
-    fine_acoustics_config ([`BarkFineConfig`], *optional*):
-        Configuration of the underlying fine acoustics sub-model.
-    codec_config ([`AutoConfig`], *optional*):
-        Configuration of the underlying codec sub-model.
+        semantic_config ([`BarkSemanticConfig`], *optional*):
+            Configuration of the underlying semantic sub-model.
+        coarse_acoustics_config ([`BarkCoarseConfig`], *optional*):
+            Configuration of the underlying coarse acoustics sub-model.
+        fine_acoustics_config ([`BarkFineConfig`], *optional*):
+            Configuration of the underlying fine acoustics sub-model.
+        codec_config ([`AutoConfig`], *optional*):
+            Configuration of the underlying codec sub-model.
 
     Example:
-
-    ```python
-    >>> from transformers import (
-    ...     BarkSemanticConfig,
-    ...     BarkCoarseConfig,
-    ...     BarkFineConfig,
-    ...     BarkModel,
-    ...     BarkConfig,
-    ...     AutoConfig,
-    ... )
-
-    >>> # Initializing Bark sub-modules configurations.
-    >>> semantic_config = BarkSemanticConfig()
-    >>> coarse_acoustics_config = BarkCoarseConfig()
-    >>> fine_acoustics_config = BarkFineConfig()
-    >>> codec_config = AutoConfig.from_pretrained("facebook/encodec_24khz")
-
-
-    >>> # Initializing a Bark module style configuration
-    >>> configuration = BarkConfig.from_sub_model_configs(
-    ...     semantic_config, coarse_acoustics_config, fine_acoustics_config, codec_config
-    ... )
-
-    >>> # Initializing a model (with random weights)
-    >>> model = BarkModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        ```python
+        >>> from transformers import (
+        ...     BarkSemanticConfig,
+        ...     BarkCoarseConfig,
+        ...     BarkFineConfig,
+        ...     BarkModel,
+        ...     BarkConfig,
+        ...     AutoConfig,
+        ... )
+        ...
+        >>> # Initializing Bark sub-modules configurations.
+        >>> semantic_config = BarkSemanticConfig()
+        >>> coarse_acoustics_config = BarkCoarseConfig()
+        >>> fine_acoustics_config = BarkFineConfig()
+        >>> codec_config = AutoConfig.from_pretrained("facebook/encodec_24khz")
+        ...
+        ...
+        >>> # Initializing a Bark module style configuration
+        >>> configuration = BarkConfig.from_sub_model_configs(
+        ...     semantic_config, coarse_acoustics_config, fine_acoustics_config, codec_config
+        ... )
+        ...
+        >>> # Initializing a model (with random weights)
+        >>> model = BarkModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "bark"
 
@@ -389,7 +397,7 @@ class BarkConfig(PretrainedConfig):
             initializer_range (float): Range for weight initialization. Defaults to 0.02.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

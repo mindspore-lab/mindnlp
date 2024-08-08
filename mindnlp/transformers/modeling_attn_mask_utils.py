@@ -17,15 +17,16 @@
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops
+from mindnlp.core import ops
 
 class AttentionMaskConverter:
     """
     A utility attention mask class that allows one to:
-        - Create a causal 4d mask
-        - Create a causal 4d mask with slided window
-        - Convert a 2d attention mask (batch_size, query_length) to a 4d attention mask (batch_size, 1, query_length,
-          key_value_length) that can be multiplied with attention scores
+
+    - Create a causal 4d mask
+    - Create a causal 4d mask with slided window
+    - Convert a 2d attention mask (batch_size, query_length) to a 4d attention mask (batch_size, 1, query_length,
+    key_value_length) that can be multiplied with attention scores
 
     Parameters:
         is_causal (`bool`):
@@ -40,10 +41,12 @@ class AttentionMaskConverter:
         
         Args:
             is_causal (bool): A boolean value indicating whether the attention mask is causal or not.
-            sliding_window (Optional[int], optional): An optional integer representing the sliding window size. Defaults to None. If provided, it must be a strictly positive integer. 
+            sliding_window (Optional[int], optional):
+                An optional integer representing the sliding window size. Defaults to None. I
+                f provided, it must be a strictly positive integer.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the sliding_window parameter is provided and its value is not a strictly positive integer.
@@ -124,7 +127,7 @@ class AttentionMaskConverter:
         expanded_attn_mask = self._expand_mask(attention_mask_2d, dtype, tgt_len=input_shape[-1])
 
         if causal_4d_mask is not None:
-            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.bool(), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
+            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.bool(), float(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
 
         # expanded_attn_mask + causal_4d_mask can cause some overflow
         expanded_4d_mask = expanded_attn_mask
@@ -149,7 +152,7 @@ class AttentionMaskConverter:
         mask = mask.to(dtype)
 
         if past_key_values_length > 0:
-            mask = ops.cat([ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1)
+            mask = ops.cat([ops.zeros(tgt_len, past_key_values_length, dtype=dtype), mask], dim=-1)
 
         # add lower triangular sliding window mask if necessary
         if sliding_window is not None:
@@ -188,7 +191,8 @@ class AttentionMaskConverter:
         `expanded_mask` is [bsz, num_masks, tgt_seq_len, src_seq_len] or [bsz, tgt_seq_len, src_seq_len].
         `attention_mask` is [bsz, src_seq_len].
 
-        The dimension num_masks of `expanded_mask` is most often 1, but it can also be the number of heads in the case of alibi attention bias.
+        The dimension num_masks of `expanded_mask` is most often 1, but it can also be the number of heads in the case
+        of alibi attention bias.
 
         For example, if `expanded_mask` is (e.g. here left-padding case)
         ```
@@ -221,7 +225,7 @@ class AttentionMaskConverter:
                 "AttentionMaskConverter._unmask_unattended expects a float `expanded_mask`, got a BoolTensor."
             )
 
-        return expanded_mask.mul(~ops.all(expanded_mask == min_dtype, axis=-1, keep_dims=True))
+        return expanded_mask.mul(~ops.all(expanded_mask == min_dtype, dim=-1, keepdim=True))
 
 
 

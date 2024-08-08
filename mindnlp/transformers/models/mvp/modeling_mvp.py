@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch MVP model."""
+"""MindSpore MVP model."""
 
 import copy
 import math
@@ -20,8 +20,10 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn,ops
 from mindspore.common.initializer import initializer,Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -68,13 +70,13 @@ class MvpLearnedPositionalEmbedding(nn.Embedding):
     This module learns positional embeddings up to a fixed maximum size.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int):
+    def __init__(self, num_embeddings: int, embedding_dim: int):
         # MVP is set up so that if padding_idx is specified then offset the embedding ids by 2
-        # and adjust vocab_size appropriately. Other models don't have this hack
+        # and adjust num_embeddings appropriately. Other models don't have this hack
         self.offset = 2
-        super().__init__(vocab_size + self.offset, embedding_dim)
+        super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
 
         bsz, seq_len = input_ids.shape[:2]
@@ -82,10 +84,10 @@ class MvpLearnedPositionalEmbedding(nn.Embedding):
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         ).broadcast_to((bsz, -1))
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
-class MvpAttention(nn.Cell):
+class MvpAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -110,15 +112,15 @@ class MvpAttention(nn.Cell):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -151,8 +153,8 @@ class MvpAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -169,11 +171,11 @@ class MvpAttention(nn.Cell):
             past_key_value = (key_states, value_states)
 
         if attn_prompt is not None:
-            key_states = ops.cat([attn_prompt[0].broadcast_to((bsz, -1, -1, -1)), key_states], axis=2)
-            value_states = ops.cat([attn_prompt[1].broadcast_to((bsz, -1, -1, -1)), value_states], axis=2)
+            key_states = ops.cat([attn_prompt[0].broadcast_to((bsz, -1, -1, -1)), key_states], dim=2)
+            value_states = ops.cat([attn_prompt[1].broadcast_to((bsz, -1, -1, -1)), value_states], dim=2)
             if attention_mask is not None:
                 prompt_mask = ops.zeros(bsz, 1, tgt_len, attn_prompt[0].shape[1])
-                attention_mask = ops.cat([prompt_mask, attention_mask], axis=-1)
+                attention_mask = ops.cat([prompt_mask, attention_mask], dim=-1)
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
@@ -197,7 +199,7 @@ class MvpAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -218,7 +220,7 @@ class MvpAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -240,7 +242,7 @@ class MvpAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class MvpEncoderLayer(nn.Cell):
+class MvpEncoderLayer(nn.Module):
     def __init__(self, config: MvpConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -253,11 +255,11 @@ class MvpEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -286,15 +288,15 @@ class MvpEncoderLayer(nn.Cell):
             attn_prompt=self_attn_prompt,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -312,7 +314,7 @@ class MvpEncoderLayer(nn.Cell):
         return outputs
 
 
-class MvpDecoderLayer(nn.Cell):
+class MvpDecoderLayer(nn.Module):
     def __init__(self, config: MvpConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -335,11 +337,11 @@ class MvpDecoderLayer(nn.Cell):
             is_decoder=True,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -366,7 +368,7 @@ class MvpDecoderLayer(nn.Cell):
             attn_prompt=self_attn_prompt,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -387,7 +389,7 @@ class MvpDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -397,9 +399,9 @@ class MvpDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -415,7 +417,7 @@ class MvpDecoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartClassificationHead with Bart->MVP
-class MvpClassificationHead(nn.Cell):
+class MvpClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(
@@ -426,11 +428,11 @@ class MvpClassificationHead(nn.Cell):
         pooler_dropout: float,
     ):
         super().__init__()
-        self.dense = nn.Dense(input_dim, inner_dim)
+        self.dense = nn.Linear(input_dim, inner_dim)
         self.dropout = nn.Dropout(p=pooler_dropout)
-        self.out_proj = nn.Dense(inner_dim, num_classes)
+        self.out_proj = nn.Linear(inner_dim, num_classes)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -439,7 +441,7 @@ class MvpClassificationHead(nn.Cell):
         return hidden_states
 
 
-class MvpPrompt(nn.Cell):
+class MvpPrompt(nn.Module):
     """Layer-wise prompt for encoder or decoder."""
 
     def __init__(self, config, num_layers, num_heads):
@@ -451,12 +453,12 @@ class MvpPrompt(nn.Cell):
         self.dropout = nn.Dropout(p=config.dropout)
         self.prompt_embedding = nn.Embedding(config.prompt_length, config.d_model)
         self.prompt_trans = nn.Sequential(
-            nn.Dense(config.d_model, config.prompt_mid_dim),
+            nn.Linear(config.d_model, config.prompt_mid_dim),
             nn.GELU(),
-            nn.Dense(config.prompt_mid_dim, num_layers * 2 * config.d_model),
+            nn.Linear(config.prompt_mid_dim, num_layers * 2 * config.d_model),
         )
 
-    def construct(self, prompt_ids: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
+    def forward(self, prompt_ids: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
         prompt = self.prompt_trans(self.prompt_embedding(prompt_ids))
         prompt = prompt.view(self.prompt_length, self.num_layers * 2, self.num_heads, self.head_dim)
         prompt = self.dropout(prompt)
@@ -471,7 +473,7 @@ class MvpPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             module.weight.set_data(initializer(Normal(std,mean=0.0),module.weight.shape,module.weight.dtype))
             if module.bias is not None:
                 module.bias.set_data(initializer('zeros',module.bias.shape,module.bias.dtype))
@@ -528,7 +530,7 @@ class MvpEncoder(MvpPreTrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList([MvpEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([MvpEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([embed_dim])
 
         self.use_prompt = use_prompt
@@ -550,7 +552,7 @@ class MvpEncoder(MvpPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -622,7 +624,7 @@ class MvpEncoder(MvpPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # layer-wise prompt
         if self.use_prompt:
@@ -720,7 +722,7 @@ class MvpDecoder(MvpPreTrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList([MvpDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([MvpDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         self.use_prompt = use_prompt
@@ -747,7 +749,7 @@ class MvpDecoder(MvpPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -803,7 +805,8 @@ class MvpDecoder(MvpPreTrainedModel):
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
+                or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
                 shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
@@ -868,7 +871,7 @@ class MvpDecoder(MvpPreTrainedModel):
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # layer-wise prompt
         if self.use_prompt:
@@ -1011,7 +1014,7 @@ class MvpModel(MvpPreTrainedModel):
         self.decoder.self_attn_prompt.requires_grad(True)
         self.decoder.cross_attn_prompt.requires_grad(True)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1101,8 +1104,8 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
     def __init__(self, config: MvpConfig):
         super().__init__(config)
         self.model = MvpModel(config)
-        self.final_logits_bias=ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.final_logits_bias=ops.zeros((1, self.model.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1124,7 +1127,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias=new_bias
 
     def get_output_embeddings(self):
@@ -1137,7 +1140,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.lm_head.requires_grad(False)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1157,12 +1160,14 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple, Seq2SeqLMOutput]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1198,7 +1203,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1289,7 +1294,7 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.classification_head.requires_grad(False)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1308,9 +1313,10 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -1338,8 +1344,8 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
         )
         hidden_states = outputs[0]  # last hidden state
         eos_mask = input_ids.eq(self.config.eos_token_id)
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         sentence_representation = hidden_states[eos_mask, ].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:,-1,:]
         logits = self.classification_head(sentence_representation)
         loss = None
@@ -1353,13 +1359,13 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1382,7 +1388,7 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         config.num_labels = 2
         self.num_labels = config.num_labels
         self.model = MvpModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1390,7 +1396,7 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.qa_outputs.requires_grad(False)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1410,14 +1416,15 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
@@ -1454,8 +1461,8 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
-            start_loss = ops.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
-            end_loss =ops.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
+            end_loss =F.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
         if not return_dict:
             output = (
@@ -1486,7 +1493,7 @@ class MvpDecoderWrapper(MvpPreTrainedModel):
         super().__init__(config)
         self.decoder = MvpDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
 
 
@@ -1499,7 +1506,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
         config.is_encoder_decoder = False
         super().__init__(config)
         self.model = MvpDecoderWrapper(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1525,7 +1532,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.lm_head.requires_grad(False)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1565,7 +1572,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
         logits = self.lm_head(outputs[0])
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

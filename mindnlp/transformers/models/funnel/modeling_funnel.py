@@ -12,16 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Funnel Transformer model."""
+"""MindSpore Funnel Transformer model."""
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
-from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -61,14 +61,14 @@ FUNNEL_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 INF = 1e6
 
-class FunnelEmbeddings(nn.Cell):
+class FunnelEmbeddings(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.d_model], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(
+    def forward(
         self, input_ids: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         if inputs_embeds is None:
@@ -78,7 +78,7 @@ class FunnelEmbeddings(nn.Cell):
         return embeddings
 
 
-class FunnelAttentionStructure(nn.Cell):
+class FunnelAttentionStructure(nn.Module):
     """
     Contains helpers for `FunnelRelMultiheadAttention `.
     """
@@ -108,7 +108,7 @@ class FunnelAttentionStructure(nn.Cell):
         position_embeds = self.get_position_embeds(seq_len, inputs_embeds.dtype)
         token_type_mat = self.token_type_ids_to_mat(token_type_ids) if token_type_ids is not None else None
         cls_mask = (
-            ops.pad(inputs_embeds.new_ones([seq_len - 1, seq_len - 1]), (1, 0, 1, 0))
+            F.pad(inputs_embeds.new_ones([seq_len - 1, seq_len - 1]), (1, 0, 1, 0))
             if self.config.separate_cls
             else None
         )
@@ -119,8 +119,8 @@ class FunnelAttentionStructure(nn.Cell):
         token_type_mat = token_type_ids[:, :, None] == token_type_ids[:, None]
         # Treat <cls> as in the same segment as both A & B
         cls_ids = token_type_ids == self.cls_token_type_id
-        cls_mat = cls_ids[:, :, None] | cls_ids[:, None]
-        return cls_mat | token_type_mat
+        cls_mat = cls_ids[:, :, None].int() | cls_ids[:, None].int()
+        return (cls_mat | token_type_mat.int()).bool()
 
     def get_position_embeds(
         self, seq_len: int, dtype: mindspore.dtype
@@ -150,10 +150,10 @@ class FunnelAttentionStructure(nn.Cell):
             cos_embed = ops.cos(sinusoid)
             cos_embed_d = self.cos_dropout(cos_embed)
             # This is different from the formula on the paper...
-            phi = ops.cat([sin_embed_d, sin_embed_d], axis=-1)
-            psi = ops.cat([cos_embed, sin_embed], axis=-1)
-            pi = ops.cat([cos_embed_d, cos_embed_d], axis=-1)
-            omega = ops.cat([-sin_embed, cos_embed], axis=-1)
+            phi = ops.cat([sin_embed_d, sin_embed_d], dim=-1)
+            psi = ops.cat([cos_embed, sin_embed], dim=-1)
+            pi = ops.cat([cos_embed_d, cos_embed_d], dim=-1)
+            omega = ops.cat([-sin_embed, cos_embed], dim=-1)
             return (phi, pi, psi, omega)
         else:
             # Notations from the paper, appending A.2.1, final formula.
@@ -166,7 +166,7 @@ class FunnelAttentionStructure(nn.Cell):
             sinusoid = rel_pos_id[:, None] * inv_freq[None]
             sin_embed = self.sin_dropout(ops.sin(sinusoid))
             cos_embed = self.cos_dropout(ops.cos(sinusoid))
-            pos_embed = ops.cat([sin_embed, cos_embed], axis=-1)
+            pos_embed = ops.cat([sin_embed, cos_embed], dim=-1)
 
             pos = ops.arange(0, seq_len, dtype=mindspore.int64).to(dtype)
             pooled_pos = pos
@@ -183,13 +183,13 @@ class FunnelAttentionStructure(nn.Cell):
                 else:
                     pooled_pos = self.stride_pool_pos(pos, block_index)
 
-                    # construct rel_pos_id
+                    # forward rel_pos_id
                     stride = 2 ** (block_index - 1)
                     rel_pos = self.relative_pos(pos, stride, pooled_pos, shift=2)
                     rel_pos = rel_pos[:, None] + zero_offset
                     # rel_pos = rel_pos.expand(rel_pos.shape[0], d_model)
                     rel_pos = rel_pos.broadcast_to((rel_pos.shape[0], d_model))
-                    position_embeds_pooling = ops.gather_elements(pos_embed, 0, rel_pos)
+                    position_embeds_pooling = ops.gather(pos_embed, 0, rel_pos)
 
                 # Second type
                 pos = pooled_pos
@@ -199,7 +199,7 @@ class FunnelAttentionStructure(nn.Cell):
                 rel_pos = rel_pos[:, None] + zero_offset
                 # rel_pos = rel_pos.expand(rel_pos.shape[0], d_model)
                 rel_pos = rel_pos.broadcast_to((rel_pos.shape[0], d_model))
-                position_embeds_no_pooling = ops.gather_elements(pos_embed, 0, rel_pos)
+                position_embeds_no_pooling = ops.gather(pos_embed, 0, rel_pos)
 
                 position_embeds_list.append([position_embeds_no_pooling, position_embeds_pooling])
             return position_embeds_list
@@ -216,7 +216,7 @@ class FunnelAttentionStructure(nn.Cell):
             # cls_pos = pos_id.new_tensor([-(2**block_index) + 1])
             cls_pos = mindspore.Tensor([-(2**block_index) + 1], dtype=pos_id.dtype)
             pooled_pos_id = pos_id[1:-1] if self.config.truncate_seq else pos_id[1:]
-            return ops.cat([cls_pos, pooled_pos_id[::2]], axis=0)
+            return ops.cat([cls_pos, pooled_pos_id[::2]], dim=0)
         else:
             return pos_id[::2]
 
@@ -232,7 +232,7 @@ class FunnelAttentionStructure(nn.Cell):
         max_dist = ref_point + num_remove * stride
         min_dist = pooled_pos[0] - pos[-1]
 
-        return ops.arange(max_dist, min_dist - 1, -stride, dtype=mindspore.int64)
+        return ops.arange(max_dist.item(), min_dist.item() - 1, -stride, dtype=mindspore.int64)
 
     def stride_pool(
         self,
@@ -264,7 +264,7 @@ class FunnelAttentionStructure(nn.Cell):
         enc_slice = [slice(None)] * axis + [axis_slice]
         if self.config.separate_cls:
             cls_slice = [slice(None)] * axis + [slice(None, 1)]
-            tensor = ops.cat([tensor[cls_slice], tensor], axis=axis)
+            tensor = ops.cat([tensor[cls_slice], tensor], dim=axis)
         return tensor[enc_slice]
 
     def pool_tensor(
@@ -280,7 +280,7 @@ class FunnelAttentionStructure(nn.Cell):
 
         if self.config.separate_cls:
             suffix = tensor[:, :-1] if self.config.truncate_seq else tensor
-            tensor = ops.cat([tensor[:, :1], suffix], axis=1)
+            tensor = ops.cat([tensor[:, :1], suffix], dim=1)
 
         ndim = tensor.ndim
         if ndim == 2:
@@ -291,11 +291,11 @@ class FunnelAttentionStructure(nn.Cell):
         stride = (stride, 1)
 
         if mode == "mean":
-            tensor = ops.avg_pool2d(tensor, stride, stride=stride, ceil_mode=True)
+            tensor = F.avg_pool2d(tensor, stride, stride=stride, ceil_mode=True)
         elif mode == "max":
-            tensor = ops.max_pool2d(tensor, stride, stride=stride, ceil_mode=True)
+            tensor = F.max_pool2d(tensor, stride, stride=stride, ceil_mode=True)
         elif mode == "min":
-            tensor = -ops.max_pool2d(-tensor, stride, stride=stride, ceil_mode=True)
+            tensor = -F.max_pool2d(-tensor, stride, stride=stride, ceil_mode=True)
         else:
             raise NotImplementedError("The supported modes are 'mean', 'max' and 'min'.")
 
@@ -357,7 +357,7 @@ def _relative_shift_gather(positional_attn: mindspore.Tensor, context_len: int, 
     return positional_attn
 
 
-class FunnelRelMultiheadAttention(nn.Cell):
+class FunnelRelMultiheadAttention(nn.Module):
     def __init__(self, config: FunnelConfig, block_index: int) -> None:
         super().__init__()
         self.config = config
@@ -367,18 +367,18 @@ class FunnelRelMultiheadAttention(nn.Cell):
         self.hidden_dropout = nn.Dropout(p=config.hidden_dropout)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
-        self.q_head = nn.Dense(d_model, n_head * d_head, has_bias=False)
-        self.k_head = nn.Dense(d_model, n_head * d_head)
-        self.v_head = nn.Dense(d_model, n_head * d_head)
+        self.q_head = nn.Linear(d_model, n_head * d_head, bias=False)
+        self.k_head = nn.Linear(d_model, n_head * d_head)
+        self.v_head = nn.Linear(d_model, n_head * d_head)
 
-        self.r_w_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_r_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_kernel = mindspore.Parameter(ops.zeros([d_model, n_head, d_head]))
-        self.r_s_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.seg_embed = mindspore.Parameter(ops.zeros([2, n_head, d_head]))
+        self.r_w_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_r_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_kernel = mindspore.Parameter(ops.zeros(d_model, n_head, d_head))
+        self.r_s_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.seg_embed = mindspore.Parameter(ops.zeros(2, n_head, d_head))
 
-        self.post_proj = nn.Dense(n_head * d_head, d_model)
-        self.layer_norm = nn.LayerNorm([d_model], epsilon=config.layer_norm_eps)
+        self.post_proj = nn.Linear(n_head * d_head, d_model)
+        self.layer_norm = nn.LayerNorm([d_model], eps=config.layer_norm_eps)
         self.scale = 1.0 / (d_head**0.5)
 
     def relative_positional_attention(self, position_embeds, q_head, context_len, cls_mask=None):
@@ -437,7 +437,7 @@ class FunnelRelMultiheadAttention(nn.Cell):
         # Shape batch_size x n_head x seq_len x context_len
         token_type_mat = token_type_mat[:, None].broadcast_to((batch_size, q_head.shape[2], seq_len, context_len))
         # Shapes batch_size x n_head x seq_len
-        diff_token_type, same_token_type = ops.split(token_type_bias, 1, axis=-1)
+        diff_token_type, same_token_type = ops.split(token_type_bias, 1, dim=-1)
         # Shape batch_size x n_head x seq_len x context_len
         # ops.Print(token_type_mat)
         token_type_mat = token_type_mat.astype(mindspore.bool_)
@@ -449,7 +449,7 @@ class FunnelRelMultiheadAttention(nn.Cell):
             token_type_attn *= cls_mask
         return token_type_attn
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -489,7 +489,7 @@ class FunnelRelMultiheadAttention(nn.Cell):
         if attention_mask is not None:
             attn_score = attn_score - INF * (1 - attention_mask[:, None, None].float())
         # attention probability
-        attn_prob = ops.softmax(attn_score, axis=-1, dtype=dtype)
+        attn_prob = ops.softmax(attn_score, dim=-1, dtype=dtype)
         attn_prob = self.attention_dropout(attn_prob)
 
         # attention output, shape batch_size x seq_len x n_head x d_head
@@ -503,17 +503,17 @@ class FunnelRelMultiheadAttention(nn.Cell):
         return (output, attn_prob) if output_attentions else (output,)
 
 
-class FunnelPositionwiseFFN(nn.Cell):
+class FunnelPositionwiseFFN(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
-        self.linear_1 = nn.Dense(config.d_model, config.d_inner)
+        self.linear_1 = nn.Linear(config.d_model, config.d_inner)
         self.activation_function = ACT2FN[config.hidden_act]
         self.activation_dropout = nn.Dropout(p=config.activation_dropout)
-        self.linear_2 = nn.Dense(config.d_inner, config.d_model)
+        self.linear_2 = nn.Linear(config.d_inner, config.d_model)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.d_model], eps=config.layer_norm_eps)
 
-    def construct(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
         h = self.linear_1(hidden)
         h = self.activation_function(h)
         h = self.activation_dropout(h)
@@ -522,13 +522,13 @@ class FunnelPositionwiseFFN(nn.Cell):
         return self.layer_norm(hidden + h)
 
 
-class FunnelLayer(nn.Cell):
+class FunnelLayer(nn.Module):
     def __init__(self, config: FunnelConfig, block_index: int) -> None:
         super().__init__()
         self.attention = FunnelRelMultiheadAttention(config, block_index)
         self.ffn = FunnelPositionwiseFFN(config)
 
-    def construct(
+    def forward(
         self,
         query: mindspore.Tensor,
         key: mindspore.Tensor,
@@ -541,19 +541,19 @@ class FunnelLayer(nn.Cell):
         return (output, attn[1]) if output_attentions else (output,)
 
 
-class FunnelEncoder(nn.Cell):
+class FunnelEncoder(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
         self.attention_structure = FunnelAttentionStructure(config)
-        self.blocks = nn.CellList(
+        self.blocks = nn.ModuleList(
             [
-                nn.CellList([FunnelLayer(config, block_index) for _ in range(block_size)])
+                nn.ModuleList([FunnelLayer(config, block_index) for _ in range(block_size)])
                 for block_index, block_size in enumerate(config.block_sizes)
             ]
         )
 
-    def construct(
+    def forward(
         self,
         inputs_embeds: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -614,25 +614,25 @@ def upsample(
     if separate_cls:
         cls = x[:, :1]
         x = x[:, 1:]
-    output = ops.repeat_interleave(x, repeats=stride, axis=1)
+    output = ops.repeat_interleave(x, repeats=stride, dim=1)
     if separate_cls:
         if truncate_seq:
             output = ops.pad(output, (0, 0, 0, stride - 1, 0, 0))
         output = output[:, : target_len - 1]
-        output = ops.cat([cls, output], axis=1)
+        output = ops.cat([cls, output], dim=1)
     else:
         output = output[:, :target_len]
     return output
 
 
-class FunnelDecoder(nn.Cell):
+class FunnelDecoder(nn.Module):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
         self.attention_structure = FunnelAttentionStructure(config)
-        self.layers = nn.CellList([FunnelLayer(config, 0) for _ in range(config.num_decoder_layers)])
+        self.layers = nn.ModuleList([FunnelLayer(config, 0) for _ in range(config.num_decoder_layers)])
 
-    def construct(
+    def forward(
         self,
         final_hidden: mindspore.Tensor,
         first_block_hidden: mindspore.Tensor,
@@ -674,16 +674,16 @@ class FunnelDecoder(nn.Cell):
         return BaseModelOutput(last_hidden_state=hidden, hidden_states=all_hidden_states, attentions=all_attentions)
 
 
-class FunnelDiscriminatorPredictions(nn.Cell):
+class FunnelDiscriminatorPredictions(nn.Module):
     """Prediction module for the discriminator, made up of two dense layers."""
 
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__()
         self.config = config
-        self.dense = nn.Dense(config.d_model, config.d_model)
-        self.dense_prediction = nn.Dense(config.d_model, 1)
+        self.dense = nn.Linear(config.d_model, config.d_model)
+        self.dense_prediction = nn.Linear(config.d_model, 1)
 
-    def construct(self, discriminator_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, discriminator_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(discriminator_hidden_states)
         hidden_states = ACT2FN[self.config.hidden_act](hidden_states)
         logits = self.dense_prediction(hidden_states).squeeze(-1)
@@ -699,44 +699,39 @@ class FunnelPreTrainedModel(PreTrainedModel):
     config_class = FunnelConfig
     base_model_prefix = "funnel"
 
-    def _init_weights(self, cell):
-        classname = cell.__class__.__name__
-        if classname.find("Dense") != -1:
-            if getattr(cell, "weight", None) is not None:
+    def _init_weights(self, module):
+        classname = module.__class__.__name__
+        if classname.find("Linear") != -1:
+            if getattr(module, "weight", None) is not None:
                 if self.config.initializer_std is None:
-                    fan_out, fan_in = cell.weight.shape
+                    fan_out, fan_in = module.weight.shape
                     std = np.sqrt(1.0 / float(fan_in + fan_out))
                 else:
                     std = self.config.initializer_std
-                cell.weight.set_data(initializer(Normal(std),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if getattr(cell, "bias", None) is not None:
-                cell.bias[:] = 0.0
+                nn.init.normal_(module.weight, std=std)
+            if getattr(module, "bias", None) is not None:
+                nn.init.constant_(module.bias, 0.0)
         elif classname == "FunnelRelMultiheadAttention":
-            minval = Tensor(0.0, mindspore.float32)
-            maxval = Tensor(self.config.initializer_range, mindspore.float32)
-            cell.r_w_bias = ops.uniform(cell.r_w_bias.shape, minval, maxval)
-            cell.r_r_bias = ops.uniform(cell.r_r_bias.shape, minval, maxval)
-            cell.r_kernel = ops.uniform(cell.r_kernel.shape, minval, maxval)
-            cell.r_s_bias = ops.uniform(cell.r_s_bias.shape, minval, maxval)
-            cell.seg_embed = ops.uniform(cell.seg_embed.shape, minval, maxval)
+            nn.init.uniform_(module.r_w_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_r_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_kernel, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_s_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.seg_embed, b=self.config.initializer_range)
         elif classname == "FunnelEmbeddings":
             std = 1.0 if self.config.initializer_std is None else self.config.initializer_std
-            # nn.init.normal_(cell.word_embeddings.weight, std=std)
-            cell.word_embeddings.weight.set_data(initializer(Normal(std),
-                                                    cell.word_embeddings.weight.shape, cell.word_embeddings.weight.dtype))
-            if cell.word_embeddings.padding_idx is not None:
-                cell.word_embeddings.weight.data[cell.padding_idx].zero_()
+            nn.init.normal_(module.word_embeddings.weight, std=std)
+            if module.word_embeddings.padding_idx is not None:
+                module.word_embeddings.weight.data[module.padding_idx] = 0
 
 
-class FunnelClassificationHead(nn.Cell):
+class FunnelClassificationHead(nn.Module):
     def __init__(self, config: FunnelConfig, n_labels: int) -> None:
         super().__init__()
-        self.linear_hidden = nn.Dense(config.d_model, config.d_model)
+        self.linear_hidden = nn.Linear(config.d_model, config.d_model)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.linear_out = nn.Dense(config.d_model, n_labels)
+        self.linear_out = nn.Linear(config.d_model, n_labels)
 
-    def construct(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden: mindspore.Tensor) -> mindspore.Tensor:
         hidden = self.linear_hidden(hidden)
         hidden = ops.tanh(hidden)
         hidden = self.dropout(hidden)
@@ -767,7 +762,7 @@ class FunnelBaseModel(FunnelPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -834,7 +829,7 @@ class FunnelModel(FunnelPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -921,7 +916,7 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -933,27 +928,29 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FunnelForPreTrainingOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the ELECTRA-style loss. Input should be a sequence of tokens (see `input_ids`
-            docstring) Indices should be in `[0, 1]`:
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the ELECTRA-style loss. Input should be a sequence of tokens (see `input_ids`
+                docstring) Indices should be in `[0, 1]`:
 
-            - 0 indicates the token is an original token,
-            - 1 indicates the token was replaced.
+                - 0 indicates the token is an original token,
+                - 1 indicates the token was replaced.
 
         Returns:
+            `Union[Tuple, FunnelForPreTrainingOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoTokenizer, FunnelForPreTraining
-        >>> import torch
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("funnel-transformer/small")
-        >>> model = FunnelForPreTraining.from_pretrained("funnel-transformer/small")
-
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> logits = model(**inputs).logits
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, FunnelForPreTraining
+            >>> import torch
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("funnel-transformer/small")
+            >>> model = FunnelForPreTraining.from_pretrained("funnel-transformer/small")
+            ...
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> logits = model(**inputs).logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         discriminator_hidden_states = self.funnel(
@@ -999,18 +996,18 @@ class FunnelForMaskedLM(FunnelPreTrainedModel):
         super().__init__(config)
 
         self.funnel = FunnelModel(config)
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_output_embeddings(self) -> nn.Dense:
+    def get_output_embeddings(self) -> nn.Linear:
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1022,10 +1019,11 @@ class FunnelForMaskedLM(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1071,7 +1069,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1083,10 +1081,11 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1149,7 +1148,7 @@ class FunnelForMultipleChoice(FunnelPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1161,10 +1160,11 @@ class FunnelForMultipleChoice(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -1218,12 +1218,12 @@ class FunnelForTokenClassification(FunnelPreTrainedModel):
 
         self.funnel = FunnelModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1235,8 +1235,9 @@ class FunnelForTokenClassification(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1278,12 +1279,12 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.funnel = FunnelModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1296,14 +1297,15 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

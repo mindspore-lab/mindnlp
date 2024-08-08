@@ -138,33 +138,36 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
         This method initializes an instance of the LayoutLMv2TokenizerFast class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): Path to the vocabulary file. Defaults to None.
-        - tokenizer_file (str): Path to the tokenizer file. Defaults to None.
-        - do_lower_case (bool): Flag indicating whether to convert tokens to lowercase. Defaults to True.
-        - unk_token (str): The token representing unknown words. Defaults to '[UNK]'.
-        - sep_token (str): The separator token. Defaults to '[SEP]'.
-        - pad_token (str): The padding token. Defaults to '[PAD]'.
-        - cls_token (str): The classification token. Defaults to '[CLS]'.
-        - mask_token (str): The masking token. Defaults to '[MASK]'.
-        - cls_token_box (list): A list of four integer values representing the bounding box for the classification token. Defaults to [0, 0, 0, 0].
-        - sep_token_box (list): A list of four integer values representing the bounding box for the separator token. Defaults to [1000, 1000, 1000, 1000].
-        - pad_token_box (list): A list of four integer values representing the bounding box for the padding token. Defaults to [0, 0, 0, 0].
-        - pad_token_label (int): The label for padding tokens. Defaults to -100.
-        - only_label_first_subword (bool): Flag indicating whether to only label the first subword. Defaults to True.
-        - tokenize_chinese_chars (bool): Flag indicating whether to tokenize Chinese characters. Defaults to True.
-        - strip_accents (str): Method for stripping accents. Defaults to None.
-        
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file. Defaults to None.
+            tokenizer_file (str): Path to the tokenizer file. Defaults to None.
+            do_lower_case (bool): Flag indicating whether to convert tokens to lowercase. Defaults to True.
+            unk_token (str): The token representing unknown words. Defaults to '[UNK]'.
+            sep_token (str): The separator token. Defaults to '[SEP]'.
+            pad_token (str): The padding token. Defaults to '[PAD]'.
+            cls_token (str): The classification token. Defaults to '[CLS]'.
+            mask_token (str): The masking token. Defaults to '[MASK]'.
+            cls_token_box (list): A list of four integer values representing the bounding box for
+                the classification token. Defaults to [0, 0, 0, 0].
+            sep_token_box (list): A list of four integer values representing the bounding box for
+                the separator token. Defaults to [1000, 1000, 1000, 1000].
+            pad_token_box (list): A list of four integer values representing the bounding box for
+                the padding token. Defaults to [0, 0, 0, 0].
+            pad_token_label (int): The label for padding tokens. Defaults to -100.
+            only_label_first_subword (bool): Flag indicating whether to only label the first subword. Defaults to True.
+            tokenize_chinese_chars (bool): Flag indicating whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str): Method for stripping accents. Defaults to None.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - ValueError: If an invalid argument is provided.
-        - TypeError: If input types are incorrect.
-        - FileNotFoundError: If the specified vocab_file or tokenizer_file is not found.
-        - JSONDecodeError: If there is an issue decoding the pre_tok_state JSON.
-        - AttributeError: If there is an issue with setting the backend_tokenizer normalizer.
-        - KeyError: If required keys are missing in the pre_tok_state.
+            ValueError: If an invalid argument is provided.
+            TypeError: If input types are incorrect.
+            FileNotFoundError: If the specified vocab_file or tokenizer_file is not found.
+            JSONDecodeError: If there is an issue decoding the pre_tok_state JSON.
+            AttributeError: If there is an issue with setting the backend_tokenizer normalizer.
+            KeyError: If required keys are missing in the pre_tok_state.
         """
         super().__init__(
             vocab_file,
@@ -376,34 +379,37 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
     ) -> BatchEncoding:
         """
         This method encodes a batch of text or text pairs using LayoutLMv2TokenizerFast.
-        
+
         Args:
-        - self: The instance of the LayoutLMv2TokenizerFast class.
-        - batch_text_or_text_pairs (List[TextInput] or List[TextInputPair] or List[PreTokenizedInput]): A list of text inputs or text pairs to be encoded.
-        - is_pair (bool, optional): Specifies whether the input is a text pair. Default is None.
-        - boxes (List[List[List[int]]], optional): Optional bounding boxes for text elements in the input text. Default is None.
-        - word_labels (List[int] or List[List[int]], optional): Optional word labels for the input text. Default is None.
-        - add_special_tokens (bool): Whether to add special tokens to the encoded inputs. Default is True.
-        - padding (bool or str or PaddingStrategy): Padding strategy to apply. Default is False.
-        - truncation (bool or str or TruncationStrategy, optional): Truncation strategy to apply. Default is None.
-        - max_length (int, optional): Maximum length of the encoded inputs. Default is None.
-        - stride (int): The stride to use for overflowing tokens. Default is 0.
-        - pad_to_multiple_of (int, optional): Pad the sequence length to a multiple of this value. Default is None.
-        - return_tensors (str or TensorType, optional): Specifies the tensor type to return. Default is None.
-        - return_token_type_ids (bool, optional): Whether to return token type IDs. Default is None.
-        - return_attention_mask (bool, optional): Whether to return attention masks. Default is None.
-        - return_overflowing_tokens (bool): Whether to return overflowing tokens. Default is False.
-        - return_special_tokens_mask (bool): Whether to return a special tokens mask. Default is False.
-        - return_offsets_mapping (bool): Whether to return offsets mapping. Default is False.
-        - return_length (bool): Whether to return the lengths of the encoded inputs. Default is False.
-        - verbose (bool): Verbosity flag. Default is True.
-        - **kwargs: Additional keyword arguments for customization.
-        
+            self: The instance of the LayoutLMv2TokenizerFast class.
+            batch_text_or_text_pairs (List[TextInput] or List[TextInputPair] or List[PreTokenizedInput]):
+                A list of text inputs or text pairs to be encoded.
+            is_pair (bool, optional): Specifies whether the input is a text pair. Default is None.
+            boxes (List[List[List[int]]], optional): Optional bounding boxes for text elements in the input text.
+                Default is None.
+            word_labels (List[int] or List[List[int]], optional): Optional word labels for the input text.
+                Default is None.
+            add_special_tokens (bool): Whether to add special tokens to the encoded inputs. Default is True.
+            padding (bool or str or PaddingStrategy): Padding strategy to apply. Default is False.
+            truncation (bool or str or TruncationStrategy, optional): Truncation strategy to apply. Default is None.
+            max_length (int, optional): Maximum length of the encoded inputs. Default is None.
+            stride (int): The stride to use for overflowing tokens. Default is 0.
+            pad_to_multiple_of (int, optional): Pad the sequence length to a multiple of this value. Default is None.
+            return_tensors (str or TensorType, optional): Specifies the tensor type to return. Default is None.
+            return_token_type_ids (bool, optional): Whether to return token type IDs. Default is None.
+            return_attention_mask (bool, optional): Whether to return attention masks. Default is None.
+            return_overflowing_tokens (bool): Whether to return overflowing tokens. Default is False.
+            return_special_tokens_mask (bool): Whether to return a special tokens mask. Default is False.
+            return_offsets_mapping (bool): Whether to return offsets mapping. Default is False.
+            return_length (bool): Whether to return the lengths of the encoded inputs. Default is False.
+            verbose (bool): Verbosity flag. Default is True.
+            **kwargs: Additional keyword arguments for customization.
+
         Returns:
-        - BatchEncoding: A dictionary-like object containing the encoded inputs with various attributes.
-        
+            BatchEncoding: A dictionary-like object containing the encoded inputs with various attributes.
+
         Raises:
-        - None
+            None
         """
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
@@ -440,20 +446,20 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
     def tokenize(self, text: str, pair: Optional[str] = None, add_special_tokens: bool = False, **kwargs) -> List[str]:
         """
         Tokenizes a given text using the LayoutLMv2TokenizerFast.
-        
+
         Args:
             self (LayoutLMv2TokenizerFast): An instance of the LayoutLMv2TokenizerFast class.
             text (str): The input text to be tokenized.
             pair (str, optional): The second input text if tokenizing a pair of texts. Defaults to None.
             add_special_tokens (bool, optional): Whether to add special tokens to the input sequence. Defaults to False.
             **kwargs: Additional keyword arguments to be passed to the underlying tokenizer.
-        
+
         Returns:
             List[str]: A list of tokens representing the tokenized input text.
-        
+
         Raises:
             None.
-        
+
         """
         batched_input = [(text, pair)] if pair else [text]
         encodings = self._tokenizer.encode_batch(
@@ -554,10 +560,11 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
     ) -> BatchEncoding:
         """
         This method performs batch encoding for the LayoutLMv2TokenizerFast class.
-        
+
         Args:
             self: The instance of the LayoutLMv2TokenizerFast class.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]): A list of input text or text pairs to be encoded.
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]):
+                A list of input text or text pairs to be encoded.
             is_pair (bool): A flag indicating whether the input consists of text pairs.
             boxes (Optional[List[List[List[int]]]): Optional bounding boxes for the input text or text pairs.
             word_labels (Optional[List[List[int]]]): Optional word labels for the input text or text pairs.
@@ -575,10 +582,10 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             return_offsets_mapping (bool): Flag to indicate whether to return offset mappings.
             return_length (bool): Flag to indicate whether to return the length of the encoded sequences.
             verbose (bool): Flag to indicate whether to display verbose output.
-        
+
         Returns:
             BatchEncoding: A dictionary containing sanitized tokens and encodings.
-        
+
         Raises:
             TypeError: If batch_text_or_text_pairs is not a list.
             ValueError: If the ID of a token is not recognized.
@@ -737,34 +744,43 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             **kwargs,
     ) -> BatchEncoding:
         """
-        This method encodes the input text and optional text pair into a batch of tokenized and encoded outputs. It provides various options for special tokens, padding and truncation strategies, and return
-types.
-        
+        This method encodes the input text and optional text pair into a batch of tokenized and encoded outputs.
+        It provides various options for special tokens, padding and truncation strategies, and return types.
+
         Args:
             self: The instance of the LayoutLMv2TokenizerFast class.
-            text (Union[TextInput, PreTokenizedInput]): The input text to be encoded. It can be either a plain TextInput or a PreTokenizedInput.
+            text (Union[TextInput, PreTokenizedInput]): The input text to be encoded.
+                It can be either a plain TextInput or a PreTokenizedInput.
             text_pair (Optional[PreTokenizedInput]): Optional input text pair to be encoded. Defaults to None.
-            boxes (Optional[List[List[int]]]): Optional bounding boxes for each token in the input text. Defaults to None.
+            boxes (Optional[List[List[int]]]): Optional bounding boxes for each token in the input text.
+                Defaults to None.
             word_labels (Optional[List[int]]): Optional word labels for each token in the input text. Defaults to None.
-            add_special_tokens (bool): Whether to add special tokens (e.g., [CLS], [SEP]) to the encoded output. Defaults to True.
+            add_special_tokens (bool): Whether to add special tokens (e.g., [CLS], [SEP]) to the encoded output.
+                Defaults to True.
             padding_strategy (PaddingStrategy): The padding strategy to use. Defaults to PaddingStrategy.DO_NOT_PAD.
-            truncation_strategy (TruncationStrategy): The truncation strategy to use. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
+            truncation_strategy (TruncationStrategy): The truncation strategy to use.
+                Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
             max_length (Optional[int]): The maximum length of the encoded output. Defaults to None.
             stride (int): The stride to use for overflowing tokens. Defaults to 0.
             pad_to_multiple_of (Optional[int]): The padding length will be a multiple of this value. Defaults to None.
-            return_tensors (Optional[bool]): Whether to return the encoded output as PyTorch/TensorFlow tensors. Defaults to None.
+            return_tensors (Optional[bool]): Whether to return the encoded output as PyTorch/TensorFlow tensors.
+                Defaults to None.
             return_token_type_ids (Optional[bool]): Whether to return the token type IDs. Defaults to None.
             return_attention_mask (Optional[bool]): Whether to return the attention mask. Defaults to None.
-            return_overflowing_tokens (bool): Whether to return overflowing tokens if the input length exceeds max_length. Defaults to False.
-            return_special_tokens_mask (bool): Whether to return a mask indicating the position of special tokens. Defaults to False.
-            return_offsets_mapping (bool): Whether to return the mapping from token indices to character offsets. Defaults to False.
+            return_overflowing_tokens (bool): Whether to return overflowing tokens if the input length exceeds max_length.
+                Defaults to False.
+            return_special_tokens_mask (bool): Whether to return a mask indicating the position of special tokens.
+                Defaults to False.
+            return_offsets_mapping (bool): Whether to return the mapping from token indices to character offsets.
+                Defaults to False.
             return_length (bool): Whether to return the length of each encoded sequence. Defaults to False.
             verbose (bool): Whether to enable verbose logging. Defaults to True.
             **kwargs: Additional keyword arguments for future extensibility.
-        
+
         Returns:
-            BatchEncoding: A dictionary-like object containing the encoded inputs with optional additional information such as token type IDs, attention mask, and more.
-        
+            BatchEncoding: A dictionary-like object containing the encoded inputs with optional additional
+                information such as token type IDs, attention mask, and more.
+
         Raises:
             None.
         """
@@ -828,15 +844,17 @@ types.
                 Dictionary of tokenized inputs (`List[int]`) or batch of tokenized inputs (`List[List[int]]`).
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
-            padding_strategy: PaddingStrategy to use for padding.
+            padding_strategy:
+                PaddingStrategy to use for padding.
 
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
+
                 The tokenizer padding sides are defined in self.padding_side:
 
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                - 'left': pads on the left of the sequences
+                - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability
                 `>= 7.5` (Volta).
@@ -925,7 +943,10 @@ types.
     ) -> List[int]:
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A BERT sequence
-        pair mask has the following format: :: 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second
+        pair mask has the following format:
+
+        ```:: 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second```
+
         sequence | If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
 
         Args:
@@ -950,7 +971,8 @@ types.
         Args:
             self: Instance of the LayoutLMv2TokenizerFast class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str], optional): Prefix to be added to the filename of the vocabulary files. Defaults to None.
+            filename_prefix (Optional[str], optional): Prefix to be added to the filename of the vocabulary files.
+                Defaults to None.
         
         Returns:
             Tuple[str]: A tuple containing the paths to the saved vocabulary files.

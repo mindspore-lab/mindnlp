@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore LED model."""
-
 import math
 import warnings
 from dataclasses import dataclass
@@ -21,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from ....modules.functional import finfo
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -67,7 +67,6 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
         raise ValueError("config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
     shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
-
     return shifted_input_ids
 
 
@@ -78,11 +77,10 @@ def _prepare_4d_attention_mask_inverted(mask: mindspore.Tensor, dtype, tgt_len: 
     bsz, src_len = mask.shape
     tgt_len = tgt_len if tgt_len is not None else src_len
 
-    expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
+    expanded_mask = mask[:, None, None, :].broadcast_to((bsz, 1, tgt_len, src_len)).to(dtype)
 
     inverted_mask = 1.0 - expanded_mask
-    expanded_attention_mask = inverted_mask.masked_fill(inverted_mask.bool(), finfo(dtype, 'min'))
-
+    expanded_attention_mask = inverted_mask.masked_fill(inverted_mask.bool(), float(ops.finfo(dtype).min))
     # make sure that global_attn_mask is positive
     expanded_attention_mask = expanded_attention_mask * inverted_mask
 
@@ -97,17 +95,17 @@ class LEDLearnedPositionalEmbedding(nn.Embedding):
     def __init__(self, num_embeddings: int, embedding_dim: int):
         super().__init__(num_embeddings, embedding_dim)
 
-    def construct(self, input_ids_shape, past_key_values_length: int = 0):
+    def forward(self, input_ids_shape, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().construct(positions)
+        return super().forward(positions)
 
 
 # Copied from transformers.models.longformer.modeling_longformer.LongformerSelfAttention with Longformer->LEDEncoder
-class LEDEncoderSelfAttention(nn.Cell):
+class LEDEncoderSelfAttention(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
@@ -119,14 +117,14 @@ class LEDEncoderSelfAttention(nn.Cell):
         self.head_dim = int(config.hidden_size / config.num_attention_heads)
         self.embed_dim = config.hidden_size
 
-        self.query = nn.Dense(config.hidden_size, self.embed_dim)
-        self.key = nn.Dense(config.hidden_size, self.embed_dim)
-        self.value = nn.Dense(config.hidden_size, self.embed_dim)
+        self.query = nn.Linear(config.hidden_size, self.embed_dim)
+        self.key = nn.Linear(config.hidden_size, self.embed_dim)
+        self.value = nn.Linear(config.hidden_size, self.embed_dim)
 
         # separate projection layers for tokens with global attention
-        self.query_global = nn.Dense(config.hidden_size, self.embed_dim)
-        self.key_global = nn.Dense(config.hidden_size, self.embed_dim)
-        self.value_global = nn.Dense(config.hidden_size, self.embed_dim)
+        self.query_global = nn.Linear(config.hidden_size, self.embed_dim)
+        self.key_global = nn.Linear(config.hidden_size, self.embed_dim)
+        self.value_global = nn.Linear(config.hidden_size, self.embed_dim)
 
         self.dropout = config.attention_probs_dropout_prob
 
@@ -143,7 +141,7 @@ class LEDEncoderSelfAttention(nn.Cell):
 
         self.config = config
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -159,9 +157,9 @@ class LEDEncoderSelfAttention(nn.Cell):
 
         The *attention_mask* is changed in [`LEDEncoderModel.forward`] from 0, 1, 2 to:
 
-            - -10000: no attention
-            - 0: local attention
-            - +10000: global attention
+        - -10000: no attention
+        - 0: local attention
+        - +10000: global attention
         """
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -190,7 +188,7 @@ class LEDEncoderSelfAttention(nn.Cell):
 
         # cast to fp32/fp16 then replace 1's with -inf
         float_mask = remove_from_windowed_attention_mask.type_as(query_vectors).masked_fill(
-            remove_from_windowed_attention_mask, finfo(query_vectors.dtype, 'min')
+            remove_from_windowed_attention_mask, float(ops.finfo(query_vectors.dtype).min)
         )
         # diagonal mask with zeros everywhere and -inf inplace of padding
         diagonal_mask = self._sliding_chunks_query_key_matmul(
@@ -231,13 +229,13 @@ class LEDEncoderSelfAttention(nn.Cell):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = ops.cat((global_key_attn_scores, attn_scores), axis=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), dim=-1)
 
             # free memory
             del global_key_attn_scores
 
         attn_probs = ops.softmax(
-            attn_scores, axis=-1, dtype=mindspore.float32
+            attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         if layer_head_mask is not None:
@@ -249,12 +247,11 @@ class LEDEncoderSelfAttention(nn.Cell):
         # softmax sometimes inserts NaN if all positions are masked, replace them with 0
         attn_probs = ops.masked_fill(attn_probs, is_index_masked[:, :, None, None], 0.0)
         attn_probs = attn_probs.type_as(attn_scores)
-
         # free memory
         del attn_scores
 
         # apply dropout
-        attn_probs = ops.dropout(attn_probs, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_probs, p=self.dropout, training=self.training)
 
         value_vectors = value_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
 
@@ -328,32 +325,30 @@ class LEDEncoderSelfAttention(nn.Cell):
         shift every row 1 step right, converting columns into diagonals.
 
         Example:
-
-        ```python
-        chunked_hidden_states: [
-            0.4983,
-            2.6918,
-            -0.0071,
-            1.0492,
-            -1.8348,
-            0.7672,
-            0.2986,
-            0.0285,
-            -0.7584,
-            0.4206,
-            -0.0405,
-            0.1599,
-            2.0514,
-            -1.1600,
-            0.5372,
-            0.2629,
-        ]
-        window_overlap = num_rows = 4
-        ```
-
-                     (pad & diagonalize) => [ 0.4983, 2.6918, -0.0071, 1.0492, 0.0000, 0.0000, 0.0000
-                       0.0000, -1.8348, 0.7672, 0.2986, 0.0285, 0.0000, 0.0000 0.0000, 0.0000, -0.7584, 0.4206,
-                       -0.0405, 0.1599, 0.0000 0.0000, 0.0000, 0.0000, 2.0514, -1.1600, 0.5372, 0.2629 ]
+            ```python
+            >>> chunked_hidden_states: [
+            ...     0.4983,
+            ...     2.6918,
+            ...     -0.0071,
+            ...     1.0492,
+            ...     -1.8348,
+            ...     0.7672,
+            ...     0.2986,
+            ...     0.0285,
+            ...     -0.7584,
+            ...     0.4206,
+            ...     -0.0405,
+            ...     0.1599,
+            ...     2.0514,
+            ...     -1.1600,
+            ...     0.5372,
+            ...     0.2629,
+            ... ]
+            >>> window_overlap = num_rows = 4
+            ```
+             (pad & diagonalize) => [ 0.4983, 2.6918, -0.0071, 1.0492, 0.0000, 0.0000, 0.0000
+               0.0000, -1.8348, 0.7672, 0.2986, 0.0285, 0.0000, 0.0000 0.0000, 0.0000, -0.7584, 0.4206,
+               -0.0405, 0.1599, 0.0000 0.0000, 0.0000, 0.0000, 2.0514, -1.1600, 0.5372, 0.2629 ]
         """
         total_num_heads, num_chunks, window_overlap, hidden_dim = chunked_hidden_states.shape
         chunked_hidden_states = ops.pad(
@@ -388,7 +383,7 @@ class LEDEncoderSelfAttention(nn.Cell):
 
             chunk_stride = list(hidden_states.stride())
             chunk_stride[1] = chunk_stride[1] // 2
-            return hidden_states.as_strided(size=chunk_size, stride=chunk_stride)
+            return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
         # When exporting to ONNX, use this separate logic
         # have to use slow implementation since as_strided, unfold and 2d-tensor indexing aren't supported (yet) in ONNX export
@@ -418,12 +413,12 @@ class LEDEncoderSelfAttention(nn.Cell):
         beginning_mask = beginning_mask_2d[None, :, None, :]
         ending_mask = beginning_mask.flip(dims=(1, 3))
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
-        beginning_mask = beginning_mask.expand(beginning_input.shape)
+        beginning_mask = beginning_mask.broadcast_to(beginning_input.shape)
         input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = ops.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
         ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :]
-        ending_mask = ending_mask.expand(ending_input.shape)
+        ending_mask = ending_mask.broadcast_to(ending_input.shape)
         input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :] = ops.full_like(
             ending_input, -float("inf")
         ).where(ending_mask.bool(), ending_input)
@@ -531,11 +526,11 @@ class LEDEncoderSelfAttention(nn.Cell):
             chunked_value_stride[1],
             chunked_value_stride[2],
         )
-        chunked_value = padded_value.as_strided(size=chunked_value_size, stride=chunked_value_stride)
+        chunked_value = ops.as_strided(padded_value, size=chunked_value_size, stride=chunked_value_stride)
 
         chunked_attn_probs = self._pad_and_diagonalize(chunked_attn_probs)
 
-        context = ops.einsum("bcwd,bcdh->bcwh", (chunked_attn_probs, chunked_value))
+        context = ops.einsum("bcwd,bcdh->bcwh", (chunked_attn_probs.to(chunked_value.dtype), chunked_value))
         return context.view(batch_size, num_heads, seq_len, head_dim).swapaxes(1, 2)
 
     @staticmethod
@@ -543,9 +538,8 @@ class LEDEncoderSelfAttention(nn.Cell):
         """compute global attn indices required throughout forward pass"""
         # helper variable
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
-
         # max number of global attn indices in batch
-        max_num_global_attn_indices = num_global_attn_indices.max().item()
+        max_num_global_attn_indices = ops.max(num_global_attn_indices).item()
 
         # indices of global attn
         is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
@@ -588,9 +582,10 @@ class LEDEncoderSelfAttention(nn.Cell):
 
         # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
-        attn_probs_from_global_key[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = finfo(attn_probs_from_global_key.dtype, 'min')
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            attn_probs_from_global_key[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(ops.finfo(attn_probs_from_global_key.dtype).min)
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
         return attn_probs_from_global_key
@@ -687,21 +682,22 @@ class LEDEncoderSelfAttention(nn.Cell):
 
         # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
-        global_attn_scores[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = finfo(global_attn_scores.dtype, 'min')
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            global_attn_scores[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(ops.finfo(global_attn_scores.dtype).min)
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
 
         global_attn_scores = global_attn_scores.masked_fill(
             is_index_masked[:, None, None, :],
-            finfo(global_attn_scores.dtype, 'min'),
+            float(ops.finfo(global_attn_scores.dtype).min),
         )
 
         global_attn_scores = global_attn_scores.view(batch_size * self.num_heads, max_num_global_attn_indices, seq_len)
 
         # compute global attn probs
         global_attn_probs_float = ops.softmax(
-            global_attn_scores, axis=-1, dtype=mindspore.float32
+            global_attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         # apply layer head masking
@@ -716,7 +712,7 @@ class LEDEncoderSelfAttention(nn.Cell):
                 batch_size * self.num_heads, max_num_global_attn_indices, seq_len
             )
 
-        global_attn_probs = ops.dropout(
+        global_attn_probs = F.dropout(
             global_attn_probs_float.type_as(global_attn_scores), p=self.dropout, training=self.training
         )
 
@@ -740,13 +736,13 @@ class LEDEncoderSelfAttention(nn.Cell):
         return global_attn_output, global_attn_probs
 
 
-class LEDEncoderAttention(nn.Cell):
+class LEDEncoderAttention(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
         self.longformer_self_attn = LEDEncoderSelfAttention(config, layer_id=layer_id)
-        self.output = nn.Dense(config.d_model, config.d_model)
+        self.output = nn.Linear(config.d_model, config.d_model)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -774,7 +770,7 @@ class LEDEncoderAttention(nn.Cell):
         return outputs
 
 
-class LEDDecoderAttention(nn.Cell):
+class LEDDecoderAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -798,15 +794,15 @@ class LEDDecoderAttention(nn.Cell):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -837,8 +833,8 @@ class LEDDecoderAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -876,7 +872,7 @@ class LEDDecoderAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
                 raise ValueError(
@@ -896,7 +892,7 @@ class LEDDecoderAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -917,7 +913,7 @@ class LEDDecoderAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class LEDEncoderLayer(nn.Cell):
+class LEDEncoderLayer(nn.Module):
     def __init__(self, config: LEDConfig, layer_id: int):
         super().__init__()
         self.embed_dim = config.d_model
@@ -926,11 +922,11 @@ class LEDEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -959,27 +955,27 @@ class LEDEncoderLayer(nn.Cell):
             output_attentions=output_attentions,
         )
         hidden_states = attn_outputs[0]
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = float(ops.finfo(hidden_states.dtype).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
         return (hidden_states,) + attn_outputs[1:]
 
 
-class LEDDecoderLayer(nn.Cell):
+class LEDDecoderLayer(nn.Module):
     def __init__(self, config: LEDConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -1002,11 +998,11 @@ class LEDDecoderLayer(nn.Cell):
             is_decoder=True,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1048,7 +1044,7 @@ class LEDDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -1068,7 +1064,7 @@ class LEDDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -1078,9 +1074,9 @@ class LEDDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -1095,7 +1091,7 @@ class LEDDecoderLayer(nn.Cell):
         return outputs
 
 
-class LEDClassificationHead(nn.Cell):
+class LEDClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(
@@ -1106,11 +1102,11 @@ class LEDClassificationHead(nn.Cell):
         pooler_dropout: float,
     ):
         super().__init__()
-        self.dense = nn.Dense(input_dim, inner_dim)
+        self.dense = nn.Linear(input_dim, inner_dim)
         self.dropout = nn.Dropout(p=pooler_dropout)
-        self.out_proj = nn.Dense(inner_dim, num_classes)
+        self.out_proj = nn.Linear(inner_dim, num_classes)
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -1127,11 +1123,11 @@ class LEDPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -1160,12 +1156,14 @@ class LEDEncoderBaseModelOutput(ModelOutput):
     Args:
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
             attention_window + 1)`, where `x` is the number of tokens with global attention mask.
 
@@ -1180,7 +1178,8 @@ class LEDEncoderBaseModelOutput(ModelOutput):
             index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
             attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
             accessed from `global_attentions`.
-        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1207,24 +1206,28 @@ class LEDSeq2SeqModelOutput(ModelOutput):
 
             If `past_key_values` is used only the last hidden-state of the sequences of shape `(batch_size, 1,
             hidden_size)` is output.
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed
+            or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1232,18 +1235,21 @@ class LEDSeq2SeqModelOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1273,24 +1279,28 @@ class LEDSeq2SeqLMOutput(ModelOutput):
             Language modeling loss.
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1298,18 +1308,21 @@ class LEDSeq2SeqLMOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1340,24 +1353,28 @@ class LEDSeq2SeqSequenceClassifierOutput(ModelOutput):
             Classification (or regression if config.num_labels==1) loss.
         logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1365,18 +1382,21 @@ class LEDSeq2SeqSequenceClassifierOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1409,24 +1429,28 @@ class LEDSeq2SeqQuestionAnsweringModelOutput(ModelOutput):
             Span-start scores (before SoftMax).
         end_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Span-end scores (before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1434,18 +1458,21 @@ class LEDSeq2SeqQuestionAnsweringModelOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1471,7 +1498,7 @@ LED_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. See the superclass documentation for the generic methods the library
     implements for all its models (such as downloading or saving, resizing the input embeddings, pruning heads etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for general usage and behavior.
 
     Parameters:
@@ -1482,41 +1509,40 @@ LED_START_DOCSTRING = r"""
 """
 
 LED_GENERATION_EXAMPLE = r"""
-    Summarization example:
-
-    ```python
-    >>> import torch
-    >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
-
-    >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-large-16384-arxiv")
-    >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-large-16384-arxiv")
-
-    >>> ARTICLE_TO_SUMMARIZE = '''Transformers (Vaswani et al., 2017) have achieved state-of-the-art
-    ...     results in a wide range of natural language tasks including generative language modeling
-    ...     (Dai et al., 2019; Radford et al., 2019) and discriminative ... language understanding (Devlin et al., 2019).
-    ...     This success is partly due to the self-attention component which enables the network to capture contextual
-    ...     information from the entire sequence. While powerful, the memory and computational requirements of
-    ...     self-attention grow quadratically with sequence length, making it infeasible (or very expensive) to
-    ...     process long sequences. To address this limitation, we present Longformer, a modified Transformer
-    ...     architecture with a self-attention operation that scales linearly with the sequence length, making it
-    ...     versatile for processing long documents (Fig 1). This is an advantage for natural language tasks such as
-    ...     long document classification, question answering (QA), and coreference resolution, where existing approaches
-    ...     partition or shorten the long context into smaller sequences that fall within the typical 512 token limit
-    ...     of BERT-style pretrained models. Such partitioning could potentially result in loss of important
-    ...     cross-partition information, and to mitigate this problem, existing methods often rely on complex
-    ...     architectures to address such interactions. On the other hand, our proposed Longformer is able to build
-    ...     contextual representations of the entire context using multiple layers of attention, reducing the need for
-    ...     task-specific architectures.'''
-    >>> inputs = tokenizer.encode(ARTICLE_TO_SUMMARIZE, return_tensors="ms")
-
-    >>> # Global attention on the first token (cf. Beltagy et al. 2020)
-    >>> global_attention_mask = torch.zeros_like(inputs)
-    >>> global_attention_mask[:, 0] = 1
-
-    >>> # Generate Summary
-    >>> summary_ids = model.generate(inputs, global_attention_mask=global_attention_mask, num_beams=3, max_length=32)
-    >>> print(tokenizer.decode(summary_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
-    ```
+    Example:
+        ```python
+        >>> import torch
+        >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
+        ... 
+        >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-large-16384-arxiv")
+        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-large-16384-arxiv")
+        ... 
+        >>> ARTICLE_TO_SUMMARIZE = '''Transformers (Vaswani et al., 2017) have achieved state-of-the-art
+        ...     results in a wide range of natural language tasks including generative language modeling
+        ...     (Dai et al., 2019; Radford et al., 2019) and discriminative ... language understanding (Devlin et al., 2019).
+        ...     This success is partly due to the self-attention component which enables the network to capture contextual
+        ...     information from the entire sequence. While powerful, the memory and computational requirements of
+        ...     self-attention grow quadratically with sequence length, making it infeasible (or very expensive) to
+        ...     process long sequences. To address this limitation, we present Longformer, a modified Transformer
+        ...     architecture with a self-attention operation that scales linearly with the sequence length, making it
+        ...     versatile for processing long documents (Fig 1). This is an advantage for natural language tasks such as
+        ...     long document classification, question answering (QA), and coreference resolution, where existing approaches
+        ...     partition or shorten the long context into smaller sequences that fall within the typical 512 token limit
+        ...     of BERT-style pretrained models. Such partitioning could potentially result in loss of important
+        ...     cross-partition information, and to mitigate this problem, existing methods often rely on complex
+        ...     architectures to address such interactions. On the other hand, our proposed Longformer is able to build
+        ...     contextual representations of the entire context using multiple layers of attention, reducing the need for
+        ...     task-specific architectures.'''
+        >>> inputs = tokenizer.encode(ARTICLE_TO_SUMMARIZE, return_tensors="ms")
+        ... 
+        >>> # Global attention on the first token (cf. Beltagy et al. 2020)
+        >>> global_attention_mask = torch.zeros_like(inputs)
+        >>> global_attention_mask[:, 0] = 1
+        ... 
+        >>> # Generate Summary
+        >>> summary_ids = model.generate(inputs, global_attention_mask=global_attention_mask, num_beams=3, max_length=32)
+        >>> print(tokenizer.decode(summary_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
+        ```
 """
 
 LED_INPUTS_DOCSTRING = r"""
@@ -1531,7 +1557,7 @@ LED_INPUTS_DOCSTRING = r"""
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
@@ -1560,27 +1586,24 @@ LED_INPUTS_DOCSTRING = r"""
             For example, for classification, the <s> token should be given global attention. For QA, all question
             tokens should also have global attention. Please refer to the [Longformer
             paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-
+            
             - 0 for local attention (a sliding window attention),
             - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
         head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
             Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
-
         decoder_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
             Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
         cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0,
-            1]`:
-
+            Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0, 1]`:
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
-
         encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
             Tuple consists of (`last_hidden_state`, *optional*: `hidden_states`, *optional*: `attentions`)
             `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)`, *optional*) is a sequence of
@@ -1664,7 +1687,7 @@ class LEDEncoder(LEDPreTrainedModel):
             self.max_source_positions,
             embed_dim,
         )
-        self.layers = nn.CellList([LEDEncoderLayer(config, i) for i in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([LEDEncoderLayer(config, i) for i in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(embed_dim)
 
         self.gradient_checkpointing = False
@@ -1714,7 +1737,7 @@ class LEDEncoder(LEDPreTrainedModel):
             if inputs_embeds is not None:
                 input_ids_padding = ops.full((batch_size, padding_len), self.config.pad_token_id, dtype=mindspore.int64)
                 inputs_embeds_padding = self.embed_tokens(input_ids_padding)
-                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], axis=-2)
+                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], dim=-2)
 
             attention_mask = ops.pad(
                 attention_mask, (0, padding_len), value=False
@@ -1722,7 +1745,7 @@ class LEDEncoder(LEDPreTrainedModel):
 
         return padding_len, input_ids, attention_mask, inputs_embeds
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1754,7 +1777,7 @@ class LEDEncoder(LEDPreTrainedModel):
                 Mask to decide the attention given on each token, local attention or global attention for the encoder.
                 Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
                 important for task-specific finetuning because it makes the model more flexible at representing the
-                task. For example, for classification, the <s> token should be given global attention. For QA, all
+                task. For example, for classification, the `<s>` token should be given global attention. For QA, all
                 question tokens should also have global attention. Please refer to the [Longformer
                 paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
 
@@ -1830,7 +1853,7 @@ class LEDEncoder(LEDPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1933,14 +1956,14 @@ class LEDDecoder(LEDPreTrainedModel):
             self.max_target_positions,
             config.d_model,
         )
-        self.layers = nn.CellList([LEDDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([LEDDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -2006,7 +2029,8 @@ class LEDDecoder(LEDPreTrainedModel):
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True`
+                is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
                 shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
@@ -2081,7 +2105,7 @@ class LEDDecoder(LEDPreTrainedModel):
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -2201,7 +2225,7 @@ class LEDModel(LEDPreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2295,8 +2319,8 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
     def __init__(self, config: LEDConfig):
         super().__init__(config)
         self.led = LEDModel(config)
-        self.final_logits_bias = ops.zeros((1, self.led.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.led.shared.vocab_size, has_bias=False)
+        self.final_logits_bias = ops.zeros((1, self.led.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.led.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2318,7 +2342,7 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -2327,7 +2351,7 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2348,27 +2372,29 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], LEDSeq2SeqLMOutput]`
 
-        Conditional generation example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-base-16384")
-        >>> TXT = "My friends are <mask> but they eat too many carbs."
-
-        >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
-        >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
-
-        >>> prediction = model.generate(input_ids)[0]
-        >>> print(tokenizer.decode(prediction, skip_special_tokens=True))
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-base-16384")
+            >>> TXT = "My friends are <mask> but they eat too many carbs."
+            ...
+            >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
+            >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
+            ...
+            >>> prediction = model.generate(input_ids)[0]
+            >>> print(tokenizer.decode(prediction, skip_special_tokens=True))
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -2402,7 +2428,7 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -2488,7 +2514,7 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2508,9 +2534,10 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -2541,8 +2568,8 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
         hidden_states = outputs[0]  # last hidden state
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:, -1, :]
         logits = self.classification_head(sentence_representation)
 
@@ -2558,13 +2585,13 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -2593,12 +2620,12 @@ class LEDForQuestionAnswering(LEDPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.led = LEDModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2619,14 +2646,15 @@ class LEDForQuestionAnswering(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqQuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
@@ -2669,8 +2697,8 @@ class LEDForQuestionAnswering(LEDPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

@@ -43,7 +43,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, nn
+    from mindnlp.core import ops, nn
 
     from mindnlp.transformers import (
         MusicgenForCausalLM,
@@ -214,7 +214,7 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             first_embed = model.get_input_embeddings()[0]
             self.assertIsInstance(first_embed, nn.Embedding)
             lm_heads = model.get_output_embeddings()
-            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Dense))
+            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Linear))
 
     # skip as this model doesn't support all arguments tested
     def test_model_outputs_equivalence(self):
@@ -525,7 +525,7 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

@@ -71,9 +71,12 @@ def _is_package_available(
     return package_exists
 
 
+_tiktoken_available = _is_package_available('tiktoken')
+_bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
+_soundfile_available = _is_package_available("soundfile")
 _tokenizers_available = _is_package_available("tokenizers")
 _pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
@@ -104,6 +107,16 @@ try:
 except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
+_levenshtein_available = _is_package_available("Levenshtein")
+_nltk_available = _is_package_available("nltk")
+
+def is_levenshtein_available():
+    return _levenshtein_available
+
+def is_nltk_available():
+    return _nltk_available
+
+
 def is_sudachi_available():
     """
     Checks if SudachiPy is available for use.
@@ -128,6 +141,9 @@ def get_sudachi_version():
     return _sudachipy_version
 
 
+def is_bs4_available():
+    return _bs4_available
+
 def is_sudachi_projection_available():
     """
     Checks if Sudachi projection is available.
@@ -143,7 +159,7 @@ def is_sudachi_projection_available():
     if not is_sudachi_available():
         return False
 
-    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the constructor of BertJapaneseTokenizer.
+    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the forwardor of BertJapaneseTokenizer.
     # - `projection` option is not supported in sudachipy<0.6.8, see https://github.com/WorksApplications/sudachi.rs/issues/230
     return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 
@@ -382,6 +398,10 @@ def is_pytesseract_available():
 
 def is_g2p_en_available():
     return _g2p_en_available
+
+
+def is_tiktoken_available():
+    return _tiktoken_available
 
 
 @lru_cache()
@@ -661,3 +681,7 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     spec.loader.exec_module(module)
     module = sys.modules[name]
     return module
+
+
+def is_soundfile_availble():
+    return _soundfile_available

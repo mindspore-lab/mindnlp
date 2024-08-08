@@ -25,7 +25,7 @@ from setuptools.command.egg_info import egg_info
 from setuptools.command.build_py import build_py
 
 
-version = '0.3.2'
+version = '0.4.0'
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 pkg_dir = os.path.join(cur_dir, 'build')
 
@@ -116,7 +116,7 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
-        'mindspore',
+        'mindspore>=2.2.14',
         'tqdm',
         'requests',
         'datasets', # hf dependency

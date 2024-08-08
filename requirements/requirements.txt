@@ -25,3 +25,7 @@ pytesseract
 gensim
 evaluate
 g2p-en
+pycocotools
+Levenshtein
+bs4
+tiktoken

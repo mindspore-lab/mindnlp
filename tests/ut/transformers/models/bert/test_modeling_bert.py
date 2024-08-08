@@ -27,7 +27,7 @@ from .....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
@@ -299,8 +299,8 @@ class BertModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -467,7 +467,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
+                    self.model_tester.batch_size, self.model_tester.seq_length, dtype=mindspore.int64
                 )
                 inputs_dict["next_sentence_label"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64

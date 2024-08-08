@@ -63,14 +63,13 @@ class GPTConfig(PretrainedConfig):
         summary_type (`str`, *optional*, defaults to `"cls_index"`):
             Argument used when doing sequence summary, used in the models [`OpenAIGPTDoubleHeadsModel`] and
             [`OpenAIGPTDoubleHeadsModel`].
-
             Has to be one of the following options:
 
-                - `"last"`: Take the last token hidden state (like XLNet).
-                - `"first"`: Take the first token hidden state (like BERT).
-                - `"mean"`: Take the mean of all tokens hidden states.
-                - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
-                - `"attn"`: Not implemented now, use multi-head attention.
+            - `"last"`: Take the last token hidden state (like XLNet).
+            - `"first"`: Take the first token hidden state (like BERT).
+            - `"mean"`: Take the mean of all tokens hidden states.
+            - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
+            - `"attn"`: Not implemented now, use multi-head attention.
         summary_use_proj (`bool`, *optional*, defaults to `True`):
             Argument used when doing sequence summary, used in the models [`OpenAIGPTDoubleHeadsModel`] and
             [`OpenAIGPTDoubleHeadsModel`].
@@ -93,20 +92,20 @@ class GPTConfig(PretrainedConfig):
             The dropout ratio to be used after the projection and activation.
 
 
-    Examples:
-
-    ```python
-    >>> from transformers import OpenAIGPTConfig, OpenAIGPTModel
-
-    >>> # Initializing a GPT configuration
-    >>> configuration = OpenAIGPTConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = OpenAIGPTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import OpenAIGPTConfig, OpenAIGPTModel
+        ...
+        >>> # Initializing a GPT configuration
+        >>> configuration = OpenAIGPTConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = OpenAIGPTModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "openai-gpt"
     attribute_map = {
         "max_position_embeddings": "n_positions",
@@ -137,31 +136,31 @@ class GPTConfig(PretrainedConfig):
     ):
         """
         Initializes a GPTConfig object with the provided parameters.
-        
+
         Args:
-        - vocab_size (int): The size of the vocabulary.
-        - n_positions (int): The number of positions.
-        - n_embd (int): The embedding dimension.
-        - n_layer (int): The number of layers.
-        - n_head (int): The number of attention heads.
-        - afn (str): The activation function to be used.
-        - resid_pdrop (float): The dropout probability for residual connections.
-        - embd_pdrop (float): The dropout probability for the embeddings.
-        - attn_pdrop (float): The dropout probability for attention layers.
-        - layer_norm_epsilon (float): The epsilon value for layer normalization.
-        - initializer_range (float): The range of the initializer.
-        - summary_type (str): The type of summary to be used.
-        - summary_use_proj (bool): Whether to use projection in summary.
-        - summary_activation (str): The activation function for the summary.
-        - summary_proj_to_labels (bool): Whether to project the summary to labels.
-        - summary_first_dropout (float): The dropout probability for the first layer of the summary.
-        - **kwargs: Additional keyword arguments.
-        
+            vocab_size (int): The size of the vocabulary.
+            n_positions (int): The number of positions.
+            n_embd (int): The embedding dimension.
+            n_layer (int): The number of layers.
+            n_head (int): The number of attention heads.
+            afn (str): The activation function to be used.
+            resid_pdrop (float): The dropout probability for residual connections.
+            embd_pdrop (float): The dropout probability for the embeddings.
+            attn_pdrop (float): The dropout probability for attention layers.
+            layer_norm_epsilon (float): The epsilon value for layer normalization.
+            initializer_range (float): The range of the initializer.
+            summary_type (str): The type of summary to be used.
+            summary_use_proj (bool): Whether to use projection in summary.
+            summary_activation (str): The activation function for the summary.
+            summary_proj_to_labels (bool): Whether to project the summary to labels.
+            summary_first_dropout (float): The dropout probability for the first layer of the summary.
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None
+            None
         """
         self.vocab_size = vocab_size
         self.n_positions = n_positions

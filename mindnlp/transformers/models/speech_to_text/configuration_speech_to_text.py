@@ -101,19 +101,19 @@ class Speech2TextConfig(PretrainedConfig):
             An integer specifying number of input channels of the input feature vector.
 
     Example:
-
-    ```python
-    >>> from transformers import Speech2TextConfig, Speech2TextModel
-
-    >>> # Initializing a Speech2Text s2t_transformer_s style configuration
-    >>> configuration = Speech2TextConfig()
-
-    >>> # Initializing a model (with random weights) from the s2t_transformer_s style configuration
-    >>> model = Speech2TextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import Speech2TextConfig, Speech2TextModel
+        ...
+        >>> # Initializing a Speech2Text s2t_transformer_s style configuration
+        >>> configuration = Speech2TextConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the s2t_transformer_s style configuration
+        >>> model = Speech2TextModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "speech_to_text"
     keys_to_ignore_at_inference = ["past_key_values"]

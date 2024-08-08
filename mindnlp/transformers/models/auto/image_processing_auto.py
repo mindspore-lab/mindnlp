@@ -54,10 +54,10 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("cvt", "ConvNextImageProcessor"),
         # ("data2vec-vision", "BeitImageProcessor"),
         # ("deformable_detr", "DeformableDetrImageProcessor"),
-        # ("deit", "DeiTImageProcessor"),
+        ("deit", "DeiTImageProcessor"),
         # ("depth_anything", "DPTImageProcessor"),
-        # ("deta", "DetaImageProcessor"),
-        # ("detr", "DetrImageProcessor"),
+        ("deta", "DetaImageProcessor"),
+        ("detr", "DetrImageProcessor"),
         # ("dinat", "ViTImageProcessor"),
         # ("dinov2", "BitImageProcessor"),
         # ("donut-swin", "DonutImageProcessor"),
@@ -65,7 +65,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("efficientformer", "EfficientFormerImageProcessor"),
         ("efficientnet", "EfficientNetImageProcessor"),
         ("flava", "FlavaImageProcessor"),
-        # ("focalnet", "BitImageProcessor"),
+        ("focalnet", "BitImageProcessor"),
         # ("fuyu", "FuyuImageProcessor"),
         ("git", "CLIPImageProcessor"),
         # ("glpn", "GLPNImageProcessor"),
@@ -73,7 +73,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("idefics", "IdeficsImageProcessor"),
         ("imagegpt", "ImageGPTImageProcessor"),
         # ("instructblip", "BlipImageProcessor"),
-        # ("kosmos-2", "CLIPImageProcessor"),
+        ("kosmos-2", "CLIPImageProcessor"),
         ("layoutlmv2", "LayoutLMv2ImageProcessor"),
         ("layoutlmv3", "LayoutLMv3ImageProcessor"),
         # ("levit", "LevitImageProcessor"),
@@ -86,11 +86,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("mobilevit", "MobileViTImageProcessor"),
         # ("mobilevitv2", "MobileViTImageProcessor"),
         # ("nat", "ViTImageProcessor"),
-        # ("nougat", "NougatImageProcessor"),
+        ("nougat", "NougatImageProcessor"),
         ("oneformer", "OneFormerImageProcessor"),
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
-        # ("perceiver", "PerceiverImageProcessor"),
+        ("perceiver", "PerceiverImageProcessor"),
         # ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
@@ -109,14 +109,14 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("timesformer", "VideoMAEImageProcessor"),
         # ("tvlt", "TvltImageProcessor"),
         # ("tvp", "TvpImageProcessor"),
-        # ("udop", "LayoutLMv3ImageProcessor"),
+        ("udop", "LayoutLMv3ImageProcessor"),
         # ("upernet", "SegformerImageProcessor"),
         ("van", "ConvNextImageProcessor"),
         ("videomae", "VideoMAEImageProcessor"),
         # ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
-        # ("vit_hybrid", "ViTHybridImageProcessor"),
+        ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
         # ("vitmatte", "VitMatteImageProcessor"),
@@ -133,10 +133,10 @@ def image_processor_class_from_name(class_name: str):
     Args:
         class_name (str): The name of the image processor class to retrieve.
             It is used to locate and import the corresponding class based on the provided name.
-    
+
     Returns:
         None: If the class with the given name is not found, None is returned.
-    
+
     Raises:
         AttributeError: If an attribute error occurs while attempting to retrieve the class from the imported module.
         ImportError: If an import error occurs while attempting to import the module.
@@ -217,21 +217,21 @@ def get_image_processor_config(
     Returns:
         `Dict`: The configuration of the image processor.
 
-    Examples:
-
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
-    # This model does not have a image processor config so the result will be an empty dict.
-    image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
-
-    # Save a pretrained image processor locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-    image_processor.save_pretrained("image-processor-test")
-    image_processor_config = get_image_processor_config("image-processor-test")
-    ```"""
+    Example:
+        ```python
+        >>> # Download configuration from hf-mirror.com and cache.
+        >>> image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
+        >>> # This model does not have a image processor config so the result will be an empty dict.
+        >>> image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
+        ...
+        >>> # Save a pretrained image processor locally and you can reload its config
+        >>> from transformers import AutoTokenizer
+        ...
+        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+        >>> image_processor.save_pretrained("image-processor-test")
+        >>> image_processor_config = get_image_processor_config("image-processor-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -273,16 +273,17 @@ class AutoImageProcessor:
     def __init__(self):
         """
         Initializes an instance of AutoImageProcessor.
-        
+
         Args:
             self: The object itself.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
         Raises:
-            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
-`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+            EnvironmentError:
+                Raised when attempting to directly instantiate an AutoImageProcessor object.
+                AutoImageProcessor is designed to be instantiated using the
+                `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
         """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
@@ -351,17 +352,17 @@ class AutoImageProcessor:
 
         </Tip>
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor
-
-        >>> # Download image processor from hf-mirror.com and cache.
-        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-
-        >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor
+            ...
+            >>> # Download image processor from hf-mirror.com and cache.
+            >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+            ...
+            >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
@@ -405,7 +406,6 @@ class AutoImageProcessor:
                     "`AutoFeatureExtractor`. This warning will be removed in v4.40."
                 )
 
-        print(image_processor_class)
         # If we don't find the image processor class in the image processor config, let's try the model config.
         if image_processor_class is None and image_processor_auto_map is None:
             if not isinstance(config, PretrainedConfig):

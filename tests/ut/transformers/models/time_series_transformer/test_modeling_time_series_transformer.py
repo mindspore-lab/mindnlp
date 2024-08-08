@@ -18,7 +18,7 @@ import inspect
 import tempfile
 import unittest
 import numpy
-from mindnlp.utils.serialization import load
+from mindnlp.core.serialization import load
 from huggingface_hub import hf_hub_download
 from parameterized import parameterized
 from mindnlp.utils.testing_utils import (
@@ -254,7 +254,7 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

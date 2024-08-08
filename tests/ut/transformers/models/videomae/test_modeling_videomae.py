@@ -24,7 +24,7 @@ from mindnlp.utils.generic import cached_property
 from mindnlp.transformers import VideoMAEConfig
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow,is_mindspore_available,is_vision_available
-from mindnlp.utils.serialization import load
+from mindnlp.core.serialization import load
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
@@ -220,7 +220,7 @@ class VideoMAEModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 

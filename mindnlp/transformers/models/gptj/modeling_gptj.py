@@ -18,10 +18,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -50,24 +51,26 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return indices, cu_seqlens, max_seqlen_in_batch
 
 
 def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.int64) / dim))
     sinusoid_inp = ops.einsum("i , j -> i j", ops.arange(num_pos, dtype=mindspore.int64).float(), inv_freq).float()
-    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
 
 
 def get_embed_positions(embed_positions, position_ids):
-    return embed_positions.repeat(position_ids.shape[0], 1, 1)
+    return ops.tile(embed_positions, (position_ids.shape[0], 1, 1))
 
 
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
-    x1 = x[:, :, :, ::2]
-    x2 = x[:, :, :, 1::2]
-    x = ops.stack((-x2, x1), axis=-1)
+    # x1 = x[:, :, :, ::2]
+    # x2 = x[:, :, :, 1::2]
+    x1 = ops.index_select(x, -1, ops.arange(0, x.shape[-1], 2))
+    x2 = ops.index_select(x, -1, ops.arange(1, x.shape[-1], 2))
+    x = ops.stack((-x2, x1), dim=-1)
 
     return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
 
@@ -79,13 +82,13 @@ def apply_rotary_pos_emb(tensor: mindspore.Tensor, sin: mindspore.Tensor, cos: m
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
-class GPTJAttention(nn.Cell):
+class GPTJAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
-                1, 1, max_positions, max_positions)
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).view(
+                1, 1, max_positions, max_positions).to(mindspore.bool_)
         self.masked_bias = mindspore.Tensor(-1e9)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
@@ -103,10 +106,10 @@ class GPTJAttention(nn.Cell):
             )
         self.scale_attn = ops.sqrt(mindspore.Tensor(self.head_dim, dtype=mindspore.float32))
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
@@ -169,7 +172,7 @@ class GPTJAttention(nn.Cell):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
         attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -183,9 +186,9 @@ class GPTJAttention(nn.Cell):
 
     def _get_embed_positions(self, position_ids):
         embed_positions = self.embed_positions
-        return embed_positions.repeat(position_ids.shape[0], 1, 1)
+        return ops.tile(embed_positions, (position_ids.shape[0], 1, 1))
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -213,11 +216,10 @@ class GPTJAttention(nn.Cell):
         # else:
         embed_positions = self._get_embed_positions(position_ids)
 
-        repeated_position_ids = position_ids.unsqueeze(-1).repeat(1, 1, embed_positions.shape[-1])
-        # sincos = ops.gather(embed_positions, repeated_position_ids, axis=1)
-        sincos = ops.gather_elements(embed_positions, 1, repeated_position_ids)
+        repeated_position_ids = ops.tile(position_ids.unsqueeze(-1), (1, 1, embed_positions.shape[-1]))
+        sincos = ops.gather(embed_positions, 1, repeated_position_ids)
 
-        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, axis=-1)
+        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, dim=-1)
 
         if self.rotary_dim is not None:
             k_rot = key[:, :, :, : self.rotary_dim]
@@ -229,8 +231,8 @@ class GPTJAttention(nn.Cell):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -241,8 +243,8 @@ class GPTJAttention(nn.Cell):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             # Note that this cast is quite ugly, but is not implemented before ROPE as the original codebase keeps the key in float32 all along the computation.
@@ -272,18 +274,18 @@ GPTJ_ATTENTION_CLASSES = {
 }
 
 
-class GPTJMLP(nn.Cell):
+class GPTJMLP(nn.Module):
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         super().__init__()
         embed_dim = config.n_embd
 
-        self.fc_in = nn.Dense(embed_dim, intermediate_size)
-        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+        self.fc_in = nn.Linear(embed_dim, intermediate_size)
+        self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
         hidden_states = self.fc_in(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.fc_out(hidden_states)
@@ -291,15 +293,15 @@ class GPTJMLP(nn.Cell):
         return hidden_states
 
 
-class GPTJBlock(nn.Cell):
+class GPTJBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
-        self.ln_1 = nn.LayerNorm(config.n_embd, epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.attn = GPTJ_ATTENTION_CLASSES[config._attn_implementation](config)
         self.mlp = GPTJMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -353,10 +355,10 @@ class GPTJPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense,)):
+        if isinstance(cell, (nn.Linear,)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -369,7 +371,7 @@ class GPTJPreTrainedModel(PreTrainedModel):
 
 
 GPTJ_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -390,15 +392,15 @@ GPTJ_INPUTS_DOCSTRING = r"""
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
         token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
-            1]`:
-
+                1]`:
+                
             - 0 corresponds to a *sentence A* token,
             - 1 corresponds to a *sentence B* token.
 
@@ -410,7 +412,7 @@ GPTJ_INPUTS_DOCSTRING = r"""
             [What are position IDs?](../glossary#position-ids)
         head_mask (`mindspore.Tensor` of shape `(num_attention_heads,)` or `(n_layer, num_attention_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
+            
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
@@ -439,41 +441,39 @@ PARALLELIZE_DOCSTRING = r"""
             automatically mapped to the first device (for esoteric reasons). That means that the first device should
             have fewer attention modules mapped to it than other devices. For reference, the GPT-J models have the
             following number of attention modules:
-
+            
                 - gpt-j-6B: 28
 
     Example:
-
-    ```python
-    # Here is an example of a device map on a machine with 4 GPUs using gpt-j-6B, which has a total of 28 attention modules:
-    model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-    device_map = {
-        0: [0, 1, 2, 3, 4, 5, 6],
-        1: [7, 8, 9, 10, 11, 12, 13],
-        2: [14, 15, 16, 17, 18, 19, 20],
-        3: [21, 22, 23, 24, 25, 26, 27],
-    }
-    model.parallelize(device_map)
-    ```
+        ```python
+        >>> # Here is an example of a device map on a machine with 4 GPUs using gpt-j-6B, which has a total of 28 attention modules:
+        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
+        >>> device_map = {
+        >>>     0: [0, 1, 2, 3, 4, 5, 6],
+        >>>     1: [7, 8, 9, 10, 11, 12, 13],
+        >>>     2: [14, 15, 16, 17, 18, 19, 20],
+        >>>     3: [21, 22, 23, 24, 25, 26, 27],
+        >>> }
+        >>> model.parallelize(device_map)
+        ```
 """
 
 DEPARALLELIZE_DOCSTRING = r"""
     Moves the model to CPU from a model parallel state.
 
     Example:
-
-    ```python
-    # On a 4 GPU machine with gpt-j-6B:
-    model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-    device_map = {
-        0: [0, 1, 2, 3, 4, 5, 6],
-        1: [7, 8, 9, 10, 11, 12, 13],
-        2: [14, 15, 16, 17, 18, 19, 20],
-        3: [21, 22, 23, 24, 25, 26, 27],
-    }
-    model.parallelize(device_map)  # Splits the model across several devices
-    model.deparallelize()  # Put the model back on cpu and cleans memory by calling torch.cuda.empty_cache()
-    ```
+        ```python
+        >>> # On a 4 GPU machine with gpt-j-6B:
+        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
+        >>> device_map = {
+        >>>     0: [0, 1, 2, 3, 4, 5, 6],
+        >>>     1: [7, 8, 9, 10, 11, 12, 13],
+        >>>     2: [14, 15, 16, 17, 18, 19, 20],
+        >>>     3: [21, 22, 23, 24, 25, 26, 27],
+        >>> }
+        >>> model.parallelize(device_map)  # Splits the model across several devices
+        >>> model.deparallelize()  # Put the model back on cpu and cleans memory by calling torch.cuda.empty_cache()
+        ```
 """
 
 
@@ -485,8 +485,8 @@ class GPTJModel(GPTJPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPTJBlock(config) for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([GPTJBlock(config) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Model parallel
         self.model_parallel = False
@@ -504,7 +504,7 @@ class GPTJModel(GPTJPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -660,7 +660,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = GPTJModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
 
         self.model_parallel = False
 
@@ -695,7 +695,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             # position_ids.masked_fill_(attention_mask == 0, 1)
             position_ids=ops.where(attention_mask == 0, 1, position_ids)
             if past_key_values:
@@ -719,7 +719,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
 
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -735,10 +735,11 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -770,7 +771,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
             loss = loss.to(hidden_states.dtype)
 
@@ -806,7 +807,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTJModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Model parallel
         self.model_parallel = False
@@ -814,7 +815,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -830,10 +831,11 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -892,7 +894,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
                 else:
                     loss = ops.mse(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
@@ -914,7 +916,7 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTJModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Model parallel
         self.model_parallel = False
@@ -922,7 +924,7 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -937,14 +939,15 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -979,8 +982,8 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

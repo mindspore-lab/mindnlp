@@ -216,7 +216,7 @@ class FastSpeech2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         model = FastSpeech2ConformerModel(config)
-        signature = inspect.signature(model.construct)
+        signature = inspect.signature(model.forward)
         # signature.parameters is an OrderedDict => so arg_names order is deterministic
         arg_names = [*signature.parameters.keys()]
 
@@ -624,7 +624,7 @@ class FastSpeech2ConformerWithHifiGanTest(ModelTesterMixin, unittest.TestCase):
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         model = FastSpeech2ConformerWithHifiGan(config)
-        signature = inspect.signature(model.construct)
+        signature = inspect.signature(model.forward)
         # signature.parameters is an OrderedDict => so arg_names order is deterministic
         arg_names = [*signature.parameters.keys()]
 

@@ -23,7 +23,8 @@ import copy
 from typing import Any, Optional, Union
 from abc import ABC
 from contextlib import contextmanager
-from mindspore import nn, Tensor
+from mindspore import Tensor
+from mindnlp.core import nn
 
 from ..config import PeftConfig
 from ..utils import _get_subcells
@@ -42,7 +43,7 @@ def onload_layer(layer):
     If the cell has no offloaded sub-cells, this function does nothing.
 
     Args:
-        layer ('mindspore.nn.Cell'):
+        layer ('mindspore.nn.Module'):
             layer with tuners to be merged
     """
     offloaded_cells = []
@@ -98,10 +99,10 @@ def onload_layer(layer):
     #     layer.base_layer._hf_hook.post_forward(layer.base_layer, torch.tensor([]))
 
 
-class BaseTuner(nn.Cell):
+class BaseTuner(nn.Module):
     r"""
     A base tuner model that provides the common methods and attributes for all tuners that are injectable into a
-    torch.nn.Cell
+    torch.nn.Module
 
     For adding a new Tuner class, one needs to overwrite the following methods:
 
@@ -120,7 +121,7 @@ class BaseTuner(nn.Cell):
     The easiest is to check what is done in the `peft.tuners.lora.LoraModel` class.
 
     Attributes:
-        model (`mindspore.nn.Cell`):
+        model (`mindspore.nn.Module`):
             The model to which the adapter tuner layers will be attached.
         forward (`Callable`):
             The forward method of the model.
@@ -201,9 +202,9 @@ class BaseTuner(nn.Cell):
         # is already a list of str
         return self.active_adapter
 
-    def construct(self, *args: Any, **kwargs: Any):
+    def forward(self, *args: Any, **kwargs: Any):
         r"""
-        This method constructs an instance of the BaseTuner class.
+        This method forwards an instance of the BaseTuner class.
         
         Args:
             self: The instance of the BaseTuner class.
@@ -214,7 +215,7 @@ class BaseTuner(nn.Cell):
         Raises:
             None. This method does not raise any exceptions.
         """
-        return self.model.construct(*args, **kwargs)
+        return self.model.forward(*args, **kwargs)
 
     def _prepare_adapter_config(self, peft_config: PeftConfig, model_config: dict) -> PeftConfig:
         r"""
@@ -249,9 +250,9 @@ class BaseTuner(nn.Cell):
         self,
         peft_config: PeftConfig,
         adapter_name: str,
-        target: nn.Cell,
+        target: nn.Module,
         target_name: str,
-        parent: nn.Cell,
+        parent: nn.Module,
         current_key: str,
     ) -> None:
         r"""
@@ -265,11 +266,11 @@ class BaseTuner(nn.Cell):
                 The adapter config.
             adapter_name (`str`):
                 The adapter name.
-            target (`nn.Cell`):
+            target (`nn.Module`):
                 The target cell.
             target_name (`str`):
                 The target cell's name.
-            parent (`nn.Cell`):
+            parent (`nn.Module`):
                 The parent cell.
             **optionnal_kwargs (`dict`):
                 The optional keyword arguments to pass to deal with particular cases (e.g. 8bit, 4bit quantization)
@@ -306,7 +307,7 @@ class BaseTuner(nn.Cell):
     #     if self.peft_config[adapter_name].inference_mode:
     #         # freeze adapter
     #         _freeze_adapter(self.model, adapter_name)
-    def inject_adapter(self, model: nn.Cell, adapter_name: str):
+    def inject_adapter(self, model: nn.Module, adapter_name: str):
         r"""
         Creates adapter layers and replaces the target cells with the adapter layers. This method is called under the
         hood by `peft.mapping.get_peft_model` if a non-prompt tuning adapter class is passed, e.g. LoRA.
@@ -315,7 +316,7 @@ class BaseTuner(nn.Cell):
         Rename add_adapter -> inject_adapter.
 
         Args:
-            model (`nn.Cell`):
+            model (`nn.Module`):
                 The model to be tuned.
             adapter_name (`str`):
                 The adapter name.
@@ -403,7 +404,7 @@ class BaseTunerLayer(ABC):
     # List all merged adapters
     merged_adapters: list[str] = []
 
-    def get_base_layer(self) -> nn.Cell:
+    def get_base_layer(self) -> nn.Module:
         """
         (Recursively) get the base_layer.
 
@@ -743,7 +744,7 @@ def check_target_cell_exists(config, key: str) -> bool | re.Match[str] | None:
     return target_cell_found
 
 
-def clone_cell(cell: nn.Cell, share_weights=False):
+def clone_cell(cell: nn.Module, share_weights=False):
     """Clone a cell in a pytorch model.
 
     Clones a cell of a model, optionally sharing all the parameters between the original and the clone. Simplifies
@@ -751,7 +752,7 @@ def clone_cell(cell: nn.Cell, share_weights=False):
     """
     clone = copy.deepcopy(cell)
 
-    def _share_weights(src: nn.Cell, dst: nn.Cell):
+    def _share_weights(src: nn.Module, dst: nn.Module):
         for name, param in src.parameters_and_names(expand=False):
             setattr(dst, name, param)
 
@@ -785,7 +786,7 @@ def replicate_layers(model: nn.Module, layer_map: list[tuple[int, int]]):
     elif hasattr(model, "h"):
         model_type = "falcon"
         layers = model.h
-    if not model_type or not isinstance(layers, nn.CellList):
+    if not model_type or not isinstance(layers, nn.ModuleList):
         raise ValueError(
             "Could not locate the layers attribute in the model. "
             "Expected Llama, Bert or Falcon compatible architectures."
@@ -800,7 +801,7 @@ def replicate_layers(model: nn.Module, layer_map: list[tuple[int, int]]):
             for subcell in new_layers[-1].cells():
                 if hasattr(subcell, "layer_idx"):
                     subcell.layer_idx = current_idx
-    layers = nn.CellList(new_layers)
+    layers = nn.ModuleList(new_layers)
     if model_type == "llama":
         model.layers = layers
     elif model_type == "bert":

@@ -56,7 +56,7 @@ class ConvNextImageProcessor(BaseImageProcessor):
         do_resize (`bool`, *optional*, defaults to `True`):
             Controls whether to resize the image's (height, width) dimensions to the specified `size`. Can be overriden
             by `do_resize` in the `preprocess` method.
-        size (`Dict[str, int]` *optional*, defaults to `{"shortest_edge": 384}`):
+        size (`Dict[str, int]` *optional*, defaults to `{"shortest_edge" -- 384}`):
             Resolution of the output image after `resize` is applied. If `size["shortest_edge"]` >= 384, the image is
             resized to `(size["shortest_edge"], size["shortest_edge"])`. Otherwise, the smaller edge of the image will
             be matched to `int(size["shortest_edge"]/crop_pct)`, after which the image is cropped to
@@ -102,22 +102,24 @@ class ConvNextImageProcessor(BaseImageProcessor):
         Initialize a ConvNextImageProcessor object.
         
         Args:
-        - self (object): The instance of the ConvNextImageProcessor class.
-        - do_resize (bool): A flag indicating whether to resize the input image. Default is True.
-        - size (Dict[str, int]): A dictionary specifying the size of the output image. Default is {'shortest_edge': 384}.
-        - crop_pct (float): The percentage of the image to be cropped. Default is 224 / 256.
-        - resample (PILImageResampling): The resampling method for image resizing. Default is PILImageResampling.BILINEAR.
-        - do_rescale (bool): A flag indicating whether to rescale the image. Default is True.
-        - rescale_factor (Union[int, float]): The factor by which to rescale the image. Default is 1 / 255.
-        - do_normalize (bool): A flag indicating whether to normalize the image. Default is True.
-        - image_mean (Optional[Union[float, List[float]]): The mean values for image normalization. Default is IMAGENET_STANDARD_MEAN.
-        - image_std (Optional[Union[float, List[float]]): The standard deviation values for image normalization. Default is IMAGENET_STANDARD_STD.
-        
+            self (object): The instance of the ConvNextImageProcessor class.
+            do_resize (bool): A flag indicating whether to resize the input image. Default is True.
+            size (Dict[str, int]): A dictionary specifying the size of the output image. Default is {'shortest_edge': 384}.
+            crop_pct (float): The percentage of the image to be cropped. Default is 224 / 256.
+            resample (PILImageResampling): The resampling method for image resizing. Default is PILImageResampling.BILINEAR.
+            do_rescale (bool): A flag indicating whether to rescale the image. Default is True.
+            rescale_factor (Union[int, float]): The factor by which to rescale the image. Default is 1 / 255.
+            do_normalize (bool): A flag indicating whether to normalize the image. Default is True.
+            image_mean (Optional[Union[float, List[float]]): The mean values for image normalization.
+                Default is IMAGENET_STANDARD_MEAN.
+            image_std (Optional[Union[float, List[float]]): The standard deviation values for image normalization.
+                Default is IMAGENET_STANDARD_STD.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None.
+
         Raises:
-        - None
+            None
         """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 384}
@@ -266,19 +268,22 @@ class ConvNextImageProcessor(BaseImageProcessor):
                 Image standard deviation.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.

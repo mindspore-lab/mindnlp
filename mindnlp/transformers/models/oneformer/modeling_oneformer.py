@@ -22,10 +22,11 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Tensor, Parameter
+from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, TruncatedNormal
 
-from mindnlp.modules.functional import finfo
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ....amp import autocast
 
 from ...activations import ACT2FN
@@ -49,7 +50,7 @@ if is_scipy_available():
 
 
 def _get_clones(module, N):
-    return nn.CellList([copy.deepcopy(module) for i in range(N)])
+    return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 
 # Copied from transformers.models.deformable_detr.modeling_deformable_detr.multi_scale_deformable_attention
@@ -77,7 +78,7 @@ def multi_scale_deformable_attention(
         B, H, *others = tmp.shape
         sampling_grid_l_ = tmp.reshape([B*H, *others])
         # batch_size*num_heads, hidden_dim, num_queries, num_points
-        sampling_value_l_ = ops.grid_sample(
+        sampling_value_l_ = F.grid_sample(
             value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
         )
         sampling_value_list.append(sampling_value_l_)
@@ -88,7 +89,7 @@ def multi_scale_deformable_attention(
         batch_size * num_heads, 1, num_queries, num_levels * num_points
     )
     output = (
-        (ops.stack(sampling_value_list, axis=-2).flatten(start_dim=-2) * attention_weights)
+        (ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2) * attention_weights)
         .sum(-1)
         .view(batch_size, num_heads * hidden_dim, num_queries)
     )
@@ -223,7 +224,7 @@ def sample_point(
         point_coordinates = point_coordinates.unsqueeze(2)
 
     # use nn.function.grid_sample to get features for points in `point_coordinates` via bilinear interpolation
-    point_features = ops.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
+    point_features = F.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
     if add_dim:
         point_features = point_features.squeeze(3)
 
@@ -231,7 +232,7 @@ def sample_point(
 
 
 # Refactored from https://github.com/SHI-Labs/OneFormer/blob/33ebb56ed34f970a30ae103e786c0cb64c653d9a/oneformer/modeling/matcher.py#L93
-class OneFormerHungarianMatcher(nn.Cell):
+class OneFormerHungarianMatcher(nn.Module):
     def __init__(
         self, cost_class: float = 1.0, cost_mask: float = 1.0, cost_dice: float = 1.0, num_points: int = 12544
     ):
@@ -260,7 +261,7 @@ class OneFormerHungarianMatcher(nn.Cell):
         self.num_points = num_points
 
     # @ops.no_grad()
-    def construct(self, masks_queries_logits, class_queries_logits, mask_labels, class_labels) -> List[Tuple[Tensor]]:
+    def forward(self, masks_queries_logits, class_queries_logits, mask_labels, class_labels) -> List[Tuple[Tensor]]:
         """Performs the matching
 
         Params:
@@ -308,13 +309,13 @@ class OneFormerHungarianMatcher(nn.Cell):
             # get ground truth labels
             target_mask = sample_point(
                 target_mask,
-                point_coords.repeat(target_mask.shape[0], 1, 1),
+                point_coords.tile((target_mask.shape[0], 1, 1)),
                 align_corners=False,
             ).squeeze(1)
 
             pred_mask = sample_point(
                 pred_mask,
-                point_coords.repeat(pred_mask.shape[0], 1, 1),
+                point_coords.tile((pred_mask.shape[0], 1, 1)),
                 align_corners=False,
             ).squeeze(1)
 
@@ -340,7 +341,7 @@ class OneFormerHungarianMatcher(nn.Cell):
         return matched_indices
 
 
-class OneFormerLoss(nn.Cell):
+class OneFormerLoss(nn.Module):
     def __init__(
         self,
         num_classes: int,
@@ -437,19 +438,18 @@ class OneFormerLoss(nn.Cell):
         image_queries = contrastive_queries_logits.float()
 
         # [batch_size, hidden_dim]
-        normalize = lambda x: x / ops.norm(x, dim=-1, keepdim=True)  # pylint: disable=unnecessary-lambda-assignment
-        image_queries = normalize(image_queries.flatten(start_dim=1))
-        text_queries = normalize(text_queries.flatten(start_dim=1))
+        image_queries = nn.functional.normalize(ops.flatten(image_queries, 1), dim=-1)
+        text_queries = nn.functional.normalize(ops.flatten(text_queries, 1), dim=-1)
 
         logit_scale = ops.clamp(self.logit_scale.exp(), max=100)
 
         logits_per_text = ops.matmul(text_queries, image_queries.t()) * logit_scale
         logits_per_img = logits_per_text.t()
 
-        loss_img = ops.cross_entropy(
+        loss_img = F.cross_entropy(
             logits_per_img, ops.arange(len(logits_per_img))
         )
-        loss_text = ops.cross_entropy(
+        loss_text = F.cross_entropy(
             logits_per_text, ops.arange(len(logits_per_text))
         )
 
@@ -619,23 +619,23 @@ class OneFormerLoss(nn.Cell):
         if num_random_points > 0:
             point_coordinates = ops.cat(
                 [point_coordinates, ops.rand(num_boxes, num_random_points, 2)],
-                axis=1,
+                dim=1,
             )
         return point_coordinates
 
     def _get_predictions_permutation_indices(self, indices):
         # permute predictions following indices
-        batch_indices = ops.cat([ops.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(src, i, dtype=mindspore.int64) for i, (src, _) in enumerate(indices)])
         predictions_indices = ops.cat([src for (src, _) in indices])
         return batch_indices, predictions_indices
 
     def _get_targets_permutation_indices(self, indices):
         # permute labels following indices
-        batch_indices = ops.cat([ops.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(tgt, i, dtype=mindspore.int64) for i, (_, tgt) in enumerate(indices)])
         target_indices = ops.cat([tgt for (_, tgt) in indices])
         return batch_indices, target_indices
 
-    def construct(
+    def forward(
         self,
         masks_queries_logits: Tensor,
         class_queries_logits: Tensor,
@@ -696,7 +696,7 @@ class OneFormerLoss(nn.Cell):
             for idx, aux_outputs in enumerate(auxiliary_predictions):
                 masks_queries_logits = aux_outputs["masks_queries_logits"]
                 class_queries_logits = aux_outputs["class_queries_logits"]
-                loss_dict = self.construct(
+                loss_dict = self.forward(
                     masks_queries_logits,
                     class_queries_logits,
                     None,
@@ -915,7 +915,7 @@ class OneFormerForUniversalSegmentationOutput(ModelOutput):
 
 
 # Modified from transformers.models.deformable_detr.modeling_deformable_detr.DeformableDetrFrozenBatchNorm2d with DeformableDetr->OneFormerPixelDecoder
-class OneFormerPixelDecoderFrozenBatchNorm2d(nn.Cell):
+class OneFormerPixelDecoderFrozenBatchNorm2d(nn.Module):
     """
     BatchNorm2d where the batch statistics and the affine parameters are fixed.
 
@@ -941,7 +941,7 @@ class OneFormerPixelDecoderFrozenBatchNorm2d(nn.Cell):
             state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
         )
 
-    def construct(self, x):
+    def forward(self, x):
         weight = self.weight.reshape(1, -1, 1, 1)
         bias = self.bias.reshape(1, -1, 1, 1)
         running_var = self.running_var.reshape(1, -1, 1, 1)
@@ -953,7 +953,7 @@ class OneFormerPixelDecoderFrozenBatchNorm2d(nn.Cell):
 
 
 # Modified from transformers.models.detr.modeling_deformable_detr.DeformableDetrMultiscaleDeformableAttention with DeformableDetr->OneFormerPixelDecoderEncoder
-class OneFormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Cell):
+class OneFormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Module):
     """
     Multiscale deformable attention as proposed in Deformable DETR.
     """
@@ -980,15 +980,15 @@ class OneFormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Cell):
         self.n_heads = num_heads
         self.n_points = n_points
 
-        self.sampling_offsets = nn.Dense(embed_dim, num_heads * n_levels * n_points * 2)
-        self.attention_weights = nn.Dense(embed_dim, num_heads * n_levels * n_points)
-        self.value_proj = nn.Dense(embed_dim, embed_dim)
-        self.output_proj = nn.Dense(embed_dim, embed_dim)
+        self.sampling_offsets = nn.Linear(embed_dim, num_heads * n_levels * n_points * 2)
+        self.attention_weights = nn.Linear(embed_dim, num_heads * n_levels * n_points)
+        self.value_proj = nn.Linear(embed_dim, embed_dim)
+        self.output_proj = nn.Linear(embed_dim, embed_dim)
 
     def with_pos_embed(self, tensor: mindspore.Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1046,7 +1046,7 @@ class OneFormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Cell):
         return output, attention_weights
 
 
-class OneFormerPixelDecoderEncoderLayer(nn.Cell):
+class OneFormerPixelDecoderEncoderLayer(nn.Module):
     def __init__(self, config: OneFormerConfig):
         super().__init__()
         self.embed_dim = config.conv_dim
@@ -1057,17 +1057,17 @@ class OneFormerPixelDecoderEncoderLayer(nn.Cell):
             n_points=4,
         )
 
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.dropout = config.dropout
-        self.activation_fn = ops.relu
+        self.activation_fn = F.relu
         self.activation_dropout = config.dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_feedforward_dim)
-        self.fc2 = nn.Dense(config.encoder_feedforward_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_feedforward_dim)
+        self.fc2 = nn.Linear(config.encoder_feedforward_dim, self.embed_dim)
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
         self.is_training = config.is_training
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -1110,23 +1110,23 @@ class OneFormerPixelDecoderEncoderLayer(nn.Cell):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.is_training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.is_training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.is_training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.is_training)
 
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.is_training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.is_training)
 
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if self.is_training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -1138,7 +1138,7 @@ class OneFormerPixelDecoderEncoderLayer(nn.Cell):
 
 
 # Modified from from transformers.models.detr.modeling_deformable_detr.DeformableDetrEncoder with DeformableDetrEncoder->OneFormerPixelDecoderEncoderOnly
-class OneFormerPixelDecoderEncoderOnly(nn.Cell):
+class OneFormerPixelDecoderEncoderOnly(nn.Module):
     """
     Transformer encoder consisting of *config.encoder_layers* deformable attention layers. Each layer is a
     [`OneFormerPixelDecoderEncoderLayer`].
@@ -1154,7 +1154,7 @@ class OneFormerPixelDecoderEncoderOnly(nn.Cell):
 
         self.config = config
         self.dropout = config.dropout
-        self.layers = nn.CellList([OneFormerPixelDecoderEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([OneFormerPixelDecoderEncoderLayer(config) for _ in range(config.encoder_layers)])
 
     @staticmethod
     def get_reference_points(spatial_shapes, valid_ratios):
@@ -1171,6 +1171,7 @@ class OneFormerPixelDecoderEncoderOnly(nn.Cell):
         """
         reference_points_list = []
         for lvl, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             ref_y, ref_x = ops.meshgrid(
                 ops.linspace(0.5, height - 0.5, height),
                 ops.linspace(0.5, width - 0.5, width),
@@ -1184,7 +1185,7 @@ class OneFormerPixelDecoderEncoderOnly(nn.Cell):
         reference_points = reference_points[:, :, None] * valid_ratios[:, None]
         return reference_points
 
-    def construct(
+    def forward(
         self,
         inputs_embeds=None,
         attention_mask=None,
@@ -1260,7 +1261,7 @@ class OneFormerPixelDecoderEncoderOnly(nn.Cell):
 
 
 # Modified from from transformers.models.mask2former.modeling_mask2former.Mask2FormerPixelDecoder with Mask2->One
-class OneFormerPixelDecoder(nn.Cell):
+class OneFormerPixelDecoder(nn.Module):
     def __init__(self, config: OneFormerConfig, feature_channels):
         super().__init__()
 
@@ -1279,17 +1280,17 @@ class OneFormerPixelDecoder(nn.Cell):
             input_projections_list = []
             for in_channels in transformer_in_channels[::-1]:
                 input_projections_list.append(
-                    nn.SequentialCell(
-                        nn.Conv2d(in_channels, config.conv_dim, kernel_size=1, has_bias=True),
+                    nn.Sequential(
+                        nn.Conv2d(in_channels, config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
                 )
-            self.input_projections = nn.CellList(input_projections_list)
+            self.input_projections = nn.ModuleList(input_projections_list)
         else:
-            self.input_projections = nn.CellList(
+            self.input_projections = nn.ModuleList(
                 [
-                    nn.SequentialCell(
-                        nn.Conv2d(transformer_in_channels[-1], config.conv_dim, kernel_size=1, has_bias=True),
+                    nn.Sequential(
+                        nn.Conv2d(transformer_in_channels[-1], config.conv_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, config.conv_dim),
                     )
                 ]
@@ -1303,7 +1304,7 @@ class OneFormerPixelDecoder(nn.Cell):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=True,
+            bias=True,
         )
 
         self.common_stride = config.common_stride
@@ -1316,30 +1317,29 @@ class OneFormerPixelDecoder(nn.Cell):
         output_convs = []
 
         for idx, in_channels in enumerate(self.feature_channels[: self.num_fpn_levels]):
-            lateral_conv = nn.SequentialCell(
+            lateral_conv = nn.Sequential(
                 nn.Conv2d(
                     in_channels,
                     config.conv_dim,
                     kernel_size=1,
-                    has_bias=False,
+                    bias=False,
                 ),
                 nn.GroupNorm(32, config.conv_dim),
             )
-            output_conv = nn.SequentialCell(
+            output_conv = nn.Sequential(
                 nn.Conv2d(
                     config.conv_dim,
                     config.conv_dim,
                     kernel_size=3,
                     stride=1,
-                    pad_mode='pad',
                     padding=1,
-                    has_bias=False,
+                    bias=False,
                 ),
                 nn.GroupNorm(32, config.conv_dim),
                 nn.ReLU(),
             )
-            self.insert_child_to_cell("adapter_{}".format(idx + 1), lateral_conv)
-            self.insert_child_to_cell("layer_{}".format(idx + 1), output_conv)
+            self.add_module("adapter_{}".format(idx + 1), lateral_conv)
+            self.add_module("layer_{}".format(idx + 1), output_conv)
 
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
@@ -1359,7 +1359,7 @@ class OneFormerPixelDecoder(nn.Cell):
         valid_ratio = ops.stack([valid_ratio_width, valid_ratio_heigth], -1)
         return valid_ratio
 
-    def construct(
+    def forward(
         self,
         features,
         encoder_outputs=None,
@@ -1391,7 +1391,7 @@ class OneFormerPixelDecoder(nn.Cell):
             spatial_shape = (height, width)
             spatial_shapes.append(spatial_shape)
             source = source.flatten(start_dim=2).swapaxes(1, 2)
-            mask = mask.flatten(start_dim=1)
+            mask = ops.flatten(mask, start_dim=1)
             pos_embed = pos_embed.flatten(start_dim=2).swapaxes(1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
@@ -1401,7 +1401,7 @@ class OneFormerPixelDecoder(nn.Cell):
         mask_flatten = ops.cat(mask_flatten, 1)
         lvl_pos_embed_flatten = ops.cat(lvl_pos_embed_flatten, 1)
         spatial_shapes = Tensor(spatial_shapes, dtype=mindspore.int64)
-        level_start_index = ops.cat((spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1]))
+        level_start_index = ops.cat((spatial_shapes.new_zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).int().cumsum(0)[:-1]))
         valid_ratios = ops.stack([self.get_valid_ratio(m, dtype=source_flatten.dtype) for m in masks], 1)
 
         # Fourth, sent source_flatten + mask_flatten + lvl_pos_embed_flatten (backbone + proj layer output) through encoder
@@ -1428,7 +1428,7 @@ class OneFormerPixelDecoder(nn.Cell):
                 split_size_or_sections[i] = level_start_index[i + 1] - level_start_index[i]
             else:
                 split_size_or_sections[i] = y.shape[1] - level_start_index[i]
-        y = ops.split(y, [x.item() for x in split_size_or_sections], axis=1)
+        y = ops.split(y, [x.item() for x in split_size_or_sections], dim=1)
 
         out = []
         multi_scale_features = []
@@ -1443,7 +1443,7 @@ class OneFormerPixelDecoder(nn.Cell):
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(feats)
             # Following FPN implementation, we use nearest upsampling here
-            y = cur_fpn + ops.interpolate(
+            y = cur_fpn + F.interpolate(
                 out[-1], size=cur_fpn.shape[-2:], mode="bilinear", align_corners=False
             )
             y = output_conv(y)
@@ -1462,7 +1462,7 @@ class OneFormerPixelDecoder(nn.Cell):
 
 
 # Modified from from transformers.models.mask2former.modeling_mask2former.Mask2FormerPixelLevelModule with Mask2->One
-class OneFormerPixelLevelModule(nn.Cell):
+class OneFormerPixelLevelModule(nn.Module):
     def __init__(self, config: OneFormerConfig):
         """
         Pixel Level Module proposed in [Masked-attention Mask Transformer for Universal Image
@@ -1477,7 +1477,7 @@ class OneFormerPixelLevelModule(nn.Cell):
         self.encoder = load_backbone(config)
         self.decoder = OneFormerPixelDecoder(config, feature_channels=self.encoder.channels)
 
-    def construct(self, pixel_values: Tensor, output_hidden_states: bool = False) -> OneFormerPixelLevelModuleOutput:
+    def forward(self, pixel_values: Tensor, output_hidden_states: bool = False) -> OneFormerPixelLevelModuleOutput:
         features: List[Tensor] = self.encoder(pixel_values).feature_maps
         decoder_output: OneFormerPixelDecoderOutput = self.decoder(features, output_hidden_states=output_hidden_states)
         return OneFormerPixelLevelModuleOutput(
@@ -1488,7 +1488,7 @@ class OneFormerPixelLevelModule(nn.Cell):
 
 
 # Modified from transformers.models.detr.modeling_detr.DetrAttention with Detr->OneFormer
-class OneFormerAttention(nn.Cell):
+class OneFormerAttention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Here, we add position embeddings to the queries and
     keys (as explained in the DETR paper).
@@ -1514,10 +1514,10 @@ class OneFormerAttention(nn.Cell):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1525,7 +1525,7 @@ class OneFormerAttention(nn.Cell):
     def with_pos_embed(self, tensor: mindspore.Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1593,7 +1593,7 @@ class OneFormerAttention(nn.Cell):
                 )
             attn_weights += attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -1605,7 +1605,7 @@ class OneFormerAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1624,14 +1624,14 @@ class OneFormerAttention(nn.Cell):
         return attn_output, attn_weights_reshaped
 
 
-class OneFormerTransformerDecoderSelfAttentionLayer(nn.Cell):
+class OneFormerTransformerDecoderSelfAttentionLayer(nn.Module):
     def __init__(
         self, embed_dim, num_heads, dropout=0.0, activation="relu", normalize_before=False, layer_norm_eps=1e-05
     ):
         super().__init__()
         self.self_attn = OneFormerAttention(embed_dim=embed_dim, num_heads=num_heads, dropout=dropout, is_decoder=True)
 
-        self.norm = nn.LayerNorm(embed_dim, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
         self.activation = ACT2FN[activation]
@@ -1670,7 +1670,7 @@ class OneFormerTransformerDecoderSelfAttentionLayer(nn.Cell):
 
         return output, attention_weights
 
-    def construct(
+    def forward(
         self,
         output,
         output_mask: Optional[Tensor] = None,
@@ -1682,14 +1682,14 @@ class OneFormerTransformerDecoderSelfAttentionLayer(nn.Cell):
         return self.forward_post(output, output_mask, output_key_padding_mask, query_pos)
 
 
-class OneFormerTransformerDecoderCrossAttentionLayer(nn.Cell):
+class OneFormerTransformerDecoderCrossAttentionLayer(nn.Module):
     def __init__(
         self, embed_dim, num_heads, dropout=0.0, activation="relu", normalize_before=False, layer_norm_eps=1e-05
     ):
         super().__init__()
         self.multihead_attn = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout)
 
-        self.norm = nn.LayerNorm(embed_dim, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
         self.activation = ACT2FN[activation]
@@ -1740,7 +1740,7 @@ class OneFormerTransformerDecoderCrossAttentionLayer(nn.Cell):
 
         return output, attention_weights
 
-    def construct(
+    def forward(
         self,
         output,
         memory,
@@ -1754,7 +1754,7 @@ class OneFormerTransformerDecoderCrossAttentionLayer(nn.Cell):
         return self.forward_post(output, memory, memory_mask, memory_key_padding_mask, pos, query_pos)
 
 
-class OneFormerTransformerDecoderFFNLayer(nn.Cell):
+class OneFormerTransformerDecoderFFNLayer(nn.Module):
     def __init__(
         self,
         d_model,
@@ -1766,11 +1766,11 @@ class OneFormerTransformerDecoderFFNLayer(nn.Cell):
     ):
         super().__init__()
         # Implementation of Feedforward model
-        self.linear1 = nn.Dense(d_model, dim_feedforward)
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(p=dropout)
-        self.linear2 = nn.Dense(dim_feedforward, d_model)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        self.norm = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm = nn.LayerNorm(d_model, eps=layer_norm_eps)
 
         self.activation = ACT2FN[activation]
         self.normalize_before = normalize_before
@@ -1790,13 +1790,13 @@ class OneFormerTransformerDecoderFFNLayer(nn.Cell):
         output = output + self.dropout(output2)
         return output
 
-    def construct(self, output):
+    def forward(self, output):
         if self.normalize_before:
             return self.forward_pre(output)
         return self.forward_post(output)
 
 
-class OneFormerMLPPredictionHead(nn.Cell):
+class OneFormerMLPPredictionHead(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, num_layers: int = 3):
         """
         A classic Multi Layer Perceptron (MLP).
@@ -1821,14 +1821,14 @@ class OneFormerMLPPredictionHead(nn.Cell):
                 PredictionBlock(in_dim, out_dim, activation=nn.ReLU() if i < num_layers - 1 else nn.Identity())
             )
 
-        self.layers = nn.SequentialCell(*layers)
+        self.layers = nn.Sequential(*layers)
 
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         return self.layers(input)
 
 
 # refactored from original implementation
-class OneFormerTransformerDecoderLayer(nn.Cell):
+class OneFormerTransformerDecoderLayer(nn.Module):
     def __init__(self, config: OneFormerConfig):
         super().__init__()
         self.embed_dim = config.hidden_dim
@@ -1858,7 +1858,7 @@ class OneFormerTransformerDecoderLayer(nn.Cell):
             layer_norm_eps=config.layer_norm_eps,
         )
 
-    def construct(
+    def forward(
         self,
         index: int,
         output: mindspore.Tensor,
@@ -1915,7 +1915,7 @@ class OneFormerTransformerDecoderLayer(nn.Cell):
         return outputs
 
 
-class OneFormerTransformerDecoderQueryTransformerDecoder(nn.Cell):
+class OneFormerTransformerDecoderQueryTransformerDecoder(nn.Module):
     def __init__(self, decoder_layer, num_layers, norm=None, return_intermediate=False):
         super().__init__()
         self.layers = _get_clones(decoder_layer, num_layers)
@@ -1923,7 +1923,7 @@ class OneFormerTransformerDecoderQueryTransformerDecoder(nn.Cell):
         self.norm = norm
         self.return_intermediate = return_intermediate
 
-    def construct(
+    def forward(
         self,
         output,
         memory,
@@ -1962,7 +1962,7 @@ class OneFormerTransformerDecoderQueryTransformerDecoder(nn.Cell):
         return output.unsqueeze(0)
 
 
-class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Cell):
+class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Module):
     def __init__(
         self,
         d_model,
@@ -1977,13 +1977,13 @@ class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Cell):
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
-        self.linear1 = nn.Dense(d_model, dim_feedforward)
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(p=dropout)
-        self.linear2 = nn.Dense(dim_feedforward, d_model)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        self.norm1 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm2 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm3 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout1 = nn.Dropout(p=dropout)
         self.dropout2 = nn.Dropout(p=dropout)
         self.dropout3 = nn.Dropout(p=dropout)
@@ -2056,7 +2056,7 @@ class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Cell):
         output = output + self.dropout3(output2)
         return output
 
-    def construct(
+    def forward(
         self,
         output,
         memory,
@@ -2090,7 +2090,7 @@ class OneFormerTransformerDecoderQueryTransformerDecoderLayer(nn.Cell):
         )
 
 
-class OneFormerTransformerDecoderQueryTransformer(nn.Cell):
+class OneFormerTransformerDecoderQueryTransformer(nn.Module):
     def __init__(
         self,
         d_model=512,
@@ -2108,7 +2108,7 @@ class OneFormerTransformerDecoderQueryTransformer(nn.Cell):
         decoder_layer = OneFormerTransformerDecoderQueryTransformerDecoderLayer(
             d_model, nhead, dim_feedforward, dropout, activation, normalize_before, layer_norm_eps
         )
-        decoder_norm = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        decoder_norm = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.decoder = OneFormerTransformerDecoderQueryTransformerDecoder(
             decoder_layer,
             num_decoder_layers,
@@ -2119,24 +2119,24 @@ class OneFormerTransformerDecoderQueryTransformer(nn.Cell):
         self.d_model = d_model
         self.nhead = nhead
 
-    def construct(self, src, mask, query_embed, pos_embed, task_token=None):
+    def forward(self, src, mask, query_embed, pos_embed, task_token=None):
         batch_size = src.shape[0]
         src = src.flatten(start_dim=2).permute(2, 0, 1)
         pos_embed = pos_embed.flatten(start_dim=2).permute(2, 0, 1)
-        query_embed = query_embed.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embed = query_embed.unsqueeze(1).tile((1, batch_size, 1))
         if mask is not None:
             mask = mask.flatten(start_dim=1)
 
         if task_token is None:
             queries = ops.zeros_like(query_embed)
         else:
-            queries = task_token.repeat(query_embed.shape[0], 1, 1)
+            queries = task_token.tile((query_embed.shape[0], 1, 1))
 
         queries = self.decoder(queries, src, memory_key_padding_mask=mask, pos=pos_embed, query_pos=query_embed)
         return queries.swapaxes(1, 2)
 
 
-class OneFormerTransformerDecoder(nn.Cell):
+class OneFormerTransformerDecoder(nn.Module):
     """
     Transformer decoder
     """
@@ -2162,17 +2162,17 @@ class OneFormerTransformerDecoder(nn.Cell):
             layer_norm_eps=config.layer_norm_eps,
         )
 
-        self.decoder_norm = nn.LayerNorm(config.hidden_dim, epsilon=config.layer_norm_eps)
+        self.decoder_norm = nn.LayerNorm(config.hidden_dim, eps=config.layer_norm_eps)
 
         self.num_feature_levels = 3
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [OneFormerTransformerDecoderLayer(config) for _ in range(config.decoder_layers - 1)]
         )
 
-        self.query_input_projection = nn.Conv2d(in_channels, config.hidden_dim, kernel_size=1, has_bias=True)
+        self.query_input_projection = nn.Conv2d(in_channels, config.hidden_dim, kernel_size=1, bias=True)
 
-        self.class_embed = nn.Dense(config.hidden_dim, config.num_labels + 1)
+        self.class_embed = nn.Linear(config.hidden_dim, config.num_labels + 1)
         self.mask_embed = OneFormerMLPPredictionHead(
             config.hidden_dim,
             config.hidden_dim,
@@ -2180,7 +2180,7 @@ class OneFormerTransformerDecoder(nn.Cell):
             3,
         )
 
-    def construct(
+    def forward(
         self,
         task_token=None,
         multi_stage_features=None,
@@ -2205,7 +2205,7 @@ class OneFormerTransformerDecoder(nn.Cell):
 
         object_queries = object_queries[0].permute(1, 0, 2)
 
-        queries = ops.cat([object_queries, task_token], axis=0)
+        queries = ops.cat([object_queries, task_token], dim=0)
 
         output = Tensor.copy(queries)
 
@@ -2271,7 +2271,7 @@ class OneFormerTransformerDecoder(nn.Cell):
         mask_embed = self.mask_embed(decoder_output)
         outputs_mask = ops.einsum("bqc,bchw->bqhw", mask_embed, mask_features)
 
-        attention_mask = ops.interpolate(
+        attention_mask = F.interpolate(
             outputs_mask, size=attention_mask_target_size, mode="bilinear", align_corners=False
         )
 
@@ -2282,7 +2282,7 @@ class OneFormerTransformerDecoder(nn.Cell):
             return x.reshape([B * C, *others])
 
         attention_mask = (
-            flatten_01(attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).repeat(1, self.num_heads, 1, 1)) < 0.5
+            flatten_01(attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).tile((1, self.num_heads, 1, 1))) < 0.5
         ).bool()
 
         return outputs_class, outputs_mask, attention_mask
@@ -2299,7 +2299,7 @@ class OneFormerTransformerDecoder(nn.Cell):
         return tuple(aux_list)
 
 
-class OneFormerTransformerModule(nn.Cell):
+class OneFormerTransformerModule(nn.Module):
     """
     The OneFormer's transformer module.
     """
@@ -2314,14 +2314,14 @@ class OneFormerTransformerModule(nn.Cell):
 
         for _ in range(self.num_feature_levels):
             if in_features != hidden_dim or config.enforce_input_proj:
-                self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1, has_bias=True))
+                self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1, bias=True))
             else:
-                self.input_projections.append(nn.SequentialCell())
+                self.input_projections.append(nn.Sequential())
 
         self.decoder = OneFormerTransformerDecoder(in_channels=in_features, config=config)
         self.level_embed = nn.Embedding(self.num_feature_levels, hidden_dim)
 
-    def construct(
+    def forward(
         self,
         multi_scale_features: List[Tensor],
         mask_features: Tensor,
@@ -2352,7 +2352,7 @@ class OneFormerTransformerModule(nn.Cell):
         _, batch_size, _ = multi_stage_features[0].shape
 
         # QxNxC
-        query_embeddings = self.queries_embedder.weight.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embeddings = self.queries_embedder.weight.unsqueeze(1).tile((1, batch_size, 1))
         task_token = task_token.unsqueeze(0)
 
         query_features = self.position_embedder(mask_features, None)
@@ -2371,7 +2371,7 @@ class OneFormerTransformerModule(nn.Cell):
 
 
 # Copied from transformers.models.maskformer.modeling_maskformer.MaskFormerSinePositionEmbedding with Mask->One
-class OneFormerSinePositionEmbedding(nn.Cell):
+class OneFormerSinePositionEmbedding(nn.Module):
     """
     This is a more standard version of the position embedding, very similar to the one used by the Attention is all you
     need paper, generalized to work on images.
@@ -2388,7 +2388,7 @@ class OneFormerSinePositionEmbedding(nn.Cell):
         self.normalize = normalize
         self.scale = 2 * math.pi if scale is None else scale
 
-    def construct(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
         if mask is None:
             mask = ops.zeros((x.shape[0], x.shape[2], x.shape[3]), dtype=mindspore.bool_)
         not_mask = (~mask).to(x.dtype)
@@ -2404,29 +2404,29 @@ class OneFormerSinePositionEmbedding(nn.Cell):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
 
 # Copied from transformers.models.maskformer.modeling_maskformer.PredictionBlock
-class PredictionBlock(nn.Cell):
-    def __init__(self, in_dim: int, out_dim: int, activation: nn.Cell) -> None:
+class PredictionBlock(nn.Module):
+    def __init__(self, in_dim: int, out_dim: int, activation: nn.Module) -> None:
         super().__init__()
-        self.layers = [nn.Dense(in_dim, out_dim), activation]
+        self.layers = [nn.Linear(in_dim, out_dim), activation]
         # Maintain submodule indexing as if part of a Sequential block
         for i, layer in enumerate(self.layers):
-            self.insert_child_to_cell(str(i), layer)
+            self.add_module(str(i), layer)
 
-    def construct(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         hidden_state = input
         for layer in self.layers:
             hidden_state = layer(hidden_state)
         return hidden_state
 
 
-class OneFormerTextMapperAttention(nn.Cell):
+class OneFormerTextMapperAttention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0.0, proj_drop=0.0):
         super().__init__()
         self.num_heads = num_heads
@@ -2434,15 +2434,15 @@ class OneFormerTextMapperAttention(nn.Cell):
         # NOTE scale factor was wrong in my original version, can set manually to be compat with prev weights
         self.scale = qk_scale or head_dim**-0.5
 
-        self.q_proj = nn.Dense(dim, dim, has_bias=qkv_bias)
-        self.k_proj = nn.Dense(dim, dim, has_bias=qkv_bias)
-        self.v_proj = nn.Dense(dim, dim, has_bias=qkv_bias)
+        self.q_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.k_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.v_proj = nn.Linear(dim, dim, bias=qkv_bias)
 
         self.attn_drop = nn.Dropout(p=attn_drop)
-        self.proj = nn.Dense(dim, dim)
+        self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(p=proj_drop)
 
-    def construct(self, q, k, v):
+    def forward(self, q, k, v):
         batch_size, q_sequence_length, num_channels = q.shape
         if not k.shape == v.shape:
             raise ValueError(f"keys ({list(k.shape)}) and values ({list(v.shape)}) have different shapes!")
@@ -2453,7 +2453,7 @@ class OneFormerTextMapperAttention(nn.Cell):
 
         attn = ops.einsum("bnkc,bmkc->bknm", q, k) * self.scale
 
-        attn = ops.softmax(attn, axis=-1)
+        attn = ops.softmax(attn, dim=-1)
 
         output = ops.einsum("bknm,bmkc->bnkc", attn, v).reshape(batch_size, q_sequence_length, num_channels)
 
@@ -2462,7 +2462,7 @@ class OneFormerTextMapperAttention(nn.Cell):
         return output
 
 
-class OneFormerTextTransformerDecoderLayer(nn.Cell):
+class OneFormerTextTransformerDecoderLayer(nn.Module):
     def __init__(
         self,
         d_model,
@@ -2474,16 +2474,16 @@ class OneFormerTextTransformerDecoderLayer(nn.Cell):
         self.self_attn = OneFormerTextMapperAttention(d_model, nhead, proj_drop=dropout)
         self.cross_attn = OneFormerTextMapperAttention(d_model, nhead, proj_drop=dropout)
 
-        self.norm1 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm2 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
-        self.norm3 = nn.LayerNorm(d_model, epsilon=layer_norm_eps)
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout = nn.Dropout(p=dropout)
 
-        self.mlp = nn.SequentialCell(
-            nn.Dense(d_model, d_model * 4), nn.GELU(), nn.Dropout(p=dropout), nn.Dense(d_model * 4, d_model)
+        self.mlp = nn.Sequential(
+            nn.Linear(d_model, d_model * 4), nn.GELU(), nn.Dropout(p=dropout), nn.Linear(d_model * 4, d_model)
         )
 
-    def construct(self, hidden_state, mem):
+    def forward(self, hidden_state, mem):
         q = k = v = self.norm1(hidden_state)
         hidden_state = hidden_state + self.self_attn(q, k, v)
         q = self.norm2(hidden_state)
@@ -2492,7 +2492,7 @@ class OneFormerTextTransformerDecoderLayer(nn.Cell):
         return hidden_state
 
 
-class OneFormerTextContextDecoder(nn.Cell):
+class OneFormerTextContextDecoder(nn.Module):
     def __init__(
         self,
         transformer_width=256,
@@ -2505,29 +2505,29 @@ class OneFormerTextContextDecoder(nn.Cell):
     ):
         super().__init__()
 
-        self.memory_proj = nn.SequentialCell(
-            nn.LayerNorm(visual_dim, epsilon=layer_norm_eps),
-            nn.Dense(visual_dim, transformer_width),
-            nn.LayerNorm(transformer_width, epsilon=layer_norm_eps),
+        self.memory_proj = nn.Sequential(
+            nn.LayerNorm(visual_dim, eps=layer_norm_eps),
+            nn.Linear(visual_dim, transformer_width),
+            nn.LayerNorm(transformer_width, eps=layer_norm_eps),
         )
 
-        self.text_proj = nn.SequentialCell(
-            nn.LayerNorm(visual_dim, epsilon=layer_norm_eps),
-            nn.Dense(visual_dim, transformer_width),
+        self.text_proj = nn.Sequential(
+            nn.LayerNorm(visual_dim, eps=layer_norm_eps),
+            nn.Linear(visual_dim, transformer_width),
         )
 
-        self.decoder = nn.CellList(
+        self.decoder = nn.ModuleList(
             [
                 OneFormerTextTransformerDecoderLayer(transformer_width, transformer_heads, dropout, layer_norm_eps)
                 for _ in range(transformer_layers)
             ]
         )
 
-        self.out_proj = nn.SequentialCell(
-            nn.LayerNorm(transformer_width, epsilon=layer_norm_eps), nn.Dense(transformer_width, visual_dim)
+        self.out_proj = nn.Sequential(
+            nn.LayerNorm(transformer_width, eps=layer_norm_eps), nn.Linear(transformer_width, visual_dim)
         )
 
-    def construct(self, text, visual):
+    def forward(self, text, visual):
         visual = self.memory_proj(visual)
         hidden_state = self.text_proj(text)
 
@@ -2537,7 +2537,7 @@ class OneFormerTextContextDecoder(nn.Cell):
         return self.out_proj(hidden_state)
 
 
-class OneFormerTextMLP(nn.Cell):
+class OneFormerTextMLP(nn.Module):
     def __init__(
         self,
         hidden_size: Optional[int] = None,
@@ -2546,26 +2546,26 @@ class OneFormerTextMLP(nn.Cell):
     ):
         super().__init__()
         self.activation_fn = ACT2FN["quick_gelu"]
-        self.fc1 = nn.Dense(hidden_size, intermediate_size)
-        self.fc2 = nn.Dense(intermediate_size, output_size)
+        self.fc1 = nn.Linear(hidden_size, intermediate_size)
+        self.fc2 = nn.Linear(intermediate_size, output_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
         return hidden_states
 
 
-class OneFormerTextTransformerLayer(nn.Cell):
+class OneFormerTextTransformerLayer(nn.Module):
     def __init__(self, width: int, heads: int, attn_mask: mindspore.Tensor, layer_norm_eps=1e-05):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(width, heads)
-        self.layer_norm1 = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(width, eps=layer_norm_eps)
         self.mlp = OneFormerTextMLP(width, width * 4, width)
-        self.layer_norm2 = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(width, eps=layer_norm_eps)
         self.attn_mask = attn_mask
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_padding_mask: Optional[mindspore.Tensor] = None,
@@ -2590,7 +2590,7 @@ class OneFormerTextTransformerLayer(nn.Cell):
         return hidden_states
 
 
-class OneFormerTextTransformer(nn.Cell):
+class OneFormerTextTransformer(nn.Module):
     def __init__(
         self,
         width: int,
@@ -2603,12 +2603,12 @@ class OneFormerTextTransformer(nn.Cell):
         super().__init__()
         self.width = width
         self.num_layers = layers
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[OneFormerTextTransformerLayer(width, heads, attn_mask, layer_norm_eps) for _ in range(layers)]
         )
         self.use_checkpoint = use_checkpoint
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         for layer in self.layers:
             if self.use_checkpoint:
                 hidden_states = self._gradient_checkpointing_func(layer, hidden_states)
@@ -2617,7 +2617,7 @@ class OneFormerTextTransformer(nn.Cell):
         return hidden_states
 
 
-class OneFormerTextEncoder(nn.Cell):
+class OneFormerTextEncoder(nn.Module):
     def __init__(
         self,
         context_length: int,
@@ -2641,17 +2641,17 @@ class OneFormerTextEncoder(nn.Cell):
         )
 
         self.positional_embedding = Parameter(ops.zeros(self.context_length, width))
-        self.ln_final = nn.LayerNorm(width, epsilon=layer_norm_eps)
+        self.ln_final = nn.LayerNorm(width, eps=layer_norm_eps)
         self.token_embedding = nn.Embedding(vocab_size, width)
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
         # pytorch uses additive attention mask; fill with -inf
-        mask = ops.fill(mindspore.float32, (self.context_length, self.context_length), value=float("-inf"))
-        ops.triu(mask, 1)  # zero out the lower diagonal
+        mask = ops.full((self.context_length, self.context_length), float("-inf"), dtype=mindspore.float32)
+        mask = ops.triu(mask, 1)  # zero out the lower diagonal
         return mask
 
-    def construct(self, text):
+    def forward(self, text):
         hidden_state = self.token_embedding(text)
         hidden_state = hidden_state + self.positional_embedding
         hidden_state = hidden_state.permute(1, 0, 2)
@@ -2663,7 +2663,7 @@ class OneFormerTextEncoder(nn.Cell):
         return hidden_state
 
 
-class OneFormerTextMapper(nn.Cell):
+class OneFormerTextMapper(nn.Module):
     def __init__(self, config: OneFormerConfig):
         super().__init__()
         self.text_encoder = OneFormerTextEncoder(
@@ -2688,7 +2688,7 @@ class OneFormerTextMapper(nn.Cell):
         else:
             self.prompt_ctx = None
 
-    def construct(
+    def forward(
         self,
         inputs: Tensor,
     ) -> Tensor:
@@ -2718,13 +2718,13 @@ class OneFormerTextMapper(nn.Cell):
             _, hidden_dim = text_queries.shape
             text_queries = text_queries.reshape(batch_size, num_text, hidden_dim)
             if self.prompt_ctx is not None:
-                text_queries_ctx = self.prompt_ctx.weight.unsqueeze(0).repeat(text_queries.shape[0], 1, 1)
-                text_queries = ops.cat([text_queries, text_queries_ctx], axis=1)
+                text_queries_ctx = self.prompt_ctx.weight.unsqueeze(0).tile((text_queries.shape[0], 1, 1))
+                text_queries = ops.cat([text_queries, text_queries_ctx], dim=1)
 
         return text_queries
 
 
-class OneFormerTaskModel(nn.Cell):
+class OneFormerTaskModel(nn.Module):
     def __init__(self, config: OneFormerConfig):
         super().__init__()
         self.task_mlp = OneFormerMLPPredictionHead(
@@ -2734,7 +2734,7 @@ class OneFormerTaskModel(nn.Cell):
             2,
         )
 
-    def construct(self, inputs: Tensor) -> Tensor:
+    def forward(self, inputs: Tensor) -> Tensor:
         task_tokens = self.task_mlp(inputs)
         return task_tokens
 
@@ -2744,13 +2744,13 @@ class OneFormerPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     main_input_name = "pixel_values"
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         xavier_std = self.config.init_xavier_std
         std = self.config.init_std
         if isinstance(cell, OneFormerTransformerModule):
             if cell.input_projections is not None:
                 for input_projection in cell.input_projections:
-                    if not isinstance(input_projection, nn.SequentialCell):
+                    if not isinstance(input_projection, nn.Sequential):
                         input_projection.weight.set_data(initializer(XavierUniform(xavier_std), input_projection.weight.shape, input_projection.weight.dtype))
                         input_projection.bias.set_data(initializer('zeros', input_projection.bias.shape, input_projection.bias.dtype))
         elif isinstance(cell, OneFormerTransformerDecoder):
@@ -2764,7 +2764,7 @@ class OneFormerPreTrainedModel(PreTrainedModel):
             grid_init = (
                 (grid_init / grid_init.abs().max(-1, keepdims=True)[0])
                 .view(cell.n_heads, 1, 1, 2)
-                .repeat(1, cell.n_levels, cell.n_points, 1)
+                .tile((1, cell.n_levels, cell.n_points, 1))
             )
             for i in range(cell.n_points):
                 grid_init[:, :, i, :] *= i + 1
@@ -2802,16 +2802,16 @@ class OneFormerPreTrainedModel(PreTrainedModel):
                 if p.dim() > 1:
                     p.set_data(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
         elif isinstance(cell, OneFormerPixelLevelModule):
-            for subcell in cell.cells():
-                if isinstance(subcell, (nn.Conv2d, nn.Dense)):
+            for subcell in cell.modules():
+                if isinstance(subcell, (nn.Conv2d, nn.Linear)):
                     subcell.weight.set_data(initializer(Normal(sigma=std), subcell.weight.shape, subcell.weight.dtype))
                     if subcell.bias is not None:
                         subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
         elif isinstance(cell, OneFormerTextContextDecoder):
-            for subcell in cell.cells():
-                if isinstance(subcell, nn.Dense):
+            for subcell in cell.modules():
+                if isinstance(subcell, nn.Linear):
                     subcell.weight.set_data(initializer(TruncatedNormal(sigma=0.02), subcell.weight.shape, subcell.weight.dtype))
-                    if isinstance(subcell, nn.Dense) and subcell.bias is not None:
+                    if isinstance(subcell, nn.Linear) and subcell.bias is not None:
                         subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
                 elif isinstance(subcell, nn.LayerNorm):
                     subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
@@ -2832,10 +2832,10 @@ class OneFormerPreTrainedModel(PreTrainedModel):
             cell.reference_points.weight.set_data(initializer(XavierUniform(1.0), cell.reference_points.weight.shape, cell.reference_points.weight.dtype))
             cell.reference_points.set_data(initializer('zeros', cell.reference_points.shape, cell.reference_points.dtype))
         elif isinstance(cell, OneFormerTaskModel):
-            for subcell in cell.cells():
+            for subcell in cell.modules():
                 if isinstance(cell, OneFormerMLPPredictionHead):
-                    for subcell in cell.cells():
-                        if isinstance(subcell, nn.Dense):
+                    for subcell in cell.modules():
+                        if isinstance(subcell, nn.Linear):
                             subcell.weight.set_data(initializer(XavierUniform(xavier_std), subcell.weight.shape, subcell.weight.dtype))
                             subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
                         elif isinstance(cell, nn.LayerNorm):
@@ -2844,7 +2844,7 @@ class OneFormerPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, nn.MultiheadAttention):
             cell.in_proj_weight.set_data(initializer(Normal(sigma=std, mean=0), cell.in_proj_weight.shape, cell.in_proj_weight.dtype))
             cell.in_proj_bias.set_data(initializer('zeros', cell.in_proj_bias.shape, cell.in_proj_bias.dtype))
-        elif isinstance(cell, (nn.Dense, nn.Conv2d, nn.BatchNorm2d)):
+        elif isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -2871,7 +2871,7 @@ class OneFormerModel(OneFormerPreTrainedModel):
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Tensor,
         task_inputs: Tensor,
@@ -3044,7 +3044,7 @@ class OneFormerForUniversalSegmentation(OneFormerPreTrainedModel):
     def get_loss(self, loss_dict: Dict[str, Tensor]) -> Tensor:
         return sum(loss_dict.values())
 
-    def construct(
+    def forward(
         self,
         pixel_values: Tensor,
         task_inputs: Tensor,

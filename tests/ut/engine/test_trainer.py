@@ -34,6 +34,7 @@ import numpy as np
 from parameterized import parameterized
 from requests.exceptions import HTTPError
 
+import mindnlp
 from mindnlp.engine import (
     IntervalStrategy,
     TrainerCallback,
@@ -45,7 +46,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.modules.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
@@ -212,7 +213,7 @@ if is_mindspore_available():
             for loader in self.loaders:
                 yield from loader
 
-    class RegressionModel(nn.Cell):
+    class RegressionModel(nn.Module):
         def __init__(self, a=0, b=0, double_output=False):
             super().__init__()
             self.a = mindspore.Parameter(mindspore.tensor([a]).float())
@@ -227,7 +228,7 @@ if is_mindspore_available():
             loss = ops.mse_loss(y, labels)
             return (loss, y, y) if self.double_output else (loss, y)
 
-    class RegressionDictModel(nn.Cell):
+    class RegressionDictModel(nn.Module):
         def __init__(self, a=0, b=0):
             super().__init__()
             self.a = mindspore.Parameter(mindspore.tensor([a]).float())
@@ -284,7 +285,7 @@ if is_mindspore_available():
             loss = ops.mse_loss(y, labels)
             return (loss, y)
 
-    class TstLayer(nn.Cell):
+    class TstLayer(nn.Module):
         def __init__(self, hidden_size):
             super().__init__()
             self.linear1 = nn.Dense(hidden_size, hidden_size)
@@ -812,7 +813,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         dummy_input = mindspore.Tensor([[1, 0, 1]])
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
-
         self.assertFalse(np.allclose(emb1.asnumpy(), emb2.asnumpy()), "Neftune noise is not applied!")
 
         # redefine the model
@@ -831,7 +831,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hook) == 0)
 
         trainer.model.set_train(False)
-
         # Check that we get identical embeddings just in case
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
@@ -1992,7 +1991,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertAlmostEqual(bf16_eval, fp32_init / 2, delta=5_000)
 
     def test_no_wd_param_group(self):
-        model = nn.SequentialCell(TstLayer(128), nn.CellList([TstLayer(128), TstLayer(128)]))
+        model = nn.SequentialCell(TstLayer(128), nn.ModuleList([TstLayer(128), TstLayer(128)]))
         trainer = Trainer(model=model)
         trainer.create_optimizer_and_scheduler(10)
         wd_names = ['0.linear1.weight', '0.linear2.weight', '1.0.linear1.weight', '1.0.linear2.weight', '1.1.linear1.weight', '1.1.linear2.weight']  # fmt: skip
@@ -2068,7 +2067,7 @@ if is_mindspore_available():
     optim_test_params = [
         (
             TrainingArguments(optim=OptimizerNames.ADAMW, output_dir="None"),
-            mindspore.experimental.optim.AdamW,
+            mindnlp.core.optim.AdamW,
             default_adam_kwargs,
         ),
         # (

@@ -27,8 +27,10 @@ def _find_cuda_home():
     """
     Find the CUDA home directory.
     
-    This function searches for the CUDA home directory on the system. It first checks the environment variables 'CUDA_HOME' and 'CUDA_PATH' to see if either of them is set. If not, it tries to locate the
-'nvcc' executable using the 'which' command and extracts the CUDA home directory path from it.
+    This function searches for the CUDA home directory on the system.
+    It first checks the environment variables 'CUDA_HOME' and 'CUDA_PATH' to see if either of them is set.
+    If not, it tries to locate the 'nvcc' executable using the 'which' command and extracts the CUDA home
+    directory path from it.
     
     Returns:
         str: The path to the CUDA home directory. Returns None if the CUDA home directory is not found.

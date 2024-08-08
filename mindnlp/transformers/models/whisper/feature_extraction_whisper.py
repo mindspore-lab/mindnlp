@@ -80,7 +80,7 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
             return_attention_mask (bool): Flag indicating whether to return an attention mask.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

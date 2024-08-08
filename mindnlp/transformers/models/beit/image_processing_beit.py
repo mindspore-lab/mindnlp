@@ -129,7 +129,10 @@ class BeitImageProcessor(BaseImageProcessor):
             None
         
         Raises:
-            FutureWarning: If the 'reduce_labels' parameter is used. This parameter is deprecated and will be removed in a future version. Please use 'do_reduce_labels' instead.
+            FutureWarning:
+                If the 'reduce_labels' parameter is used.
+                This parameter is deprecated and will be removed in a future version.
+                Please use 'do_reduce_labels' instead.
         """
         if "reduce_labels" in kwargs:
             warnings.warn(
@@ -231,7 +234,7 @@ class BeitImageProcessor(BaseImageProcessor):
                 The input label image to be processed. It should be a valid ImageInput object.
         
         Returns:
-            np.ndarray
+            np.ndarray:
                 Returns a numpy array representing the reduced label image.
         
         Raises:
@@ -285,7 +288,7 @@ class BeitImageProcessor(BaseImageProcessor):
             input_data_format (Optional[Union[str, ChannelDimension]], optional): The format of the input data. Defaults to None.
         
         Returns:
-            None. The processed image is returned as the output.
+            None: The processed image is returned as the output.
         
         Raises:
             None.
@@ -409,7 +412,7 @@ class BeitImageProcessor(BaseImageProcessor):
             None: This method does not return any value. The processing is done in place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # Overrides the `__call__` method of the `Preprocessor` class such that the images and segmentation maps can both
         # be passed in as positional arguments.
@@ -473,19 +476,22 @@ class BeitImageProcessor(BaseImageProcessor):
                 ADE20k). The background label will be replaced by 255.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -586,8 +592,8 @@ class BeitImageProcessor(BaseImageProcessor):
 
         Returns:
             semantic_segmentation: `List[torch.Tensor]` of length `batch_size`, where each item is a semantic
-            segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
-            specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
+                segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
+                specified). Each entry of each `torch.Tensor` correspond to a semantic class id.
         """
         # TODO: add support for other frameworks
         logits = outputs.logits

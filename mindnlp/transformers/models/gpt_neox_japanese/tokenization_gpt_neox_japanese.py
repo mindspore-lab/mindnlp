@@ -61,28 +61,27 @@ class GPTNeoXJapaneseTokenizer(PreTrainedTokenizer):
     Japanese has a relatively large vocabulary and there is no separation between words. Furthermore, the language is a
     combination of hiragana, katakana, and kanji, and variants such as "1" and "①" are often used. In order to cope
     with these, this tokenizer has the following features
+
     - Subword-by-subword segmentation, which is intermediate between byte strings and morphological analysis.
     - BPEs are created for each Kanji, Hiragana, and Katakana character, and there are no BPEs that cross character
-        types, such as Kanji + Hiragana or Hiragana + Katakana.
+    types, such as Kanji + Hiragana or Hiragana + Katakana.
     - All-byte encoding that does not require <unk>.
     - Independent of UTF codes such as 2-byte and 3-byte characters
     - Conversion of heterographs to the same token_id
     - Emoji and Emoticon are grouped into 12 types as special tags.
 
     Example:
-
-    ```python
-    >>> from transformers import GPTNeoXJapaneseTokenizer
-
-    >>> tokenizer = GPTNeoXJapaneseTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
-    >>> # You can confirm both 慶応 and 慶應 are encoded to 17749
-    >>> tokenizer("吾輩は猫である🐯。実は慶応(慶應)大学出身")["input_ids"]
-    [30014, 26883, 26638, 27228, 25, 26650, 31732, 31679, 27809, 26638, 17749, 31592, 17749, 31593, 321, 1281]
-
-    >>> # Both 慶応 and 慶應 are decoded to 慶応
-    >>> tokenizer.decode(tokenizer("吾輩は猫である🐯。実は慶応(慶應)大学出身")["input_ids"])
-    '吾輩は猫である🐯。実は慶応(慶応)大学出身'
-    ```
+        ```python
+        >>> from transformers import GPTNeoXJapaneseTokenizer
+        ...
+        >>> tokenizer = GPTNeoXJapaneseTokenizer.from_pretrained("abeja/gpt-neox-japanese-2.7b")
+        >>> # You can confirm both 慶応 and 慶應 are encoded to 17749
+        >>> tokenizer("吾輩は猫である🐯。実は慶応(慶應)大学出身")["input_ids"]
+        [30014, 26883, 26638, 27228, 25, 26650, 31732, 31679, 27809, 26638, 17749, 31592, 17749, 31593, 321, 1281]
+        >>> # Both 慶応 and 慶應 are decoded to 慶応
+        >>> tokenizer.decode(tokenizer("吾輩は猫である🐯。実は慶応(慶應)大学出身")["input_ids"])
+        '吾輩は猫である🐯。実は慶応(慶応)大学出身'
+        ```
 
     Args:
         vocab_file (`str`):

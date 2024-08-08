@@ -194,19 +194,19 @@ class Wav2Vec2Config(PretrainedConfig):
             if `add_adapter is True`.
 
     Example:
-
-    ```python
-    >>> from transformers import Wav2Vec2Config, Wav2Vec2Model
-
-    >>> # Initializing a Wav2Vec2 facebook/wav2vec2-base-960h style configuration
-    >>> configuration = Wav2Vec2Config()
-
-    >>> # Initializing a model (with random weights) from the facebook/wav2vec2-base-960h style configuration
-    >>> model = Wav2Vec2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import Wav2Vec2Config, Wav2Vec2Model
+        ...
+        >>> # Initializing a Wav2Vec2 facebook/wav2vec2-base-960h style configuration
+        >>> configuration = Wav2Vec2Config()
+        ...
+        >>> # Initializing a model (with random weights) from the facebook/wav2vec2-base-960h style configuration
+        >>> model = Wav2Vec2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "wav2vec2"
 
     def __init__(
@@ -270,7 +270,7 @@ class Wav2Vec2Config(PretrainedConfig):
     ):
         """
         Initializes a new instance of the Wav2Vec2Config class.
-        
+
         Args:
             self: The class instance.
             vocab_size (int, optional): The size of the vocabulary. Defaults to 32.
@@ -328,13 +328,14 @@ class Wav2Vec2Config(PretrainedConfig):
             num_adapter_layers (int, optional): The number of adapter layers. Defaults to 3.
             output_hidden_size (int, optional): The size of the output hidden layers. Defaults to None.
             adapter_attn_dim (int, optional): The attention dimension for adapter layers. Defaults to None.
-        
+
         Returns:
-            None. This method returns nothing.
-        
+            None.
+
         Raises:
-            ValueError: If the configuration for convolutional layers is incorrect, i.e., if the dimensions, strides, or kernel sizes are not of the same length.
-        
+            ValueError: If the configuration for convolutional layers is incorrect,
+                i.e., if the dimensions, strides, or kernel sizes are not of the same length.
+
         """
         super().__init__(**kwargs, pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id)
         self.hidden_size = hidden_size
@@ -419,17 +420,19 @@ class Wav2Vec2Config(PretrainedConfig):
     def inputs_to_logits_ratio(self):
         """
         Calculates the ratio of inputs to logits for the Wav2Vec2Config class.
-        
+
         Args:
             self (Wav2Vec2Config): The instance of the Wav2Vec2Config class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None.
-        
-        This method calculates the ratio of inputs to logits by multiplying the convolution stride values. The convolution stride values are accessed using the self.conv_stride attribute. The
-functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
+
+        This method calculates the ratio of inputs to logits by multiplying the convolution stride values.
+        The convolution stride values are accessed using the self.conv_stride attribute. The functools.reduce() function
+        is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be
+        1. The calculated ratio is then returned as the output of this method.
         """
         return functools.reduce(operator.mul, self.conv_stride, 1)

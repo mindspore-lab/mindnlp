@@ -1,0 +1,2 @@
+:::mindnlp.transformers.models.switch_transformers.configuration_switch_transformers
+:::mindnlp.transformers.models.switch_transformers.modeling_switch_transformers

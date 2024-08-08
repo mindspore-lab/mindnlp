@@ -89,12 +89,13 @@ class BasicTokenizer():
             self (object): The instance of the BasicTokenizer class.
             do_lower_case (bool, optional): Indicates whether text should be converted to lowercase. Default is True.
             never_split (list, optional): List of tokens that should never be split. Default is an empty list.
-            tokenize_chinese_chars (bool, optional): Indicates whether Chinese characters should be tokenized. Default is True.
+            tokenize_chinese_chars (bool, optional): Indicates whether Chinese characters should be tokenized.
+                Default is True.
             strip_accents (None or str, optional): Specifies the type of accents to remove. Default is None.
             do_split_on_punc (bool, optional): Indicates whether to split on punctuation. Default is True.
         
         Returns:
-            None. This method initializes the instance attributes of the BasicTokenizer class.
+            None.
         
         Raises:
             None.
@@ -263,7 +264,7 @@ class GPTTokenizer(PreTrainedTokenizer):
 
     - lowercases all inputs,
     - uses `SpaCy` tokenizer and `ftfy` for pre-BPE tokenization if they are installed, fallback to BERT's
-      `BasicTokenizer` if not.
+    `BasicTokenizer` if not.
 
     This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods.
@@ -285,16 +286,16 @@ class GPTTokenizer(PreTrainedTokenizer):
     def __init__(self, vocab_file, merges_file, unk_token="<unk>", **kwargs):
         """
         This method initializes an instance of the GPTTokenizer class.
-        
+
         Args:
             self: The instance of the GPTTokenizer class.
             vocab_file (str): The path to the vocabulary file containing the encoder information.
             merges_file (str): The path to the file containing merge operations for Byte Pair Encoding (BPE).
             unk_token (str, optional): The token to represent unknown words. Defaults to '<unk>'.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             ImportError: If the required packages 'ftfy' or 'spacy' are not installed, an ImportError is raised.
             FileNotFoundError: If the vocab_file or merges_file is not found, a FileNotFoundError is raised.
@@ -328,26 +329,30 @@ class GPTTokenizer(PreTrainedTokenizer):
     def do_lower_case(self):
         """
         Toggle the lower case flag for the GPTTokenizer object.
-        
+
         Args:
             self: An instance of the GPTTokenizer class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method is used to toggle the lower case flag for the GPTTokenizer object. When the lower case flag is set to True, the tokenizer will convert all text to lower case. When the flag is set to False,
-the tokenizer will preserve the original casing of the text.
-        
-        Note that changing the lower case flag will affect the tokenization behavior of the GPTTokenizer object. It is recommended to set the lower case flag before tokenizing any text using the tokenizer. By
-default, the lower case flag is set to True.
-        
-        Example usage:
-            tokenizer = GPTTokenizer()
-            tokenizer.do_lower_case = False
+
+        This method is used to toggle the lower case flag for the GPTTokenizer object.
+        When the lower case flag is set to True, the tokenizer will convert all text to lower case.
+        When the flag is set to False, the tokenizer will preserve the original casing of the text.
+
+        Note that changing the lower case flag will affect the tokenization behavior of the GPTTokenizer object.
+        It is recommended to set the lower case flag before tokenizing any text using the tokenizer. By default,
+        the lower case flag is set to True.
+
+        Example:
+            ```python
+            >>> tokenizer = GPTTokenizer()
+            >>> tokenizer.do_lower_case = False
             ...
+            ```
         """
         return True
 
@@ -358,14 +363,15 @@ default, the lower case flag is set to True.
         
         Args:
             self: GPTTokenizer
-                The instance of GPTTokenizer for which the vocabulary size is to be determined. It is automatically passed when the method is called.
+                The instance of GPTTokenizer for which the vocabulary size is to be determined.
+                It is automatically passed when the method is called.
                 
         Returns:
-            int
+            int:
                 The vocabulary size of the GPTTokenizer instance, which is the length of the encoder used by the tokenizer.
                 
         Raises:
-            None
+            None:
                 This method does not raise any exceptions.
         """
         return len(self.encoder)
@@ -378,7 +384,8 @@ default, the lower case flag is set to True.
             self (GPTTokenizer): The instance of the GPTTokenizer class.
             
         Returns:
-            dict: A dictionary containing the vocabulary, where the keys are the tokens and the values are their corresponding IDs.
+            dict: A dictionary containing the vocabulary,
+                where the keys are the tokens and the values are their corresponding IDs.
         
         Raises:
             None
@@ -397,7 +404,7 @@ default, the lower case flag is set to True.
             None: This method does not return any value but updates the cache with the encoded word.
         
         Raises:
-            N/A
+            None.
         """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
         if token in self.cache:
@@ -482,10 +489,10 @@ default, the lower case flag is set to True.
             Tuple[str]: A tuple containing the paths to the saved vocabulary file and merge file.
         
         Raises:
-            - FileNotFoundError: If the specified save_directory does not exist.
-            - IOError: If there is an issue with writing the vocabulary files.
-            - ValueError: If the provided filename_prefix is invalid.
-            - RuntimeError: If the BPE merge indices are not consecutive, indicating a potential tokenizer corruption.
+            FileNotFoundError: If the specified save_directory does not exist.
+            IOError: If there is an issue with writing the vocabulary files.
+            ValueError: If the provided filename_prefix is invalid.
+            RuntimeError: If the BPE merge indices are not consecutive, indicating a potential tokenizer corruption.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")

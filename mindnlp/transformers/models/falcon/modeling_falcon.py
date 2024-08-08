@@ -25,12 +25,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
-from mindspore.nn import Dense as FalconLinear
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp._legacy import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
@@ -44,6 +43,7 @@ from ...modeling_utils import PreTrainedModel
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from .configuration_falcon import FalconConfig
 
+FalconLinear = nn.Linear
 
 logger = logging.get_logger(__name__)
 
@@ -68,7 +68,7 @@ def rotate_half(x):
     Returns:
         Tensor: The rotated tensor."""
     x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
@@ -80,18 +80,20 @@ def _get_unpad_data(padding_mask):
         padding_mask (ndarray): A binary mask indicating the positions of padding elements in a batch of sequences.
     
     Returns:
-        tuple: A tuple containing the following three elements:
+        tuple:
+            A tuple containing the following three elements:
+
             - indices (ndarray): Flattened indices of the padding elements in the padding mask.
             - cu_seqlens (ndarray): The cumulative sum of sequence lengths in the batch, padded with a zero at the beginning.
             - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-    
+
     Raises:
         None.
     """
     seqlens_in_batch = padding_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(padding_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -128,7 +130,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class FalconRotaryEmbedding(nn.Cell):
+class FalconRotaryEmbedding(nn.Module):
     """Implementation of RotaryEmbedding from GPT-NeoX.
     This implementation is designed to operate on queries and keys that are compatible with `[batch_size,
     n_heads_per_partition, seq_len, head_dim]` (e.g. MinGPTAttention format).
@@ -136,16 +138,16 @@ class FalconRotaryEmbedding(nn.Cell):
     def __init__(self, dim: int, max_position_embeddings=2048, base=10000):
         """
         Initializes an instance of the FalconRotaryEmbedding class.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimensionality of the embeddings.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
             base (int, optional): The base value used for calculating the inverse frequency. Defaults to 10000.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -163,15 +165,15 @@ class FalconRotaryEmbedding(nn.Cell):
     def _set_cos_sin_cache(self, seq_len, dtype):
         """
         Sets the cosine and sine cache for FalconRotaryEmbedding.
-        
+
         Args:
             self (FalconRotaryEmbedding): The instance of the FalconRotaryEmbedding class.
             seq_len (int): The length of the sequence.
             dtype: The desired data type for the cosine and sine cache.
-        
+
         Returns:
-            None. This method updates the cos_cached and sin_cached attributes of the FalconRotaryEmbedding instance.
-        
+            None: This method updates the cos_cached and sin_cached attributes of the FalconRotaryEmbedding instance.
+
         Raises:
             None.
         """
@@ -179,22 +181,23 @@ class FalconRotaryEmbedding(nn.Cell):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # freqs = ops.matmul()(t.reshape(-1, 1), self.inv_freq.reshape(1, -1))
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Constructs the FalconRotaryEmbedding.
-        
+
         Args:
             self (FalconRotaryEmbedding): The instance of the FalconRotaryEmbedding class.
             x: The input tensor.
             seq_len (int, optional): The length of the sequence. Default is None.
-        
+
         Returns:
-            tuple: A tuple containing two numpy arrays of cosine and sine values. The arrays are of the same type as the input 'x'.
-        
+            tuple: A tuple containing two numpy arrays of cosine and sine values.
+                The arrays are of the same type as the input 'x'.
+
         Raises:
             ValueError: If the sequence length exceeds the maximum sequence length cached in the instance.
         """
@@ -215,21 +218,21 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
     ):
         """
         __init__
-        
+
         Initializes a new instance of the FalconLinearScalingRotaryEmbedding class.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimension of the embedding space.
             max_position_embeddings (int): The maximum number of position embeddings. Defaults to 2048.
             base (int): The base value for positional encoding. Defaults to 10000.
             scaling_factor (float): The scaling factor for the positional encoding. Defaults to 1.0.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
@@ -237,15 +240,15 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
     def _set_cos_sin_cache(self, seq_len, dtype):
         """
         Set the cached values for cosine and sine embeddings based on the given sequence length and data type.
-        
+
         Args:
             self (FalconLinearScalingRotaryEmbedding): The instance of FalconLinearScalingRotaryEmbedding class.
             seq_len (int): The length of the sequence for which the cosine and sine embeddings are to be cached.
             dtype: The data type for the cached cosine and sine embeddings.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -253,7 +256,7 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
         t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
@@ -267,17 +270,17 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
     ):
         """
         Initializes an instance of the FalconDynamicNTKScalingRotaryEmbedding class.
-        
+
         Args:
             self (FalconDynamicNTKScalingRotaryEmbedding): The instance of the class.
             dim (int): The dimension of the embedding.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
             base (int, optional): The base value used for positional encoding. Defaults to 10000.
             scaling_factor (float, optional): The scaling factor applied to the embeddings. Defaults to 1.0.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -286,19 +289,22 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         """
-        This method '_set_cos_sin_cache' is a part of the 'FalconDynamicNTKScalingRotaryEmbedding' class and is responsible for caching cosine and sine values based on the input sequence length and data type.
-        
+        This method '_set_cos_sin_cache' is a part of the 'FalconDynamicNTKScalingRotaryEmbedding' class and is
+        responsible for caching cosine and sine values based on the input sequence length and data type.
+
         Args:
             self (object): The instance of the FalconDynamicNTKScalingRotaryEmbedding class.
             seq_len (int): The length of the input sequence for which the cosine and sine values are to be cached.
             dtype (dtype): The data type for the cached cosine and sine values.
-        
+
         Returns:
-            None: This method does not return any value. It caches the cosine and sine values internally.
-        
+            None: This method does not return any value.
+                It caches the cosine and sine values internally.
+
         Raises:
             ValueError: If the input sequence length 'seq_len' is not a positive integer.
-            TypeError: If the data type 'dtype' is not a valid numeric data type supported by the operations performed in the method.
+            TypeError: If the data type 'dtype' is not a valid numeric data type supported
+                by the operations performed in the method.
         """
         self.max_seq_len_cached = seq_len
 
@@ -313,7 +319,7 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
 
         t = ops.arange(seq_len)
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
@@ -366,9 +372,9 @@ def build_alibi_tensor(
         extra_powers = ops.arange(
             1, 1 + 2 * num_remaining_heads, 2, dtype=mindspore.int32
         )
-        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], axis=0)
+        slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], dim=0)
 
-    arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
+    arange_tensor = ((attention_mask.int().cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None].astype(mindspore.float32) * arange_tensor
     return ops.reshape(alibi, (batch_size * num_heads, 1, seq_length)).astype(dtype)
 
@@ -390,12 +396,12 @@ def dropout_add(
         training (`bool`, *required*):
             training mode
     """
-    out = ops.dropout(x, p=prob, training=training)
+    out = F.dropout(x, p=prob, training=training)
     out = residual + out
     return out
 
 
-class FalconAttention(nn.Cell):
+class FalconAttention(nn.Module):
     """
     FalconAttention is a module that implements the attention mechanism used in the Falcon model.
 
@@ -425,10 +431,12 @@ class FalconAttention(nn.Cell):
     def __init__(self, config: FalconConfig):
         """
         Initialize the FalconAttention class with the provided configuration.
-        
+
         Args:
             self (FalconAttention): The instance of the FalconAttention class.
-            config (FalconConfig): An instance of FalconConfig containing configuration parameters for the attention mechanism.
+            config (FalconConfig):
+                An instance of FalconConfig containing configuration parameters for the attention mechanism.
+
                 - hidden_size (int): The size of the hidden layers.
                 - num_attention_heads (int): The number of attention heads.
                 - hidden_dropout (float): The dropout rate for hidden layers.
@@ -439,10 +447,10 @@ class FalconAttention(nn.Cell):
                 - multi_query (bool): Flag indicating the use of multiple queries.
                 - num_kv_heads (int): The number of key-value heads.
                 - bias (bool): Flag indicating the presence of bias in linear transformations.
-        
+
         Returns:
-            None. The method initializes the FalconAttention instance with the provided configuration parameters.
-        
+            None.
+
         Raises:
             ValueError: Raised if the `hidden_size` is not divisible by `num_attention_heads`.
         """
@@ -479,12 +487,12 @@ class FalconAttention(nn.Cell):
         else:
             qkv_out_dim = 3 * self.hidden_size
         self.query_key_value = FalconLinear(
-            self.hidden_size, qkv_out_dim, has_bias=config.bias
+            self.hidden_size, qkv_out_dim, bias=config.bias
         )
         self.new_decoder_architecture = config.new_decoder_architecture
         self.multi_query = config.multi_query
         self.dense = FalconLinear(
-            self.hidden_size, self.hidden_size, has_bias=config.bias
+            self.hidden_size, self.hidden_size, bias=config.bias
         )
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self.num_kv_heads = (
@@ -603,7 +611,7 @@ class FalconAttention(nn.Cell):
         # batch_size, seq_length, num_heads, head_dim -> batch_size, seq_length, num_heads * head_dim
         return x.reshape(batch_size, seq_length, self.num_heads * self.head_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         alibi: Optional[mindspore.Tensor],
@@ -630,9 +638,12 @@ class FalconAttention(nn.Cell):
 
         Returns:
             Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]], Optional[mindspore.Tensor]]:
+
                 - output_tensor (mindspore.Tensor): The output tensor of shape [batch_size, seq_length, hidden_size].
-                - present (Tuple[mindspore.Tensor, mindspore.Tensor], optional): The present key-value states of the layer.
-                - attention_scores (mindspore.Tensor, optional): The attention scores tensor of shape [batch_size, num_heads, seq_length, seq_length].
+                - present (Tuple[mindspore.Tensor, mindspore.Tensor], optional):
+                The present key-value states of the layer.
+                - attention_scores (mindspore.Tensor, optional):
+                The attention scores tensor of shape [batch_size, num_heads, seq_length, seq_length].
 
         """
         if "padding_mask" in kwargs:
@@ -678,22 +689,21 @@ class FalconAttention(nn.Cell):
             # concatenate along seq_length dimension:
             #  - key: [batch_size, self.num_heads, kv_length, head_dim]
             #  - value: [batch_size, self.num_heads, kv_length, head_dim]
-            key_layer = ops.cat((past_key, key_layer), axis=-2)
-            value_layer = ops.cat((past_value, value_layer), axis=-2)
+            key_layer = ops.cat((past_key, key_layer), dim=-2)
+            value_layer = ops.cat((past_value, value_layer), dim=-2)
 
         kv_length = key_layer.shape[-2]
         present = (key_layer, value_layer) if use_cache else None
 
         if alibi is None:
-            if hasattr(F, "_scaled_dot_product_attention") and not output_attentions:
-                attn_output, attention_scores = F._scaled_dot_product_attention(
+            if hasattr(F, "scaled_dot_product_attention") and not output_attentions:
+                attn_output = F.scaled_dot_product_attention(
                     query_layer,
                     key_layer,
                     value_layer,
                     attention_mask,
                     0.0,
                     is_causal=False,
-                    is_training=self.training,
                 )
             else:
                 attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
@@ -701,7 +711,7 @@ class FalconAttention(nn.Cell):
 
                 attention_scores = ops.softmax(
                     attention_scores + attention_mask,
-                    axis=-1,
+                    dim=-1,
                     dtype=hidden_states.dtype,
                 )
                 attn_output = ops.matmul(attention_scores, value_layer)
@@ -744,7 +754,7 @@ class FalconAttention(nn.Cell):
         )
         attention_logits *= self.inv_norm_factor
         attention_probs = ops.softmax(
-            attention_logits + attention_mask, axis=-1, dtype=hidden_states.dtype
+            attention_logits + attention_mask, dim=-1, dtype=hidden_states.dtype
         )
         # [batch_size, num_heads, q_length, kv_length]
         attention_probs = self.attention_dropout(attention_probs)
@@ -770,7 +780,7 @@ class FalconAttention(nn.Cell):
         return output_tensor, present
 
 
-class FalconMLP(nn.Cell):
+class FalconMLP(nn.Module):
     """
     FalconMLP is a multi-layer perceptron (MLP) module for the Falcon model.
 
@@ -782,43 +792,43 @@ class FalconMLP(nn.Cell):
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconMLP instance.
-        
+
         Args:
             self: The instance of the FalconMLP class.
             config (FalconConfig): A FalconConfig object containing the configuration parameters for the MLP model.
                 This parameter is used to set the hidden size and bias for the dense layers and the hidden dropout rate.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type FalconConfig.
-            - ValueError: If the hidden size specified in the config is not valid.
-            - RuntimeError: If there is an issue with initializing the dense layers or activation function.
+            TypeError: If the config parameter is not of type FalconConfig.
+            ValueError: If the hidden size specified in the config is not valid.
+            RuntimeError: If there is an issue with initializing the dense layers or activation function.
         """
         super().__init__()
         hidden_size = config.hidden_size
 
         self.dense_h_to_4h = FalconLinear(
-            hidden_size, 4 * hidden_size, has_bias=config.bias
+            hidden_size, 4 * hidden_size, bias=config.bias
         )
-        self.act = nn.GELU(approximate=False)
+        self.act = nn.GELU()
         self.dense_4h_to_h = FalconLinear(
-            4 * hidden_size, hidden_size, has_bias=config.bias
+            4 * hidden_size, hidden_size, bias=config.bias
         )
         self.hidden_dropout = config.hidden_dropout
 
-    def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the FalconMLP by performing forward propagation on the input tensor 'x'.
-        
+
         Args:
             self (FalconMLP): An instance of the FalconMLP class.
             x (mindspore.Tensor): The input tensor for performing forward propagation.
-        
+
         Returns:
             mindspore.Tensor: The output tensor after performing forward propagation.
-        
+
         Raises:
             None.
         """
@@ -827,7 +837,7 @@ class FalconMLP(nn.Cell):
         return x
 
 
-class FalconDecoderLayer(nn.Cell):
+class FalconDecoderLayer(nn.Module):
     """
     FalconDecoderLayer is a class that represents a single layer of the Falcon decoder model.
 
@@ -840,32 +850,37 @@ class FalconDecoderLayer(nn.Cell):
         mlp (FalconMLP): The MLP module.
         hidden_dropout (float): The dropout rate for the hidden states.
         config (FalconConfig): The configuration for the Falcon model.
-        ln_attn (nn.LayerNorm): The layer normalization module before self-attention (only used in new decoder architecture).
+        ln_attn (nn.LayerNorm): The layer normalization module before self-attention
+            (only used in new decoder architecture).
         ln_mlp (nn.LayerNorm): The layer normalization module before the MLP (only used in new decoder architecture).
-        input_layernorm (nn.LayerNorm): The layer normalization module before the self-attention (only used in old decoder architecture).
-        post_attention_layernorm (nn.LayerNorm): The layer normalization module after the self-attention (only used in old decoder architecture).
+        input_layernorm (nn.LayerNorm): The layer normalization module before the self-attention
+            (only used in old decoder architecture).
+        post_attention_layernorm (nn.LayerNorm): The layer normalization module after the self-attention
+            (only used in old decoder architecture).
 
     Methods:
-        construct: Forward pass of the FalconDecoderLayer.
+        forward: Forward pass of the FalconDecoderLayer.
     """
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconDecoderLayer object.
-        
+
         Args:
             self: The FalconDecoderLayer instance itself.
-            config (FalconConfig): An instance of FalconConfig that specifies the configuration parameters for the Falcon decoder layer.
+            config (FalconConfig):
+                An instance of FalconConfig that specifies the configuration parameters for the Falcon decoder layer.
                 It contains the following attributes:
-                    - hidden_size (int): The size of the hidden layers.
-                    - num_attention_heads (int): The number of attention heads.
-                    - hidden_dropout (float): The dropout rate for hidden layers.
-                    - new_decoder_architecture (bool): Flag indicating whether to use a new decoder architecture.
-                    - layer_norm_epsilon (float): A small epsilon value for layer normalization calculations.
-                    - parallel_attn (bool): Flag indicating whether to use parallel attention.
-        
+
+                - hidden_size (int): The size of the hidden layers.
+                - num_attention_heads (int): The number of attention heads.
+                - hidden_dropout (float): The dropout rate for hidden layers.
+                - new_decoder_architecture (bool): Flag indicating whether to use a new decoder architecture.
+                - layer_norm_epsilon (float): A small epsilon value for layer normalization calculations.
+                - parallel_attn (bool): Flag indicating whether to use parallel attention.
+
         Returns:
-            None. This method initializes the FalconDecoderLayer object with the specified configuration parameters.
-        
+            None.
+
         Raises:
             None.
         """
@@ -881,20 +896,20 @@ class FalconDecoderLayer(nn.Cell):
         if config.new_decoder_architecture:
             # The layer norm before self-attention
             self.ln_attn = nn.LayerNorm(
-                [hidden_size], epsilon=config.layer_norm_epsilon
+                [hidden_size], eps=config.layer_norm_epsilon
             )
             # The layer norm before the MLP
-            self.ln_mlp = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+            self.ln_mlp = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         else:
             self.input_layernorm = nn.LayerNorm(
-                [hidden_size], epsilon=config.layer_norm_epsilon
+                [hidden_size], eps=config.layer_norm_epsilon
             )
             if not config.parallel_attn:
                 self.post_attention_layernorm = nn.LayerNorm(
-                    [hidden_size], epsilon=config.layer_norm_epsilon
+                    [hidden_size], eps=config.layer_norm_epsilon
                 )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         alibi: Optional[mindspore.Tensor],
@@ -991,7 +1006,7 @@ class FalconPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense, FalconLinear)):
+        if isinstance(cell, (nn.Linear, FalconLinear)):
             # 使用正态分布初始化权重
             cell.weight.set_data(
                 initializer(
@@ -1000,7 +1015,7 @@ class FalconPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -1031,14 +1046,14 @@ class FalconModel(FalconPreTrainedModel):
         num_heads (int): The number of attention heads.
         use_alibi (bool): Whether to use alibi tensor.
         word_embeddings (nn.Embedding): The word embedding layer.
-        h (nn.CellList): The list of FalconDecoderLayer instances representing the transformer blocks.
+        h (nn.ModuleList): The list of FalconDecoderLayer instances representing the transformer blocks.
         ln_f (nn.LayerNorm): The final layer normalization.
         gradient_checkpointing (bool): Whether to use gradient checkpointing.
 
     Methods:
         get_input_embeddings(): Returns the word embedding layer.
         set_input_embeddings(new_embeddings: mindspore.Tensor): Sets the word embedding layer with new embeddings.
-        construct(...): The forward pass of the FalconModel.
+        forward(...): The forward pass of the FalconModel.
 
     Returns:
         Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
@@ -1048,20 +1063,22 @@ class FalconModel(FalconPreTrainedModel):
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconModel instance.
-        
+
         Args:
             self (FalconModel): The FalconModel instance to be initialized.
-            config (FalconConfig): Configuration object containing various parameters for the model.
+            config (FalconConfig):
+                Configuration object containing various parameters for the model.
+
                 - config.hidden_size (int): Size of the hidden layer dimension.
                 - config.num_attention_heads (int): Number of attention heads.
                 - config.alibi (bool): Flag indicating whether to use alibi.
                 - config.vocab_size (int): Size of the vocabulary.
                 - config.num_hidden_layers (int): Number of hidden layers.
                 - config.layer_norm_epsilon (float): Epsilon value for layer normalization.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
@@ -1075,12 +1092,12 @@ class FalconModel(FalconPreTrainedModel):
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
 
         # Transformer blocks
-        self.h = nn.CellList(
+        self.h = nn.ModuleList(
             [FalconDecoderLayer(config) for _ in range(config.num_hidden_layers)]
         )
 
         # Final Layer Norm
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1088,35 +1105,36 @@ class FalconModel(FalconPreTrainedModel):
     def get_input_embeddings(self):
         """
         Returns the input embeddings used by the FalconModel.
-        
+
         Args:
             self (FalconModel): The instance of the FalconModel class.
-        
+
         Returns:
-            None: The method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
         """
         Sets the input embeddings for the FalconModel.
-        
+
         Args:
             self (FalconModel): The instance of the FalconModel class.
-            new_embeddings (mindspore.Tensor): The new embeddings to be set as input embeddings. It should be a tensor object.
-        
+            new_embeddings (mindspore.Tensor): The new embeddings to be set as input embeddings.
+                It should be a tensor object.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[
@@ -1133,11 +1151,13 @@ class FalconModel(FalconPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
         """
         Constructs the Falcon model.
-        
+
         Args:
             self (FalconModel): The FalconModel instance.
-            input_ids (Optional[mindspore.Tensor]): The input tensor containing the tokenized input sequence. Default is None.
-            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): Tuple of past key and value tensors for fast decoding. Default is None.
+            input_ids (Optional[mindspore.Tensor]):
+                The input tensor containing the tokenized input sequence. Default is None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]):
+                Tuple of past key and value tensors for fast decoding. Default is None.
             attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. Default is None.
             position_ids (Optional[mindspore.Tensor]): The position ids tensor. Default is None.
             head_mask (Optional[mindspore.Tensor]): The head mask tensor. Default is None.
@@ -1146,13 +1166,14 @@ class FalconModel(FalconPreTrainedModel):
             output_attentions (Optional[bool]): Whether to output attentions. Default is None.
             output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
             return_dict (Optional[bool]): Whether to return a dictionary. Default is None.
-        
+
         Returns:
-            Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]: 
+            Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
             The output tensor or a BaseModelOutputWithPastAndCrossAttentions object depending on the return_dict parameter.
-        
+
         Raises:
-            ValueError: If both input_ids and inputs_embeds are specified or if neither input_ids nor inputs_embeds are specified.
+            ValueError: If both input_ids and inputs_embeds are specified
+                or if neither input_ids nor inputs_embeds are specified.
             ValueError: If the input_ids or inputs_embeds shape is not valid.
         """
         output_attentions = (
@@ -1299,7 +1320,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
 
     Attributes:
         transformer (FalconModel): The Falcon model.
-        lm_head (nn.Dense): The linear layer for language modeling.
+        lm_head (nn.Linear): The linear layer for language modeling.
 
     """
     _tied_weights_keys = ["lm_head.weight"]
@@ -1307,20 +1328,20 @@ class FalconForCausalLM(FalconPreTrainedModel):
     def __init__(self, config: FalconConfig):
         """
         Initializes a new instance of the FalconForCausalLM class.
-        
+
         Args:
             self: An instance of the FalconForCausalLM class.
             config (FalconConfig): The configuration object containing various hyperparameters and settings for the model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__(config)
         self.transformer = FalconModel(config)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1328,21 +1349,23 @@ class FalconForCausalLM(FalconPreTrainedModel):
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the FalconForCausalLM model.
-        
+
         Args:
             self: The instance of the FalconForCausalLM class.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
-        
-        This method returns the output embeddings of the FalconForCausalLM model. The output embeddings represent the final hidden states of the model's language model head. These embeddings can be used for
-downstream tasks such as fine-tuning or feature extraction.
-        
-        Note that the method takes only one parameter, `self`, which refers to the instance of the FalconForCausalLM class itself. No additional arguments are required.
-        
+
+        This method returns the output embeddings of the FalconForCausalLM model.
+        The output embeddings represent the final hidden states of the model's language model head.
+        These embeddings can be used for downstream tasks such as fine-tuning or feature extraction.
+
+        Note that the method takes only one parameter, `self`, which refers to the instance of the FalconForCausalLM
+        class itself. No additional arguments are required.
+
         The method does not raise any exceptions.
         """
         return self.lm_head
@@ -1350,19 +1373,19 @@ downstream tasks such as fine-tuning or feature extraction.
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
         """
         Sets the output embeddings of the FalconForCausalLM model.
-        
+
         Args:
             self (FalconForCausalLM): The instance of FalconForCausalLM.
             new_embeddings (mindspore.Tensor): The new embeddings to set as output embeddings for the model.
                 It should be a tensor representing the output embeddings with shape (vocab_size, hidden_size).
                 The vocab_size should match the size of the vocabulary used by the model.
                 The hidden_size should match the size of the hidden state in the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -1376,23 +1399,26 @@ downstream tasks such as fine-tuning or feature extraction.
     ) -> dict:
         """
         Prepare inputs for generation.
-        
+
         Args:
             self: An instance of the FalconForCausalLM class.
             input_ids (mindspore.Tensor): The input tensor containing the tokenized input sequence.
             past_key_values (Optional[mindspore.Tensor]): The past key values used for decoding the input sequence.
             attention_mask (Optional[mindspore.Tensor]): The attention mask indicating which tokens to attend to.
-            position_ids (Optional[mindspore.Tensor]): The position ids indicating the position of each token in the input sequence.
+            position_ids (Optional[mindspore.Tensor]):
+                The position ids indicating the position of each token in the input sequence.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation, including the following keys:
+            dict:
+                A dictionary containing the prepared inputs for generation, including the following keys:
+
                 - 'input_ids' (mindspore.Tensor): The updated input tensor.
                 - 'position_ids' (mindspore.Tensor): The updated position ids.
                 - 'past_key_values' (Optional[mindspore.Tensor]): The past key values.
                 - 'use_cache' (bool): The value of the 'use_cache' keyword argument.
                 - 'attention_mask' (Optional[mindspore.Tensor]): The attention mask.
-        
+
         Raises:
             None.
         """
@@ -1415,7 +1441,7 @@ downstream tasks such as fine-tuning or feature extraction.
             and position_ids is None
         ):
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1428,7 +1454,7 @@ downstream tasks such as fine-tuning or feature extraction.
             "attention_mask": attention_mask,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[
@@ -1445,10 +1471,11 @@ downstream tasks such as fine-tuning or feature extraction.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1477,7 +1504,7 @@ downstream tasks such as fine-tuning or feature extraction.
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(batch_size * seq_length, vocab_size),
                 shift_labels.view(batch_size * seq_length),
             )
@@ -1526,27 +1553,27 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
     def __init__(self, config: FalconConfig):
         """
         Initializes a new instance of the FalconForSequenceClassification class.
-        
+
         Args:
             self: The object itself.
             config (FalconConfig): The configuration object that contains all the required settings for the model.
                 It must be an instance of the FalconConfig class.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = FalconModel(config)
-        self.score = nn.Dense(config.hidden_size, config.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, config.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[
@@ -1562,10 +1589,11 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1625,13 +1653,13 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits, labels)
+                loss = F.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1656,22 +1684,22 @@ class FalconForTokenClassification(FalconPreTrainedModel):
         num_labels (int): The number of labels for token classification.
         transformer (FalconModel): The Falcon model transformer.
         dropout (nn.Dropout): The dropout layer.
-        classifier (nn.Dense): The dense layer for classification.
+        classifier (nn.Linear): The dense layer for classification.
 
     """
     def __init__(self, config: FalconConfig):
         """
         Initializes an instance of FalconForTokenClassification.
-        
+
         Args:
             self: The instance of the FalconForTokenClassification class.
             config (FalconConfig): An object of type FalconConfig containing configuration parameters.
                 This parameter is required to configure the FalconForTokenClassification instance.
                 It specifies the number of labels for token classification and other configuration settings.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1686,12 +1714,12 @@ class FalconForTokenClassification(FalconPreTrainedModel):
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[
@@ -1715,11 +1743,17 @@ class FalconForTokenClassification(FalconPreTrainedModel):
                 the self-attention mechanism. Shape: (batch_size, num_layers, 2, sequence_length, hidden_size).
             attention_mask (mindspore.Tensor, optional): The attention mask to avoid performing attention on padding tokens.
                 Shape: (batch_size, sequence_length).
-            head_mask (mindspore.Tensor, optional): The head mask to mask specific attention heads. Shape: (batch_size, num_heads).
-            inputs_embeds (mindspore.Tensor, optional): The embedded input tokens. Shape: (batch_size, sequence_length, hidden_size).
-            labels (mindspore.Tensor, optional): The labels for computing the sequence classification/regression loss.
-                Indices should be in [0, ..., config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed
-                (Mean-Square loss). If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
+            head_mask (mindspore.Tensor, optional):
+                The head mask to mask specific attention heads. Shape: (batch_size, num_heads).
+            inputs_embeds (mindspore.Tensor, optional):
+                The embedded input tokens. Shape: (batch_size, sequence_length, hidden_size).
+            labels (mindspore.Tensor, optional):
+                The labels for computing the sequence classification/regression loss. Indices should be in
+                [0, ..., config.num_labels - 1].
+
+                - If config.num_labels == 1, a regression loss is computed (Mean-Square loss).
+                - If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
+
                 Shape: (batch_size, sequence_length).
             use_cache (bool, optional): Whether to use the cache for the self-attention mechanism.
             output_attentions (bool, optional): Whether to output the attentions weights.
@@ -1727,8 +1761,11 @@ class FalconForTokenClassification(FalconPreTrainedModel):
             return_dict (bool, optional): Whether to return a dictionary as the output.
 
         Returns:
-            Union[Tuple[mindspore.Tensor], TokenClassifierOutput]: The model output. If return_dict is False, returns a tuple
-            of (logits, hidden_states, attentions). If labels is not None, also returns the loss.
+            Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+                The model output.
+
+                - If return_dict is False, returns a tuple of (logits, hidden_states, attentions).
+                - If labels is not None, also returns the loss.
 
         """
         return_dict = (
@@ -1754,7 +1791,7 @@ class FalconForTokenClassification(FalconPreTrainedModel):
         loss = None
         if labels is not None:
             batch_size, seq_length = labels.shape
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(batch_size * seq_length, self.num_labels),
                 labels.view(batch_size * seq_length),
             )
@@ -1780,16 +1817,18 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
 
     Attributes:
         transformer (FalconModel): The underlying Falcon model.
-        qa_outputs (nn.Dense): The dense layer for question answering outputs.
+        qa_outputs (nn.Linear): The dense layer for question answering outputs.
 
     """
     def __init__(self, config):
         """
         Initializes a new instance of the FalconForQuestionAnswering class.
-        
+
         Args:
             self: The object itself.
-            config: The configuration object that contains various settings for the model.
+            config:
+                The configuration object that contains various settings for the model.
+
                 - Type: Any
                 - Purpose: Specifies the configuration settings for the model.
                 - Restrictions: None
@@ -1802,12 +1841,12 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = FalconModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1871,10 +1910,10 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

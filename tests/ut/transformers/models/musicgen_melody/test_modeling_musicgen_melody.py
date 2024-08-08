@@ -42,7 +42,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, nn
+    from mindnlp.core import ops, nn
 
     from mindnlp.transformers import (
         MusicgenMelodyForCausalLM,
@@ -212,7 +212,7 @@ class MusicgenMelodyDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittes
             first_embed = model.get_input_embeddings()[0]
             self.assertIsInstance(first_embed, nn.Embedding)
             lm_heads = model.get_output_embeddings()
-            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Dense))
+            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Linear))
 
     @unittest.skip("this model doesn't support all arguments tested")
     def test_model_outputs_equivalence(self):
@@ -508,7 +508,7 @@ class MusicgenMelodyTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -615,7 +615,7 @@ class MusicgenMelodyTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), nn.Embedding)
             lm_heads = model.get_output_embeddings()
-            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Dense))
+            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Linear))
 
     def _get_input_ids_and_config(self, batch_size=2):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()

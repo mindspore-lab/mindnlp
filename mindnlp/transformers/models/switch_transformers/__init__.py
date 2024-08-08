@@ -16,7 +16,7 @@
 SwitchTransformers Model init
 """
 
-from .import configuration_switch_transformers, modeling_switch_transformers
+from . import configuration_switch_transformers, modeling_switch_transformers
 
 from .configuration_switch_transformers import *
 from .modeling_switch_transformers import *

@@ -139,10 +139,11 @@ class Pop2PianoProcessor(ProcessorMixin):
         
         Args:
             self (Pop2PianoProcessor): The instance of the Pop2PianoProcessor class.
-            save_directory (str): The directory path where the model and its configuration file will be saved. It should be a directory and not a file.
+            save_directory (str): The directory path where the model and its configuration file will be saved.
+                It should be a directory and not a file.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the provided save_directory already exists as a file instead of a directory.
@@ -162,7 +163,7 @@ class Pop2PianoProcessor(ProcessorMixin):
             pretrained_model_name_or_path (str): The name or path of the pretrained model to be used for initialization.
         
         Returns:
-            None: This method does not return a value.
+            None.
         
         Raises:
             Any exceptions raised by the _get_arguments_from_pretrained method.

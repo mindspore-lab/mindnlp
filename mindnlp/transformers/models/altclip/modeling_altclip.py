@@ -20,9 +20,11 @@ from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -62,7 +64,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     Raises:
         None.
     """
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 def clip_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
@@ -121,12 +123,14 @@ class AltCLIPOutput(ModelOutput):
             self (AltCLIPOutput): The AltCLIPOutput object to convert to a tuple.
         
         Returns:
-            Tuple[Any]: A tuple representation of the AltCLIPOutput object. The tuple contains the values of all attributes in the object, except for 'text_model_output' and 'vision_model_output'. If any of
-these attributes are present, their values will be recursively converted to tuples as well.
-        
+            Tuple[Any]: A tuple representation of the AltCLIPOutput object. 
+                The tuple contains the values of all attributes in the object, except for 'text_model_output' and
+                'vision_model_output'. If any of these attributes are present, their values will be recursively
+                converted to tuples as well.
+
         Raises:
             None.
-        
+
         """
         return tuple(
             self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
@@ -135,7 +139,7 @@ these attributes are present, their values will be recursively converted to tupl
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEmbeddings with Roberta->AltRoberta
-class AltRobertaEmbeddings(nn.Cell):
+class AltRobertaEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -144,7 +148,9 @@ class AltRobertaEmbeddings(nn.Cell):
         """
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration parameters for the embeddings. It should have the following attributes:
+            config (object): 
+                An object containing configuration parameters for the embeddings. It should have the following attributes:
+                
                 - vocab_size (int): The size of the vocabulary.
                 - hidden_size (int): The dimension of the hidden layers.
                 - max_position_embeddings (int): The maximum position for position embeddings.
@@ -153,10 +159,10 @@ class AltRobertaEmbeddings(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layers.
                 - position_embedding_type (str, optional): The type of position embedding, defaults to 'absolute'.
                 - pad_token_id (int): The ID of the padding token.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             AttributeError: If the config object does not have the required attributes.
             ValueError: If the config attributes have invalid values or types.
@@ -169,12 +175,12 @@ class AltRobertaEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.register_buffer('position_ids', ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1)))
+        self.register_buffer('token_type_ids', ops.zeros(*self.position_ids.shape, dtype=mindspore.int64))
 
         # End copy
         self.padding_idx = config.pad_token_id
@@ -182,27 +188,27 @@ class AltRobertaEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         """
         Constructs the embeddings for the AltRoberta model.
-        
+
         Args:
             self (AltRobertaEmbeddings): An instance of the AltRobertaEmbeddings class.
-            input_ids (Optional[mindspore.Tensor]): The input tensor containing the token indices. 
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing the token indices.
                 Default is None.
-            token_type_ids (Optional[mindspore.Tensor]): The input tensor containing the token type indices. 
+            token_type_ids (Optional[mindspore.Tensor]): The input tensor containing the token type indices.
                 Default is None.
-            position_ids (Optional[mindspore.Tensor]): The input tensor containing the position indices. 
+            position_ids (Optional[mindspore.Tensor]): The input tensor containing the position indices.
                 Default is None.
-            inputs_embeds (Optional[mindspore.Tensor]): The input tensor containing the embedded inputs. 
+            inputs_embeds (Optional[mindspore.Tensor]): The input tensor containing the embedded inputs.
                 Default is None.
             past_key_values_length (int): The length of past key values. Default is 0.
-        
+
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor.
-        
+            mindspore.Tensor: The forwarded embeddings tensor.
+
         Raises:
             None.
         """
@@ -220,16 +226,16 @@ class AltRobertaEmbeddings(nn.Cell):
 
         seq_length = input_shape[1]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -250,7 +256,8 @@ class AltRobertaEmbeddings(nn.Cell):
         Args:
             inputs_embeds: mindspore.Tensor
 
-        Returns: mindspore.Tensor
+        Returns:
+            mindspore.Tensor
         """
         input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
@@ -258,39 +265,36 @@ class AltRobertaEmbeddings(nn.Cell):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return ops.broadcast_to(position_ids.unsqueeze(0), (input_shape))
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfAttention with Roberta->AltRoberta
-class AltRobertaSelfAttention(nn.Cell):
+class AltRobertaSelfAttention(nn.Module):
 
     """
     Represents a self-attention mechanism for the ALBERT model.
-    This class implements the self-attention mechanism used in the ALBERT model for natural language processing tasks. 
-    The attention mechanism calculates attention scores between different parts of the input sequence and generates context-aware representations. 
+    This class implements the self-attention mechanism used in the ALBERT model for natural language processing tasks.
+    The attention mechanism calculates attention scores between different parts of the input sequence and generates context-aware representations.
     The class includes methods for initializing the self-attention layer, processing input tensors, and generating output representations.
-    
+
     Attributes:
         num_attention_heads (int): Number of attention heads used in the self-attention mechanism.
         attention_head_size (int): Size of each attention head.
         all_head_size (int): Total size of all attention heads.
-        query (nn.Dense): Dense layer for query transformation.
-        key (nn.Dense): Dense layer for key transformation.
-        value (nn.Dense): Dense layer for value transformation.
+        query (nn.Linear): Dense layer for query transformation.
+        key (nn.Linear): Dense layer for key transformation.
+        value (nn.Linear): Dense layer for value transformation.
         dropout (nn.Dropout): Dropout layer for attention probabilities.
         position_embedding_type (str): Type of position embeddings used in the attention mechanism.
         max_position_embeddings (int): Maximum number of position embeddings.
         distance_embedding (nn.Embedding): Embedding layer for distance-based positional encodings.
         is_decoder (bool): Indicates if the self-attention layer is used in a decoder context.
-    
+
     Methods:
-        swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        swapaxes_for_scores:
             Reshapes the input tensor 'x' to prepare it for calculating attention scores.
-    
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, 
-                  encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, 
-                  output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
+
+        forward:
             Constructs the self-attention mechanism using the given input tensors and masks.
             Calculates attention scores, applies position embeddings, and produces the final context layer.
             Supports optional parameters for handling cross-attention, caching key-value pairs, and outputting attention scores.
@@ -299,15 +303,15 @@ class AltRobertaSelfAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes an instance of the AltRobertaSelfAttention class.
-        
+
         Args:
             self: The instance of the class.
             config (object): An object containing configuration parameters for the self-attention mechanism.
             position_embedding_type (str, optional): The type of position embedding to be used. Defaults to None.
-        
+
         Returns:
-            None. This method initializes the instance with the specified configuration and position embedding type.
-        
+            None.
+
         Raises:
             ValueError: If the hidden size in the config is not a multiple of the number of attention heads.
         """
@@ -322,9 +326,9 @@ class AltRobertaSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -339,22 +343,22 @@ class AltRobertaSelfAttention(nn.Cell):
     def swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method 'swapaxes_for_scores' is defined in the class 'AltRobertaSelfAttention' and is used to perform a specific transformation on the input tensor 'x'.
-        
+
         Args:
             self (AltRobertaSelfAttention): The instance of the AltRobertaSelfAttention class.
             x (mindspore.Tensor): The input tensor on which the swapaxes operation will be performed. It should be of type mindspore.Tensor.
-        
+
         Returns:
             mindspore.Tensor: Returns a new tensor after performing the swapaxes operation.
-        
+
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -365,22 +369,29 @@ class AltRobertaSelfAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         '''
-        This method constructs the self-attention mechanism for the AltRoberta model.
-        
+        This method forwards the self-attention mechanism for the AltRoberta model.
+
         Args:
             self: The object instance.
-            hidden_states (mindspore.Tensor): The input hidden states. It is a tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores. It has the same shape as hidden_states and contains 0s for positions that should be masked and
--10000s for positions that should be kept.
-            head_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores per head. It has the shape (num_heads,) and is a tensor of 0s and 1s.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor representing hidden states from the encoder. It has the same shape as hidden_states.
-            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores in encoder_hidden_states. It has the same shape as encoder_hidden_states.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key and value tensors. Each tensor has the shape (batch_size, num_heads, past_sequence_length, head_size).
+            hidden_states (mindspore.Tensor): The input hidden states. 
+                It is a tensor of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores. 
+                It has the same shape as hidden_states and contains 0s for positions that should be masked and
+                -10000s for positions that should be kept.
+            head_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores per head. 
+                It has the shape (num_heads,) and is a tensor of 0s and 1s.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor representing hidden states from the encoder. 
+                It has the same shape as hidden_states.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores in encoder_hidden_states. 
+                It has the same shape as encoder_hidden_states.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key and value tensors.
+                Each tensor has the shape (batch_size, num_heads, past_sequence_length, head_size).
             output_attentions (Optional[bool]): An optional flag to indicate whether to output attention scores.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: The output of the self-attention mechanism, which is a tuple containing context_layer and attention_probs.
-        
+            Tuple[mindspore.Tensor]: 
+                The output of the self-attention mechanism, which is a tuple containing context_layer and attention_probs.
+
         Raises:
             None
         '''
@@ -403,8 +414,8 @@ class AltRobertaSelfAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.swapaxes_for_scores(self.key(hidden_states))
             value_layer = self.swapaxes_for_scores(self.value(hidden_states))
@@ -453,7 +464,7 @@ class AltRobertaSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -477,61 +488,64 @@ class AltRobertaSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfOutput
-class AltRobertaSelfOutput(nn.Cell):
-
+class AltRobertaSelfOutput(nn.Module):
     """A class representing the self-attention output module of the alternative implementation of the RoBERTa model.
-    
-    This class inherits from the `nn.Cell` class and implements the functionality of the self-attention output module in the RoBERTa model. It applies a dense layer, followed by a dropout layer, and then
-applies layer normalization to the output. The output is the sum of the layer-normalized hidden states and the input tensor.
-    
+
+    This class inherits from the `nn.Module` class and implements the functionality of the self-attention output module in the RoBERTa model. 
+    It applies a dense layer, followed by a dropout layer, and then applies layer normalization to the output. 
+    The output is the sum of the layer-normalized hidden states and the input tensor.
+
     Attributes:
-        dense (nn.Dense): The dense layer used to transform the hidden states.
+        dense (nn.Linear): The dense layer used to transform the hidden states.
         LayerNorm (nn.LayerNorm): The layer normalization module.
         dropout (nn.Dropout): The dropout module.
-    
+
     Methods:
-        construct(hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        forward:
             Applies the self-attention output module to the given hidden states and input tensor.
-    
-        Examples:
-            >>> config = RobertaConfig(hidden_size=768, layer_norm_eps=1e-12, hidden_dropout_prob=0.1)
-            >>> self_output = AltRobertaSelfOutput(config)
-            >>> hidden_states = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
-            >>> input_tensor = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
-            >>> output = self_output.construct(hidden_states, input_tensor)
+
+    Example:
+        ```python
+        >>> config = RobertaConfig(hidden_size=768, layer_norm_eps=1e-12, hidden_dropout_prob=0.1)
+        >>> self_output = AltRobertaSelfOutput(config)
+        >>> hidden_states = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
+        >>> input_tensor = mindspore.Tensor(np.random.rand(2, 3, 768), mindspore.float32)
+        >>> output = self_output.forward(hidden_states, input_tensor)
+        ```
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaSelfOutput class.
-        
+
         Args:
             self: The instance of the AltRobertaSelfOutput class.
-            config: An object containing configuration parameters for the self output layer, including the hidden size and dropout probability. It is of type Config.
-        
+            config: An object containing configuration parameters for the self output layer, including the hidden size
+                and dropout probability. It is of type Config.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the configuration parameters are invalid or missing.
-            - TypeError: If the input parameters are of incorrect types.
+            ValueError: If the configuration parameters are invalid or missing.
+            TypeError: If the input parameters are of incorrect types.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output of the self-attention mechanism in the AltRoberta model.
-        
+        This method forwards the output of the self-attention mechanism in the AltRoberta model.
+
         Args:
             self (AltRobertaSelfOutput): The instance of the AltRobertaSelfOutput class.
             hidden_states (mindspore.Tensor): The tensor representing the hidden states from the previous layer.
             input_tensor (mindspore.Tensor): The tensor representing the input to the current layer.
-        
+
         Returns:
-            mindspore.Tensor: Returns a tensor representing the constructed hidden states after self-attention mechanism.
-        
+            mindspore.Tensor: Returns a tensor representing the forwarded hidden states after self-attention mechanism.
+
         Raises:
             None
         """
@@ -542,41 +556,40 @@ applies layer normalization to the output. The output is the sum of the layer-no
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaAttention with Roberta->AltRoberta
-class AltRobertaAttention(nn.Cell):
+class AltRobertaAttention(nn.Module):
+    '''
+    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model.
+    This class inherits from nn.Module and includes methods for initializing the attention mechanism, pruning
+    attention heads, and forwarding the attention output.
 
-    ''' 
-    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model. This class inherits from nn.Cell and includes methods for initializing the attention mechanism, pruning
-attention heads, and constructing the attention output.
-    
     Attributes:
         config: The configuration parameters for the attention mechanism.
         position_embedding_type: The type of position embedding to be used.
-    
+
     Methods:
-        __init__(self, config, position_embedding_type=None): Initializes the AltRobertaAttention class.
-        prune_heads(self, heads): Prunes the specified attention heads from the attention mechanism.
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention
-output using the given inputs.
-    
+        __init__: Initializes the AltRobertaAttention class.
+        prune_heads: Prunes the specified attention heads from the attention mechanism.
+        forward: Constructs the attention output using the given inputs.
+
     Note:
-        The class inherits from nn.Cell and is designed for use in the AltRoberta model.
+        The class inherits from nn.Module and is designed for use in the AltRoberta model.
     '''
     def __init__(self, config, position_embedding_type=None):
         """
         __init__
-        
+
         Initializes an instance of the AltRobertaAttention class.
-        
+
         Args:
             self (object): The instance of the class.
             config (object): The configuration object containing the settings for the attention mechanism.
             position_embedding_type (str, optional): The type of position embedding to be used. Default is None.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__()
         self.self = AltRobertaSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -586,17 +599,19 @@ output using the given inputs.
     def prune_heads(self, heads):
         """
         This method 'prune_heads' is defined within the class 'AltRobertaAttention' and is used to prune the attention heads based on the specified 'heads'.
-        
+
         Args:
             self: The instance of the 'AltRobertaAttention' class.
             heads: A list of integers representing the attention heads to be pruned.
-        
+
         Returns:
-            None. The method performs in-place modifications on the instance variables of the 'AltRobertaAttention' class.
-        
+            None: The method performs in-place modifications on the instance variables of the 'AltRobertaAttention' class.
+
         Raises:
-            This method does not raise any exceptions explicitly. However, it assumes that the input parameters are of the correct type and format. Any exceptions raised within the called functions (e.g.,
-find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the caller.
+            This method does not raise any exceptions explicitly.
+                However, it assumes that the input parameters are of the correct type and format.
+                Any exceptions raised within the called functions (e.g.,find_pruneable_heads_and_indices, prune_linear_layer)
+                will propagate to the caller.
         """
         if len(heads) == 0:
             return
@@ -608,14 +623,14 @@ find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the call
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -626,8 +641,8 @@ find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the call
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         """
-        This method constructs the attention mechanism for the AltRoberta model.
-        
+        This method forwards the attention mechanism for the AltRoberta model.
+
         Args:
             self (AltRobertaAttention): The current instance of the AltRobertaAttention class.
             hidden_states (mindspore.Tensor): The input hidden states. Shape: [batch_size, sequence_length, hidden_size].
@@ -637,10 +652,11 @@ find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the call
             encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention. Shape: [batch_size, 1, sequence_length].
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Tuple containing the previous key and value tensors for faster decoding.
             output_attentions (Optional[bool]): Flag to output attentions weights. Default is False.
-        
+
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the attention output tensor. Shape: [batch_size, sequence_length, hidden_size].
-        
+            Tuple[mindspore.Tensor]:
+                A tuple containing the attention output tensor. Shape: [batch_size, sequence_length, hidden_size].
+
         Raises:
             None
         """
@@ -659,58 +675,60 @@ find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the call
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaIntermediate with Roberta->AltRoberta
-class AltRobertaIntermediate(nn.Cell):
+class AltRobertaIntermediate(nn.Module):
 
     """
     Represents the intermediate layer for an alternative implementation of the Roberta model.
-    
-    This class inherits from nn.Cell and contains methods to initialize and construct the intermediate layer.
-    
+
+    This class inherits from nn.Module and contains methods to initialize and forward the intermediate layer.
+
     Attributes:
         config (obj): Configuration object for the intermediate layer.
-    
+
     Methods:
-        __init__(config): Initializes the AltRobertaIntermediate class with the provided configuration.
-        construct(hidden_states): Constructs the intermediate layer using the given hidden states tensor.
-    
+        __init__: Initializes the AltRobertaIntermediate class with the provided configuration.
+        forward: Constructs the intermediate layer using the given hidden states tensor.
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaIntermediate class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object of type 'config' containing the configuration parameters for the model.
+            config:
+                An object of type 'config' containing the configuration parameters for the model.
+
                 - Type: 'config'
                 - Purpose: Specifies the configuration parameters for the model.
                 - Restrictions: None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method to construct hidden states in the AltRobertaIntermediate class.
-        
+        Method to forward hidden states in the AltRobertaIntermediate class.
+
         Args:
             self: Instance of the AltRobertaIntermediate class.
             hidden_states (mindspore.Tensor): The input hidden states tensor to be processed.
                 It represents the intermediate hidden states that are to be transformed.
-        
+
         Returns:
             mindspore.Tensor: The transformed hidden states tensor after passing through the dense layer
                 and applying the intermediate activation function.
-        
+
         Raises:
             None
         """
@@ -720,56 +738,57 @@ class AltRobertaIntermediate(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaOutput
-class AltRobertaOutput(nn.Cell):
+class AltRobertaOutput(nn.Module):
 
     """
     Represents the output of an alternative Roberta model.
-    
-    This class inherits from nn.Cell and includes methods for initializing the class and constructing the output tensor based on the input hidden states and input tensor. The output tensor is obtained by
-applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
-    
+
+    This class inherits from nn.Module and includes methods for initializing the class and forwarding the output tensor
+    based on the input hidden states and input tensor.
+    The output tensor is obtained by applying dense layers, dropout, and layer normalization to the input hidden states
+    and input tensor.
+
     Attributes:
-        dense (nn.Dense): A dense layer with the specified intermediate and hidden sizes.
+        dense (nn.Linear): A dense layer with the specified intermediate and hidden sizes.
         LayerNorm (nn.LayerNorm): A layer normalization module with the specified hidden size and epsilon value.
         dropout (nn.Dropout): A dropout module with the specified dropout probability.
-    
+
     Methods:
-        __init__(self, config): Initializes the AltRobertaOutput class with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the
-input hidden states and input tensor.
-    
+        __init__: Initializes the AltRobertaOutput class with the given configuration.
+        forward: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaOutput class.
-        
+
         Args:
             self (AltRobertaOutput): The instance of the class.
             config: A configuration object containing the parameters for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs the output of the alternative Roberta model.
-        
+        This method forwards the output of the alternative Roberta model.
+
         Args:
             self (AltRobertaOutput): The instance of the AltRobertaOutput class.
             hidden_states (mindspore.Tensor): The hidden states tensor to be processed.
             input_tensor (mindspore.Tensor): The input tensor to be added to the processed hidden states.
-        
+
         Returns:
             mindspore.Tensor: The processed hidden states tensor.
-        
+
         Raises:
             None
         """
@@ -780,44 +799,48 @@ input hidden states and input tensor.
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaLayer with Roberta->AltRoberta
-class AltRobertaLayer(nn.Cell):
+class AltRobertaLayer(nn.Module):
 
     """
-    This class represents a layer in the AltRoberta model. It inherits from the nn.Cell class.
-    
+    This class represents a layer in the AltRoberta model. It inherits from the nn.Module class.
+
     Attributes:
-    - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
-    - seq_len_dim (int): The dimension of the sequence length.
-    - attention (AltRobertaAttention): The attention module used in the layer.
-    - is_decoder (bool): Indicates if the layer is a decoder.
-    - add_cross_attention (bool): Indicates if cross-attention is added.
-    - crossattention (AltRobertaAttention, optional): The cross-attention module used in the layer, if cross-attention is added.
-    - intermediate (AltRobertaIntermediate): The intermediate module used in the layer.
-    - output (AltRobertaOutput): The output module used in the layer.
-    
+        chunk_size_feed_forward (int): The chunk size for feed-forward operations.
+        seq_len_dim (int): The dimension of the sequence length.
+        attention (AltRobertaAttention): The attention module used in the layer.
+        is_decoder (bool): Indicates if the layer is a decoder.
+        add_cross_attention (bool): Indicates if cross-attention is added.
+        crossattention (AltRobertaAttention, optional): The cross-attention module used in the layer, if cross-attention is added.
+        intermediate (AltRobertaIntermediate): The intermediate module used in the layer.
+        output (AltRobertaOutput): The output module used in the layer.
+
     Methods:
-    - construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): 
-        Constructs the layer by applying attention, intermediate, and output operations.
-    - feed_forward_chunk(attention_output): 
-        Applies the feed-forward operations on the attention output.
-    
+        forward:
+            Constructs the layer by applying attention, intermediate, and output operations.
+        feed_forward_chunk:
+            Applies the feed-forward operations on the attention output.
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaLayer class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object of the configuration class that contains various settings and hyperparameters for the model.
+            config:
+                An object of the configuration class that contains various settings and hyperparameters for the model.
+
                 - Type: Custom Configuration object
                 - Purpose: Provides necessary configuration parameters for initializing the AltRobertaLayer instance.
                 - Restrictions: None
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            ValueError: If `self` is not used as a decoder model and `add_cross_attention` is `True`.
+            ValueError:
+                If `self` is not used as a decoder model and `add_cross_attention` is `True`.
+
                 - Raised when the `add_cross_attention` parameter is set to `True` but `self` is not used as a decoder model.
                 - Purpose: Ensures that cross attention is only added when the layer is used as a decoder model.
                 - Restrictions: None
@@ -835,7 +858,7 @@ class AltRobertaLayer(nn.Cell):
         self.intermediate = AltRobertaIntermediate(config)
         self.output = AltRobertaOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -847,7 +870,7 @@ class AltRobertaLayer(nn.Cell):
     ) -> Tuple[mindspore.Tensor]:
         """
         Constructs the layer of the alternative Roberta model.
-        
+
         Args:
             self (AltRobertaLayer): The instance of the AltRobertaLayer class.
             hidden_states (mindspore.Tensor): The input hidden states for the layer.
@@ -857,12 +880,13 @@ class AltRobertaLayer(nn.Cell):
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder_hidden_states if the layer is a decoder. Defaults to None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key and value tensors for fast autoregressive decoding. Defaults to None.
             output_attentions (Optional[bool]): Whether to return attentions as part of the output. Defaults to False.
-        
+
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the layer output and additional values if the layer is a decoder.
-        
+
         Raises:
-            ValueError: If `encoder_hidden_states` are passed, and the cross-attention layers are not instantiated with `config.add_cross_attention=True`.
+            ValueError:
+                If `encoder_hidden_states` are passed, and the cross-attention layers are not instantiated with `config.add_cross_attention=True`.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -922,14 +946,14 @@ class AltRobertaLayer(nn.Cell):
     def feed_forward_chunk(self, attention_output):
         """
         This method applies the feed-forward chunk operation to the given attention output.
-        
+
         Args:
             self (AltRobertaLayer): The instance of the AltRobertaLayer class invoking this method.
             attention_output (tensor): The input tensor representing the attention output.
-        
+
         Returns:
             tensor: The output tensor obtained after applying the feed-forward chunk operation.
-        
+
         Raises:
             ValueError: If the attention_output is not a valid tensor.
             TypeError: If the input parameters are not of the expected types.
@@ -940,44 +964,47 @@ class AltRobertaLayer(nn.Cell):
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEncoder with Roberta->AltRoberta
-class AltRobertaEncoder(nn.Cell):
+class AltRobertaEncoder(nn.Module):
 
     """
-    The 'AltRobertaEncoder' class is responsible for encoding input data using a variation of the Roberta model. This class inherits from the 'nn.Cell' class and provides methods to construct the encoder and
-generate the output based on the input.
-    
-    The class consists of an initialization method that takes a configuration object as input and sets up the encoder layers. The 'construct' method takes various input tensors and optional parameters to
-construct the encoder output based on the Roberta model's architecture. 
-    
-    The 'construct' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations. It also handles gradient checkpointing during
-training if enabled. The method returns the encoder output in the form of a tuple or a custom 'BaseModelOutputWithPastAndCrossAttentions' object based on the specified return dict option.
-    
-    Overall, the 'AltRobertaEncoder' class encapsulates the functionality to encode input data using the specified Roberta model architecture and provides flexibility in configuring the output based on the
-input parameters.
+    The 'AltRobertaEncoder' class is responsible for encoding input data using a variation of the Roberta model.
+    This class inherits from the 'nn.Module' class and provides methods to forward the encoder and generate the output based on the input.
+
+    The class consists of an initialization method that takes a configuration object as input and sets up the encoder layers.
+    The 'forward' method takes various input tensors and optional parameters to forward the encoder output based on the Roberta model's architecture.
+
+    The 'forward' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations.
+    It also handles gradient checkpointing during training if enabled.
+    The method returns the encoder output in the form of a tuple or a custom 'BaseModelOutputWithPastAndCrossAttentions' object based on the specified return dict option.
+
+    Overall, the 'AltRobertaEncoder' class encapsulates the functionality to encode input data using the specified Roberta model architecture
+    and provides flexibility in configuring the output based on the input parameters.
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaEncoder class.
-        
+
         Args:
             self: The instance of the AltRobertaEncoder class.
-            config: A dictionary containing configuration settings for the encoder.
-                Type: dict
-                Purpose: Contains various parameters to configure the encoder.
-                Restrictions: Must be a valid dictionary object.
-        
+            config:
+                A dictionary containing configuration settings for the encoder.
+
+                - Type: dict
+                - Purpose: Contains various parameters to configure the encoder.
+                - Restrictions: Must be a valid dictionary object.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([AltRobertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([AltRobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -991,28 +1018,28 @@ input parameters.
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
         """
-        This method constructs the AltRobertaEncoder by processing the input hidden states and optional parameters to generate the output.
-        
+        This method forwards the AltRobertaEncoder by processing the input hidden states and optional parameters to generate the output.
+
         Args:
-        - self: The instance of the AltRobertaEncoder class.
-        - hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
-        - attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the attention mask. Default is None.
-        - head_mask (Optional[mindspore.Tensor]): An optional tensor representing the head mask. Default is None.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor representing the encoder hidden states. Default is None.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the encoder attention mask. Default is None.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key values. Default is None.
-        - use_cache (Optional[bool]): An optional boolean flag indicating whether to use cache. Default is None.
-        - output_attentions (Optional[bool]): An optional boolean flag indicating whether to output attentions. Default is False.
-        - output_hidden_states (Optional[bool]): An optional boolean flag indicating whether to output hidden states. Default is False.
-        - return_dict (Optional[bool]): An optional boolean flag indicating whether to return a dictionary. Default is True.
-        
+            self: The instance of the AltRobertaEncoder class.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the attention mask. Default is None.
+            head_mask (Optional[mindspore.Tensor]): An optional tensor representing the head mask. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor representing the encoder hidden states. Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor representing the encoder attention mask. Default is None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple of past key values. Default is None.
+            use_cache (Optional[bool]): An optional boolean flag indicating whether to use cache. Default is None.
+            output_attentions (Optional[bool]): An optional boolean flag indicating whether to output attentions. Default is False.
+            output_hidden_states (Optional[bool]): An optional boolean flag indicating whether to output hidden states. Default is False.
+            return_dict (Optional[bool]): An optional boolean flag indicating whether to return a dictionary. Default is True.
+
         Returns:
-        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: 
-            Depending on the return_dict flag, returns either a tuple of relevant tensors or a BaseModelOutputWithPastAndCrossAttentions object.
-        
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+                Depending on the return_dict flag, returns either a tuple of relevant tensors or a BaseModelOutputWithPastAndCrossAttentions object.
+
         Raises:
-        - None
-        
+            None
+
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -1088,50 +1115,55 @@ input parameters.
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaPooler
-class AltRobertaPooler(nn.Cell):
+class AltRobertaPooler(nn.Module):
 
     """
     Represents a custom pooler layer for an alternative implementation of the RoBERTa model.
-    
-    This class inherits from the nn.Cell module and provides a custom pooler layer for an alternative implementation of the RoBERTa model.
-    
-    The AltRobertaPooler class initializes with a configuration object and includes methods to construct the pooler layer. The constructor initializes the dense layer and activation function. The construct
-method takes hidden_states as input, extracts the first token tensor, applies the dense layer, applies the activation function, and returns the pooled output.
-    
-    This class is designed to be used as part of a custom RoBERTa model implementation and provides an alternative approach to pooling hidden states for downstream tasks.
+
+    This class inherits from the nn.Module module and provides a custom pooler layer for an alternative implementation of the RoBERTa model.
+
+    The AltRobertaPooler class initializes with a configuration object and includes methods to forward the pooler layer.
+    The forwardor initializes the dense layer and activation function.
+    The forward method takes hidden_states as input, extracts the first token tensor, applies the dense layer,
+    applies the activation function, and returns the pooled output.
+
+    This class is designed to be used as part of a custom RoBERTa model implementation and provides
+    an alternative approach to pooling hidden states for downstream tasks.
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltRobertaPooler class.
-        
+
         Args:
             self (object): The instance of the AltRobertaPooler class.
-            config (object): An object containing configuration settings.
+            config (object):
+                An object containing configuration settings.
+
                 - Type: Any
                 - Purpose: Specifies the configuration settings for the pooler.
                 - Restrictions: Must be a valid configuration object.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a pooled output tensor from the given hidden states tensor.
-        
+
         Args:
             self (AltRobertaPooler): The instance of the AltRobertaPooler class.
             hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) containing hidden states.
-        
+
         Returns:
             mindspore.Tensor: The output tensor of shape (batch_size, hidden_size) representing the pooled output.
-        
+
         Raises:
             None.
         """
@@ -1144,25 +1176,29 @@ method takes hidden_states as input, extracts the first token tensor, applies th
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPAttention with CLIP->AltCLIP
-class AltCLIPAttention(nn.Cell):
+class AltCLIPAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config):
         """
         Initializes an instance of the AltCLIPAttention class.
-        
+
         Args:
             self: The instance of the class AltCLIPAttention.
-            config: An object containing configuration parameters for the attention mechanism.
-                Type: object
-                Purpose: To configure the attention mechanism.
-                Restrictions: None
-        
+            config:
+                An object containing configuration parameters for the attention mechanism.
+
+                - Type: object
+                - Purpose: To configure the attention mechanism.
+                - Restrictions: None
+
         Returns:
             None
-        
+
         Raises:
-            ValueError: If embed_dim is not divisible by num_heads.
-                Purpose: To indicate that the configuration is invalid.
+            ValueError:
+                If embed_dim is not divisible by num_heads.
+
+                - Purpose: To indicate that the configuration is invalid.
         """
         super().__init__()
         self.config = config
@@ -1177,30 +1213,30 @@ class AltCLIPAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method '_shape' in the class 'AltCLIPAttention' reshapes the input tensor based on the provided sequence length and batch size.
-        
+
         Args:
             self (AltCLIPAttention): The instance of the AltCLIPAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the sequence.
             bsz (int): The size of the batch.
-        
+
         Returns:
-            None. This method does not return any value, as it directly reshapes the input tensor.
-        
+            None: This method does not return any value, as it directly reshapes the input tensor.
+
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1247,7 +1283,7 @@ class AltCLIPAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -1259,7 +1295,7 @@ class AltCLIPAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1279,58 +1315,61 @@ class AltCLIPAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->AltCLIP
-class AltCLIPMLP(nn.Cell):
+class AltCLIPMLP(nn.Module):
 
     """
-    This class represents an alternative implementation of the Multilayer Perceptron (MLP) used in the Contrastive Language-Image Pretraining (CLIP) model. It inherits from the `nn.Cell` class.
-    
+    This class represents an alternative implementation of the Multilayer Perceptron (MLP) used in the Contrastive Language-Image Pretraining (CLIP) model.
+    It inherits from the `nn.Module` class.
+
     Attributes:
         config (object): The configuration object containing the hyperparameters for the MLP.
         activation_fn (function): The activation function used for the hidden layers.
-        fc1 (mindspore.nn.Dense): The first fully connected layer of the MLP.
-        fc2 (mindspore.nn.Dense): The second fully connected layer of the MLP.
-    
+        fc1 (mindspore.nn.Linear): The first fully connected layer of the MLP.
+        fc2 (mindspore.nn.Linear): The second fully connected layer of the MLP.
+
     Methods:
-        __init__(self, config): Initializes a new instance of the AltCLIPMLP class.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the forward pass of the MLP.
-    
+        __init__: Initializes a new instance of the AltCLIPMLP class.
+        forward: Constructs the forward pass of the MLP.
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the AltCLIPMLP class.
-        
+
         Args:
             self (AltCLIPMLP): The instance of the AltCLIPMLP class.
-            config: The configuration object containing the settings for the AltCLIPMLP model.
-                Type: Any
-                Purpose: Specifies the configuration settings for the AltCLIPMLP model.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                The configuration object containing the settings for the AltCLIPMLP model.
+
+                - Type: Any
+                - Purpose: Specifies the configuration settings for the AltCLIPMLP model.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Construct the AltCLIPMLP model.
-        
-        This method takes in a tensor of hidden states and applies linear transformations and activation functions to construct the AltCLIPMLP model.
-        
+
+        This method takes in a tensor of hidden states and applies linear transformations and activation functions to forward the AltCLIPMLP model.
+
         Args:
             self (AltCLIPMLP): An instance of the AltCLIPMLP class.
             hidden_states (mindspore.Tensor): A tensor of hidden states to be processed by the model.
-        
+
         Returns:
             mindspore.Tensor: A tensor representing the output of the AltCLIPMLP model.
-        
+
         Raises:
             None.
         """
@@ -1341,35 +1380,41 @@ class AltCLIPMLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->AltCLIP
-class AltCLIPEncoderLayer(nn.Cell):
+class AltCLIPEncoderLayer(nn.Module):
 
     """
-    This class represents a single layer of the AltCLIPEncoder. It applies multi-head self-attention and feed-forward neural network operations to the input hidden states.
-    
-    The AltCLIPEncoderLayer class inherits from the nn.Cell class.
-    
+    This class represents a single layer of the AltCLIPEncoder.
+    It applies multi-head self-attention and feed-forward neural network operations to the input hidden states.
+
+    The AltCLIPEncoderLayer class inherits from the nn.Module class.
+
     Attributes:
         embed_dim (int): The dimensionality of the input hidden states.
         self_attn (AltCLIPAttention): An instance of the AltCLIPAttention class that performs the self-attention operation.
         layer_norm1 (nn.LayerNorm): A layer normalization operation applied after the self-attention.
         mlp (AltCLIPMLP): An instance of the AltCLIPMLP class that performs the feed-forward neural network operation.
         layer_norm2 (nn.LayerNorm): A layer normalization operation applied after the feed-forward neural network operation.
-    
+
     Methods:
-        construct(hidden_states, attention_mask, causal_attention_mask, output_attentions=False)
+        forward(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
             Applies the AltCLIPEncoderLayer operations to the input hidden states.
-    
+
             Args:
-                hidden_states (mindspore.Tensor): The input hidden states of shape (batch, seq_len, embed_dim).
-                attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len), where padding elements are indicated by very large negative values.
-                causal_attention_mask (mindspore.Tensor): The causal attention mask of size (batch, 1, tgt_len, src_len), which is used to mask future positions during self-attention.
-                output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers. Defaults to False.
-    
+
+                - hidden_states (mindspore.Tensor): The input hidden states of shape (batch, seq_len, embed_dim).
+                - attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len),
+                where padding elements are indicated by very large negative values.
+                - causal_attention_mask (mindspore.Tensor): The causal attention mask of size (batch, 1, tgt_len, src_len),
+                which is used to mask future positions during self-attention.
+                - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers. Defaults to False.
+
             Returns:
-                Tuple[mindspore.Tensor]: A tuple containing the output hidden states. If output_attentions is True, the tuple also contains the attention weights tensor.
-    
+                Tuple[mindspore.Tensor]: A tuple containing the output hidden states.
+                    If output_attentions is True, the tuple also contains the attention weights tensor.
+
     Note:
-        The construct method performs the following operations in order:
+        The forward method performs the following operations in order:
+
         1. Applies layer normalization to the input hidden states.
         2. Performs the self-attention operation using the self_attn instance.
         3. Adds the residual connection from step 1 to the output of step 2.
@@ -1377,33 +1422,33 @@ class AltCLIPEncoderLayer(nn.Cell):
         5. Applies the feed-forward neural network operation using the mlp instance.
         6. Adds the residual connection from step 3 to the output of step 5.
         7. Returns the output hidden states.
-    
+
         If output_attentions is True, the attention weights tensor is also returned.
-    
+
     """
     def __init__(self, config: AltCLIPConfig):
         """
         Initializes an instance of the AltCLIPEncoderLayer class.
-        
+
         Args:
             self: The instance of the AltCLIPEncoderLayer class.
-            config (AltCLIPConfig): An object of type AltCLIPConfig containing the configuration parameters for the encoder layer. 
+            config (AltCLIPConfig): An object of type AltCLIPConfig containing the configuration parameters for the encoder layer.
                 It specifies the hidden size and layer normalization epsilon for the encoder layer.
-        
+
         Returns:
-            None. The method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = AltCLIPAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = AltCLIPMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -1445,7 +1490,7 @@ class AltCLIPEncoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoder with CLIP->AltCLIP
-class AltCLIPEncoder(nn.Cell):
+class AltCLIPEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`AltCLIPEncoderLayer`].
@@ -1456,27 +1501,27 @@ class AltCLIPEncoder(nn.Cell):
     def __init__(self, config: AltCLIPConfig):
         """
         __init__
-        
+
         Initializes an instance of the AltCLIPEncoder class.
-        
+
         Args:
             self: AltCLIPEncoder - The instance of the AltCLIPEncoder class.
             config (AltCLIPConfig): The configuration object for the AltCLIPEncoder instance.
                 This parameter specifies the configuration settings for the AltCLIPEncoder.
                 It should be an instance of the AltCLIPConfig class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([AltCLIPEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([AltCLIPEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1559,14 +1604,14 @@ class AltCLIPEncoder(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->AltCLIP
-class AltCLIPVisionEmbeddings(nn.Cell):
+class AltCLIPVisionEmbeddings(nn.Module):
 
     """
     A class representing the alternate vision embeddings for CLIP (Contrastive Language-Image Pre-training) models in MindSpore.
-    
-    This class extends the nn.Cell module and is used to generate embeddings for images in the CLIP model architecture. 
-    The embeddings are constructed based on the input pixel values using a combination of class embedding, patch embedding, and position embedding.
-    
+
+    This class extends the nn.Module module and is used to generate embeddings for images in the CLIP model architecture.
+    The embeddings are forwarded based on the input pixel values using a combination of class embedding, patch embedding, and position embedding.
+
     Attributes:
         config (AltCLIPVisionConfig): The configuration object containing parameters for the embeddings.
         embed_dim (int): The dimensionality of the embeddings.
@@ -1578,28 +1623,28 @@ class AltCLIPVisionEmbeddings(nn.Cell):
         num_positions (int): The total number of positions including the patches and the class embedding.
         position_embedding (nn.Embedding): The embedding layer for positional encoding.
         position_ids (mindspore.Tensor): The tensor containing position indices.
-    
+
     Methods:
-        construct(pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+        forward:
             Constructs the embeddings for the input pixel values by combining class embedding, patch embedding, and position embedding.
-    
+
     Returns:
         mindspore.Tensor: The generated embeddings for the input pixel values.
-    
+
     """
     def __init__(self, config: AltCLIPVisionConfig):
         """
         Initialize the AltCLIPVisionEmbeddings class.
-        
+
         Args:
             self: The instance of the AltCLIPVisionEmbeddings class.
             config (AltCLIPVisionConfig): An instance of the AltCLIPVisionConfig class containing configuration parameters.
                 The config parameter is used to initialize various attributes within the AltCLIPVisionEmbeddings instance.
                 It must be of type AltCLIPVisionConfig.
-        
+
         Returns:
-            None. This method initializes the attributes of the AltCLIPVisionEmbeddings class and does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1616,29 +1661,29 @@ class AltCLIPVisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(self.num_positions).expand((1, -1))
+        self.register_buffer('position_ids', ops.broadcast_to(ops.arange(self.num_positions), ((1, -1))))
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the embeddings for the AltCLIPVisionEmbeddings model.
-        
+
         Args:
             self (AltCLIPVisionEmbeddings): An instance of the AltCLIPVisionEmbeddings class.
-            pixel_values (mindspore.Tensor): A tensor containing pixel values of images. 
+            pixel_values (mindspore.Tensor): A tensor containing pixel values of images.
                 The shape of the tensor is (batch_size, channels, height, width).
-                
+
         Returns:
-            mindspore.Tensor: A tensor containing the constructed embeddings. 
-                The shape of the tensor is (batch_size, num_patches + 1, embed_dim), 
-                where num_patches is the number of patches extracted from the images and 
+            mindspore.Tensor: A tensor containing the forwarded embeddings.
+                The shape of the tensor is (batch_size, num_patches + 1, embed_dim),
+                where num_patches is the number of patches extracted from the images and
                 embed_dim is the dimension of the embedding.
-                
+
         Raises:
             None.
         """
@@ -1647,8 +1692,8 @@ class AltCLIPVisionEmbeddings(nn.Cell):
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1))
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -1704,12 +1749,12 @@ class AltCLIPPreTrainedModel(PreTrainedModel):
                                                 cell.visual_projection.weight.shape, cell.visual_projection.weight.dtype))
             cell.visual_projection._is_initialized = True
 
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_factor),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_factor, cell.weight.shape)
@@ -1722,34 +1767,34 @@ class AltCLIPPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class AltCLIPVisionTransformer(nn.Cell):
+class AltCLIPVisionTransformer(nn.Module):
 
     """
-    This class represents a vision transformer model for the Alternative Contrastive Learning for Image and Text (AltCLIP) framework. It encapsulates the functionality to process visual inputs using the
-AltCLIP vision transformer architecture.
-    
-    The AltCLIPVisionTransformer class inherits from the nn.Cell class and consists of methods for initialization and construction. 
-    
-    The __init__ method initializes the AltCLIPVisionTransformer with the provided AltCLIPVisionConfig. It sets up the embeddings, encoder, and layer normalization components required for processing visual
-inputs.
-    
-    The construct method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output. It also handles the optional arguments for
-controlling the output format.
-    
+    This class represents a vision transformer model for the Alternative Contrastive Learning for Image and Text (AltCLIP) framework.
+    It encapsulates the functionality to process visual inputs using the AltCLIP vision transformer architecture.
+
+    The AltCLIPVisionTransformer class inherits from the nn.Module class and consists of methods for initialization and forwardion.
+
+    The __init__ method initializes the AltCLIPVisionTransformer with the provided AltCLIPVisionConfig.
+    It sets up the embeddings, encoder, and layer normalization components required for processing visual inputs.
+
+    The forward method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output.
+    It also handles the optional arguments for controlling the output format.
+
     For more details on the AltCLIPVisionTransformer model and its usage, refer to the AltCLIPVisionTransformer documentation and examples.
     """
     def __init__(self, config: AltCLIPVisionConfig):
         """
         Initializes an instance of the AltCLIPVisionTransformer class.
-        
+
         Args:
             self: The instance of the class.
             config (AltCLIPVisionConfig): An instance of AltCLIPVisionConfig containing the configuration parameters for the transformer.
                 This parameter is required to initialize the transformer and should be an instance of AltCLIPVisionConfig.
-        
+
         Returns:
-            None. This method returns nothing.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1758,11 +1803,11 @@ controlling the output format.
         embed_dim = config.hidden_size
 
         self.embeddings = AltCLIPVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         self.encoder = AltCLIPEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1771,6 +1816,7 @@ controlling the output format.
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPooling]
 
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1810,15 +1856,21 @@ controlling the output format.
 class AltCLIPVisionModel(AltCLIPPreTrainedModel):
 
     """
-    The 'AltCLIPVisionModel' class represents a vision model for the AltCLIP framework. It inherits from the 'AltCLIPPreTrainedModel' class and contains methods for initializing the model, obtaining input
-embeddings, and constructing the model output. The 'AltCLIPVisionModel' class is designed to work with image inputs and provides flexibility in handling output attentions, hidden states, and return
-dictionaries. It supports the use of pre-trained models and enables easy integration with image processing pipelines.
-    
-    The 'AltCLIPVisionModel' class can be instantiated and used to process image data, extract features, and perform inference in the context of the AltCLIP framework. It provides a convenient interface for
-leveraging vision transformers and accessing model outputs, such as hidden states and pooled representations of images.
-    
-    This class encapsulates the functionality required to utilize vision models within the AltCLIP framework, allowing for seamless integration with image processing workflows and enabling efficient
-utilization of pre-trained models for various vision-related tasks.
+    The 'AltCLIPVisionModel' class represents a vision model for the AltCLIP framework.
+    It inherits from the 'AltCLIPPreTrainedModel' class and contains methods for initializing the model, obtaining input
+    embeddings, and forwarding the model output.
+    The 'AltCLIPVisionModel' class is designed to work with image inputs and provides flexibility in handling output attentions, hidden states, and return
+    dictionaries.
+    It supports the use of pre-trained models and enables easy integration with image processing pipelines.
+
+    The 'AltCLIPVisionModel' class can be instantiated and used to process image data, extract features,
+    and perform inference in the context of the AltCLIP framework.
+    It provides a convenient interface for leveraging vision transformers and accessing model outputs,
+    such as hidden states and pooled representations of images.
+
+    This class encapsulates the functionality required to utilize vision models within the AltCLIP framework,
+    allowing for seamless integration with image processing workflows and enabling efficient
+    utilization of pre-trained models for various vision-related tasks.
     """
     config_class = AltCLIPVisionConfig
     main_input_name = "pixel_values"
@@ -1826,14 +1878,15 @@ utilization of pre-trained models for various vision-related tasks.
     def __init__(self, config: AltCLIPVisionConfig):
         """
         Initializes an instance of the AltCLIPVisionModel class.
-        
+
         Args:
             self: The instance of the AltCLIPVisionModel class.
-            config (AltCLIPVisionConfig): An instance of AltCLIPVisionConfig representing the configuration parameters for the vision model.
-        
+            config (AltCLIPVisionConfig):
+                An instance of AltCLIPVisionConfig representing the configuration parameters for the vision model.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1842,22 +1895,22 @@ utilization of pre-trained models for various vision-related tasks.
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         Returns the input embeddings of the AltCLIPVisionModel.
-        
+
         Args:
             self (AltCLIPVisionModel): An instance of the AltCLIPVisionModel class.
-        
+
         Returns:
-            nn.Cell: The input embeddings of the AltCLIPVisionModel.
-        
+            nn.Module: The input embeddings of the AltCLIPVisionModel.
+
         Raises:
             None.
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1866,26 +1919,27 @@ utilization of pre-trained models for various vision-related tasks.
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPooling]
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AltCLIPVisionModel
-
-        >>> model = AltCLIPVisionModel.from_pretrained("BAAI/AltCLIP")
-        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AltCLIPVisionModel
+            ...
+            >>> model = AltCLIPVisionModel.from_pretrained("BAAI/AltCLIP")
+            >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         return self.vision_model(
@@ -1898,7 +1952,6 @@ utilization of pre-trained models for various vision-related tasks.
 
 class AltRobertaModel(AltCLIPPreTrainedModel):
     """
-
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
     cross-attention is added between the self-attention layers, following the architecture described in *Attention is
     all you need*_ by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz
@@ -1917,15 +1970,15 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the AltRobertaModel class.
-        
+
         Args:
             self: The instance of the class.
             config (object): The configuration object containing the model's settings.
             add_pooling_layer (bool): Flag indicating whether to add a pooling layer. Defaults to True.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1943,31 +1996,31 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings for the AltRobertaModel.
-        
+
         Args:
             self (AltRobertaModel): The instance of the AltRobertaModel class.
-        
+
         Returns:
             None: This method returns the input embeddings as a word_embeddings object.
-        
+
         Raises:
-            N/A
+            None
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
         """
         Sets the input embeddings for the AltRobertaModel.
-        
+
         Args:
             self (AltRobertaModel): The instance of the AltRobertaModel.
             value (object): The input embeddings value to be set. It can be of any valid type.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         self.embeddings.word_embeddings = value
 
@@ -1980,7 +2033,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.forward
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1997,24 +2050,25 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
-        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input.
+                This mask is used in the cross-attention if the model is configured as a decoder.
+                Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2043,15 +2097,15 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = ops.ones(((batch_size, seq_length + past_key_values_length)))
+            attention_mask = ops.ones(batch_size, seq_length + past_key_values_length)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+                token_type_ids = ops.zeros(*input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -2063,7 +2117,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(*encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -2113,11 +2167,14 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
 class AltCLIPTextModel(AltCLIPPreTrainedModel):
 
     """
-    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods
-for initializing the model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference. The 'construct' method takes various input tensors and optional parameters
-and returns the model's output, including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
-    
-    Examples:
+    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically
+    tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods for initializing the
+    model, getting and setting input embeddings, resizing token embeddings, and forwarding the model for inference.
+    The 'forward' method takes various input tensors and optional parameters and returns the model's output,
+    including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
+
+    Example:
+        ```python
         >>> from transformers import AutoProcessor, AltCLIPTextModel
         >>> model = AltCLIPTextModel.from_pretrained("BAAI/AltCLIP")
         >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
@@ -2126,46 +2183,49 @@ and returns the model's output, including the last hidden state and the pooled C
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
         >>> pooled_output = outputs.pooler_output  # pooled CLS states
+        ```
     """
     config_class = AltCLIPTextConfig
 
     def __init__(self, config):
         """
         Initializes an instance of the AltCLIPTextModel class.
-        
+
         Args:
             self: The instance of the class.
-            config: A configuration object containing parameters for the model initialization.
-                Type: dict
-                Purpose: Specifies the configuration settings for the model.
-                Restrictions: Must be a valid configuration dictionary.
-        
+            config:
+                A configuration object containing parameters for the model initialization.
+
+                - Type: dict
+                - Purpose: Specifies the configuration settings for the model.
+                - Restrictions: Must be a valid configuration dictionary.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided config parameter is not of type dict.
-            - ValueError: If the config dictionary is missing required keys or contains invalid values.
-            - RuntimeError: If there is an issue during the initialization process.
+            TypeError: If the provided config parameter is not of type dict.
+            ValueError: If the config dictionary is missing required keys or contains invalid values.
+            RuntimeError: If there is an issue during the initialization process.
         """
         super().__init__(config)
         self.roberta = AltRobertaModel(config, add_pooling_layer=False)
-        self.transformation = nn.Dense(config.hidden_size, config.project_dim)
-        self.pre_LN = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.transformation = nn.Linear(config.hidden_size, config.project_dim)
+        self.pre_LN = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         This method returns the input embeddings for the AltCLIPTextModel.
-        
+
         Args:
             self: AltCLIPTextModel
                 The instance of the AltCLIPTextModel class.
-        
+
         Returns:
-            nn.Cell
-                The input embeddings for the AltCLIPTextModel, represented as an instance of nn.Cell.
-        
+            nn.Module
+                The input embeddings for the AltCLIPTextModel, represented as an instance of nn.Module.
+
         Raises:
             None
                 This method does not raise any exceptions.
@@ -2175,41 +2235,41 @@ and returns the model's output, including the last hidden state and the pooled C
     def set_input_embeddings(self, value: nn.Embedding) -> None:
         """
         Method to set the input embeddings for the AltCLIPTextModel.
-        
+
         Args:
             self (AltCLIPTextModel): An instance of the AltCLIPTextModel class.
                 This parameter refers to the object itself.
             value (nn.Embedding): The new embedding to be set as the input embedding.
                 It should be an instance of nn.Embedding representing the input embeddings.
                 The value parameter will replace the existing word embeddings in the model.
-        
+
         Returns:
             None: This method does not return any value. It updates the input embeddings of the model in place.
-        
+
         Raises:
-            N/A
+            None
         """
         self.roberta.embeddings.word_embeddings = value
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """
         This method resizes the token embeddings of the AltCLIPTextModel.
-        
+
         Args:
             self (AltCLIPTextModel): The instance of the AltCLIPTextModel class.
-            
-            new_num_tokens (Optional[int]): The new number of tokens for the resized embeddings. 
+
+            new_num_tokens (Optional[int]): The new number of tokens for the resized embeddings.
             If None, the original number of tokens will be used. Default is None.
-        
+
         Returns:
             nn.Embedding: The resized token embeddings as an instance of nn.Embedding.
-        
+
         Raises:
             None: This method does not explicitly raise any exceptions.
         """
         return super().resize_token_embeddings(new_num_tokens)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2225,23 +2285,24 @@ and returns the model's output, including the last hidden state and the pooled C
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndProjection]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPoolingAndProjection]
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoProcessor, AltCLIPTextModel
-
-        >>> model = AltCLIPTextModel.from_pretrained("BAAI/AltCLIP")
-        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-
-        >>> texts = ["it's a cat", "it's a dog"]
-
-        >>> inputs = processor(text=texts, padding=True, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, AltCLIPTextModel
+            ...
+            >>> model = AltCLIPTextModel.from_pretrained("BAAI/AltCLIP")
+            >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+            ...
+            >>> texts = ["it's a cat", "it's a dog"]
+            ...
+            >>> inputs = processor(text=texts, padding=True, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.roberta(
@@ -2284,45 +2345,48 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
     """
     AltCLIPModel
     Represents an alternative implementation of the Contrastive Language-Image Pretraining (CLIP) model.
-    
-    This class inherits from the `AltCLIPPreTrainedModel` class and includes methods to obtain text and image features, as well as to construct the final output.
-    
+
+    This class inherits from the `AltCLIPPreTrainedModel` class and includes methods to obtain text and image features, as well as to forward the final output.
+
     The `AltCLIPModel` class includes the following methods:
+
     - get_text_features: Returns the text embeddings obtained by applying the projection layer to the pooled output of `AltCLIPTextModel`.
     - get_image_features: Returns the image embeddings obtained by applying the projection layer to the pooled output of `AltCLIPVisionModel`.
-    - construct: Constructs the final output, including image-text similarity scores and label probabilities.
-    
-    Examples:
-    >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
-    >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-    >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-    >>> image = Image.open(requests.get(url, stream=True).raw)
-    >>> inputs = processor(images=image, return_tensors="pt")
-    >>> image_features = model.get_image_features(**inputs)
-    
-    >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
-    >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-    >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-    >>> image = Image.open(requests.get(url, stream=True).raw)
-    >>> inputs = processor(
-    ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-    ... )
-    >>> outputs = model(**inputs)
-    >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-    >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+    - forward: Constructs the final output, including image-text similarity scores and label probabilities.
+
+    Example:
+        ```python
+        >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> image_features = model.get_image_features(**inputs)
+        ...
+        >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = processor(
+        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+        ... )
+        >>> outputs = model(**inputs)
+        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+        ```
     """
     config_class = AltCLIPConfig
 
     def __init__(self, config: AltCLIPConfig):
         """Initialize the AltCLIPModel with the provided configuration.
-        
+
         Args:
             self: The instance of the AltCLIPModel class.
             config (AltCLIPConfig): The configuration object containing the settings for the AltCLIPModel.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the 'config.vision_config' is not an instance of AltCLIPVisionConfig.
             ValueError: If the 'config.text_config' is not an instance of AltCLIPTextConfig.
@@ -2350,9 +2414,9 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         self.text_model = AltCLIPTextModel(text_config)
         self.vision_model = AltCLIPVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
-        self.logit_scale = Parameter(mindspore.tensor([self.config.logit_scale_init_value]))
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
+        self.logit_scale = Parameter(mindspore.tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -2368,20 +2432,21 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> mindspore.Tensor:
         r"""
+
         Returns:
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`AltCLIPTextModel`].
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoProcessor, AltCLIPModel
-
-        >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
-        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, AltCLIPModel
+            ...
+            >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+            >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         # Use AltCLIP model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2411,24 +2476,25 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> mindspore.Tensor:
         r"""
+
         Returns:
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
             applying the projection layer to the pooled output of [`AltCLIPVisionModel`].
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AltCLIPModel
-
-        >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
-        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AltCLIPModel
+            ...
+            >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+            >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         # Use AltCLIP model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2448,7 +2514,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -2461,26 +2527,28 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, AltCLIPOutput]:
         r"""
+
         Returns:
+            `Union[Tuple, AltCLIPOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AltCLIPModel
-
-        >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
-        >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-        ... )
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AltCLIPModel
+            ...
+            >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+            >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ... )
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use AltCLIP model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2548,11 +2616,12 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     Args:
         x: mindspore.Tensor x:
 
-    Returns: mindspore.Tensor
+    Returns:
+        mindspore.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 __all__ = [

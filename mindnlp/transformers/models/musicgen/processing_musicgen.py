@@ -50,7 +50,7 @@ class MusicgenProcessor(ProcessorMixin):
             tokenizer (object): The tokenizer object used for tokenizing.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -61,7 +61,8 @@ class MusicgenProcessor(ProcessorMixin):
 
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
         """
-        This method retrieves the decoder prompt IDs for a specified task and language, while allowing the exclusion of timestamps.
+        This method retrieves the decoder prompt IDs for a specified task and language, while allowing the exclusion
+        of timestamps.
         
         Args:
             self: The instance of the class.
@@ -73,7 +74,7 @@ class MusicgenProcessor(ProcessorMixin):
             None: This method does not return a value, but rather sets the decoder prompt IDs in the tokenizer.
         
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
 

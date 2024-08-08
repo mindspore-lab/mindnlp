@@ -87,19 +87,19 @@ class BigBirdPegasusConfig(PretrainedConfig):
             Whether to rescale embeddings with (hidden_size ** 0.5).
 
     Example:
-
-    ```python
-    >>> from transformers import BigBirdPegasusConfig, BigBirdPegasusModel
-
-    >>> # Initializing a BigBirdPegasus bigbird-pegasus-base style configuration
-    >>> configuration = BigBirdPegasusConfig()
-
-    >>> # Initializing a model (with random weights) from the bigbird-pegasus-base style configuration
-    >>> model = BigBirdPegasusModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import BigBirdPegasusConfig, BigBirdPegasusModel
+        ...
+        >>> # Initializing a BigBirdPegasus bigbird-pegasus-base style configuration
+        >>> configuration = BigBirdPegasusConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the bigbird-pegasus-base style configuration
+        >>> model = BigBirdPegasusModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bigbird_pegasus"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -175,7 +175,7 @@ class BigBirdPegasusConfig(PretrainedConfig):
             use_bias (bool, optional): Whether to use bias. Defaults to False.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

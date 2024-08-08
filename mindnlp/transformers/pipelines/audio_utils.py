@@ -139,7 +139,8 @@ def ffmpeg_microphone_live(
         format_for_conversion (`str`, defalts to `f32le`)
             The name of the format of the audio samples to be returned by ffmpeg. The standard is `f32le`, `s16le`
             could also be used.
-    Return:
+
+    Returns:
         A generator yielding dictionaries of the following form
 
         `{"sampling_rate": int, "raw": np.array(), "partial" bool}` With optionnally a `"stride" (int, int)` key if

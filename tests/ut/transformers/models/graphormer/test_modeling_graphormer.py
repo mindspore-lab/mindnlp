@@ -429,19 +429,19 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
     # Inputs are 'input_nodes' and 'input_edges' not 'input_ids'
     def test_model_main_input_name(self):
         for model_class in self.all_model_classes:
-            model_signature = inspect.signature(getattr(model_class, "construct"))
+            model_signature = inspect.signature(getattr(model_class, "forward"))
             # The main input is the name of the argument after `self`
             observed_main_input_name_nodes = list(model_signature.parameters.keys())[1]
             observed_main_input_name_edges = list(model_signature.parameters.keys())[2]
             self.assertEqual(model_class.main_input_name_nodes, observed_main_input_name_nodes)
             self.assertEqual(model_class.main_input_name_edges, observed_main_input_name_edges)
 
-    def test_construct_signature(self):
+    def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

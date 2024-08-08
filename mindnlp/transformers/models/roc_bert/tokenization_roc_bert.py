@@ -75,10 +75,11 @@ def whitespace_tokenize(text):
 
 class RoCBertTokenizer(PreTrainedTokenizer):
     r"""
-    Args:
     Construct a RoCBert tokenizer. Based on WordPiece. This tokenizer inherits from [`PreTrainedTokenizer`] which
     contains most of the main methods. Users should refer to this superclass for more information regarding those
     methods.
+
+    Args:
         vocab_file (`str`):
             File containing the vocabulary.
         word_shape_file (`str`):

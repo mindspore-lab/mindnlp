@@ -12,17 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MindNLP  GPTNeoX model."""
-
+""" MindNLP GPTNeoX model."""
 from typing import Optional, Tuple, Union
 
 from functools import partial
 import numpy as np
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging, get_default_dtype
+from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -54,11 +54,14 @@ GPT_NEOX_PRETRAINED_MODEL_ARCHIVE_LIST = [
 def _get_unpad_data(attention_mask):
     """
     Args:
-        attention_mask (Tensor): A tensor representing the attention mask for the input data. It is used to mask padded tokens in the input sequence. 
-            Should be a 2D tensor with shape (batch_size, sequence_length) containing 0s for padded tokens and 1s for non-padded tokens.
+        attention_mask (Tensor): A tensor representing the attention mask for the input data.
+            It is used to mask padded tokens in the input sequence. Should be a 2D tensor with shape
+            (batch_size, sequence_length) containing 0s for padded tokens and 1s for non-padded tokens.
     
     Returns:
-        None: This function does not return any value. Instead, it computes and stores the necessary data in the form of indices, cumulative sequence lengths, and maximum sequence length.
+        None: This function does not return any value.
+            Instead, it computes and stores the necessary data in the form of indices, cumulative sequence lengths,
+            and maximum sequence length.
     
     Raises:
         None
@@ -66,7 +69,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = mindspore.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -89,10 +92,10 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
@@ -114,14 +117,16 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
             value (bool): The value to set for the gradient checkpointing flag.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
         
-        This method sets the gradient checkpointing flag to the specified value for the given module. The gradient checkpointing flag determines whether gradient checkpointing is used during the forward pass
-of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage at the expense of additional compute. The flag is only set if the module is an instance of the
-GPTNeoXModel class.
+        This method sets the gradient checkpointing flag to the specified value for the given module.
+        The gradient checkpointing flag determines whether gradient checkpointing is used during the forward pass
+        of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage
+        at the expense of additional compute. The flag is only set if the module is an instance of the GPTNeoXModel
+        class.
         """
         if isinstance(module, GPTNeoXModel):
             module.gradient_checkpointing = value
@@ -147,24 +152,27 @@ GPTNeoXModel class.
         self.apply(partial(self._set_gradient_checkpointing, value=True))
 
 
-class GPTNeoXAttention(nn.Cell):
+class GPTNeoXAttention(nn.Module):
     """GPTNeoXAttention"""
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoXAttention class.
-        
+
         Args:
             self: The object instance itself.
-            config: A configuration object containing various hyperparameters for the GPTNeoXAttention model.
-                Type: Any
-                Purpose: To store the configuration settings for the GPTNeoXAttention model.
-                Restrictions: Must be a valid configuration object.
-        
+            config:
+                A configuration object containing various hyperparameters for the GPTNeoXAttention model.
+
+                - Type: Any
+                - Purpose: To store the configuration settings for the GPTNeoXAttention model.
+                - Restrictions: Must be a valid configuration object.
+
         Returns:
             None
-        
+
         Raises:
-            ValueError: If the hidden size is not divisible by the number of attention heads specified in the configuration.
+            ValueError:
+                If the hidden size is not divisible by the number of attention heads specified in the configuration.
         """
         super().__init__()
         self.config = config
@@ -182,25 +190,25 @@ class GPTNeoXAttention(nn.Cell):
         self._init_rope()
 
         self.norm_factor = self.head_size ** -0.5
-        self.query_key_value = nn.Dense(config.hidden_size, 3 * config.hidden_size, has_bias=config.attention_bias)
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, has_bias=config.attention_bias)
+        self.query_key_value = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=config.attention_bias)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.attention_bias)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
         self.is_causal = True
 
     def _init_bias(self, max_positions):
         """
         Initialize the bias matrix for GPTNeoXAttention.
-        
+
         Args:
             self (object): The instance of the GPTNeoXAttention class.
             max_positions (int): The maximum number of positions for the bias matrix.
                 It defines the size of the square matrix and must be a positive integer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.bias = ops.tril(ops.ones((max_positions, max_positions))).view(
                 1, 1, max_positions, max_positions).astype(mindspore.bool_)
@@ -208,13 +216,13 @@ class GPTNeoXAttention(nn.Cell):
     def _init_rope(self):
         """
         Initializes the routing position encoding (RoPE) for the GPTNeoXAttention class.
-        
+
         Args:
             self: The instance of the GPTNeoXAttention class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the scaling_type provided in the configuration for RoPE is neither 'linear' nor 'dynamic'.
         """
@@ -242,7 +250,7 @@ class GPTNeoXAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: mindspore.Tensor,
@@ -252,22 +260,25 @@ class GPTNeoXAttention(nn.Cell):
             use_cache: Optional[bool] = False,
             output_attentions: Optional[bool] = False,
     ):
-        ''' 
+        '''
         Constructs the GPTNeoXAttention method.
-        
+
         Args:
             self: The instance of the GPTNeoXAttention class.
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
             attention_mask (mindspore.Tensor): The attention mask tensor to mask invalid positions in the input.
             position_ids (mindspore.Tensor): The tensor representing the position indices in the input sequence.
             head_mask (Optional[mindspore.Tensor]): An optional tensor to mask attention heads. Default is None.
-            layer_past (Optional[Tuple[mindspore.Tensor]]): An optional tuple representing the cached layer past. Default is None.
-            use_cache (Optional[bool]): An optional boolean flag indicating whether to use cached values. Default is False.
-            output_attentions (Optional[bool]): An optional boolean flag indicating whether to output attentions. Default is False.
-        
+            layer_past (Optional[Tuple[mindspore.Tensor]]): An optional tuple representing the cached layer past.
+                Default is None.
+            use_cache (Optional[bool]): An optional boolean flag indicating whether to use cached values.
+                Default is False.
+            output_attentions (Optional[bool]): An optional boolean flag indicating whether to output attentions.
+                Default is False.
+
         Returns:
-            None: This method does not return anything.
-        
+            None.
+
         Raises:
             None
         '''
@@ -300,15 +311,15 @@ class GPTNeoXAttention(nn.Cell):
             seq_len += layer_past[0].shape[-2]
         cos, sin = self.rotary_emb(value, seq_len=seq_len)
         query, key = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
-        query = ops.cat((query, query_pass.type_as(query)), axis=-1)
-        key = ops.cat((key, key_pass.type_as(key)), axis=-1)
+        query = ops.cat((query, query_pass.type_as(query)), dim=-1)
+        key = ops.cat((key, key_pass.type_as(key)), dim=-1)
 
         # Cache QKV values
         if has_layer_past:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
         present = (key, value) if use_cache else None
 
         # Compute attention
@@ -350,21 +361,24 @@ class GPTNeoXAttention(nn.Cell):
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
         Performs attention mechanism on the given inputs.
-        
+
         Args:
             self (GPTNeoXAttention): An instance of the GPTNeoXAttention class.
             query (Tensor): The query tensor of shape (batch_size, num_attention_heads, query_length, attn_head_size).
             key (Tensor): The key tensor of shape (batch_size, num_attention_heads, key_length, attn_head_size).
             value (Tensor): The value tensor of shape (batch_size, num_attention_heads, key_length, attn_head_size).
-            attention_mask (Tensor, optional): An optional tensor of shape (batch_size, num_attention_heads, query_length, key_length).
-                It is used to mask attention scores. Defaults to None.
-            head_mask (Tensor, optional): An optional tensor of shape (num_attention_heads,) or (batch_size, num_attention_heads).
+            attention_mask (Tensor, optional): An optional tensor of shape
+                (batch_size, num_attention_heads, query_length, key_length). It is used to mask attention scores.
+                Defaults to None.
+            head_mask (Tensor, optional):
+                An optional tensor of shape (num_attention_heads,) or (batch_size, num_attention_heads).
                 It is used to mask attention weights. Defaults to None.
-        
+
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing the attention output tensor of shape (batch_size, num_attention_heads, query_length, attn_head_size)
-                and the attention weights tensor of shape (batch_size, num_attention_heads, query_length, key_length).
-        
+            Tuple[Tensor, Tensor]: A tuple containing the attention output tensor of shape
+                (batch_size, num_attention_heads, query_length, attn_head_size) and the attention weights tensor of
+                shape (batch_size, num_attention_heads, query_length, key_length).
+
         Raises:
             None.
         """
@@ -402,7 +416,7 @@ class GPTNeoXAttention(nn.Cell):
             # Apply the attention mask
             attn_scores = attn_scores + attention_mask
 
-        attn_weights = ops.softmax(attn_scores, axis=-1)
+        attn_weights = ops.softmax(attn_scores, dim=-1)
         attn_weights = attn_weights.to(value.dtype)
 
         # Mask heads if we want to
@@ -422,20 +436,20 @@ def attention_mask_func(attention_scores, ltor_mask):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding with LlamaRotary->GPTNeoXRotary
-class GPTNeoXRotaryEmbedding(nn.Cell):
+class GPTNeoXRotaryEmbedding(nn.Module):
     """GPTNeoXRotaryEmbedding"""
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         Initializes the GPTNeoXRotaryEmbedding class.
-        
+
         Args:
             dim (int): The dimension of the embedding.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
             base (int, optional): The base value for computing inverse frequencies. Defaults to 10000.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             TypeError: If the provided dimensions are not integers.
             ValueError: If max_position_embeddings or base is non-positive.
@@ -453,42 +467,42 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-        ''' 
+        '''
         _set_cos_sin_cache(self, seq_len, dtype):
             Set the cached cosine and sine values for the GPTNeoXRotaryEmbedding layer.
-        
+
             Args:
                 self (GPTNeoXRotaryEmbedding): The instance of the GPTNeoXRotaryEmbedding class.
                 seq_len (int): The length of the input sequence. It specifies the number of time steps in the sequence.
                 dtype: The data type for the calculations. It should be compatible with the data type of self.inv_freq.
-        
+
             Returns:
-                None: This method does not return any value.
-        
+                None.
+
             Raises:
-                N/A
+                None.
         '''
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype).type_as(self.inv_freq)
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Constructs the rotary embeddings for the GPTNeoX model.
-        
+
         Args:
             self (GPTNeoXRotaryEmbedding): The instance of the GPTNeoXRotaryEmbedding class.
-            x (Tensor): The input tensor for which rotary embeddings are to be constructed.
+            x (Tensor): The input tensor for which rotary embeddings are to be forwarded.
             seq_len (int, optional): The length of the sequence. Defaults to None.
-        
+
         Returns:
-            None. Returns the constructed cosine and sine embeddings for the input tensor.
-        
+            The forwarded cosine and sine embeddings for the input tensor.
+
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached in the instance.
         """
@@ -508,19 +522,19 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of GPTNeoXLinearScalingRotaryEmbedding.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimension of the embeddings.
             max_position_embeddings (int): The maximum number of position embeddings. Default is 2048.
             base (int): The base value used in calculations. Default is 10000.
             scaling_factor (float): The scaling factor applied to the embeddings.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
@@ -528,45 +542,51 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     def _set_cos_sin_cache(self, seq_len, dtype):
         """
         Sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding class.
-        
+
         Args:
             self (GPTNeoXLinearScalingRotaryEmbedding): An instance of the GPTNeoXLinearScalingRotaryEmbedding class.
             seq_len (int): The length of the sequence.
             dtype: The data type of the elements in the cache.
-        
+
         Returns:
-            None. This method modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
-        
+            None: This method modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
+
         Raises:
             None.
-        
+
         Description:
-        This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on the given sequence length and data type. The cosine and sine caches are used to store
-precalculated values for efficient computation during the forward pass of the GPTNeoX model.
-        
-        The parameters for this method are as follows:
-        
-        - self: This parameter refers to the instance of the GPTNeoXLinearScalingRotaryEmbedding class on which the method is called.
-        
-        - seq_len: This parameter specifies the length of the sequence. It is an integer value.
-        
-        - dtype: This parameter denotes the data type of the elements in the cache. The data type can be any valid data type supported by the underlying framework.
-        
-        The method first sets the maximum sequence length cached by assigning the value of seq_len to self.max_seq_len_cached.
-        
-        Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached and the specified data type. The 'type_as' method is used to ensure that 't' has the same data
-type as self.inv_freq. 
-        
-        Then, 't' is divided by self.scaling_factor to scale the values.
-        
-        The 'ops.outer' function is used to calculate the outer product of 't' and self.inv_freq, resulting in a tensor 'freqs'.
-        
-        The 'ops.cat' function is called to concatenate 'freqs' with itself along the last dimension, creating a tensor 'emb'.
-        
-        Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively. The resulting cosine values are stored in self.cos_cached and sine values are stored in
-self.sin_cached.
-        
-        This method does not return any value but modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
+            This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on
+            the given sequence length and data type. The cosine and sine caches are used to store precalculated values
+            for efficient computation during the forward pass of the GPTNeoX model.
+
+            The parameters for this method are as follows:
+
+            - self: This parameter refers to the instance of the GPTNeoXLinearScalingRotaryEmbedding class
+            on which the method is called.
+            - seq_len: This parameter specifies the length of the sequence. It is an integer value.
+            - dtype: This parameter denotes the data type of the elements in the cache. The data type can be any valid
+            data type supported by the underlying framework.
+
+            The method first sets the maximum sequence length cached by assigning the value of seq_len to
+            self.max_seq_len_cached.
+
+            Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached
+            and the specified data type. The 'type_as' method is used to ensure that 't' has the same data
+            type as self.inv_freq.
+
+            Then, 't' is divided by self.scaling_factor to scale the values.
+
+            The 'ops.outer' function is used to calculate the outer product of 't' and self.inv_freq,
+            resulting in a tensor 'freqs'.
+
+            The 'ops.cat' function is called to concatenate 'freqs' with itself along the last dimension,
+            creating a tensor 'emb'.
+
+            Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively.
+            The resulting cosine values are stored in self.cos_cached and sine values are stored in self.sin_cached.
+
+            This method does not return any value but modifies the state of the GPTNeoXLinearScalingRotaryEmbedding
+            instance.
         """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=mindspore.float32).type_as(self.inv_freq)
@@ -574,7 +594,7 @@ self.sin_cached.
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -584,23 +604,25 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         __init__
-        
+
         Initializes a new instance of the GPTNeoXDynamicNTKScalingRotaryEmbedding class.
-        
+
         Args:
             self: The instance of the class.
             dim (int): The dimension of the embedding.
             max_position_embeddings (int, optional): The maximum number of position embeddings. Default is 2048.
             base (int, optional): The base value for position embedding calculations. Default is 10000.
             scaling_factor (float, optional): A scaling factor for the embeddings. Default is 1.0.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided dimension, max_position_embeddings, base, or scaling_factor is not of the correct type.
-            - ValueError: If the provided dimension, max_position_embeddings, base, or scaling_factor does not meet specific criteria.
-            - NotImplementedError: If the method is not implemented for some reason.
+            TypeError: If the provided dimension, max_position_embeddings, base,
+                or scaling_factor is not of the correct type.
+            ValueError: If the provided dimension, max_position_embeddings, base,
+                or scaling_factor does not meet specific criteria.
+            NotImplementedError: If the method is not implemented for some reason.
         """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
@@ -608,18 +630,19 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     def _set_cos_sin_cache(self, seq_len, dtype):
         """
         Method _set_cos_sin_cache in the class GPTNeoXDynamicNTKScalingRotaryEmbedding.
-        
+
         Args:
-            self (GPTNeoXDynamicNTKScalingRotaryEmbedding): The instance of the GPTNeoXDynamicNTKScalingRotaryEmbedding class.
+            self (GPTNeoXDynamicNTKScalingRotaryEmbedding):
+                The instance of the GPTNeoXDynamicNTKScalingRotaryEmbedding class.
             seq_len (int): The length of the sequence for which to set the cosine and sine cache.
             dtype (Type): The data type to be used for calculations.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - ValueError: If the sequence length 'seq_len' is less than or equal to 0.
-            - RuntimeError: If an error occurs during the computation of cosine and sine cache.
+            ValueError: If the sequence length 'seq_len' is less than or equal to 0.
+            RuntimeError: If an error occurs during the computation of cosine and sine cache.
         """
         self.max_seq_len_cached = seq_len
 
@@ -634,7 +657,7 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -644,7 +667,7 @@ def rotate_half(x):
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2:]
     x1, x2 = x.tensor_split(2, -1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -657,40 +680,42 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class GPTNeoXMLP(nn.Cell):
+class GPTNeoXMLP(nn.Module):
     """GPTNeoXMLP"""
     def __init__(self, config):
         """
         __init__ method in the GPTNeoXMLP class.
-        
+
         This method initializes the GPTNeoXMLP class.
-        
+
         Args:
             self: The instance of the GPTNeoXMLP class.
-            config: An instance of the configuration class that contains the configuration parameters for the GPTNeoXMLP model.
-        
+            config:
+                An instance of the configuration class that contains the configuration parameters
+                for the GPTNeoXMLP model.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__()
-        self.dense_h_to_4h = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.dense_4h_to_h = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.dense_h_to_4h = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.dense_4h_to_h = nn.Linear(config.intermediate_size, config.hidden_size)
         self.act = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states using the specified operations.
-        
+
         Args:
             self (GPTNeoXMLP): The instance of the GPTNeoXMLP class.
             hidden_states (tensor): The input hidden states to be processed.
-        
+
         Returns:
-            None. The processed hidden states are returned after applying the specified operations.
-        
+            hidden_states: The processed hidden states are returned after applying the specified operations.
+
         Raises:
             None.
         """
@@ -705,40 +730,42 @@ GPT_NEOX_ATTENTION_CLASSES = {
 }
 
 
-class GPTNeoXLayer(nn.Cell):
+class GPTNeoXLayer(nn.Module):
     """GPTNeoXLayer"""
     def __init__(self, config):
         """
         Initializes a GPTNeoXLayer instance.
-        
+
         Args:
             self: The object instance itself.
-            config: An instance of a configuration class containing the following attributes:
+            config:
+                An instance of a configuration class containing the following attributes:
+
                 - use_parallel_residual: A boolean flag indicating whether to use parallel residual connections.
                 - hidden_size: An integer specifying the size of the hidden layers.
                 - layer_norm_eps: A float representing the epsilon value for layer normalization.
                 - hidden_dropout: A float indicating the dropout probability for hidden layers.
-        
+
         Returns:
-            None. This method initializes various components of the GPTNeoXLayer class including layer normalization,
-            dropout layers, attention mechanism, and multi-layer perceptron (MLP).
-        
+            None: This method initializes various components of the GPTNeoXLayer class including layer normalization,
+                dropout layers, attention mechanism, and multi-layer perceptron (MLP).
+
         Raises:
-            - AttributeError: If the required attributes are missing in the 'config' parameter.
-            - TypeError: If the data types of the attributes in the 'config' parameter are incorrect.
-            - ValueError: If the values of the attributes in the 'config' parameter are invalid.
+            AttributeError: If the required attributes are missing in the 'config' parameter.
+            TypeError: If the data types of the attributes in the 'config' parameter are incorrect.
+            ValueError: If the values of the attributes in the 'config' parameter are invalid.
         """
         super().__init__()
         self.use_parallel_residual = config.use_parallel_residual
-        self.input_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.post_attention_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.input_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.post_attention_dropout = nn.Dropout(p=config.hidden_dropout)
         self.post_mlp_dropout = nn.Dropout(p=config.hidden_dropout)
         # self.attention = GPT_NEOX_ATTENTION_CLASSES[config._attn_implementation](config)
         self.attention = GPT_NEOX_ATTENTION_CLASSES["eager"](config)
         self.mlp = GPTNeoXMLP(config)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Optional[mindspore.Tensor],
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -750,7 +777,7 @@ class GPTNeoXLayer(nn.Cell):
     ):
         """
         Constructs the GPTNeoXLayer.
-        
+
         Args:
             self (GPTNeoXLayer): The instance of the GPTNeoXLayer class.
             hidden_states (mindspore.Tensor): The input hidden states tensor.
@@ -760,10 +787,10 @@ class GPTNeoXLayer(nn.Cell):
             use_cache (bool, optional): Whether to use cache. Defaults to False.
             layer_past (Tuple[mindspore.Tensor], optional): The past layer tensor. Defaults to None.
             output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-        
+
         Returns:
             Tuple[mindspore.Tensor]: The output tensor(s) of the GPTNeoXLayer.
-        
+
         Raises:
             None
         """
@@ -808,24 +835,24 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoXModel class.
-        
+
         Args:
             self (GPTNeoXModel): The current instance of the GPTNeoXModel class.
             config (object): An object containing configuration parameters for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.config = config
 
         self.embed_in = nn.Embedding(config.vocab_size, config.hidden_size)
         self.emb_dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList([GPTNeoXLayer(config) for _ in range(config.num_hidden_layers)])
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layers = nn.ModuleList([GPTNeoXLayer(config) for _ in range(config.num_hidden_layers)])
+        self.final_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         # Not support flash_attention_2
         # self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
         self._use_flash_attention_2 = False
@@ -838,36 +865,36 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings for the GPTNeoXModel.
-        
+
         Args:
             self (object): The instance of the GPTNeoXModel class.
                 This parameter is used to access the instance attributes and methods.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embed_in
 
     def set_input_embeddings(self, new_embeddings):
         """
         Set the input embeddings for the GPTNeoXModel.
-        
+
         Args:
             self (GPTNeoXModel): The instance of the GPTNeoXModel class.
             new_embeddings (object): The new input embeddings to be set for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         self.embed_in = new_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -881,14 +908,16 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+        Args:
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4
+                tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                (see `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1017,23 +1046,23 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoXForCausalLM class.
-        
+
         Args:
             self: GPTNeoXForCausalLM
                 The instance of the GPTNeoXForCausalLM class.
             config: object
                 The configuration object containing the settings for the GPTNeoXForCausalLM model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
 
         self.gpt_neox = GPTNeoXModel(config)
-        self.embed_out = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1041,38 +1070,38 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     def get_output_embeddings(self):
         """
         Method: get_output_embeddings
-        
+
         Description:
         Returns the output embeddings for the GPTNeoXForCausalLM model.
-        
+
         Args:
-        - self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
-        
+            self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
+
         Returns:
-        - None: This method returns None, representing the output embeddings.
-        
+            The output embeddings.
+
         Raises:
-        - None
+            None
         """
         return self.embed_out
 
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings for the GPTNeoXForCausalLM model.
-        
+
         Args:
             self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
             new_embeddings (Any): The new embeddings to be set as the output embeddings for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.embed_out = new_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1087,25 +1116,27 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
-            only required when the model is used as a decoder in a Sequence to Sequence model.
+        Args:
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
+                or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
+                `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
+                `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
+                only required when the model is used as a decoder in a Sequence to Sequence model.
 
-            Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
-            `past_key_values` input) to speed up sequential decoding.
+                Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
+                `past_key_values` input) to speed up sequential decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1131,7 +1162,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shift_logits = lm_logits[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), labels.view(-1))
+            lm_loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1150,18 +1181,21 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     ):
         """
         This method prepares inputs for generation in the GPTNeoXForCausalLM class.
-        
+
         Args:
             self: The instance of the class.
-            input_ids (torch.Tensor): The input tensor containing the token IDs. Shape should be [batch_size, sequence_length].
-            past_key_values (tuple of torch.Tensor, optional): The past key values for autoregressive generation. Default is None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor. Shape should be [batch_size, sequence_length].
+            input_ids (torch.Tensor):
+                The input tensor containing the token IDs. Shape should be [batch_size, sequence_length].
+            past_key_values (tuple of torch.Tensor, optional):
+                The past key values for autoregressive generation. Default is None.
+            attention_mask (torch.Tensor, optional):
+                The attention mask tensor. Shape should be [batch_size, sequence_length].
             inputs_embeds (torch.Tensor, optional): The embedded input tensor. Default is None.
-        
+
         Returns:
             dict: A dictionary containing the model inputs necessary for generation, including 'input_ids', 'attention_mask',
-            'past_key_values', and 'position_ids'.
-        
+                'past_key_values', and 'position_ids'.
+
         Raises:
             TypeError: If the input_ids or attention_mask is not of type torch.Tensor.
             ValueError: If the past_key_values do not have the expected shape.
@@ -1184,7 +1218,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1]:]
@@ -1211,15 +1245,15 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     def _reorder_cache(self, past, beam_idx):
         """
         Reorders the cache for the GPTNeoXForCausalLM model based on the given beam index.
-        
+
         Args:
             self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
             past (Tuple): The past cache states to be reordered.
             beam_idx (Tensor): The indices of the beams to reorder the cache.
-        
+
         Returns:
             Tuple: The reordered past cache states.
-        
+
         Raises:
             ValueError: If the past cache states are not in the expected format.
             IndexError: If the beam index is out of range.
@@ -1238,28 +1272,30 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoXForSequenceClassification class.
-        
+
         Args:
             self: The instance of the class.
-            config: An object containing configuration settings for the model. It should have attributes:
+            config: An object containing configuration settings for the model.
+                It should have attributes:
+
                 - num_labels (int): The number of labels for classification.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not provided.
-            - ValueError: If the num_labels attribute is missing from the config object.
+            TypeError: If the config parameter is not provided.
+            ValueError: If the num_labels attribute is missing from the config object.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.gpt_neox = GPTNeoXModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1274,10 +1310,11 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1331,13 +1368,13 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1356,33 +1393,36 @@ class GPTNeoXForTokenClassification(GPTNeoXPreTrainedModel):
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoXForTokenClassification class.
-        
+
         Args:
             self: The object itself.
             config (GPTNeoXConfig): The model configuration class that defines the model architecture and hyperparameters.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method initializes the GPTNeoXForTokenClassification model with the provided configuration. It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is
-instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate is added, and a fully connected layer (classifier) is initialized with the hidden size and the number
-of labels from the configuration. Finally, the post_init() method is called for any post-initialization tasks.
+            This method initializes the GPTNeoXForTokenClassification model with the provided configuration.
+            It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is
+            instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate
+            is added, and a fully connected layer (classifier) is initialized with the hidden size and the number
+            of labels from the configuration.
+            Finally, the post_init() method is called for any post-initialization tasks.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
 
         self.gpt_neox = GPTNeoXModel(config)
         self.dropout = nn.Dropout(p=config.classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1397,10 +1437,11 @@ of labels from the configuration. Finally, the post_init() method is called for 
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1423,7 +1464,7 @@ of labels from the configuration. Finally, the post_init() method is called for 
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1450,22 +1491,22 @@ class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
                 It must contain the 'num_labels' attribute specifying the number of labels for the model.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - TypeError: If the 'config' parameter is not provided or is not of the expected type.
-            - ValueError: If the 'num_labels' attribute is missing in the 'config' parameter.
-            - AttributeError: If any required attributes are missing during initialization.
+            TypeError: If the 'config' parameter is not provided or is not of the expected type.
+            ValueError: If the 'num_labels' attribute is missing in the 'config' parameter.
+            AttributeError: If any required attributes are missing during initialization.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.gpt_neox = GPTNeoXModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1479,14 +1520,15 @@ class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1520,8 +1562,8 @@ class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

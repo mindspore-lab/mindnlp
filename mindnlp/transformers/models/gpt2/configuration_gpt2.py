@@ -73,11 +73,11 @@ class GPT2Config(PretrainedConfig):
 
             Has to be one of the following options:
 
-                - `"last"`: Take the last token hidden state (like XLNet).
-                - `"first"`: Take the first token hidden state (like BERT).
-                - `"mean"`: Take the mean of all tokens hidden states.
-                - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
-                - `"attn"`: Not implemented now, use multi-head attention.
+            - `"last"`: Take the last token hidden state (like XLNet).
+            - `"first"`: Take the first token hidden state (like BERT).
+            - `"mean"`: Take the mean of all tokens hidden states.
+            - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
+            - `"attn"`: Not implemented now, use multi-head attention.
         summary_use_proj (`bool`, *optional*, defaults to `True`):
             Argument used when doing sequence summary, used in the models [`GPT2DoubleHeadsModel`] and
             [`TFGPT2DoubleHeadsModel`].
@@ -113,19 +113,19 @@ class GPT2Config(PretrainedConfig):
             dot-product/softmax to float() when training with mixed precision.
 
     Example:
-
-    ```python
-    >>> from transformers import GPT2Config, GPT2Model
-
-    >>> # Initializing a GPT2 configuration
-    >>> configuration = GPT2Config()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = GPT2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import GPT2Config, GPT2Model
+        ...
+        >>> # Initializing a GPT2 configuration
+        >>> configuration = GPT2Config()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = GPT2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "gpt2"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -193,10 +193,10 @@ class GPT2Config(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.vocab_size = vocab_size
         self.n_positions = n_positions

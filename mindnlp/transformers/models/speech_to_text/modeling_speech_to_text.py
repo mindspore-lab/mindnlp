@@ -19,11 +19,12 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
-import mindspore.common.dtype as mstype
 from mindspore import Tensor
+import mindspore.common.dtype as mstype
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -60,7 +61,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     return shifted_input_ids
 
 
-class Conv1dSubsampler(nn.Cell):
+class Conv1dSubsampler(nn.Module):
     """
     Convolutional subsampler: a stack of 1D convolution (along temporal dimension) followed by non-linear activation
     via gated linear units (https://arxiv.org/abs/1911.08460)
@@ -75,30 +76,29 @@ class Conv1dSubsampler(nn.Cell):
         self.out_channels = config.d_model
         self.kernel_sizes = config.conv_kernel_sizes
 
-        self.conv_layers = nn.CellList(
+        self.conv_layers = nn.ModuleList(
             [nn.Conv1d(
                 self.in_channels if i == 0 else self.mid_channels // 2,
                 self.mid_channels if i < self.num_layers - 1 else self.out_channels * 2,
                 kernel_size=k,
                 stride=2,
                 padding=k // 2,
-                pad_mode="pad"
             )
             for i, k in enumerate(self.kernel_sizes)]
         )
 
-    def construct(self, input_features):
+    def forward(self, input_features):
         # hidden_states = input_features.transpose(1, 2) # -> B x (C x D) x T
         hidden_states = input_features.swapaxes(1, 2)
         for conv in self.conv_layers:
             hidden_states = conv(hidden_states)
-            hidden_states = mindspore.ops.glu(hidden_states, axis=1)
+            hidden_states = F.glu(hidden_states, dim=1)
         # hidden_states = hidden_states.transpose(1, 2) # -> T x B x (C x D)
         hidden_states = hidden_states.swapaxes(1,2)
         return hidden_states
 
 
-class Speech2TextSinusoidalPositionalEmbedding(nn.Cell):
+class Speech2TextSinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -129,16 +129,16 @@ class Speech2TextSinusoidalPositionalEmbedding(nn.Cell):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mstype.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mstype.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
         return emb.float()
 
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         bsz, seq_len = input_ids.shape
         # Create the position ids from the input token ids. Any padded tokens remain padded.
         position_ids = self.create_position_ids_from_input_ids(input_ids, self.padding_idx, past_key_values_length)
@@ -158,17 +158,19 @@ class Speech2TextSinusoidalPositionalEmbedding(nn.Cell):
         symbols are ignored. This is modified from fairseq's `utils.make_positions`.
 
         Args:
-            x: mindspore.Tensor x:
-        Returns: mindspore.Tensor
+            x (mindspore.Tensor): x.
+
+        Returns:
+            mindspore.Tensor
         """
         # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+        incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
         return incremental_indices.long() + padding_idx
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Speech2Text
-class Speech2TextAttention(nn.Cell):
+class Speech2TextAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -197,15 +199,15 @@ class Speech2TextAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -244,8 +246,8 @@ class Speech2TextAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -283,7 +285,7 @@ class Speech2TextAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = mindspore.ops.softmax(attn_weights, axis=-1)
+        attn_weights = F.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -304,7 +306,7 @@ class Speech2TextAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = mindspore.ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = mindspore.F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -330,7 +332,7 @@ SPEECH_TO_TEXT_ATTENTION_CLASSES = {"eager": Speech2TextAttention}
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->Speech2Text, MBART->SPEECH_TO_TEXT
-class Speech2TextEncoderLayer(nn.Cell):
+class Speech2TextEncoderLayer(nn.Module):
     def __init__(self, config: Speech2TextConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -345,11 +347,11 @@ class Speech2TextEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -375,15 +377,15 @@ class Speech2TextEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         if hidden_states.dtype == mstype.float16 and (
@@ -402,7 +404,7 @@ class Speech2TextEncoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer with MBart->Speech2Text, MBART->SPEECH_TO_TEXT
-class Speech2TextDecoderLayer(nn.Cell):
+class Speech2TextDecoderLayer(nn.Module):
     def __init__(self, config: Speech2TextConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -428,11 +430,11 @@ class Speech2TextDecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -476,7 +478,7 @@ class Speech2TextDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Cross-Attention Block
@@ -496,7 +498,7 @@ class Speech2TextDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
@@ -506,9 +508,9 @@ class Speech2TextDecoderLayer(nn.Cell):
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -530,10 +532,10 @@ class Speech2TextPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         std = self.config.init_std
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             cell.weight.set_data(initializer(Normal(std),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
@@ -573,7 +575,7 @@ SPEECH_TO_TEXT_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -698,14 +700,14 @@ class Speech2TextEncoder(Speech2TextPreTrainedModel):
             embed_dim,
             self.padding_idx,
         )
-        self.layers = nn.CellList([Speech2TextEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([Speech2TextEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_features,
         attention_mask=None,
@@ -764,7 +766,7 @@ class Speech2TextEncoder(Speech2TextPreTrainedModel):
         embed_pos = self.embed_positions(padding_mask)
 
         hidden_states = inputs_embeds + embed_pos
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -850,7 +852,7 @@ class Speech2TextDecoder(Speech2TextPreTrainedModel):
             self.padding_idx,
         )
 
-        self.layers = nn.CellList([Speech2TextDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([Speech2TextDecoderLayer(config) for _ in range(config.decoder_layers)])
 
         self.layer_norm = nn.LayerNorm(config.d_model)
 
@@ -864,7 +866,7 @@ class Speech2TextDecoder(Speech2TextPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -983,7 +985,7 @@ class Speech2TextDecoder(Speech2TextPreTrainedModel):
         positions = self.embed_positions(input_ids, past_key_values_length=past_key_values_length)
 
         hidden_states = inputs_embeds + positions
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = mindspore.F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1098,7 +1100,7 @@ class Speech2TextModel(Speech2TextPreTrainedModel):
         return self.decoder
 
 
-    def construct(
+    def forward(
         self,
         input_features: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1116,27 +1118,29 @@ class Speech2TextModel(Speech2TextPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
         r"""
+
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]
 
         Example:
-
-         ```python
-         >>> import torch
-         >>> from transformers import Speech2TextModel, AutoFeatureExtractor
-         >>> from datasets import load_dataset
-
-         >>> model = Speech2TextModel.from_pretrained("facebook/s2t-small-librispeech-asr")
-         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/s2t-small-librispeech-asr")
-         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-         >>> inputs = feature_extractor(
-         ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
-         ... )
-         >>> input_features = inputs.input_features
-         >>> decoder_input_ids = mindspore.Tensor([[1, 1]]) * model.config.decoder_start_token_id
-         >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
-         >>> list(last_hidden_state.shape)
-         [1, 2, 256]
-         ```"""
+            ```python
+            >>> import torch
+            >>> from transformers import Speech2TextModel, AutoFeatureExtractor
+            >>> from datasets import load_dataset
+            ...
+            >>> model = Speech2TextModel.from_pretrained("facebook/s2t-small-librispeech-asr")
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/s2t-small-librispeech-asr")
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            >>> inputs = feature_extractor(
+            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
+            ... )
+            >>> input_features = inputs.input_features
+            >>> decoder_input_ids = mindspore.Tensor([[1, 1]]) * model.config.decoder_start_token_id
+            >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
+            >>> list(last_hidden_state.shape)
+            [1, 2, 256]
+            ```
+         """
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1209,7 +1213,7 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
     def __init__(self, config: Speech2TextConfig):
         super().__init__(config)
         self.model = Speech2TextModel(config)
-        self.lm_head = nn.Dense(config.d_model, self.config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1226,7 +1230,7 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_features: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1245,37 +1249,39 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the language modeling loss. Indices should either be in `[0, ..., config.vocab_size]`
-            or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored (masked), the loss is
-            only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the language modeling loss. Indices should either be in `[0, ..., config.vocab_size]`
+                or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored (masked), the loss is
+                only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]
 
         Example:
-
-        ```python
-        >>> import torch
-        >>> from transformers import Speech2TextProcessor, Speech2TextForConditionalGeneration
-        >>> from datasets import load_dataset
-
-        >>> model = Speech2TextForConditionalGeneration.from_pretrained("facebook/s2t-small-librispeech-asr")
-        >>> processor = Speech2TextProcessor.from_pretrained("facebook/s2t-small-librispeech-asr")
-
-
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-
-        >>> inputs = processor(
-        ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
-        ... )
-        >>> input_features = inputs.input_features
-
-        >>> generated_ids = model.generate(inputs=input_features)
-
-        >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        >>> transcription
-        'mister quilter is the apostle of the middle classes and we are glad to welcome his gospel'
-        ```"""
+            ```python
+            >>> import torch
+            >>> from transformers import Speech2TextProcessor, Speech2TextForConditionalGeneration
+            >>> from datasets import load_dataset
+            ...
+            >>> model = Speech2TextForConditionalGeneration.from_pretrained("facebook/s2t-small-librispeech-asr")
+            >>> processor = Speech2TextProcessor.from_pretrained("facebook/s2t-small-librispeech-asr")
+            ...
+            ...
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            ...
+            >>> inputs = processor(
+            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
+            ... )
+            >>> input_features = inputs.input_features
+            ...
+            >>> generated_ids = model.generate(inputs=input_features)
+            ...
+            >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            >>> transcription
+            'mister quilter is the apostle of the middle classes and we are glad to welcome his gospel'
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -1304,7 +1310,7 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]

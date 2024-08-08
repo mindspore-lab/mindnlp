@@ -1,2 +1,1 @@
-export MS_DEV_ENABLE_ASCEND_VMM=1
-export MS_DEV_ASCEND_VMM_ALIGN_SIZE="2MB"
+export MS_ALLOC_CONF=enable_vmm:True,vmm_align_size:2MB
