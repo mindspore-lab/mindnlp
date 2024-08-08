@@ -81,11 +81,11 @@ class AdamW(Optimizer):
         start = 0
         for group in self.param_groups:
             end = start + len(group['params'])
+            amsgrad = group['amsgrad']
+            maximize = group["maximize"]
             for (p, grad) in zip(group['params'], grads[start: end]):
                 grad = grad if not maximize else -grad
                 start = end
-                amsgrad = group['amsgrad']
-                maximize=group["maximize"]
 
                 state = self.state[p]
 

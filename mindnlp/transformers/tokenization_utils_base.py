@@ -2947,6 +2947,13 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if text is None and text_target is None:
             raise ValueError("You need to specify either `text` or `text_target`.")
         if text is not None:
+            # for mindspore.dataset
+            if isinstance(text, np.ndarray):
+                text = str(text)
+                if isinstance(text_pair, np.ndarray):
+                    text_pair = str(text_pair)
+                elif isinstance(text_pair, list):
+                    text_pair = [str(t) for t in text_pair]
             # The context manager will send the inputs as normal texts and not text_target, but we shouldn't change the
             # input mode in this case.
             if not self._in_target_context_manager:
