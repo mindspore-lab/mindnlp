@@ -60,9 +60,7 @@ class SGD(Optimizer):
         for group in self.param_groups:
             weight_decay = group['weight_decay']
             momentum = Tensor(group['momentum'], mindspore.float32)
-            stat = Tensor(1, mindspore.float32)
             lr = Tensor(group['lr'], mindspore.float32)
-            accum = Tensor(0, mindspore.float32)
             dampening = group['dampening']
             nesterov = group['nesterov']
             maximize=group["maximize"]
@@ -87,6 +85,8 @@ class SGD(Optimizer):
                 #         d_p = buf
                 # new_p = p.add(d_p, alpha=-group['lr'])
                 # assign(p, new_p)
+                stat = ops.ones_like(p)
+                accum = ops.zeros_like(p)
                 ops.optim.raw_sgd(p, d_p, lr, dampening, weight_decay, nesterov, accum, momentum, stat)
 
         return loss
