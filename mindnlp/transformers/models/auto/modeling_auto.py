@@ -107,6 +107,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("focalnet", "FocalNetModel"),
         ("fsmt", "FSMTModel"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
+        ("fsmt","FSMTModel"),
         ("gemma", "GemmaModel"),
         ("gemma2", "Gemma2Model"),
         ("git", "GitModel"),

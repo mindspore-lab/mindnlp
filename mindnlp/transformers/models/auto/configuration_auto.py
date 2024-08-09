@@ -95,6 +95,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("funnel", "FunnelConfig"),
         ("fuyu","FuyuConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
+        ("fsmt","FSMTConfig"),
         ("gemma", "GemmaConfig"),
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
