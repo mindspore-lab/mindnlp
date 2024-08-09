@@ -64,6 +64,7 @@ from . import (
     cpmbee,
     cvt,
     data2vec,
+    dbrx,
     deberta,
     deberta_v2,
     decision_transformer,
@@ -275,6 +276,7 @@ from .cpmant import *
 from .cpmbee import *
 from .cvt import *
 from .data2vec import *
+from .dbrx import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
@@ -485,6 +487,7 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
 __all__.extend(data2vec.__all__)
+__all__.extend(dbrx.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
