@@ -25,11 +25,11 @@ from dataclasses import dataclass
 from typing import Union, Tuple, Optional, NamedTuple, List, Dict, Any
 from collections.abc import Mapping
 
-import mindspore.experimental
 import numpy as np
 import mindspore
-from mindspore import ops
 
+from mindnlp.core import ops, optim
+from mindnlp.core.nn import functional as F
 from mindnlp.configs import GENERATOR_SEED
 from mindnlp.utils import is_mindspore_available, ExplicitEnum
 
@@ -265,7 +265,7 @@ class LabelSmoother:
             logits = logits[..., :-1, :]
             labels = labels[..., 1:]
 
-        log_probs = -ops.log_softmax(logits, axis=-1)
+        log_probs = -F.log_softmax(logits, dim=-1)
         if labels.ndim == log_probs.ndim - 1:
             labels = labels.unsqueeze(-1)
 
@@ -273,7 +273,7 @@ class LabelSmoother:
         # In case the ignore_index is -100, the gather will fail, so we replace labels by 0. The padding_mask
         # will ignore them in any case.
         labels = ops.clamp(labels, min=0)
-        nll_loss = log_probs.gather_elements(dim=-1, index=labels)
+        nll_loss = ops.gather(log_probs, dim=-1, index=labels)
         # works for fp16 input tensor too, by internally upcasting it to fp32
         smoothed_loss = ops.sum(log_probs, dim=-1, keepdim=True, dtype=mindspore.float32)
 
@@ -460,14 +460,14 @@ def get_parameter_names(model, forbidden_layer_types):
     Returns the names of the model parameters that are not inside a forbidden layer.
     """
     result = []
-    for name, child in model.name_cells().items():
+    for name, child in model.named_children():
         result += [
             f"{name}.{n}"
             for n in get_parameter_names(child, forbidden_layer_types)
             if not isinstance(child, tuple(forbidden_layer_types))
         ]
     # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
-    result += list(model._params.keys())
+    result += list(model._parameters.keys())
     return result
 
 def get_model_param_count(model, trainable_only=False):
@@ -518,13 +518,14 @@ def _get_learning_rate(self):
     Raises:
         None.
     """
-    if isinstance(self.lr_scheduler, mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau):
+    if isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
         last_lr = self.optimizer.param_groups[0]["lr"]
     else:
         last_lr = self.lr_scheduler.get_last_lr()[0]
     if ops.is_tensor(last_lr):
         last_lr = last_lr.item()
     return last_lr
+
 
 def find_batch_size(tensors):
     """
@@ -599,8 +600,8 @@ def atleast_1d(tensor_or_array: Union[mindspore.Tensor, np.ndarray]):
     
     """
     if isinstance(tensor_or_array, mindspore.Tensor):
-        if hasattr(mindspore.ops, "atleast_1d"):
-            tensor_or_array = ops.atleast_1d(tensor_or_array)
+        if hasattr(F, "atleast_1d"):
+            tensor_or_array = F.atleast_1d(tensor_or_array)
         elif tensor_or_array.ndim < 1:
             tensor_or_array = tensor_or_array[None]
     else:
@@ -613,7 +614,7 @@ def ms_pad_and_concatenate(tensor1, tensor2, padding_index=-100):
     tensor2 = atleast_1d(tensor2)
 
     if len(tensor1.shape) == 1 or tensor1.shape[1] == tensor2.shape[1]:
-        return ops.cat((tensor1, tensor2), axis=0)
+        return ops.cat((tensor1, tensor2), dim=0)
 
     # Let's figure out the new shape
     new_shape = (tensor1.shape[0] + tensor2.shape[0], max(tensor1.shape[1], tensor2.shape[1])) + tensor1.shape[2:]

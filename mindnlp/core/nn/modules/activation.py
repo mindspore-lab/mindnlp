@@ -452,12 +452,12 @@ class MultiheadAttention(Module):
             # make sure that the transpose op does not affect the "is" property
             if key is value:
                 if query is key:
-                    query = key = value = query.transpose(1, 0)
+                    query = key = value = ops.transpose(query, 1, 0)
                 else:
-                    query, key = (x.transpose(1, 0) for x in (query, key))
+                    query, key = (ops.transpose(x, 1, 0) for x in (query, key))
                     value = key
             else:
-                query, key, value = (x.transpose(1, 0) for x in (query, key, value))
+                query, key, value = (ops.transpose(x, 1, 0) for x in (query, key, value))
 
         if not self._qkv_same_embed_dim:
             attn_output, attn_output_weights = F.multi_head_attention_forward(
@@ -486,7 +486,7 @@ class MultiheadAttention(Module):
                 average_attn_weights=average_attn_weights,
                 is_causal=is_causal)
         if self.batch_first and is_batched:
-            return attn_output.transpose(1, 0), attn_output_weights
+            return ops.transpose(attn_output, 1, 0), attn_output_weights
         else:
             return attn_output, attn_output_weights
 
