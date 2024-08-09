@@ -157,6 +157,7 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    pegasus_x,
     perceiver,
     persimmon,
     phi,
@@ -372,6 +373,7 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .pegasus_x import *
 from .perceiver import *
 from .persimmon import *
 from .phi import *
@@ -587,6 +589,7 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
