@@ -90,6 +90,7 @@ from . import (
     chatglm3,
     chatglm4,
     flava,
+    florence2,
     focalnet,
     fnet,
     funnel,
@@ -303,6 +304,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .florence2 import *
 from .focalnet import *
 from .fnet import *
 from .funnel import *
@@ -515,6 +517,7 @@ __all__.extend(chatglm.__all__)
 __all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
