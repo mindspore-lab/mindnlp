@@ -244,7 +244,8 @@ class ReLUSquaredActivation(nn.Module):
         Raises:
             None.
         """
-        relu_applied = ops.relu(input)
+        # relu_applied = ops.relu(input)
+        relu_applied = nn.functional.relu(input)
         squared = ops.square(relu_applied)
         return squared
 
