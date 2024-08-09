@@ -3225,6 +3225,29 @@ class GenerationMixin:
                     next_token_scores, n_tokens_to_keep, dim=1, largest=True, sorted=True
                 )
 
+            def replace_negative_indices(next_tokens):
+                next_tokens_np = next_tokens.asnumpy()
+
+                used_indices = set(next_tokens_np[next_tokens_np != -1].flatten())
+                min_unused = 0
+
+                result = []
+                for token_row in next_tokens_np:
+                    new_row = []
+                    for token in token_row:
+                        if token == -1:
+                            while min_unused in used_indices:
+                                min_unused += 1
+                            new_row.append(min_unused)
+                            used_indices.add(min_unused)
+                        else:
+                            new_row.append(token)
+                    result.append(new_row)
+
+                return mindspore.Tensor(np.array(result, dtype=next_tokens_np.dtype))
+
+            next_tokens = replace_negative_indices(next_tokens)
+
             next_indices = ops.div(next_tokens, vocab_size, rounding_mode="floor")
             next_tokens = next_tokens % vocab_size
 

@@ -859,8 +859,7 @@ class RagModelIntegrationTests(unittest.TestCase):
         rag_retriever = RagRetriever(
             rag_config,
             question_encoder_tokenizer=rag_question_encoder_tokenizer,
-            generator_tokenizer=rag_decoder_tokenizer,
-            trust_remote_code=True
+            generator_tokenizer=rag_decoder_tokenizer
         )
 
         rag_sequence = self.sequence_model
