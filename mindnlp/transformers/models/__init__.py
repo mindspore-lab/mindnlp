@@ -90,9 +90,11 @@ from . import (
     chatglm3,
     chatglm4,
     flava,
+    florence2,
     focalnet,
     fnet,
     funnel,
+    fsmt,
     gemma,
     git,
     gpt,
@@ -165,6 +167,7 @@ from . import (
     qdqbert,
     qwen2,
     qwen2_moe,
+    realm,
     reformer,
     rembert,
     resnet,
@@ -195,6 +198,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    tvlt,
     udop,
     upernet,
     umt5,
@@ -225,8 +229,9 @@ from . import (
     xmod,
     vilt,
     yolos,
+    fuyu,
 )
-
+from .fuyu import *
 from .owlv2 import *
 from .albert import *
 from .align import *
@@ -299,9 +304,11 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .florence2 import *
 from .focalnet import *
 from .fnet import *
 from .funnel import *
+from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
@@ -375,6 +382,7 @@ from .pop2piano import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .realm import *
 from .reformer import *
 from .rembert import *
 from .resnet import *
@@ -405,6 +413,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .tvlt import *
 from .udop import *
 from .upernet import *
 from .unispeech_sat import *
@@ -508,9 +517,11 @@ __all__.extend(chatglm.__all__)
 __all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
@@ -586,6 +597,7 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
@@ -616,6 +628,7 @@ __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
@@ -645,4 +658,5 @@ __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(fuyu.__all__)
 __all__.extend(yolos.__all__)
