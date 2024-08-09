@@ -196,6 +196,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    tvlt,
     udop,
     upernet,
     umt5,
@@ -408,6 +409,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .tvlt import *
 from .udop import *
 from .upernet import *
 from .unispeech_sat import *
@@ -620,6 +622,7 @@ __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)

@@ -172,6 +172,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
         ("trocr", "TrOCRConfig"),
+        ("tvlt","TvltConfig"),
         ("udop", "UdopConfig"),
         ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
