@@ -19,8 +19,8 @@ from functools import partial
 from typing import Optional, Union
 
 from mindspore import ops
-from mindspore.experimental.optim import Optimizer
-from mindspore.experimental.optim.lr_scheduler import LRScheduler, LambdaLR, ReduceLROnPlateau
+from mindnlp.core.optim import Optimizer
+from mindnlp.core.optim.lr_scheduler import LRScheduler, LambdaLR, ReduceLROnPlateau
 
 from ..engine.utils import SchedulerType
 from ..utils import logging

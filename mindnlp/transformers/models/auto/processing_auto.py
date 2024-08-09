@@ -57,6 +57,7 @@ PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("clvp", "ClvpProcessor"),
         ("donut", "DonutProcessor"),
         ("flava", "FlavaProcessor"),
+        ("florence2", "Florence2Processor"),
         ("fuyu", "FuyuProcessor"),
         ("git", "GitProcessor"),
         ("groupvit", "CLIPProcessor"),

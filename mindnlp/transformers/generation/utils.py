@@ -2903,11 +2903,9 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(batch_size, dtype=mindspore.int64)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
-        import time
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
         ):
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2976,8 +2974,6 @@ class GenerationMixin:
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
-            t = time.time()
-            print(t - s)
 
         if streamer is not None:
             streamer.end()
