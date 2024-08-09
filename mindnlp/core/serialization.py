@@ -215,6 +215,23 @@ the file.
             return self.file.getinfo(filename).header_offset
         return None
 
+class PyTorchFileWriter:
+    def __init__(self, file):
+        self.zipfile = zipfile.ZipFile(file, mode='w')
+        self.written_records = set()
+
+    def write_record(self, name, data, offset=0):
+        if name in self.written_records:
+            raise RuntimeError(f"Record {name} already written")
+        self.written_records.add(name)
+        self.zipfile.writestr(name, data)
+
+    def write_end_of_file(self):
+        pass
+
+    def get_all_written_records(self):
+        return self.written_records
+
 class LoadEndianness(Enum):
 
     """
@@ -699,6 +716,44 @@ class _open_zipfile_reader(_opener):
             - IOError: If there is an error reading the zipfile from the provided name_or_buffer.
         """
         super().__init__(PyTorchFileReader(name_or_buffer))
+
+class _open_zipfile_writer_file(_opener):
+    def __init__(self, name):
+        self.file_stream = None
+        self.name = str(name)
+        try:
+            self.name.encode('ascii')
+        except UnicodeEncodeError:
+            self.file_stream = io.FileIO(self.name, mode='w')
+            super().__init__(PyTorchFileWriter(self.file_stream))
+        else:
+            super().__init__(PyTorchFileWriter(self.name))
+
+    def __exit__(self, *args):
+        self.file_like.write_end_of_file()
+        if self.file_stream is not None:
+            self.file_stream.close()
+
+class _open_zipfile_writer_buffer(_opener):
+    def __init__(self, buffer):
+        if not callable(getattr(buffer, "write", None)):
+            msg = f"Buffer of {str(type(buffer)).strip('<>')} has no callable attribute 'write'"
+            if not hasattr(buffer, "write"):
+                raise AttributeError(msg)
+            raise TypeError(msg)
+        self.buffer = buffer
+        super().__init__(PyTorchFileWriter(buffer))
+
+    def __exit__(self, *args):
+        self.file_like.write_end_of_file()
+        self.buffer.flush()
+
+def _open_zipfile_writer(name_or_buffer):
+    if _is_path(name_or_buffer):
+        container = _open_zipfile_writer_file
+    else:
+        container = _open_zipfile_writer_buffer
+    return container(name_or_buffer)
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     '''Rebuilds a tensor based on the provided parameters.
@@ -1209,6 +1264,33 @@ def convert_torch_to_mindspore(pth_file):
                             f'please checkout the path.') from exc
 
     return ms_ckpt_path
+
+def _check_save_filelike(f):
+    if not isinstance(f, (str, os.PathLike)) and not hasattr(f, 'write'):
+        raise AttributeError(
+            "expected 'f' to be string, path, or a file-like object with "
+            "a 'write' attribute")
+
+def save(obj, f, pickle_module = pickle, pickle_protocol = 2):
+    _check_save_filelike(f)
+    with _open_zipfile_writer(f) as opened_zipfile:
+        _save(obj, opened_zipfile, pickle_module, pickle_protocol)
+
+def _save(obj, zip_file, pickle_module, pickle_protocol):
+    serialized_storages = {}
+
+    data_buf = io.BytesIO()
+    pickler = pickle_module.Pickler(data_buf, protocol=pickle_protocol)
+    pickler.dump(obj)
+    data_value = data_buf.getvalue()
+    zip_file.write_record('archive/data.pkl', data_value, len(data_value))
+
+    for key in sorted(serialized_storages.keys()):
+        name = f'archive/data/{key}'
+        storage = serialized_storages[key]
+        storage_data = storage.inner_data
+        zip_file.write_record(name, storage_data)
+
 
 def safe_load_file(filename):
     """

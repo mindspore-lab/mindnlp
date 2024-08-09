@@ -570,10 +570,10 @@ def _load_state_dict_into_model(model_to_load, state_dict, start_prefix, assign_
     for key in state_dict.keys():
         new_key = None
         if "gamma" in key:
-            logger.warning(PARAM_RENAME_WARNING.format("gamma", "weight"))
+            # logger.warning(PARAM_RENAME_WARNING.format("gamma", "weight"))
             new_key = key.replace("gamma", "weight")
         if "beta" in key:
-            logger.warning(PARAM_RENAME_WARNING.format("beta", "bias"))
+            # logger.warning(PARAM_RENAME_WARNING.format("beta", "bias"))
             new_key = key.replace("beta", "bias")
         if new_key:
             old_keys.append(key)
@@ -817,7 +817,7 @@ class ModuleUtilsMixin:
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
         extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
-        extended_attention_mask = (1.0 - extended_attention_mask) * ops.finfo(dtype).min
+        extended_attention_mask = (1.0 - extended_attention_mask) * float(ops.finfo(dtype).min)
         return extended_attention_mask
 
     def get_head_mask(
