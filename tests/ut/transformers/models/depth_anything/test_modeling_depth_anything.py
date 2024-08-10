@@ -15,25 +15,24 @@
 """Testing suite for the PyTorch Depth Anything model."""
 
 import unittest
+
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available
-from mindnlp.core import no_grad
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow,is_mindspore_available
+
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 # from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
-    import mindspore
+    import torch
 
-    from mindnlp.core import ops
+    from transformers import DepthAnythingForDepthEstimation
 
-    from mindnlp.transformers import DepthAnythingForDepthEstimation
-
-mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     from PIL import Image
+
     from transformers import DPTImageProcessor
 
 
@@ -56,7 +55,7 @@ class DepthAnythingModelTester:
         out_features=["stage1", "stage2"],
         apply_layernorm=False,
         reshape_hidden_states=False,
-        neck_hidden_sizes=[2,2],
+        neck_hidden_sizes=[2, 2],
         fusion_hidden_size=6,
     ):
         self.parent = parent
@@ -133,7 +132,7 @@ class DepthAnythingModelTester:
 
 
 @require_mindspore
-class DepthAnythingModelTest(ModelTesterMixin,unittest.TestCase):
+class DepthAnythingModelTest(ModelTesterMixin, unittest.TestCase):
     """
     Here we also overwrite some of the tests of test_modeling_common.py, as Depth Anything does not use input_ids, inputs_embeds,
     attention_mask and seq_length.
@@ -253,16 +252,16 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
         inputs = image_processor(images=image, return_tensors="pt").to()
 
         # forward pass
-        with no_grad():
+        with torch.no_grad():
             outputs = model(**inputs)
             predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
-        expected_shape = ([1, 518, 686])
+        expected_shape = torch.Size([1, 518, 686])
         self.assertEqual(predicted_depth.shape, expected_shape)
 
-        expected_slice = mindspore.tensor(
+        expected_slice = torch.tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         ).to()
 
-        self.assertTrue(ops.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-6))
+        self.assertTrue(torch.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-6))

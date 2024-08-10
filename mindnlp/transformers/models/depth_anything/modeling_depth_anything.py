@@ -17,46 +17,19 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, no_grad
+from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
 
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging
+from ....utils import logging, no_grad
 from ...backbone_utils import load_backbone
 from .configuration_depth_anything import DepthAnythingConfig
 
 logger = logging.get_logger(__name__)
 
+# General docstring
 _CONFIG_FOR_DOC = "DepthAnythingConfig"
-
-mindspore.set_context(pynative_synchronize=True)
-DEPTH_ANYTHING_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
-    as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`DepthAnythingConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-DEPTH_ANYTHING_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`DPTImageProcessor.__call__`]
-            for details.
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~file_utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class DepthAnythingReassembleLayer(nn.Module):
@@ -104,8 +77,7 @@ class DepthAnythingReassembleStage(nn.Module):
         for channels, factor in zip(config.neck_hidden_sizes, config.reassemble_factors):
             self.layers.append(DepthAnythingReassembleLayer(config, channels=channels, factor=factor))
 
-    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
-        mindspore.Tensor]:
+    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[mindspore.Tensor]:
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length + 1, hidden_size)`):
@@ -252,7 +224,7 @@ class DepthAnythingPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            nn.init.normal_(module.weight,mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
@@ -285,8 +257,7 @@ class DepthAnythingNeck(nn.Module):
         # fusion
         self.fusion_stage = DepthAnythingFeatureFusionStage(config)
 
-    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
-        mindspore.Tensor]:
+    def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[mindspore.Tensor]:
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or `(batch_size, hidden_size, height, width)`):
@@ -348,12 +319,7 @@ class DepthAnythingDepthEstimationHead(nn.Module):
         return predicted_depth
 
 
-# @add_start_docstrings(
-#     """
-#     Depth Anything Model with a depth estimation head on top (consisting of 3 convolutional layers) e.g. for KITTI, NYUv2.
-#     """,
-#     DEPTH_ANYTHING_START_DOCSTRING,
-# )
+
 class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
     _no_split_modules = ["DPTViTEmbeddings"]
 
@@ -367,15 +333,13 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # @add_start_docstrings_to_model_forward(DEPTH_ANYTHING_INPUTS_DOCSTRING)
-    # @replace_return_docstrings(output_type=DepthEstimatorOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-            self,
-            pixel_values: mindspore.Tensor,
-            labels: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        pixel_values: mindspore.Tensor,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], DepthEstimatorOutput]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):

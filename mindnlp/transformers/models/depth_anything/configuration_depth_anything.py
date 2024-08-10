@@ -15,12 +15,34 @@
 """DepthAnything model configuration"""
 
 import copy
+from typing import Optional, Union
 
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
+# from ...backbone_utils import verify_backbone_config_arguments
 from ..auto.configuration_auto import CONFIG_MAPPING
 
 logger = logging.get_logger(__name__)
+
+
+def verify_backbone_config_arguments(
+        use_timm_backbone: bool,
+        use_pretrained_backbone: bool,
+        backbone: Optional[str],
+        backbone_config: Optional[Union[dict, "PretrainedConfig"]],
+        backbone_kwargs: Optional[dict],
+):
+    """
+    Verify that the config arguments to be passed to load_backbone are valid
+    """
+    if backbone_config is not None and backbone is not None:
+        raise ValueError("You can't specify both `backbone` and `backbone_config`.")
+
+    if backbone_config is not None and use_timm_backbone:
+        raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
+
+    if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
+        raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
 
 
 class DepthAnythingConfig(PretrainedConfig):
@@ -44,7 +66,7 @@ class DepthAnythingConfig(PretrainedConfig):
         use_pretrained_backbone (`bool`, *optional*, defaults to `False`):
             Whether to use pretrained weights for the backbone.
         use_timm_backbone (`bool`, *optional*, defaults to `False`):
-            Whether to use the `timm` library for the backbone. If set to `False`, will use the [`AutoBackbone`]
+            Whether or not to use the `timm` library for the backbone. If set to `False`, will use the [`AutoBackbone`]
             API.
         backbone_kwargs (`dict`, *optional*):
             Keyword arguments to be passed to AutoBackbone when loading from a checkpoint
@@ -116,13 +138,13 @@ class DepthAnythingConfig(PretrainedConfig):
             config_class = CONFIG_MAPPING[backbone_model_type]
             backbone_config = config_class.from_dict(backbone_config)
 
-        # verify_backbone_config_arguments(
-        #     use_timm_backbone=use_timm_backbone,
-        #     use_pretrained_backbone=use_pretrained_backbone,
-        #     backbone=backbone,
-        #     backbone_config=backbone_config,
-        #     backbone_kwargs=backbone_kwargs,
-        #
+        verify_backbone_config_arguments(
+            use_timm_backbone=use_timm_backbone,
+            use_pretrained_backbone=use_pretrained_backbone,
+            backbone=backbone,
+            backbone_config=backbone_config,
+            backbone_kwargs=backbone_kwargs,
+        )
 
         self.backbone_config = backbone_config
         self.backbone = backbone
@@ -152,6 +174,4 @@ class DepthAnythingConfig(PretrainedConfig):
         return output
 
 
-__all__ = [
-    'DepthAnythingConfig'
-]
+__all__ = ['DepthAnythingConfig']
