@@ -25,9 +25,9 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
-    import torch
-
-    from transformers import DepthAnythingForDepthEstimation
+    import mindspore
+    from mindnlp.core import no_grad,ops
+    from mindnlp.transformers import DepthAnythingForDepthEstimation
 
 
 if is_mindspore_available():
@@ -252,16 +252,16 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
         inputs = image_processor(images=image, return_tensors="pt").to()
 
         # forward pass
-        with torch.no_grad():
+        with no_grad():
             outputs = model(**inputs)
             predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
-        expected_shape = torch.Size([1, 518, 686])
+        expected_shape = ([1, 518, 686])
         self.assertEqual(predicted_depth.shape, expected_shape)
 
-        expected_slice = torch.tensor(
+        expected_slice = mindspore.Tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         ).to()
 
-        self.assertTrue(torch.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-6))
+        self.assertTrue(ops.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-6))
