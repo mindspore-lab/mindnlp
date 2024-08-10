@@ -22,7 +22,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-# mindspore.set_context(pynative_synchronize=True)
+mindspore.set_context(pynative_synchronize=True)
 from mindspore import Tensor
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import LayerNorm
