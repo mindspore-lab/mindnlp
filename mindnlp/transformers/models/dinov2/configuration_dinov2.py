@@ -20,7 +20,6 @@ from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 from ...backbone_utils import BackboneConfigMixin, get_aligned_output_features_output_indices
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -103,28 +102,28 @@ class Dinov2Config(BackboneConfigMixin, PretrainedConfig):
     model_type = "dinov2"
 
     def __init__(
-        self,
-        hidden_size=768,
-        num_hidden_layers=12,
-        num_attention_heads=12,
-        mlp_ratio=4,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.0,
-        attention_probs_dropout_prob=0.0,
-        initializer_range=0.02,
-        layer_norm_eps=1e-6,
-        image_size=224,
-        patch_size=16,
-        num_channels=3,
-        qkv_bias=True,
-        layerscale_value=1.0,
-        drop_path_rate=0.0,
-        use_swiglu_ffn=False,
-        out_features=None,
-        out_indices=None,
-        apply_layernorm=True,
-        reshape_hidden_states=True,
-        **kwargs,
+            self,
+            hidden_size=768,
+            num_hidden_layers=12,
+            num_attention_heads=12,
+            mlp_ratio=4,
+            hidden_act="gelu",
+            hidden_dropout_prob=0.0,
+            attention_probs_dropout_prob=0.0,
+            initializer_range=0.02,
+            layer_norm_eps=1e-6,
+            image_size=224,
+            patch_size=16,
+            num_channels=3,
+            qkv_bias=True,
+            layerscale_value=1.0,
+            drop_path_rate=0.0,
+            use_swiglu_ffn=False,
+            out_features=None,
+            out_indices=None,
+            apply_layernorm=True,
+            reshape_hidden_states=True,
+            **kwargs,
     ):
         super().__init__(**kwargs)
 
@@ -150,5 +149,6 @@ class Dinov2Config(BackboneConfigMixin, PretrainedConfig):
         )
         self.apply_layernorm = apply_layernorm
         self.reshape_hidden_states = reshape_hidden_states
+
 
 __all__ = ['Dinov2Config']

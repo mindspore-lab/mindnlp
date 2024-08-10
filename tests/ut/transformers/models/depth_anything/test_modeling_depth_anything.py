@@ -15,7 +15,6 @@
 """Testing suite for the PyTorch Depth Anything model."""
 
 import unittest
-
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available
 from mindnlp.core import no_grad
@@ -35,7 +34,6 @@ mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     from PIL import Image
-
     from transformers import DPTImageProcessor
 
 

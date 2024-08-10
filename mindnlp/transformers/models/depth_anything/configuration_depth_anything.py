@@ -44,7 +44,7 @@ class DepthAnythingConfig(PretrainedConfig):
         use_pretrained_backbone (`bool`, *optional*, defaults to `False`):
             Whether to use pretrained weights for the backbone.
         use_timm_backbone (`bool`, *optional*, defaults to `False`):
-            Whether or not to use the `timm` library for the backbone. If set to `False`, will use the [`AutoBackbone`]
+            Whether to use the `timm` library for the backbone. If set to `False`, will use the [`AutoBackbone`]
             API.
         backbone_kwargs (`dict`, *optional*):
             Keyword arguments to be passed to AutoBackbone when loading from a checkpoint
@@ -122,7 +122,7 @@ class DepthAnythingConfig(PretrainedConfig):
         #     backbone=backbone,
         #     backbone_config=backbone_config,
         #     backbone_kwargs=backbone_kwargs,
-        # )
+        #
 
         self.backbone_config = backbone_config
         self.backbone = backbone
@@ -152,4 +152,6 @@ class DepthAnythingConfig(PretrainedConfig):
         return output
 
 
-__all__ = ['DepthAnythingConfig']
+__all__ = [
+    'DepthAnythingConfig'
+]
