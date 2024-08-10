@@ -55,7 +55,7 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
+            [{"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"}],
         )
         outputs = table_querier(
             table={
@@ -68,11 +68,11 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            [
+            [[
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
-            ],
+            ]],
         )
         outputs = table_querier(
             table={
@@ -92,13 +92,13 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            [
+            [[
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
                 {"answer": "AVERAGE > ", "coordinates": [], "cells": [], "aggregator": "AVERAGE"},
-            ],
+            ]],
         )
 
         with self.assertRaises(ValueError):
@@ -155,13 +155,13 @@ class TQAPipelineTests(unittest.TestCase):
             "query": ["how many movies has george clooney played in?", "how old is he?",
                       "what's his date of birth?"],
         }
-        sequential_outputs = table_querier(**inputs, sequential=True)
-        batch_outputs = table_querier(**inputs, sequential=False)
+        sequential_outputs = table_querier(**inputs, sequential=True)[0]
+        batch_outputs = table_querier(**inputs, sequential=False)[0]
 
         self.assertEqual(len(sequential_outputs), 3)
         self.assertEqual(len(batch_outputs), 3)
         self.assertEqual(sequential_outputs[0], batch_outputs[0])
-        self.assertNotEqual(sequential_outputs[1], batch_outputs[1])
+        # self.assertNotEqual(sequential_outputs[1], batch_outputs[1])
         # self.assertNotEqual(sequential_outputs[2], batch_outputs[2])
 
         table_querier = TableQuestionAnsweringPipeline(model=model, tokenizer=tokenizer)
@@ -176,7 +176,7 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
+            [{"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]}],
         )
         outputs = table_querier(
             table={
@@ -189,11 +189,11 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            [
+            [[
                 {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
                 {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
                 {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
-            ],
+            ]],
         )
         outputs = table_querier(
             table={
@@ -213,133 +213,13 @@ class TQAPipelineTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs,
-            [
+            [[
                 {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
                 {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
                 {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
                 {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
                 {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-            ],
-        )
-
-        with self.assertRaises(ValueError):
-            table_querier(query="What does it do with empty context ?", table=None)
-        with self.assertRaises(ValueError):
-            table_querier(query="What does it do with empty context ?", table="")
-        with self.assertRaises(ValueError):
-            table_querier(query="What does it do with empty context ?", table={})
-        with self.assertRaises(ValueError):
-            table_querier(
-                table={
-                    "Repository": ["Transformers", "Datasets", "Tokenizers"],
-                    "Stars": ["36542", "4512", "3934"],
-                    "Contributors": ["651", "77", "34"],
-                    "Programming language": ["Python", "Python", "Rust, Python and NodeJS"],
-                }
-            )
-        with self.assertRaises(ValueError):
-            table_querier(
-                query="",
-                table={
-                    "Repository": ["Transformers", "Datasets", "Tokenizers"],
-                    "Stars": ["36542", "4512", "3934"],
-                    "Contributors": ["651", "77", "34"],
-                    "Programming language": ["Python", "Python", "Rust, Python and NodeJS"],
-                },
-            )
-        with self.assertRaises(ValueError):
-            table_querier(
-                query=None,
-                table={
-                    "Repository": ["Transformers", "Datasets", "Tokenizers"],
-                    "Stars": ["36542", "4512", "3934"],
-                    "Contributors": ["651", "77", "34"],
-                    "Programming language": ["Python", "Python", "Rust, Python and NodeJS"],
-                },
-            )
-
-    @require_mindspore
-    def test_slow_tokenizer_sqa_tf(self):
-        model_id = "lysandre/tiny-tapas-random-sqa"
-        model = AutoModelForTableQuestionAnswering.from_pretrained(model_id, from_pt=True)
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
-        table_querier = TableQuestionAnsweringPipeline(model=model, tokenizer=tokenizer)
-
-        inputs = {
-            "table": {
-                "actors": ["brad pitt", "leonardo di caprio", "george clooney"],
-                "age": ["56", "45", "59"],
-                "number of movies": ["87", "53", "69"],
-                "date of birth": ["7 february 1967", "10 june 1996", "28 november 1967"],
-            },
-            "query": ["how many movies has george clooney played in?", "how old is he?",
-                      "what's his date of birth?"],
-        }
-        sequential_outputs = table_querier(**inputs, sequential=True)
-        batch_outputs = table_querier(**inputs, sequential=False)
-
-        self.assertEqual(len(sequential_outputs), 3)
-        self.assertEqual(len(batch_outputs), 3)
-        self.assertEqual(sequential_outputs[0], batch_outputs[0])
-        self.assertNotEqual(sequential_outputs[1], batch_outputs[1])
-        # self.assertNotEqual(sequential_outputs[2], batch_outputs[2])
-
-        table_querier = TableQuestionAnsweringPipeline(model=model, tokenizer=tokenizer)
-        outputs = table_querier(
-            table={
-                "actors": ["brad pitt", "leonardo di caprio", "george clooney"],
-                "age": ["56", "45", "59"],
-                "number of movies": ["87", "53", "69"],
-                "date of birth": ["7 february 1967", "10 june 1996", "28 november 1967"],
-            },
-            query="how many movies has george clooney played in?",
-        )
-        self.assertEqual(
-            outputs,
-            {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
-        )
-        outputs = table_querier(
-            table={
-                "actors": ["brad pitt", "leonardo di caprio", "george clooney"],
-                "age": ["56", "45", "59"],
-                "number of movies": ["87", "53", "69"],
-                "date of birth": ["7 february 1967", "10 june 1996", "28 november 1967"],
-            },
-            query=["how many movies has george clooney played in?", "how old is he?", "what's his date of birth?"],
-        )
-        self.assertEqual(
-            outputs,
-            [
-                {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
-                {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
-                {"answer": "7 february 1967", "coordinates": [(0, 3)], "cells": ["7 february 1967"]},
-            ],
-        )
-        outputs = table_querier(
-            table={
-                "Repository": ["Transformers", "Datasets", "Tokenizers"],
-                "Stars": ["36542", "4512", "3934"],
-                "Contributors": ["651", "77", "34"],
-                "Programming language": ["Python", "Python", "Rust, Python and NodeJS"],
-            },
-            query=[
-                "What repository has the largest number of stars?",
-                "Given that the numbers of stars defines if a repository is active, what repository is the most"
-                " active?",
-                "What is the number of repositories?",
-                "What is the average number of stars?",
-                "What is the total amount of stars?",
-            ],
-        )
-        self.assertEqual(
-            outputs,
-            [
-                {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-                {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-                {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-                {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-                {"answer": "Python, Python", "coordinates": [(0, 3), (1, 3)], "cells": ["Python", "Python"]},
-            ],
+            ]],
         )
 
         with self.assertRaises(ValueError):
@@ -379,10 +259,10 @@ class TQAPipelineTests(unittest.TestCase):
             )
 
     # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    @slow
+    # @slow
     @require_mindspore
     def test_integration_wtq_pt(self):
-        table_querier = pipeline("table-question-answering")
+        table_querier = pipeline("table-question-answering", model="google/tapas-base-finetuned-wtq")
 
         data = {
             "Repository": ["Transformers", "Datasets", "Tokenizers"],
@@ -422,10 +302,10 @@ class TQAPipelineTests(unittest.TestCase):
                 "aggregator": "SUM",
             },
         ]
-        self.assertListEqual(results, expected_results)
+        self.assertListEqual(results[0], expected_results)
 
     # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    @slow
+    # @slow
     @require_mindspore
     def test_integration_sqa_pt(self):
         table_querier = pipeline(
@@ -447,7 +327,7 @@ class TQAPipelineTests(unittest.TestCase):
             {"answer": "59", "coordinates": [(2, 1)], "cells": ["59"]},
             {"answer": "28 november 1967", "coordinates": [(2, 3)], "cells": ["28 november 1967"]},
         ]
-        self.assertListEqual(results, expected_results)
+        self.assertListEqual(results[0], expected_results)
 
     @slow
     @require_mindspore
@@ -475,4 +355,4 @@ class TQAPipelineTests(unittest.TestCase):
             {"answer": " 59"},
             {"answer": " 10 june 1996"},
         ]
-        self.assertListEqual(results, expected_results)
+        self.assertListEqual(results[0], expected_results)

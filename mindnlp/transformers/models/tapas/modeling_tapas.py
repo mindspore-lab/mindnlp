@@ -587,7 +587,7 @@ class TapasPreTrainedModel(PreTrainedModel):
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.initialize(Normal(self.config.initializer_range))
+            nn.init.normal_(cell.weight,mean=0.0, std=self.config.initializer_range)
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0
         elif isinstance(cell, nn.LayerNorm):
@@ -910,8 +910,8 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                                         (config.hidden_size,), mindspore.float32),name='column_output_weights')
             # here, a truncated normal is used in the original implementation
 
-        self.output_bias = mindspore.Parameter(ops.zeros([1]), name='output_bias')
-        self.column_output_bias = mindspore.Parameter(ops.zeros([1]),name='column_output_bias')
+        self.output_bias = mindspore.Parameter(mindspore.ops.zeros(()), name='output_bias')
+        self.column_output_bias = mindspore.Parameter(mindspore.ops.zeros(()),name='column_output_bias')
 
         # aggregation head
         if config.num_aggregation_labels > 0:
@@ -1106,7 +1106,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
 
             probs = F.log_softmax(logits, dim=-1)
             probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
-            dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
+            dist_per_token = mindspore.nn.probability.distribution.Bernoulli(probs=probs)
             # Compute cell selection loss per example.
             selection_loss_per_example = None
             if not self.config.select_one_column:
@@ -1126,7 +1126,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                 probs = F.log_softmax(logits, dim=-1)
                 probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
-                dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
+                dist_per_token = mindspore.nn.probability.distribution.Bernoulli(probs=probs)
 
             # Supervised cell selection
             if self.config.disable_per_token_loss:
@@ -1418,7 +1418,7 @@ def gathertap(values, index, name="segmented_gather"):
     indices = index.indices
     # first, check whether the indices of the index represent scalar values (i.e. not vectorized)
     if len(values.shape[index.batch_dims :]) < 2:
-        return ops.gather_elements(
+        return mindspore.ops.gather_elements(
             values,
             index.batch_dims,
             indices.view(
@@ -1445,7 +1445,7 @@ def flatten(index, name="segmented_flatten"):
         (`IndexMap`): The flattened IndexMap.
     """
     # first, get batch_size as scalar tensor
-    batch_size = ops.prod(mindspore.Tensor(list(index.batch_shape()),dtype = mindspore.float32)).to(mindspore.int64)
+    batch_size = mindspore.ops.prod(mindspore.Tensor(list(index.batch_shape()),dtype = mindspore.float32)).to(mindspore.int64)
     # next, create offset as 1-D tensor of length batch_size,
     # and multiply element-wise by num segments (to offset different elements in the batch) e.g. if batch size is 2: [0, 64]
     batch_size = ops.maximum(batch_size, 1)
@@ -1525,16 +1525,16 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
 
     out = ops.zeros(int(flat_index.num_segments), dtype=mindspore.float32)
 
-    scatter_fun = ops.tensor_scatter_add
+    scatter_fun = mindspore.ops.tensor_scatter_add
     if segment_reduce_fn == 'amax':
-        scatter_fun = ops.tensor_scatter_max
+        scatter_fun = mindspore.ops.tensor_scatter_max
         out = ops.ones(int(flat_index.num_segments), dtype=mindspore.float32)*(-MAX_ENOUGH_VAlUE)
     elif segment_reduce_fn == 'amin':
 	#ops.tensor_scattle_min没有include_self参数，默认包括，所以这里先将默认值改为MAX_ENOUGH_VAlUE
-        scatter_fun = ops.tensor_scatter_min
+        scatter_fun = mindspore.ops.tensor_scatter_min
         out = ops.ones(int(flat_index.num_segments), dtype=mindspore.float32)*MAX_ENOUGH_VAlUE
     elif segment_reduce_fn == 'sum':
-        scatter_fun = ops.tensor_scatter_add
+        scatter_fun = mindspore.ops.tensor_scatter_add
 
     #ops.tensor_scatter_xxx需要二维以上，所以下面变换成二维tensor再处理
     out = out.view(1, -1)
@@ -1773,7 +1773,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     probs = F.softmax(logits_per_cell, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
-    cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
+    cell_dist = mindspore.nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
     cell_log_prob = cell_dist.log_prob(labels_per_cell.type(mindspore.float32))  # shape(batch_size, 64*32)
     cell_loss = -ops.sum(cell_log_prob * column_mask * cell_mask, dim=1)
 
@@ -1854,7 +1854,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     probs = F.softmax(logits_aggregation, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
-    dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
+    dist_aggregation = mindspore.nn.probability.distribution.Categorical(probs=probs)
 
 
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
@@ -1935,7 +1935,7 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
     """
     probs = F.softmax(logits_aggregation, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
-    dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
+    dist_aggregation = mindspore.nn.probability.distribution.Categorical(probs=probs)
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
     # Predict some aggregation in case of an answer that needs aggregation.
@@ -2004,7 +2004,7 @@ def _calculate_expected_result(
     """
     if config.use_gumbel_for_cells:
         #mindspore存在RelaxedBernoulli实现
-        b2 = nn.probability.distribution.Beta(dtype=mindspore.float32)
+        b2 = mindspore.nn.probability.distribution.Beta(dtype=mindspore.float32)
         probs = dist_per_cell.probs
         alpha = probs * config.temperature
         beta = (1 - probs) * config.temperature

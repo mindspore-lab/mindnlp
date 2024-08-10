@@ -21,13 +21,12 @@ from .base import ArgumentHandler, Dataset, Pipeline, PipelineException
 
 from ...utils import (
     is_mindspore_available,
-    is_tokenizers_available,
-    requires_backends, ModelOutput
 )
 
 if is_mindspore_available():
     import mindspore
     import mindspore.nn
+    from mindspore import ops
     from ..models.auto.modeling_auto import (
         MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING_NAMES,
         MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES
@@ -136,7 +135,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
         self.aggregate = bool(getattr(self.model.config, "aggregation_labels", False)) and bool(
             getattr(self.model.config, "aggregation_labels", False)
         )
-        self.type = "tape" if hasattr(self.model.config, "aggregation_labels") else None
+        self.type = "tapas" if hasattr(self.model.config, "aggregation_labels") else None
 
     def __call__(self, *args, **kwargs):
         r"""
@@ -232,7 +231,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
 
     def preprocess(self, pipline_input, sequential=None, padding=True, truncation=None):
         if truncation is None:
-            truncation = "drop_rows_to_fit" if self.type == "table" \
+            truncation = "drop_rows_to_fit" if self.type == "tapas" \
                 else "do_not_truncate"
 
         table, query = pipline_input["table"], pipline_input["query"]
@@ -246,14 +245,15 @@ class TableQuestionAnsweringPipeline(Pipeline):
             query,
             truncation=truncation,
             padding=padding,
+            return_tensors="ms"
         )
         inputs["table"] = table
         return inputs
 
     def _forward(self, model_inputs, sequential=False, **kwargs):
-        table = model_inputs["table"]
+        table = model_inputs.pop("table")
 
-        if self.type == "table":
+        if self.type == "tapas":
             if sequential:
                 outputs = self.sequential_inference(**model_inputs)
             else:
@@ -317,7 +317,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
         all_logits = []
         all_aggregations = []
         prev_answers = None
-        batch_size = inputs["input_inds"].shape[0]
+        batch_size = inputs["input_ids"].shape[0]
 
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
@@ -330,7 +330,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
             if prev_answers is not None:
                 prev_labels_example = token_type_ids_example[:, 3]  # shape(seq_len,)
                 model_labels = mindspore.numpy.zeros_like(  # shape(seq_len,)
-                    prev_labels_example.asnumpy(),
+                    prev_labels_example,
                     dtype=mindspore.dtype.int32
                 )
 
@@ -339,9 +339,11 @@ class TableQuestionAnsweringPipeline(Pipeline):
                     segment_id = token_type_ids_example[:, 0].tolist()[i] - 1
                     col = token_type_ids_example[:, 1].tolist()[i] - 1
                     row = token_type_ids_example[:, 2].tolist()[i] - 1
+
                     if col >= 0 and row >= 0 and segment_id == 1:
                         model_labels[i] = int(prev_answers[(col, row)])
-                token_type_ids_example[:, 3] = mindspore.Tensor(model_labels)
+
+                token_type_ids_example[:, 3] = mindspore.Tensor(model_labels).type(mindspore.int64)
 
             input_ids_example = input_ids[index]
             attention_mask_example = attention_mask[index]
@@ -358,7 +360,11 @@ class TableQuestionAnsweringPipeline(Pipeline):
 
             all_logits.append(logits)
 
-            dist_per_token = mindspore.nn.probability.distribution.Bernoulli(seed=logits)
+            sigmoid = ops.Sigmoid()
+            probs = sigmoid(logits)
+            epsilon = 1e-6
+            probs = ops.clip_by_value(probs, epsilon, 1 - epsilon)
+            dist_per_token = mindspore.nn.probability.distribution.Bernoulli(probs=probs)
             probabilities = dist_per_token.probs * attention_mask_example.type(mindspore.dtype.float32)
 
             coords_to_probs = collections.defaultdict(list)
@@ -373,5 +379,6 @@ class TableQuestionAnsweringPipeline(Pipeline):
                             for key in coords_to_probs}
 
         logits_batch = mindspore.ops.cat(tuple(all_logits), axis=0)
+
         return (logits_batch,) if not self.aggregate \
             else (logits_batch, mindspore.ops.cat(tuple(all_aggregations), axis=0))
