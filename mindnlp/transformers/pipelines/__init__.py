@@ -683,5 +683,6 @@ __all__ = [
     'QuestionAnsweringPipeline',
     'ZeroShotClassificationPipeline',
     'DocumentQuestionAnsweringPipeline',
+    'TableQuestionAnsweringPipeline',
     'pipeline',
 ]
