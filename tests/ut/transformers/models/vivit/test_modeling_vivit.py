@@ -34,7 +34,6 @@ if is_mindspore_available():
     import mindspore
     from mindnlp.core import nn
     from mindnlp.transformers import VivitForVideoClassification, VivitModel
-    mindspore.set_context(pynative_synchronize=True)
 
 if is_vision_available():
     from mindnlp.transformers import VivitImageProcessor
