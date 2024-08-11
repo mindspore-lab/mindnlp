@@ -259,7 +259,7 @@ class TQAPipelineTests(unittest.TestCase):
             )
 
     # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    # @slow
+    @slow
     @require_mindspore
     def test_integration_wtq_pt(self):
         table_querier = pipeline("table-question-answering", model="google/tapas-base-finetuned-wtq")
@@ -305,7 +305,7 @@ class TQAPipelineTests(unittest.TestCase):
         self.assertListEqual(results[0], expected_results)
 
     # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    # @slow
+    @slow
     @require_mindspore
     def test_integration_sqa_pt(self):
         table_querier = pipeline(
