@@ -336,7 +336,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
 
                 token_type_ids_example = token_type_ids[index]
                 for i in range(model_labels.shape[0]):
-                    segment_id = token_type_ids_example[:, 0].tolist()[i] - 1
+                    segment_id = token_type_ids_example[:, 0].tolist()[i]
                     col = token_type_ids_example[:, 1].tolist()[i] - 1
                     row = token_type_ids_example[:, 2].tolist()[i] - 1
 
@@ -369,7 +369,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
 
             coords_to_probs = collections.defaultdict(list)
             for i, p in enumerate(probabilities.squeeze(0).tolist()):
-                segment_id = token_type_ids_example[:, 0].tolist()[i] - 1
+                segment_id = token_type_ids_example[:, 0].tolist()[i]
                 col = token_type_ids_example[:, 1].tolist()[i] - 1
                 row = token_type_ids_example[:, 2].tolist()[i] - 1
                 if col >= 0 and row >= 0 and segment_id == 1:

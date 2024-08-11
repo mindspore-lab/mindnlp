@@ -910,8 +910,8 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                                         (config.hidden_size,), mindspore.float32),name='column_output_weights')
             # here, a truncated normal is used in the original implementation
 
-        self.output_bias = mindspore.Parameter(mindspore.ops.zeros(()), name='output_bias')
-        self.column_output_bias = mindspore.Parameter(mindspore.ops.zeros(()),name='column_output_bias')
+        self.output_bias = mindspore.Parameter(ops.zeros(()), name='output_bias')
+        self.column_output_bias = mindspore.Parameter(ops.zeros(()),name='column_output_bias')
 
         # aggregation head
         if config.num_aggregation_labels > 0:
@@ -1445,7 +1445,7 @@ def flatten(index, name="segmented_flatten"):
         (`IndexMap`): The flattened IndexMap.
     """
     # first, get batch_size as scalar tensor
-    batch_size = mindspore.ops.prod(mindspore.Tensor(list(index.batch_shape()),dtype = mindspore.float32)).to(mindspore.int64)
+    batch_size = ops.prod(mindspore.Tensor(list(index.batch_shape()),dtype = mindspore.float32), dtype=mindspore.int64)
     # next, create offset as 1-D tensor of length batch_size,
     # and multiply element-wise by num segments (to offset different elements in the batch) e.g. if batch size is 2: [0, 64]
     batch_size = ops.maximum(batch_size, 1)
