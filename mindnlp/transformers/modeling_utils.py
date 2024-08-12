@@ -2872,7 +2872,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 dtype_orig = cls._set_default_ms_dtype(ms_dtype)
 
             # Check if `_keep_in_fp32_modules` is not None
-            use_keep_in_fp32_modules = (cls._keep_in_fp32_modules is not None) and  (ms_dtype == mindspore.float16)
+            use_keep_in_fp32_modules = (cls._keep_in_fp32_modules is not None) and (ms_dtype == mindspore.float16)
 
             if is_sharded:
                 loaded_state_dict_keys = sharded_metadata["all_checkpoint_keys"]
