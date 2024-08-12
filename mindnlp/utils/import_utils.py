@@ -112,6 +112,20 @@ _levenshtein_available = _is_package_available("Levenshtein")
 _nltk_available = _is_package_available("nltk")
 
 
+_faiss_available = importlib.util.find_spec("faiss") is not None
+try:
+    _faiss_version = importlib.metadata.version("faiss")
+    logger.debug(f"Successfully imported faiss version {_faiss_version}")
+except importlib.metadata.PackageNotFoundError:
+    try:
+        _faiss_version = importlib.metadata.version("faiss-cpu")
+        logger.debug(f"Successfully imported faiss version {_faiss_version}")
+    except importlib.metadata.PackageNotFoundError:
+        _faiss_available = False
+
+def is_faiss_available():
+    return _faiss_available
+
 def is_levenshtein_available():
     return _levenshtein_available
 

@@ -21,27 +21,11 @@ from typing import Iterable, List, Optional, Tuple
 
 import numpy as np
 
-from mindnlp.utils import cached_file, logging, requires_backends, strtobool
 from .configuration_rag import RagConfig
 from .tokenization_rag import RagTokenizer
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import BatchEncoding
-
-
-def is_datasets_available():
-    try:
-        import datasets # pylint: disable=unused-import
-        return True
-    except ImportError:
-        raise ImportError("datasets has not been installed. Please install datasets first.")
-
-
-def is_faiss_available():
-    try:
-        import faiss # pylint: disable=unused-import
-        return True
-    except ImportError:
-        raise ImportError("faiss has not been installed. Please install faiss first.")
+from ....utils import cached_file, logging, requires_backends, strtobool, is_faiss_available, is_datasets_available
 
 
 if is_datasets_available():

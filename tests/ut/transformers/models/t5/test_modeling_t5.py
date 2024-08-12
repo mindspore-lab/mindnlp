@@ -19,25 +19,28 @@ import os
 import pickle
 import tempfile
 import unittest
-import numpy as np
 
-from mindnlp.transformers import T5Config
+from mindnlp.transformers import T5Config, is_mindspore_available
 from mindnlp.transformers.models.auto.modeling_auto import MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
 from mindnlp.utils.testing_utils import (
+    require_sentencepiece,
+    require_tokenizers,
     require_mindspore,
     slow,
-    is_mindspore_available
 )
 from mindnlp.utils import cached_property
+from mindnlp.configs import SUPPORT_BF16
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
 
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import ops, nn, no_grad
     from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
@@ -47,10 +50,10 @@ if is_mindspore_available():
         T5ForConditionalGeneration,
         T5ForQuestionAnswering,
         T5ForSequenceClassification,
+        T5ForTokenClassification,
         T5Model,
         T5Tokenizer,
     )
-    from mindnlp.transformers.models.t5.modeling_t5 import T5_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class T5ModelTester:
@@ -102,7 +105,7 @@ class T5ModelTester:
         self.decoder_layers = decoder_layers
 
     def get_large_model_config(self):
-        return T5Config.from_pretrained("t5-base")
+        return T5Config.from_pretrained("google-t5/t5-base")
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size).clamp(2)
@@ -176,8 +179,7 @@ class T5ModelTester:
         lm_labels,
     ):
         model = T5Model(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # make sure that lm_labels are correctly padded from the right
         lm_labels = lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
@@ -215,8 +217,7 @@ class T5ModelTester:
         lm_labels,
     ):
         model = T5Model(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -244,7 +245,7 @@ class T5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = T5ForConditionalGeneration(config=config).set_train(False)
+        model = T5ForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -265,7 +266,7 @@ class T5ModelTester:
         lm_labels,
     ):
         labels = mindspore.tensor([1] * self.batch_size, dtype=mindspore.int64)
-        model = T5ForSequenceClassification(config=config).set_train(False)
+        model = T5ForSequenceClassification(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=input_ids,
@@ -284,7 +285,7 @@ class T5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = T5Model(config=config).get_decoder().set_train(False)
+        model = T5Model(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -310,7 +311,7 @@ class T5ModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -322,11 +323,10 @@ class T5ModelTester:
         lm_labels,
     ):
         model = T5Model(config=config).get_decoder()
-
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
-        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
 
         half_seq_length = input_ids.shape[-1] // 2
         attn_mask[:, half_seq_length:] = 0
@@ -345,7 +345,7 @@ class T5ModelTester:
         # append to next input_ids and attn_mask
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
             dim=1,
         )
 
@@ -361,7 +361,7 @@ class T5ModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_past_large_inputs(
         self,
@@ -372,7 +372,7 @@ class T5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = T5Model(config=config).get_decoder().set_train(False)
+        model = T5Model(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, attention_mask=attention_mask, use_cache=True)
 
@@ -399,7 +399,7 @@ class T5ModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_generate_with_past_key_values(
         self,
@@ -410,14 +410,14 @@ class T5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = T5ForConditionalGeneration(config=config).set_train(False)
+        model = T5ForConditionalGeneration(config=config).eval()
         set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
         set_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=5, do_sample=True)
-        self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache).item())
+        self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
 
     def create_and_check_model_fp16_forward(
         self,
@@ -428,7 +428,7 @@ class T5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = T5Model(config=config).set_train(False).half()
+        model = T5Model(config=config).half().eval()
         output = model(input_ids, decoder_input_ids=input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -443,15 +443,14 @@ class T5ModelTester:
     ):
         for model_class in [T5Model, T5ForConditionalGeneration]:
             set_seed(0)
-            model = model_class(config=config).set_train(False)
+            model = model_class(config=config).eval()
             # load state dict copies weights but does not tie them
-            # model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
-            mindspore.load_param_into_net(model.encoder, model.decoder.parameters_dict())
+            model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
 
             set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
-            tied_model = model_class(config=tied_config).set_train(False)
+            tied_model = model_class(config=tied_config).eval()
 
             model_result = model(
                 input_ids=input_ids,
@@ -469,15 +468,14 @@ class T5ModelTester:
 
             # check that models has less parameters
             self.parent.assertLess(
-                sum(p.numel() for p in tied_model.get_parameters()), sum(p.numel() for p in model.get_parameters())
+                sum(p.numel() for p in tied_model.parameters()), sum(p.numel() for p in model.parameters())
             )
             random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
             # check that outputs are equal
             self.parent.assertTrue(
-                np.allclose(
-                    model_result[0][0, :, random_slice_idx].asnumpy(),
-                    tied_model_result[0][0, :, random_slice_idx].asnumpy(), atol=1e-4
+                ops.allclose(
+                    model_result[0][0, :, random_slice_idx], tied_model_result[0][0, :, random_slice_idx], atol=1e-4
                 )
             )
 
@@ -485,7 +483,7 @@ class T5ModelTester:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 tied_model.save_pretrained(tmpdirname)
                 tied_model = model_class.from_pretrained(tmpdirname)
-                tied_model.set_train(False)
+                tied_model.eval()
 
                 # check that models has less parameters
                 self.parent.assertLess(
@@ -502,9 +500,9 @@ class T5ModelTester:
 
                 # check that outputs are equal
                 self.parent.assertTrue(
-                    np.allclose(
-                        model_result[0][0, :, random_slice_idx].asnumpy(),
-                        tied_model_result[0][0, :, random_slice_idx].asnumpy(),
+                    ops.allclose(
+                        model_result[0][0, :, random_slice_idx],
+                        tied_model_result[0][0, :, random_slice_idx],
                         atol=1e-4,
                     )
                 )
@@ -516,7 +514,7 @@ class T5ModelTester:
         prev_vocab_size = config.vocab_size
 
         config.tie_word_embeddings = False
-        model = T5ForConditionalGeneration(config=config).set_train(False)
+        model = T5ForConditionalGeneration(config=config).eval()
         model.resize_token_embeddings(prev_vocab_size - 10)
 
         self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
@@ -554,7 +552,6 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_generative_model_classes = (T5ForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
-            "conversational": T5ForConditionalGeneration,
             "feature-extraction": T5Model,
             "question-answering": T5ForQuestionAnswering,
             "summarization": T5ForConditionalGeneration,
@@ -573,7 +570,7 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     test_model_parallel = True
     is_encoder_decoder = True
     # The small T5 model needs higher percentages for CPU/MP tests
-    model_split_percents = [0.8, 0.9]
+    model_split_percents = [0.5, 0.8, 0.9]
 
     def setUp(self):
         self.model_tester = T5ModelTester(self)
@@ -582,9 +579,11 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     # `QAPipelineTests` is not working well with slow tokenizers (for some models) and we don't want to touch the file
     # `src/transformers/data/processors/squad.py` (where this test fails for this model)
     def is_pipeline_test_to_skip(
-        self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
+        self, pipeline_test_case_name, config_class, model_architecture, tokenizer_name, processor_name
     ):
-        if pipeline_test_casse_name == "QAPipelineTests" and not tokenizer_name.endswith("Fast"):
+        if tokenizer_name is None:
+            return True
+        if pipeline_test_case_name == "QAPipelineTests" and not tokenizer_name.endswith("Fast"):
             return True
 
         return False
@@ -614,8 +613,7 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         for model_class in (T5Model, T5ForConditionalGeneration, T5ForQuestionAnswering):
             model = model_class(config)
-    
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -635,7 +633,8 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 inputs["inputs_embeds"] = wte(encoder_input_ids)
                 inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
     def test_config_and_model_silu_gated(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -695,7 +694,6 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_generate_with_past_key_values(*config_and_inputs)
 
-    @unittest.skip('mindspore.nn.Module dot not support load_states_dict')
     def test_encoder_decoder_shared_weights(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_encoder_decoder_shared_weights(*config_and_inputs)
@@ -710,17 +708,30 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = T5Model.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "google-t5/t5-small"
+        model = T5Model.from_pretrained(model_name)
+        self.assertIsNotNone(model)
+
+    @unittest.skip(reason="Test has a segmentation fault on torch 1.8.0")
+    def test_export_to_onnx(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        model = T5Model(config_and_inputs[0])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            ops.onnx.export(
+                model,
+                (config_and_inputs[1], config_and_inputs[3], config_and_inputs[2]),
+                f"{tmpdirname}/t5_test.onnx",
+                export_params=True,
+                opset_version=9,
+                input_names=["input_ids", "decoder_input_ids"],
+            )
 
     def test_generate_with_head_masking(self):
         attention_names = ["encoder_attentions", "decoder_attentions", "cross_attentions"]
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         config = config_and_inputs[0]
         max_length = config_and_inputs[1].shape[-1] + 3
-        model = T5ForConditionalGeneration(config).set_train(False)
-
+        model = T5ForConditionalGeneration(config).eval()
 
         head_masking = {
             "head_mask": ops.zeros(config.num_layers, config.num_heads),
@@ -747,14 +758,6 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             # We check the state of decoder_attentions and cross_attentions just from the last step
             attn_weights = out[attn_name] if attn_name == attention_names[0] else out[attn_name][-1]
             self.assertEqual(sum([w.sum().item() for w in attn_weights]), 0.0)
-
-    @unittest.skip("Does not work on the tiny model as we keep hitting edge cases.")
-    def test_disk_offload(self):
-        pass
-
-    @unittest.skip("Does not support conversations.")
-    def test_pipeline_conversational(self):
-        pass
 
 
 class T5EncoderOnlyModelTester:
@@ -800,7 +803,7 @@ class T5EncoderOnlyModelTester:
         self.is_training = is_training
 
     def get_large_model_config(self):
-        return T5Config.from_pretrained("t5-base")
+        return T5Config.from_pretrained("google-t5/t5-base")
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size)
@@ -838,8 +841,7 @@ class T5EncoderOnlyModelTester:
         attention_mask,
     ):
         model = T5EncoderModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -855,10 +857,25 @@ class T5EncoderOnlyModelTester:
         input_ids,
         attention_mask,
     ):
-        model = T5EncoderModel(config=config).half().set_train(False)
-        # model = T5EncoderModel(config=config).set_train(False)
+        model = T5EncoderModel(config=config).half().eval()
         output = model(input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
+
+    def create_and_check_with_token_classification_head(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+    ):
+        labels = mindspore.tensor([1] * self.seq_length * self.batch_size, dtype=mindspore.int64)
+        model = T5ForTokenClassification(config=config).eval()
+        outputs = model(
+            input_ids=input_ids,
+            labels=labels,
+            attention_mask=attention_mask,
+        )
+        self.parent.assertEqual(outputs["logits"].shape, (self.batch_size, self.seq_length, config.num_labels))
+        self.parent.assertEqual(outputs["loss"].shape, ())
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -876,10 +893,17 @@ class T5EncoderOnlyModelTester:
 
 
 class T5EncoderOnlyModelTest(ModelTesterMixin, unittest.TestCase):
-    all_model_classes = (T5EncoderModel,) if is_mindspore_available() else ()
+    all_model_classes = (T5EncoderModel, T5ForTokenClassification) if is_mindspore_available() else ()
     test_pruning = False
     test_resize_embeddings = False
     test_model_parallel = True
+    pipeline_model_mapping = (
+        {
+            "token-classification": T5ForTokenClassification,
+        }
+        if is_mindspore_available()
+        else {}
+    )
     all_parallelizable_model_classes = (T5EncoderModel,) if is_mindspore_available() else ()
 
     def setUp(self):
@@ -897,12 +921,17 @@ class T5EncoderOnlyModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_fp16_forward(*config_and_inputs)
 
+    def test_with_token_classification_head(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_with_token_classification_head(*config_and_inputs)
+
 
 def use_task_specific_params(model, task):
     model.config.update(model.config.task_specific_params[task])
 
 
 @require_mindspore
+@require_tokenizers
 @slow
 class T5ModelFp16Tests(unittest.TestCase):
     def test_fp16_fp32_conversion(self):
@@ -925,77 +954,84 @@ class T5ModelFp16Tests(unittest.TestCase):
         with unittest.mock.patch("builtins.__import__", side_effect=import_accelerate_mock):
             accelerate_available = False
 
-            model = T5ForConditionalGeneration.from_pretrained("t5-small", ms_dtype=mindspore.float16)
+            model = T5ForConditionalGeneration.from_pretrained("google-t5/t5-small", ms_dtype=mindspore.float16)
             self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.float32)
             self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.float16)
 
-            # # Load without in bf16
-            # model = T5ForConditionalGeneration.from_pretrained("t5-small", ms_dtype=mindspore.bfloat16)
-            # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
-            # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
+            # Load without in bf16
+            if SUPPORT_BF16:
+                model = T5ForConditionalGeneration.from_pretrained("google-t5/t5-small", ms_dtype=mindspore.bfloat16)
+                self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
+                self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
 
-        # # Load using `accelerate` in bf16
-        # model = T5ForConditionalGeneration.from_pretrained("t5-small", ms_type=mindspore.bfloat16)
-        # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
-        # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
+        if SUPPORT_BF16:
+            # Load using `accelerate` in bf16
+            model = T5ForConditionalGeneration.from_pretrained(
+                "google-t5/t5-small", ms_dtype=mindspore.bfloat16
+            )
+            self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
+            self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
 
-        # # Load using `accelerate` in bf16
-        # model = T5ForConditionalGeneration.from_pretrained(
-        #     "t5-small", ms_type=mindspore.bfloat16, low_cpu_mem_usage=True
-        # )
-        # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
-        # self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
+            # Load using `accelerate` in bf16
+            model = T5ForConditionalGeneration.from_pretrained(
+                "google-t5/t5-small", ms_dtype=mindspore.bfloat16, low_cpu_mem_usage=True
+            )
+            self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.bfloat16)
+            self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.bfloat16)
 
         # Load without using `accelerate`
         model = T5ForConditionalGeneration.from_pretrained(
-            "t5-small", ms_dtype=mindspore.float16, low_cpu_mem_usage=True
+            "google-t5/t5-small", ms_dtype=mindspore.float16, low_cpu_mem_usage=True
         )
         self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.float32)
         self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.float16)
 
         # Load using `accelerate`
-        model = T5ForConditionalGeneration.from_pretrained("t5-small", ms_dtype=mindspore.float16)
+        model = T5ForConditionalGeneration.from_pretrained(
+            "google-t5/t5-small", ms_dtype=mindspore.float16
+        )
         self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wo.weight.dtype == mindspore.float32)
         self.assertTrue(model.decoder.block[0].layer[2].DenseReluDense.wi.weight.dtype == mindspore.float16)
 
 
 @require_mindspore
+@require_sentencepiece
+@require_tokenizers
 class T5ModelIntegrationTests(unittest.TestCase):
     @cached_property
     def model(self):
-        return T5ForConditionalGeneration.from_pretrained("t5-base")
+        return T5ForConditionalGeneration.from_pretrained("google-t5/t5-base")
 
     @cached_property
     def tokenizer(self):
-        return T5Tokenizer.from_pretrained("t5-base")
+        return T5Tokenizer.from_pretrained("google-t5/t5-base")
 
-    @slow
-    @unittest.skip('not support quantization')
-    def test_quant(self):
-        r"""
-        Test that a simple `torch.quantization.quantize_dynamic` call works on a T5 model.
-        """
-        model_name = "google/flan-t5-small"
-        tokenizer = T5Tokenizer.from_pretrained(model_name)
-        model = T5ForConditionalGeneration.from_pretrained(model_name)
-        model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
-        input_text = "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?"
-        input_ids = tokenizer(input_text, return_tensors="ms").input_ids
-        _ = model.generate(input_ids)
+    # @slow
+    # def test_torch_quant(self):
+    #     r"""
+    #     Test that a simple `torch.quantization.quantize_dynamic` call works on a T5 model.
+    #     """
+    #     model_name = "google/flan-t5-small"
+    #     tokenizer = T5Tokenizer.from_pretrained(model_name)
+    #     model = T5ForConditionalGeneration.from_pretrained(model_name)
+    #     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+    #     input_text = "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?"
+    #     input_ids = tokenizer(input_text, return_tensors="ms").input_ids
+    #     _ = model.generate(input_ids)
 
     @slow
     def test_small_generation(self):
-        model = T5ForConditionalGeneration.from_pretrained("t5-small")
+        model = T5ForConditionalGeneration.from_pretrained("google-t5/t5-small")
         model.config.max_length = 8
         model.config.num_beams = 1
         model.config.do_sample = False
-        tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-small")
 
         input_ids = tokenizer("summarize: Hello there", return_tensors="ms").input_ids
-
         sequences = model.generate(input_ids)
 
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=True)[0]
+        print(output_str)
         self.assertTrue(output_str == "Hello there!")
 
     @slow
@@ -1012,8 +1048,8 @@ class T5ModelIntegrationTests(unittest.TestCase):
         >>> score = t5_model.score(inputs=["Hello there"], targets=["Hi I am"], vocabulary=vocab)
         """
 
-        model = T5ForConditionalGeneration.from_pretrained("t5-small")
-        tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        model = T5ForConditionalGeneration.from_pretrained("google-t5/t5-small")
+        tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-small")
 
         input_ids = tokenizer("Hello there", return_tensors="ms").input_ids
         labels = tokenizer("Hi I am", return_tensors="ms").input_ids
@@ -1046,6 +1082,7 @@ class T5ModelIntegrationTests(unittest.TestCase):
 
         loss = model(input_ids, labels=labels).loss
         mtf_score = -(labels.shape[-1] * loss.item())
+
         EXPECTED_SCORE = -59.0293
         self.assertTrue(abs(mtf_score - EXPECTED_SCORE) < 1e-4)
 
@@ -1071,6 +1108,7 @@ class T5ModelIntegrationTests(unittest.TestCase):
         mtf_score = -(labels.shape[-1] * loss.item())
 
         EXPECTED_SCORE = -60.7397
+        print(mtf_score)
         self.assertTrue(abs(mtf_score - EXPECTED_SCORE) < 1e-4)
 
     @slow
@@ -1287,6 +1325,7 @@ class T5ModelIntegrationTests(unittest.TestCase):
         dct = tok(
             [model.config.prefix + x for x in [FRANCE_ARTICLE, SHORTER_ARTICLE, IRAN_ARTICLE, ARTICLE_SUBWAY]],
             padding="max_length",
+            max_length=512,
             truncation=True,
             return_tensors="ms",
         )
@@ -1328,7 +1367,7 @@ class T5ModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_translation_en_to_fr(self):
-        model = self.model  # t5-base
+        model = self.model  # google-t5/t5-base
         tok = self.tokenizer
         use_task_specific_params(model, "translation_en_to_fr")
 
@@ -1431,7 +1470,7 @@ class TestAsymmetricT5(unittest.TestCase):
             decoder_attention_mask,
             lm_labels,
         ) = inputs
-        model = T5ForConditionalGeneration(config=config).set_train(False)
+        model = T5ForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,

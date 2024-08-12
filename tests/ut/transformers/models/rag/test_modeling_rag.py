@@ -66,8 +66,6 @@ if is_mindspore_available() and is_datasets_available() and is_faiss_available()
     )
     from mindnlp.transformers.modeling_outputs import BaseModelOutput
 
-# mindspore.set_context(pynative_synchronize=True)
-# mindspore.set_context(device_target="CPU")
 def _assert_tensors_equal(a_, b_, atol=1e-12, prefix=""):
     """If tensors not close, or a and b arent both tensors, raise a nice Assertion error."""
     if a_ is None and b_ is None:

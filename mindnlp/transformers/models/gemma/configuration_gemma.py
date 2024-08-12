@@ -29,13 +29,9 @@ class GemmaConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`GemmaModel`]. It is used to instantiate an Gemma
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the Gemma-7B.
-
-    e.g. [google/gemma-7b](https://hf-mirror.com/google/gemma-7b)
-
+    e.g. [google/gemma-7b](https://huggingface.co/google/gemma-7b)
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
-
-
     Args:
         vocab_size (`int`, *optional*, defaults to 256000):
             Vocabulary size of the Gemma model. Defines the number of different tokens that can be represented by the
@@ -52,14 +48,17 @@ class GemmaConfig(PretrainedConfig):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
             `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
-            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be forwarded
+            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
             `num_attention_heads`.
         head_dim (`int`, *optional*, defaults to 256):
             The attention head dimension.
-        hidden_act (`str` or `function`, *optional*, defaults to `"gelu"`):
-            The non-linear activation function (function or string) in the decoder.
+        hidden_act (`str` or `function`, *optional*, defaults to `"gelu_pytorch_tanh"`):
+            The legacy activation function. It is overwritten by the `hidden_activation`.
+        hidden_activation (`str` or `function`, *optional*):
+            The non-linear activation function (function or string) in the decoder. Will default to `"gelu_pytorch_tanh"`
+            if not specified. `"gelu_pytorch_tanh"` uses an approximation of the `"gelu"` activation function.
         max_position_embeddings (`int`, *optional*, defaults to 8192):
             The maximum sequence length that this model might ever be used with.
         initializer_range (`float`, *optional*, defaults to 0.02):
@@ -83,21 +82,16 @@ class GemmaConfig(PretrainedConfig):
             Whether to use a bias in the query, key, value and output projection layers during self-attention.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+    ```python
+    >>> from transformers import GemmaModel, GemmaConfig
+    >>> # Initializing a Gemma gemma-7b style configuration
+    >>> configuration = GemmaConfig()
+    >>> # Initializing a model from the gemma-7b style configuration
+    >>> model = GemmaModel(configuration)
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
 
-    Example:
-        ```python
-        >>> from transformers import GemmaModel, GemmaConfig
-        ...
-        >>> # Initializing a Gemma gemma-7b style configuration
-        >>> configuration = GemmaConfig()
-        ...
-        >>> # Initializing a model from the gemma-7b style configuration
-        >>> model = GemmaModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
     model_type = "gemma"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -110,7 +104,8 @@ class GemmaConfig(PretrainedConfig):
         num_attention_heads=16,
         num_key_value_heads=16,
         head_dim=256,
-        hidden_act="gelu",
+        hidden_act="gelu_pytorch_tanh",
+        hidden_activation=None,
         max_position_embeddings=8192,
         initializer_range=0.02,
         rms_norm_eps=1e-6,
@@ -124,37 +119,6 @@ class GemmaConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-        """
-        Initializes a new instance of GemmaConfig.
-        
-        Args:
-            self: The object itself.
-            vocab_size (int, optional): The size of the vocabulary. Defaults to 256000.
-            hidden_size (int, optional): The size of the hidden layers. Defaults to 3072.
-            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 24576.
-            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 28.
-            num_attention_heads (int, optional): The number of attention heads. Defaults to 16.
-            num_key_value_heads (int, optional): The number of key-value attention heads. Defaults to 16.
-            head_dim (int, optional): The dimension of the attention heads. Defaults to 256.
-            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
-            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 8192.
-            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
-            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Defaults to 1e-06.
-            use_cache (bool, optional): Whether to use caching. Defaults to True.
-            pad_token_id (int, optional): The ID for padding token. Defaults to 0.
-            eos_token_id (int, optional): The ID for end-of-sequence token. Defaults to 1.
-            bos_token_id (int, optional): The ID for beginning-of-sequence token. Defaults to 2.
-            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to True.
-            rope_theta (float, optional): The theta value for ROPE. Defaults to 10000.0.
-            attention_bias (bool, optional): Whether to use attention bias. Defaults to False.
-            attention_dropout (float, optional): The dropout rate for attention. Defaults to 0.0.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If any of the input parameters is invalid.
-        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size
@@ -164,6 +128,7 @@ class GemmaConfig(PretrainedConfig):
         self.head_dim = head_dim
         self.num_key_value_heads = num_key_value_heads
         self.hidden_act = hidden_act
+        self.hidden_activation = hidden_activation
         self.initializer_range = initializer_range
         self.rms_norm_eps = rms_norm_eps
         self.use_cache = use_cache

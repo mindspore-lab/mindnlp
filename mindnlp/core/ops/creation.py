@@ -44,7 +44,7 @@ def zeros(*size, dtype=None):
 # zeros_like
 def zeros_like(input, *, dtype=None):
     if dtype is None:
-        dtype = get_default_dtype()
+        dtype = input.dtype
     if USE_PYBOOST:
         return mindspore.mint.zeros_like(input, dtype=dtype)
     return ops.zeros_like(input, dtype=dtype)
@@ -63,7 +63,7 @@ def ones(*size, dtype=None):
 # ones_like
 def ones_like(input, *, dtype=None):
     if dtype is None:
-        dtype = get_default_dtype()
+        dtype = input.dtype
     if USE_PYBOOST:
         return mindspore.mint.ones_like(input, dtype=dtype)
     return ops.ones_like(input, dtype=dtype)
