@@ -43,8 +43,6 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-mindspore.set_context(pynative_synchronize=True)
-
 
 class IdeficsModelTester:
     def __init__(

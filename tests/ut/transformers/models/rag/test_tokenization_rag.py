@@ -23,7 +23,7 @@ from mindnlp.transformers import BartTokenizer, BartTokenizerFast, DPRQuestionEn
 from mindnlp.transformers.models.bart.configuration_bart import BartConfig
 from mindnlp.transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
 from mindnlp.transformers.models.dpr.configuration_dpr import DPRConfig
-from mindnlp.transformers.models.rag.retrieval_rag import is_datasets_available, is_faiss_available
+from mindnlp.transformers.utils import is_datasets_available, is_faiss_available
 from mindnlp.transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
 from mindnlp.utils import is_mindspore_available
 from mindnlp.utils.testing_utils import require_tokenizers, require_mindspore, slow

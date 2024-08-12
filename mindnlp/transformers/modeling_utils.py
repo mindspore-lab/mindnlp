@@ -748,7 +748,7 @@ class ModuleUtilsMixin:
         # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
         # encoder_extended_attention_mask.transpose(-1, -2))
         encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-        encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * ops.finfo(self.dtype).min
+        encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * float(ops.finfo(self.dtype).min)
 
         return encoder_extended_attention_mask
 
