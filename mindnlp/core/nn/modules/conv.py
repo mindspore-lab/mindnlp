@@ -273,6 +273,57 @@ class Conv2d(_ConvNd):
         return output
 
 
+class Conv3d(_ConvNd):
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_2_t,
+        stride: _size_2_t = 1,
+        padding: Union[str, _size_2_t] = 0,
+        dilation: _size_2_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = 'zeros',
+        dtype=None
+    ) -> None:
+        factory_kwargs = {'dtype': dtype}
+        kernel_size_ = _pair(kernel_size)
+        stride_ = _pair(stride)
+        padding_ = padding if isinstance(padding, str) else _pair(padding)
+        dilation_ = dilation
+        super().__init__(
+            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
+            False, _pair(0), groups, bias, padding_mode, **factory_kwargs)
+
+        pad_mode = 'pad'
+        pad = padding
+        if isinstance(padding, tuple):
+            pad = (padding[0], padding[0], padding[1], padding[1])
+        elif isinstance(padding, int):
+            pad = (padding,) * 6
+        if not isinstance(padding, (int, tuple)):
+            pad_mode = padding
+            pad = (0,) * 6
+
+        self.conv3d = mops.Conv3D(out_channel=self.out_channels,
+                                kernel_size=self.kernel_size,
+                                mode=1,
+                                pad_mode=pad_mode,
+                                pad=pad,
+                                stride=self.stride,
+                                dilation=self.dilation,
+                                group=self.groups)
+
+    def forward(self, input):
+        if self.padding_mode != 'zeros':
+            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
+        output = self.conv3d(input, self.weight)
+        if self.bias is not None:
+            output = mops.bias_add(output, self.bias)
+        return output
+
 # class Conv3d(_ConvNd):
 #     r"""Applies a 3D convolution over an input signal composed of several input
 #     planes.
