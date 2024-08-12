@@ -182,11 +182,15 @@ class Conv1d(_ConvNd):
             in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
             False, _single(0), groups, bias, padding_mode, **factory_kwargs)
 
-        pad_mode = 'pad'
+        pad_mode = 'valid'
         pad = padding
         if isinstance(padding, tuple):
+            if padding[0] != 0:
+                pad_mode = 'pad'
             pad = (0, 0, padding[0], padding[0])
         elif isinstance(padding, int):
+            if padding != 0:
+                pad_mode = 'pad'
             pad = (0, 0) + (padding,) * 2
         if not isinstance(padding, (int, tuple)):
             pad_mode = padding

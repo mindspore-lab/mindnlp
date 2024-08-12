@@ -38,11 +38,13 @@ def zeros(*size, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.zeros(size, dtype=dtype)
     if dtype is None:
-        dtype = mindspore.float32
+        dtype = get_default_dtype()
     return _zeros(size, dtype)
 
 # zeros_like
 def zeros_like(input, *, dtype=None):
+    if dtype is None:
+        dtype = get_default_dtype()
     if USE_PYBOOST:
         return mindspore.mint.zeros_like(input, dtype=dtype)
     return ops.zeros_like(input, dtype=dtype)
@@ -52,14 +54,16 @@ _ones = ops.Ones()
 def ones(*size, dtype=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
+    if dtype is None:
+        dtype = get_default_dtype()
     if USE_PYBOOST:
         return mindspore.mint.ones(size, dtype=dtype)
-    if dtype is None:
-        dtype = mindspore.float32
     return _ones(size, dtype)
 
 # ones_like
 def ones_like(input, *, dtype=None):
+    if dtype is None:
+        dtype = get_default_dtype()
     if USE_PYBOOST:
         return mindspore.mint.ones_like(input, dtype=dtype)
     return ops.ones_like(input, dtype=dtype)

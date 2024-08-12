@@ -175,8 +175,11 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
-def log_softmax(input, dim=-1):
-    return ops.log_softmax(input, dim)
+def log_softmax(input, dim=-1, dtype=None):
+    out = ops.log_softmax(input, dim)
+    if dtype is not None:
+        out = out.to(dtype)
+    return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
     if USE_PYBOOST:
@@ -220,6 +223,10 @@ def softmax(input, dim=-1, *, dtype=None):
     return ops.softmax(input, dim, dtype=dtype)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = ops.ones(normalized_shape, dtype=input.dtype)
+    if bias is None:
+        bias = ops.zeros(normalized_shape, dtype=input.dtype)
     if USE_PYBOOST:
         return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
