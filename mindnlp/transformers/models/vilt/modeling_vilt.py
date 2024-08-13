@@ -1039,7 +1039,7 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
         self.vilt = ViltModel(config)
 
         # Classifier head
-        self.classifier = nn.SequentialCell(
+        self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size * 2),
             nn.LayerNorm(config.hidden_size * 2, eps= 1e-5),
             nn.GELU(False),
@@ -1236,7 +1236,7 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
 
         # Classifier head
         num_images = config.num_images
-        self.classifier = nn.SequentialCell(
+        self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size * num_images, config.hidden_size * num_images),
             nn.LayerNorm(config.hidden_size * num_images, eps= 1e-5),
             nn.GELU(False),
