@@ -276,10 +276,7 @@ class MgpstrModelIntegrationTest(unittest.TestCase):
                 ]
             ],
         )
-        print(
-            "outputs.logits[0][:, 1:4, 1:4].asnumpy()",
-            outputs.logits[0][:, 1:4, 1:4].asnumpy(),
-        )
+
         self.assertTrue(
             np.allclose(
                 outputs.logits[0][:, 1:4, 1:4].asnumpy(),
