@@ -21,13 +21,12 @@ from functools import lru_cache
 from typing import Dict, List, Optional, Tuple, Union
 
 import regex as re
+import pandas as pd
 
 from mindnlp.utils import ExplicitEnum, PaddingStrategy, logging, TensorType
 from ...tokenization_utils import AddedToken, PreTrainedTokenizer
 from ...tokenization_utils_base import BatchEncoding, TextInput, TruncationStrategy
 
-# if is_pandas_available():
-import pandas as pd
 
 logger = logging.get_logger(__name__)
 
