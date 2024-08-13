@@ -15,12 +15,13 @@
 """
 Text/audio processor class for MusicGen
 """
-from typing import List
+
+from typing import List, Optional
 
 import numpy as np
 
-from mindnlp.utils import to_numpy
 from ...processing_utils import ProcessorMixin
+from ....utils import to_numpy
 
 
 class MusicgenProcessor(ProcessorMixin):
@@ -37,45 +38,16 @@ class MusicgenProcessor(ProcessorMixin):
         tokenizer (`T5Tokenizer`):
             An instance of [`T5Tokenizer`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "EncodecFeatureExtractor"
     tokenizer_class = ("T5Tokenizer", "T5TokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
-        """
-        Initializes a new instance of the MusicgenProcessor class.
-        
-        Args:
-            self (MusicgenProcessor): The current instance of the MusicgenProcessor class.
-            feature_extractor (object): The feature extractor object used for processing.
-            tokenizer (object): The tokenizer object used for tokenizing.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         super().__init__(feature_extractor, tokenizer)
         self.current_processor = self.feature_extractor
         self._in_target_context_manager = False
 
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-        """
-        This method retrieves the decoder prompt IDs for a specified task and language, while allowing the exclusion
-        of timestamps.
-        
-        Args:
-            self: The instance of the class.
-            task (str, optional): The task for which decoder prompt IDs are requested. Defaults to None.
-            language (str, optional): The language for which decoder prompt IDs are requested. Defaults to None.
-            no_timestamps (bool, optional): If set to True, excludes timestamps from the prompt IDs. Defaults to True.
-        
-        Returns:
-            None: This method does not return a value, but rather sets the decoder prompt IDs in the tokenizer.
-        
-        Raises:
-            None.
-        """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
 
     def __call__(self, *args, **kwargs):
@@ -141,7 +113,7 @@ class MusicgenProcessor(ProcessorMixin):
         """
         return self.tokenizer.decode(*args, **kwargs)
 
-    def _decode_audio(self, audio_values, padding_mask = None) -> List[np.ndarray]:
+    def _decode_audio(self, audio_values, padding_mask: Optional = None) -> List[np.ndarray]:
         """
         This method strips any padding from the audio values to return a list of numpy audio arrays.
         """

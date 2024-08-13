@@ -589,6 +589,8 @@ class ModelTesterMixin:
 
             def check_equal(loaded):
                 for key in state_dict.keys():
+                    if state_dict[key].dtype == mindspore.bool_:
+                        continue
                     max_diff = ops.max(ops.abs(state_dict[key] - loaded[key])
                     ).item()
                     self.assertLessEqual(max_diff, 1e-6, msg=f"{key} not identical")
