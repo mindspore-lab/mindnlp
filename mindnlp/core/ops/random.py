@@ -6,6 +6,7 @@ from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
+from ..utils import get_default_dtype
 
 # bernoulli
 def bernoulli(input, p=0.5):
@@ -53,6 +54,8 @@ def normal(mean=0.0, std=1.0, size=None):
 def rand(*size, dtype=None):
     if size[0] == []:
         size = ()
+    if dtype is None:
+        dtype = get_default_dtype()
     if USE_PYBOOST:
         return mindspore.mint.rand(*size, dtype=dtype)
     return ops.rand(*size, dtype=dtype)

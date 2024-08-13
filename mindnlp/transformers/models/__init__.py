@@ -111,6 +111,7 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    idefics,
     jamba,
     jetmoe,
     kosmos2,
@@ -167,6 +168,7 @@ from . import (
     qdqbert,
     qwen2,
     qwen2_moe,
+    rag,
     realm,
     reformer,
     rembert,
@@ -214,6 +216,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vivit,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -323,6 +326,7 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .ibert import *
+from .idefics import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
@@ -382,6 +386,7 @@ from .pop2piano import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .rag import *
 from .realm import *
 from .reformer import *
 from .rembert import *
@@ -429,6 +434,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -539,6 +545,7 @@ __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(idefics.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(instructblip.__all__)
 __all__.extend(jamba.__all__)
@@ -597,6 +604,7 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(rag.__all__)
 __all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
@@ -644,6 +652,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)

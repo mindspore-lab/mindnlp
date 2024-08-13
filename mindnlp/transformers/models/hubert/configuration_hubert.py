@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Hubert model configuration"""
+"""Hubert model configuration"""
 
 import functools
 import operator
@@ -20,17 +20,8 @@ import operator
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
-__all__ = [
-    'HUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP',
-    'HubertConfig',
-]
 
 logger = logging.get_logger(__name__)
-
-HUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/hubert-base-ls960": "https://hf-mirror.com/facebook/hubert-base-ls960/resolve/main/config.json",
-    # See all Hubert models at https://hf-mirror.com/models?filter=hubert
-}
 
 
 class HubertConfig(PretrainedConfig):
@@ -38,7 +29,7 @@ class HubertConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`HubertModel`]. It is used to instantiate an
     Hubert model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Hubert
-    [facebook/hubert-base-ls960](https://hf-mirror.com/facebook/hubert-base-ls960) architecture.
+    [facebook/hubert-base-ls960](https://huggingface.co/facebook/hubert-base-ls960) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -67,7 +58,7 @@ class HubertConfig(PretrainedConfig):
         attention_dropout(`float`, *optional*, defaults to 0.1):
             The dropout ratio for the attention probabilities.
         final_dropout (`float`, *optional*, defaults to 0.1):
-            The dropout probabilitiy for the final projection layer of [`Wav2Vec2ForCTC`].
+            The dropout probability for the final projection layer of [`Wav2Vec2ForCTC`].
         layerdrop (`float`, *optional*, defaults to 0.1):
             The LayerDrop probability. See the [LayerDrop paper](see https://arxiv.org/abs/1909.11556) for more
             details.
@@ -150,19 +141,20 @@ class HubertConfig(PretrainedConfig):
             Dimensionality of the projection before token mean-pooling for classification.
 
     Example:
-        ```python
-        >>> from transformers import HubertModel, HubertConfig
-        ...
-        >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
-        >>> configuration = HubertConfig()
-        ...
-        >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
-        >>> model = HubertModel(configuration)
-        ... 
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+
+    ```python
+    >>> from transformers import HubertModel, HubertConfig
+
+    >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
+    >>> configuration = HubertConfig()
+
+    >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
+    >>> model = HubertModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "hubert"
 
     def __init__(
@@ -207,57 +199,7 @@ class HubertConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-        """
-        Initializes a new instance of the HubertConfig class.
-        
-        Args:
-            vocab_size (int): The size of the vocabulary.
-            hidden_size (int): The size of the hidden layers.
-            num_hidden_layers (int): The number of hidden layers.
-            num_attention_heads (int): The number of attention heads.
-            intermediate_size (int): The size of the intermediate layers.
-            hidden_act (str): The activation function for the hidden layers.
-            hidden_dropout (float): The dropout rate for the hidden layers.
-            activation_dropout (float): The dropout rate for activations.
-            attention_dropout (float): The dropout rate for attention mechanisms.
-            feat_proj_layer_norm (bool): Whether to apply layer normalization to projection features.
-            feat_proj_dropout (float): The dropout rate for feature projection.
-            final_dropout (float): The final dropout rate.
-            layerdrop (float): The layer drop probability.
-            initializer_range (float): The range for parameter initialization.
-            layer_norm_eps (float): The epsilon value for layer normalization.
-            feat_extract_norm (str): The normalization type for feature extraction.
-            feat_extract_activation (str): The activation function for feature extraction.
-            conv_dim (tuple): The dimensions for convolutional layers.
-            conv_stride (tuple): The stride values for convolutional layers.
-            conv_kernel (tuple): The kernel sizes for convolutional layers.
-            conv_bias (bool): Whether to use bias in convolutional layers.
-            num_conv_pos_embeddings (int): The number of positional embeddings for convolutional layers.
-            num_conv_pos_embedding_groups (int): The number of groups for positional embeddings.
-            do_stable_layer_norm (bool): Whether to use stable layer normalization.
-            apply_spec_augment (bool): Whether to apply SpecAugment during training.
-            mask_time_prob (float): The probability of masking in the time dimension.
-            mask_time_length (int): The maximum length of time masking.
-            mask_time_min_masks (int): The minimum number of time masks.
-            mask_feature_prob (float): The probability of masking in the feature dimension.
-            mask_feature_length (int): The maximum length of feature masking.
-            mask_feature_min_masks (int): The minimum number of feature masks.
-            ctc_loss_reduction (str): The reduction type for CTC loss.
-            ctc_zero_infinity (bool): Whether to set positive infinity to zero in CTC loss.
-            use_weighted_layer_sum (bool): Whether to use weighted layer sum for classification.
-            classifier_proj_size (int): The size of the classifier projection layer.
-            pad_token_id (int): The token ID for padding.
-            bos_token_id (int): The token ID for the beginning of sequence.
-            eos_token_id (int): The token ID for the end of sequence.
-        
-        Returns:
-            None
-        
-        Raises:
-            ValueError: If the configuration for convolutional layers is incorrect.
-        """
         super().__init__(**kwargs, pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id)
-
         self.hidden_size = hidden_size
         self.feat_extract_norm = feat_extract_norm
         self.feat_extract_activation = feat_extract_activation
@@ -313,16 +255,6 @@ class HubertConfig(PretrainedConfig):
 
     @property
     def inputs_to_logits_ratio(self):
-        """
-        Calculates the ratio of inputs to logits based on the convolutional strides in the Hubert configuration.
-        
-        Args:
-            self (HubertConfig): The instance of HubertConfig.
-            
-        Returns:
-            int: The ratio of inputs to logits calculated as the product of convolutional strides.
-        
-        Raises:
-            None.
-        """
         return functools.reduce(operator.mul, self.conv_stride, 1)
+
+__all__ = ['HubertConfig']
