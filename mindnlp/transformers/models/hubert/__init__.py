@@ -15,14 +15,8 @@
 ''' Hubert Model '''
 
 from . import configuration_hubert, modeling_hubert
-from .configuration_hubert import HUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, HubertConfig
-from .modeling_hubert import (
-    HUBERT_PRETRAINED_MODEL_ARCHIVE_LIST,
-    HubertForCTC,
-    HubertForSequenceClassification,
-    HubertModel,
-    HubertPreTrainedModel,
-)
+from .configuration_hubert import *
+from .modeling_hubert import *
 
 __all__ = []
 __all__.extend(configuration_hubert.__all__)

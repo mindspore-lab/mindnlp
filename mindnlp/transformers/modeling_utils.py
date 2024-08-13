@@ -748,7 +748,7 @@ class ModuleUtilsMixin:
         # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
         # encoder_extended_attention_mask.transpose(-1, -2))
         encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-        encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * ops.finfo(self.dtype).min
+        encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * float(ops.finfo(self.dtype).min)
 
         return encoder_extended_attention_mask
 
@@ -2872,7 +2872,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 dtype_orig = cls._set_default_ms_dtype(ms_dtype)
 
             # Check if `_keep_in_fp32_modules` is not None
-            use_keep_in_fp32_modules = (cls._keep_in_fp32_modules is not None) and  (ms_dtype == mindspore.float16)
+            use_keep_in_fp32_modules = (cls._keep_in_fp32_modules is not None) and (ms_dtype == mindspore.float16)
 
             if is_sharded:
                 loaded_state_dict_keys = sharded_metadata["all_checkpoint_keys"]

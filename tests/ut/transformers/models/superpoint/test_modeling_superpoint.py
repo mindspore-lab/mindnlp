@@ -25,9 +25,6 @@ from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
 
-import mindspore
-mindspore.set_context(pynative_synchronize=True)
-
 if is_mindspore_available():
     import mindspore
     from mindspore import nn

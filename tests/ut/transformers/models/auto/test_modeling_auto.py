@@ -82,7 +82,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
     from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from mindnlp.transformers.models.t5.modeling_t5 import T5_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 @require_mindspore
@@ -164,16 +163,15 @@ class AutoModelTest(unittest.TestCase):
 
     @slow
     def test_model_for_encoder_decoder_lm(self):
-        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, T5Config)
+        model_name = "google-t5/t5-base"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, T5Config)
 
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, T5ForConditionalGeneration)
-
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        model, loading_info = AutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, T5ForConditionalGeneration)
 
     @slow
     def test_sequence_classification_model_from_pretrained(self):

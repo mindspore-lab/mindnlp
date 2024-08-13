@@ -1134,8 +1134,8 @@ class HybridCache(Cache):
         k_out[:, :, cache_position] = key_states
         v_out[:, :, cache_position] = value_states
         # `_.zero()` followed by `+=` is equivalent `=`, but compile-friendly (without graph breaks due to assignment)
-        self.key_cache[layer_idx].zero_()
-        self.value_cache[layer_idx].zero_()
+        self.key_cache[layer_idx][:] = 0
+        self.value_cache[layer_idx][:] = 0
 
         self.key_cache[layer_idx] += k_out
         self.value_cache[layer_idx] += v_out
@@ -1250,7 +1250,7 @@ class MambaCache:
 
         conv_state = conv_state.roll(shifts=-1, dims=-1)
         conv_state[:, :, cache_position] = new_conv_state
-        self.conv_states[layer_idx].zero_()
+        self.conv_states[layer_idx][:] = 0
         self.conv_states[layer_idx] += conv_state
         return self.conv_states[layer_idx]
 
@@ -1259,5 +1259,5 @@ class MambaCache:
         return self.ssm_states[layer_idx]
 
     def reset(self):
-        self.conv_states.zero_()
-        self.ssm_states.zero_()
+        self.conv_states[:] = 0
+        self.ssm_states[:] = 0
