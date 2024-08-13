@@ -280,7 +280,7 @@ class ModelTesterMixin:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
 
-                model = model_class.from_pretrained(tmpdirname, torch_dtype=mindspore.float16)
+                model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16)
 
                 for name, param in model.named_parameters():
                     if any(n in model_class._keep_in_fp32_modules for n in name.split(".")):
@@ -2516,7 +2516,7 @@ class ModelTesterMixin:
     #         with tempfile.TemporaryDirectory() as tmpdirname:
     #             model.save_pretrained(tmpdirname)
     #             model = model_class.from_pretrained(
-    #                 tmpdirname, torch_dtype=mindspore.float16, attn_implementation="flash_attention_2"
+    #                 tmpdirname, ms_dtype=mindspore.float16, attn_implementation="flash_attention_2"
     #             )
 
     #             for _, module in model.named_modules():
@@ -2544,10 +2544,10 @@ class ModelTesterMixin:
     #         with tempfile.TemporaryDirectory() as tmpdirname:
     #             model.save_pretrained(tmpdirname)
     #             model_fa = model_class.from_pretrained(
-    #                 tmpdirname, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+    #                 tmpdirname, ms_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
     #             )
 
-    #             model = model_class.from_pretrained(tmpdirname, torch_dtype=torch.bfloat16)
+    #             model = model_class.from_pretrained(tmpdirname, ms_dtype=torch.bfloat16)
     # 
     #             dummy_input = inputs_dict[model.main_input_name][:1]
     #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
@@ -2639,10 +2639,10 @@ class ModelTesterMixin:
     #         with tempfile.TemporaryDirectory() as tmpdirname:
     #             model.save_pretrained(tmpdirname)
     #             model_fa = model_class.from_pretrained(
-    #                 tmpdirname, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+    #                 tmpdirname, ms_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
     #             )
 
-    #             model = model_class.from_pretrained(tmpdirname, torch_dtype=torch.bfloat16)
+    #             model = model_class.from_pretrained(tmpdirname, ms_dtype=torch.bfloat16)
     # 
     #             dummy_input = inputs_dict[model.main_input_name][:1]
     #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
@@ -2729,7 +2729,7 @@ class ModelTesterMixin:
 
     #         with tempfile.TemporaryDirectory() as tmpdirname:
     #             model.save_pretrained(tmpdirname)
-    #             model = model_class.from_pretrained(tmpdirname, torch_dtype=mindspore.float16, low_cpu_mem_usage=True).to(
+    #             model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16, low_cpu_mem_usage=True).to(
     #                 torch_device
     #             )
 
@@ -2748,7 +2748,7 @@ class ModelTesterMixin:
 
     #             model = model_class.from_pretrained(
     #                 tmpdirname,
-    #                 torch_dtype=mindspore.float16,
+    #                 ms_dtype=mindspore.float16,
     #                 attn_implementation="flash_attention_2",
     #                 low_cpu_mem_usage=True,
     #             )
@@ -2777,7 +2777,7 @@ class ModelTesterMixin:
 
     #         with tempfile.TemporaryDirectory() as tmpdirname:
     #             model.save_pretrained(tmpdirname)
-    #             model = model_class.from_pretrained(tmpdirname, torch_dtype=mindspore.float16, low_cpu_mem_usage=True).to(
+    #             model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16, low_cpu_mem_usage=True).to(
     #                 torch_device
     #             )
 
@@ -2796,7 +2796,7 @@ class ModelTesterMixin:
 
     #             model = model_class.from_pretrained(
     #                 tmpdirname,
-    #                 torch_dtype=mindspore.float16,
+    #                 ms_dtype=mindspore.float16,
     #                 attn_implementation="flash_attention_2",
     #                 low_cpu_mem_usage=True,
     #             )
@@ -2841,7 +2841,7 @@ class ModelTesterMixin:
 
     #             model = model_class.from_pretrained(
     #                 tmpdirname,
-    #                 torch_dtype=mindspore.float16,
+    #                 ms_dtype=mindspore.float16,
     #                 attn_implementation="flash_attention_2",
     #                 low_cpu_mem_usage=True,
     #             )
@@ -2896,7 +2896,7 @@ class ModelTesterMixin:
 
     #             model = model_class.from_pretrained(
     #                 tmpdirname,
-    #                 torch_dtype=mindspore.float16,
+    #                 ms_dtype=mindspore.float16,
     #                 attn_implementation="flash_attention_2",
     #                 low_cpu_mem_usage=True,
     #                 load_in_4bit=True,
@@ -2964,7 +2964,7 @@ class ModelTesterMixin:
     #             model = (
     #                 model_class.from_pretrained(
     #                     tmpdirname,
-    #                     torch_dtype=mindspore.float16,
+    #                     ms_dtype=mindspore.float16,
     #                     attn_implementation="flash_attention_2",
     #                     low_cpu_mem_usage=True,
     #                 )
@@ -3010,7 +3010,7 @@ class ModelTesterMixin:
     #         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
     #         # TODO: to change it in the future with other relevant auto classes
     #         fa2_model = AutoModelForCausalLM.from_config(
-    #             config, attn_implementation="flash_attention_2", torch_dtype=torch.bfloat16
+    #             config, attn_implementation="flash_attention_2", ms_dtype=torch.bfloat16
     #         )
 
     #         dummy_input = torch.LongTensor([[0, 2, 3, 4], [0, 2, 3, 4]])
@@ -3139,7 +3139,7 @@ class ModelTesterMixin:
     #     n_iter = 3
 
     #     tokenizer = AutoTokenizer.from_pretrained(ckpt)
-    #     model = AutoModelForCausalLM.from_pretrained(ckpt, torch_dtype=mindspore.float16)
+    #     model = AutoModelForCausalLM.from_pretrained(ckpt, ms_dtype=mindspore.float16)
 
     #     model.generation_config.max_new_tokens = 4
 
@@ -3168,7 +3168,7 @@ class ModelTesterMixin:
     #     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     #     tokenizer = AutoTokenizer.from_pretrained(ckpt)
-    #     model = AutoModelForCausalLM.from_pretrained(ckpt, torch_dtype=mindspore.float16)
+    #     model = AutoModelForCausalLM.from_pretrained(ckpt, ms_dtype=mindspore.float16)
 
     #     cache_implementation = "static"
     #     if model.config.model_type == "gemma2":

@@ -485,15 +485,16 @@ class GenerationMixin:
         is_pad_token_in_inputs = (pad_token_id is not None) and (
             ops.isin(elements=inputs, test_elements=pad_token_id).any()
         ).item()
-        is_pad_token_not_equal_to_eos_token_id = (eos_token_id is None) or ~(
+        is_pad_token_not_equal_to_eos_token_id = (eos_token_id is None) or (~(
             ops.isin(elements=eos_token_id, test_elements=pad_token_id).any()
-        ).item()
-        can_infer_attention_mask = is_pad_token_in_inputs & is_pad_token_not_equal_to_eos_token_id
+        )).item()
+        can_infer_attention_mask = is_pad_token_in_inputs and is_pad_token_not_equal_to_eos_token_id
         attention_mask_from_padding = inputs.ne(pad_token_id).long()
 
         attention_mask = (
-            attention_mask_from_padding * can_infer_attention_mask + default_attention_mask * ~can_infer_attention_mask
+            attention_mask_from_padding * can_infer_attention_mask + default_attention_mask * (not can_infer_attention_mask)
         )
+
         return attention_mask
 
     def _prepare_encoder_decoder_kwargs_for_generation(
@@ -2903,11 +2904,9 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(batch_size, dtype=mindspore.int64)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
-        import time
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
         ):
-            s = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2976,8 +2975,6 @@ class GenerationMixin:
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
-            t = time.time()
-            print(t - s)
 
         if streamer is not None:
             streamer.end()
@@ -3228,6 +3225,29 @@ class GenerationMixin:
                 next_token_scores, next_tokens = ops.topk(
                     next_token_scores, n_tokens_to_keep, dim=1, largest=True, sorted=True
                 )
+
+            def replace_negative_indices(next_tokens):
+                next_tokens_np = next_tokens.asnumpy()
+
+                used_indices = set(next_tokens_np[next_tokens_np != -1].flatten())
+                min_unused = 0
+
+                result = []
+                for token_row in next_tokens_np:
+                    new_row = []
+                    for token in token_row:
+                        if token == -1:
+                            while min_unused in used_indices:
+                                min_unused += 1
+                            new_row.append(min_unused)
+                            used_indices.add(min_unused)
+                        else:
+                            new_row.append(token)
+                    result.append(new_row)
+
+                return mindspore.Tensor(np.array(result, dtype=next_tokens_np.dtype))
+
+            next_tokens = replace_negative_indices(next_tokens)
 
             next_indices = ops.div(next_tokens, vocab_size, rounding_mode="floor")
             next_tokens = next_tokens % vocab_size

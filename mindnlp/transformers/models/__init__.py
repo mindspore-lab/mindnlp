@@ -90,9 +90,11 @@ from . import (
     chatglm3,
     chatglm4,
     flava,
+    florence2,
     focalnet,
     fnet,
     funnel,
+    fsmt,
     gemma,
     git,
     gpt,
@@ -109,6 +111,7 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    idefics,
     jamba,
     jetmoe,
     kosmos2,
@@ -165,6 +168,8 @@ from . import (
     qdqbert,
     qwen2,
     qwen2_moe,
+    rag,
+    realm,
     reformer,
     rembert,
     resnet,
@@ -184,6 +189,7 @@ from . import (
     splinter,
     squeezebert,
     starcoder2,
+    superpoint,
     swiftformer,
     swin,
     switch_transformers,
@@ -194,6 +200,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    tvlt,
     udop,
     upernet,
     umt5,
@@ -209,6 +216,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vivit,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -224,8 +232,9 @@ from . import (
     xmod,
     vilt,
     yolos,
+    fuyu,
 )
-
+from .fuyu import *
 from .owlv2 import *
 from .albert import *
 from .align import *
@@ -298,9 +307,11 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .florence2 import *
 from .focalnet import *
 from .fnet import *
 from .funnel import *
+from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
@@ -315,6 +326,7 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .ibert import *
+from .idefics import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
@@ -374,6 +386,8 @@ from .pop2piano import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .rag import *
+from .realm import *
 from .reformer import *
 from .rembert import *
 from .resnet import *
@@ -393,6 +407,7 @@ from .stablelm import *
 from .splinter import *
 from .squeezebert import *
 from .starcoder2 import *
+from .superpoint import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
@@ -403,6 +418,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .tvlt import *
 from .udop import *
 from .upernet import *
 from .unispeech_sat import *
@@ -418,6 +434,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -506,9 +523,11 @@ __all__.extend(chatglm.__all__)
 __all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
@@ -526,6 +545,7 @@ __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(idefics.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(instructblip.__all__)
 __all__.extend(jamba.__all__)
@@ -584,6 +604,8 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(rag.__all__)
+__all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
@@ -608,11 +630,13 @@ __all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
+__all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
@@ -628,6 +652,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)
@@ -642,4 +667,5 @@ __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(fuyu.__all__)
 __all__.extend(yolos.__all__)
