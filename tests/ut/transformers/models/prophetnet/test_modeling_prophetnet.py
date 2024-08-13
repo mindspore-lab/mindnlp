@@ -190,7 +190,7 @@ class ProphetNetModelTester:
         lm_labels,
     ):
         model = ProphetNetModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         # make sure that lm_labels are correctly padded from the right
         # lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
@@ -230,7 +230,7 @@ class ProphetNetModelTester:
         lm_labels,
     ):
         model = ProphetNetModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -258,7 +258,7 @@ class ProphetNetModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = ProphetNetForConditionalGeneration(config=config).set_train(False)
+        model = ProphetNetForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -278,7 +278,7 @@ class ProphetNetModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = ProphetNetForCausalLM(config=config).set_train(False)
+        model = ProphetNetForCausalLM(config=config).eval()
         outputs = model(
             input_ids=decoder_input_ids,
             attention_mask=decoder_attention_mask,
@@ -297,7 +297,7 @@ class ProphetNetModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = ProphetNetForConditionalGeneration(config=config).set_train(False)
+        model = ProphetNetForConditionalGeneration(config=config).eval()
         mindspore.set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
@@ -315,7 +315,7 @@ class ProphetNetModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = ProphetNetForCausalLM(config=config).set_train(False)
+        model = ProphetNetForCausalLM(config=config).eval()
         mindspore.set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=10, do_sample=True, use_cache=False
@@ -333,7 +333,7 @@ class ProphetNetModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = ProphetNetModel(config=config).half().set_train(False)
+        model = ProphetNetModel(config=config).half().eval()
         output = model(input_ids, decoder_input_ids=input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -348,7 +348,7 @@ class ProphetNetModelTester:
     ):
         for model_class in [ProphetNetModel, ProphetNetForConditionalGeneration]:
             mindspore.set_seed(0)
-            model = model_class(config=config).set_train(False)
+            model = model_class(config=config).eval()
             # load state dict copies weights but does not tie them
 
             if model_class == ProphetNetForConditionalGeneration:
@@ -364,7 +364,7 @@ class ProphetNetModelTester:
             mindspore.set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
-            tied_model = model_class(config=tied_config).set_train(False)
+            tied_model = model_class(config=tied_config).eval()
 
             model_result = model(
                 input_ids=input_ids,
@@ -401,7 +401,7 @@ class ProphetNetModelTester:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 tied_model.save_pretrained(tmpdirname)
                 tied_model = model_class.from_pretrained(tmpdirname)
-                tied_model.set_train(False)
+                tied_model.eval()
 
                 # check that models has less parameters
                 self.parent.assertLess(
@@ -438,11 +438,7 @@ class ProphetNetModelTester:
         # mindspore.set_seed(0)
         config.ngram = 4
         model = ProphetNetForConditionalGeneration(config=config)
-        model.set_train(False)
-        # with torch.no_grad():
-        # import pdb
-        # pdb.set_trace()
-        # print('?1input_ids',input_ids)
+        model.eval()
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -461,7 +457,7 @@ class ProphetNetModelTester:
 
     def check_model_with_attn_mask(self, config, input_ids, decoder_input_ids, *args):
         model = ProphetNetModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         outputs_no_mask = model(input_ids=input_ids[:, :5], decoder_input_ids=decoder_input_ids[:, :5])
         attention_mask = ops.ones_like(input_ids)
@@ -504,7 +500,7 @@ class ProphetNetModelTester:
     def check_causal_lm_from_pretrained(
         self, config, input_ids, decoder_input_ids, attention_mask, decoder_attention_mask, *args
     ):
-        model = ProphetNetForConditionalGeneration(config).set_train(False)
+        model = ProphetNetForConditionalGeneration(config).eval()
 
         with tempfile.TemporaryDirectory() as tmp_dirname:
             model.save_pretrained(tmp_dirname)
@@ -689,7 +685,7 @@ class ProphetNetStandaloneDecoderModelTester:
         lm_labels,
     ):
         config.use_cache = True
-        model = ProphetNetDecoder(config=config).set_train(False)
+        model = ProphetNetDecoder(config=config).eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -724,7 +720,7 @@ class ProphetNetStandaloneDecoderModelTester:
         attention_mask,
         lm_labels,
     ):
-        model = ProphetNetDecoder(config=config).set_train(False)
+        model = ProphetNetDecoder(config=config).eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -1010,7 +1006,7 @@ class ProphetNetModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = False
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
             # with torch.no_grad():
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -1021,7 +1017,7 @@ class ProphetNetModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
             # with torch.no_grad():
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -1074,7 +1070,7 @@ class ProphetNetModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
             # with torch.no_grad():
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -1254,7 +1250,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
     def test_cnndm_inference(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased-cnndm")
         model.config.max_length = 512
-
+        # print("model",model)
         tokenizer = ProphetNetTokenizer.from_pretrained("microsoft/prophetnet-large-uncased-cnndm")
 
         ARTICLE_TO_SUMMARIZE = (
@@ -1267,8 +1263,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             " the youngest national key university.".lower()
         )
         input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=511, return_tensors="ms").input_ids
-
-
+        # print("input_ids",input_ids)
         summary_ids = model.generate(
             input_ids, num_beams=4, length_penalty=1.0, no_repeat_ngram_size=3, early_stopping=True
         )
@@ -1315,8 +1310,10 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
         ]
 
         input_ids = tokenizer(INPUTS, truncation=True, padding=True, return_tensors="ms").input_ids
-
+        # print("input_ids",input_ids)
+        # print("input_ids",input_ids.shape)
         gen_output = model.generate(input_ids, num_beams=5, early_stopping=True)
+        # print("gen_output",gen_output)
         generated_questions = tokenizer.batch_decode(gen_output, skip_special_tokens=True)
 
         EXPECTED_QUESTIONS = [
