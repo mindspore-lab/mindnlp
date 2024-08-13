@@ -24,12 +24,10 @@ import regex as re
 
 from mindnlp.utils import ExplicitEnum, PaddingStrategy, logging, TensorType
 from ...tokenization_utils import AddedToken, PreTrainedTokenizer
-from ...tokenization_utils_base import  BatchEncoding, TextInput, TruncationStrategy
-
+from ...tokenization_utils_base import BatchEncoding, TextInput, TruncationStrategy
 
 # if is_pandas_available():
 import pandas as pd
-
 
 logger = logging.get_logger(__name__)
 
@@ -1263,7 +1261,7 @@ class TapexTokenizer(PreTrainedTokenizer):
 
     def truncate_cell(self, cell_value):
         # do not process on these cases
-        if isinstance(cell_value, int) or isinstance(cell_value, float):
+        if isinstance(cell_value, (int, float)):
             return cell_value
         if cell_value.strip() != "":
             try_tokens = self.tokenize(cell_value)

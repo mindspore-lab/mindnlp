@@ -23,10 +23,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor
+from mindspore.ops import constexpr
+
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import LayerNorm
 from mindnlp.core.nn import functional as F
-from mindspore.ops import constexpr
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput
@@ -36,7 +37,6 @@ from ....utils import (
     logging,
 )
 from .configuration_prophetnet import ProphetNetConfig
-
 
 logger = logging.get_logger(__name__)
 
