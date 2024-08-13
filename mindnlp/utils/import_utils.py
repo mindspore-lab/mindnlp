@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_einops_available = _is_package_available('einops')
 _tiktoken_available = _is_package_available('tiktoken')
 _bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
@@ -110,11 +111,31 @@ except importlib_metadata.PackageNotFoundError:
 _levenshtein_available = _is_package_available("Levenshtein")
 _nltk_available = _is_package_available("nltk")
 
+
+_faiss_available = importlib.util.find_spec("faiss") is not None
+try:
+    _faiss_version = importlib.metadata.version("faiss")
+    logger.debug(f"Successfully imported faiss version {_faiss_version}")
+except importlib.metadata.PackageNotFoundError:
+    try:
+        _faiss_version = importlib.metadata.version("faiss-cpu")
+        logger.debug(f"Successfully imported faiss version {_faiss_version}")
+    except importlib.metadata.PackageNotFoundError:
+        _faiss_available = False
+
+def is_faiss_available():
+    return _faiss_available
+
 def is_levenshtein_available():
     return _levenshtein_available
 
+
 def is_nltk_available():
     return _nltk_available
+
+
+def is_einops_available():
+    return _einops_available
 
 
 def is_sudachi_available():

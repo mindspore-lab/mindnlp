@@ -30,11 +30,17 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import CrossEntropyLoss
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
-from ...modeling_outputs import MoeCausalLMOutputWithPast, MoeModelOutputWithPast, SequenceClassifierOutputWithPast
+from ...modeling_outputs import (
+    MoeCausalLMOutputWithPast,
+    MoeModelOutputWithPast,
+    SequenceClassifierOutputWithPast,
+    TokenClassifierOutput,
+)
 from ...modeling_utils import PreTrainedModel
 from .configuration_qwen2_moe import Qwen2MoeConfig
 
@@ -343,7 +349,7 @@ class Qwen2MoeRotaryEmbedding(nn.Module):
 
         Args:
             self (Qwen2MoeRotaryEmbedding): An instance of the Qwen2MoeRotaryEmbedding class.
-            x (torch.Tensor): The input tensor of shape (batch_size, sequence_length, input_size).
+            x (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, input_size).
             seq_len (int, optional): The length of the input sequence. Defaults to None.
 
         Returns:
@@ -1477,17 +1483,17 @@ class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
 
         Args:
             self: The instance of the Qwen2MoeForCausalLM class.
-            input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
-            past_key_values (Union[Cache, Tuple[torch.Tensor]]): Optional. The past key values used for caching during generation.
+            input_ids (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
+            past_key_values (Union[Cache, Tuple[mindspore.Tensor]]): Optional. The past key values used for caching during generation.
                 If past_key_values is an instance of Cache, it represents the cached key values with attributes:
 
                 - cache_length (int): The length of the cache.
                 - past_length (int): The length of the past tokens.
                 - max_cache_length (Optional[int]): The maximum cache length, if applicable.
                 If past_key_values is a tuple, it represents the shape of the past key values tensor.
-            attention_mask (torch.Tensor): Optional. The attention mask tensor of shape (batch_size, sequence_length) containing
+            attention_mask (mindspore.Tensor): Optional. The attention mask tensor of shape (batch_size, sequence_length) containing
                 the attention mask for the input IDs.
-            inputs_embeds (torch.Tensor): Optional. The input embeddings tensor of shape (batch_size, sequence_length, hidden_size)
+            inputs_embeds (mindspore.Tensor): Optional. The input embeddings tensor of shape (batch_size, sequence_length, hidden_size)
                 containing the input embeddings.
             **kwargs: Additional keyword arguments.
 
@@ -1495,12 +1501,12 @@ class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
             dict:
                 A dictionary containing the model inputs for generation with the following keys:
 
-                - 'inputs_embeds' (torch.Tensor): The input embeddings tensor.
-                - 'input_ids' (torch.Tensor): The input IDs tensor.
-                - 'position_ids' (torch.Tensor): The position IDs tensor.
-                - 'past_key_values' (Union[Cache, Tuple[torch.Tensor]]): The past key values tensor.
+                - 'inputs_embeds' (mindspore.Tensor): The input embeddings tensor.
+                - 'input_ids' (mindspore.Tensor): The input IDs tensor.
+                - 'position_ids' (mindspore.Tensor): The position IDs tensor.
+                - 'past_key_values' (Union[Cache, Tuple[mindspore.Tensor]]): The past key values tensor.
                 - 'use_cache' (Optional[bool]): Indicates whether to use cache during generation.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                - 'attention_mask' (mindspore.Tensor): The attention mask tensor.
 
         Raises:
             None.
@@ -1750,9 +1756,86 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
             attentions=transformer_outputs.attentions,
         )
 
+
+class Qwen2MoeForTokenClassification(Qwen2MoePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.model = Qwen2MoeModel(config)
+        if getattr(config, "classifier_dropout", None) is not None:
+            classifier_dropout = config.classifier_dropout
+        elif getattr(config, "hidden_dropout", None) is not None:
+            classifier_dropout = config.hidden_dropout
+        else:
+            classifier_dropout = 0.1
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.score = nn.Linear(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+    def forward(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, TokenClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+        sequence_output = self.dropout(sequence_output)
+        logits = self.score(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 __all__ = [
     "Qwen2MoeForCausalLM",
     "Qwen2MoeModel",
     "Qwen2MoePreTrainedModel",
     "Qwen2MoeForSequenceClassification",
+    "Qwen2MoeForTokenClassification"
 ]

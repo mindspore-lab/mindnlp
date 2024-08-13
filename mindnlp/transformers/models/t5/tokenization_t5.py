@@ -1,6 +1,5 @@
 # coding=utf-8
 # Copyright 2018 T5 Authors and HuggingFace Inc. team.
-# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" Tokenization class for model T5."""
-
+"""Tokenization class for model T5."""
 
 import os
 import re
@@ -25,10 +22,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import sentencepiece as spm
 
-from mindnlp.utils import logging
 from ...convert_slow_tokenizer import import_protobuf
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import AddedToken
+from ....utils import logging
 
 
 if TYPE_CHECKING:
@@ -39,25 +36,8 @@ logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
-PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {
-        "t5-small": "https://hf-mirror.com/t5-small/resolve/main/spiece.model",
-        "t5-base": "https://hf-mirror.com/t5-base/resolve/main/spiece.model",
-        "t5-large": "https://hf-mirror.com/t5-large/resolve/main/spiece.model",
-        "t5-3b": "https://hf-mirror.com/t5-3b/resolve/main/spiece.model",
-        "t5-11b": "https://hf-mirror.com/t5-11b/resolve/main/spiece.model",
-    }
-}
-
 
 # TODO(PVP) - this should be removed in Transformers v5
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "t5-small": 512,
-    "t5-base": 512,
-    "t5-large": 512,
-    "t5-3b": 512,
-    "t5-11b": 512,
-}
 
 SPIECE_UNDERLINE = "▁"
 
@@ -103,12 +83,13 @@ class T5Tokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-                - `nbest_size = {0,1}`: No sampling is performed.
-                - `nbest_size > 1`: samples from the nbest_size results.
-                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+              - `nbest_size = {0,1}`: No sampling is performed.
+              - `nbest_size > 1`: samples from the nbest_size results.
+              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
+
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-            BPE-dropout.
+              BPE-dropout.
         legacy (`bool`, *optional*):
             Whether or not the `legacy` behaviour of the tokenizer should be used. Legacy is before the merge of #24622
             and #25224 which includes fixes to properly handle tokens that appear after special tokens. A simple
@@ -117,29 +98,30 @@ class T5Tokenizer(PreTrainedTokenizer):
             - `legacy=True`:
             ```python
             >>> from transformers import T5Tokenizer
-            ...
-            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
+
+            >>> tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-base", legacy=True)
             >>> tokenizer.encode("Hello <extra_id_0>.")
             [8774, 32099, 3, 5, 1]
             ```
-
             - `legacy=False`:
             ```python
             >>> from transformers import T5Tokenizer
-            ...
-            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
+
+            >>> tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-base", legacy=False)
             >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
             [8774, 32099, 5, 1]
             ```
             Checkout the [pull request](https://github.com/huggingface/transformers/pull/24565) for more details.
+        add_prefix_space (`bool`, *optional*, defaults to `False`):
+            Whether or not to add an initial space to the input. This allows to treat the leading word just as any
+            other word.
 
     Attributes:
         sp_model (`SentencePieceProcessor`):
             The *SentencePiece* processor that is used for every conversion (string, tokens and IDs).
     """
+
     vocab_files_names = VOCAB_FILES_NAMES
-    pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
-    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(
@@ -152,33 +134,9 @@ class T5Tokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         legacy=None,
+        add_prefix_space=True,
         **kwargs,
     ) -> None:
-        """
-        Initializes a T5Tokenizer instance.
-
-        Args:
-            self (object): The T5Tokenizer instance itself.
-            vocab_file (str): The file path to the vocabulary file.
-            eos_token (str, optional): The end-of-sequence token. Defaults to '</s>'.
-            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
-            pad_token (str, optional): The padding token. Defaults to '<pad>'.
-            extra_ids (int): The number of extra tokens to be added to the vocabulary.
-            additional_special_tokens (List[str], optional): Additional special tokens to be added to the vocabulary.
-                Defaults to None.
-            sp_model_kwargs (Dict[str, Any], optional): Additional keyword arguments for the SentencePieceProcessor.
-                Defaults to None.
-            legacy (bool, optional): Flag to indicate whether to use the default legacy behavior. Defaults to None.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If both extra_ids and additional_special_tokens are provided and additional_special_tokens
-                do not include the extra_ids tokens.
-            Warning: If using the default legacy behavior, a warning is issued to notify the user about the behavior
-                and provide guidance on changing it.
-        """
         pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -209,7 +167,7 @@ class T5Tokenizer(PreTrainedTokenizer):
         self._added_tokens_decoder = {}
         for i in range(len(extra_tokens)):
             self._added_tokens_decoder[len(self.sp_model) - 1 + extra_ids - i] = AddedToken(
-                f"<extra_id_{i}>", single_word=True, lstrip=True, rstrip=True, special=True
+                f"<extra_id_{i}>", single_word=False, lstrip=True, rstrip=True, special=True, normalized=False
             )
 
         if legacy is None:
@@ -217,7 +175,7 @@ class T5Tokenizer(PreTrainedTokenizer):
                 f"You are using the default legacy behaviour of the {self.__class__}. This is"
                 " expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you."
                 " If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it"
-                " means, and thouroughly read the reason why this was added as explained in"
+                " means, and thoroughly read the reason why this was added as explained in"
                 " https://github.com/huggingface/transformers/pull/24565"
             )
             legacy = True
@@ -226,6 +184,7 @@ class T5Tokenizer(PreTrainedTokenizer):
         self.sp_model = self.get_spm_processor(kwargs.pop("from_slow", False))
         self.vocab_file = vocab_file
         self._extra_ids = extra_ids
+        self.add_prefix_space = add_prefix_space
 
         super().__init__(
             eos_token=eos_token,
@@ -235,29 +194,12 @@ class T5Tokenizer(PreTrainedTokenizer):
             additional_special_tokens=additional_special_tokens,
             sp_model_kwargs=self.sp_model_kwargs,
             legacy=legacy,
+            add_prefix_space=add_prefix_space,
             **kwargs,
         )
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
-        """
-        This method is responsible for retrieving the SentencePieceProcessor for the T5Tokenizer class.
-
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-            from_slow (bool): A flag indicating whether to use the slow SentencePiece model. Defaults to False.
-                If set to True, the method will load the tokenizer from the slow model.
-
-        Returns:
-            None: This method does not return any value, rather it modifies the internal state of the T5Tokenizer
-                instance by loading the SentencePieceProcessor.
-
-        Raises:
-            IOError: If there is an issue with reading the vocab_file or if the file is not found.
-            ImportError: If there is an issue with importing the protobuf module.
-            AttributeError: If an attribute error occurs during the method execution.
-            RuntimeError: If there is a runtime error while loading the SentencePieceProcessor.
-        """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         if self.legacy or from_slow:  # no dependency on protobuf
             tokenizer.Load(self.vocab_file)
@@ -276,29 +218,11 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-        """
-        This method is a static method in the `T5Tokenizer` class and is named `_eventually_correct_t5_max_length`.
-
-        Args:
-            pretrained_model_name_or_path (str): The name or path of the pretrained model.
-            max_model_length (int): The maximum model length.
-            init_max_model_length (int): The initial maximum model length.
-
-        Returns:
-            None.
-
-        Raises:
-            FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be
-                corrected in Transformers v5. This warning is to ensure backward compatibility when  padding/encoding
-                with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated
-                max length. To encode/pad to sequences longer than the deprecated max length, either instantiate the
-                tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
-        """
         if pretrained_model_name_or_path in T5Tokenizer.max_model_input_sizes:
             deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]
             if init_max_model_length is not None and init_max_model_length != max_model_length:
                 return init_max_model_length
-            if init_max_model_length is None:
+            elif init_max_model_length is None:
                 warnings.warn(
                     "This tokenizer was incorrectly instantiated with a model max length of"
                     f" {deprecated_max_model_length} which will be corrected in Transformers v5.\nFor now, this"
@@ -316,36 +240,9 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-        """
-        Method to get the vocabulary size of the T5Tokenizer instance.
-
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-                This parameter is required to access the tokenizer's properties and methods.
-
-        Returns:
-            int: The method returns the vocabulary size of the T5Tokenizer instance as an integer value.
-
-        Raises:
-            None.
-        """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
-        """
-        Retrieves the vocabulary of the T5Tokenizer.
-
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-
-        Returns:
-            dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens in the vocabulary,
-                and the values are the corresponding token IDs. The vocabulary includes both the original vocabulary
-                of the T5Tokenizer and any additional tokens that have been added.
-
-        Raises:
-            None.
-        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
@@ -379,44 +276,11 @@ class T5Tokenizer(PreTrainedTokenizer):
         return ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
 
     def get_sentinel_tokens(self):
-        """
-        This method, get_sentinel_tokens, belongs to the class T5Tokenizer and retrieves sentinel tokens from the additional_special_tokens list.
-
-        Args:
-            self:
-                An instance of the T5Tokenizer class.
-
-                - Type: T5Tokenizer object.
-                - Purpose: Represents the current instance of the T5Tokenizer class.
-                - Restrictions: None.
-
-        Returns:
-            None: this method modifies the internal state of the object.
-
-        Raises:
-            None.
-        """
         return list(
             set(filter(lambda x: bool(re.search(r"<extra_id_\d+>", x)) is not None, self.additional_special_tokens))
         )
 
     def get_sentinel_token_ids(self):
-        """
-        Method to retrieve the token IDs for sentinel tokens in the T5Tokenizer class.
-
-        Args:
-            self (T5Tokenizer): An instance of the T5Tokenizer class.
-                Represents the tokenizer object that the method is called on.
-                It is used to access the necessary methods and attributes within the tokenizer.
-
-        Returns:
-            None:
-                The method does not return a value but directly returns the list of token IDs for sentinel tokens.
-
-        Raises:
-            None:
-                This method does not raise any exceptions.
-        """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
 
     def _add_eos_if_not_present(self, token_ids: List[int]) -> List[int]:
@@ -427,7 +291,8 @@ class T5Tokenizer(PreTrainedTokenizer):
                 " eos tokens being added."
             )
             return token_ids
-        return token_ids + [self.eos_token_id]
+        else:
+            return token_ids + [self.eos_token_id]
 
     def create_token_type_ids_from_sequences(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
@@ -473,42 +338,16 @@ class T5Tokenizer(PreTrainedTokenizer):
         token_ids_0 = self._add_eos_if_not_present(token_ids_0)
         if token_ids_1 is None:
             return token_ids_0
-        token_ids_1 = self._add_eos_if_not_present(token_ids_1)
-        return token_ids_0 + token_ids_1
+        else:
+            token_ids_1 = self._add_eos_if_not_present(token_ids_1)
+            return token_ids_0 + token_ids_1
 
     def __getstate__(self):
-        """
-        This method __getstate__ is defined in the class T5Tokenizer and is used to retrieve the state of the tokenizer.
-        
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-            
-        Returns:
-            dict: A dictionary containing the state of the tokenizer with the 'sp_model' key set to None.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
-        """
-        Method '__setstate__' in the class 'T5Tokenizer'.
-        
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-                This parameter represents the current instance of the T5Tokenizer class.
-            d (dict): A dictionary containing the state information to be set.
-                The dictionary 'd' holds the state information that needs to be set for the T5Tokenizer instance.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -518,7 +357,6 @@ class T5Tokenizer(PreTrainedTokenizer):
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.Load(self.vocab_file)
 
-    # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.tokenize
     def tokenize(self, text: "TextInput", **kwargs) -> List[str]:
         """
         Converts a string to a list of tokens. If `self.legacy` is set to `False`, a prefix token is added unless the
@@ -527,7 +365,11 @@ class T5Tokenizer(PreTrainedTokenizer):
         if self.legacy or len(text) == 0:
             return super().tokenize(text, **kwargs)
 
-        tokens = super().tokenize(SPIECE_UNDERLINE + text.replace(SPIECE_UNDERLINE, " "), **kwargs)
+        text = text.replace(SPIECE_UNDERLINE, " ")
+        if self.add_prefix_space:
+            text = SPIECE_UNDERLINE + text
+
+        tokens = super().tokenize(text, **kwargs)
 
         if len(tokens) > 1 and tokens[0] == SPIECE_UNDERLINE and tokens[1] in self.all_special_tokens:
             tokens = tokens[1:]
@@ -535,20 +377,6 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     @property
     def unk_token_length(self):
-        """
-        This method returns the length of the encoded form of the unknown token in the T5Tokenizer.
-        
-        Args:
-            self: T5Tokenizer
-                The instance of the T5Tokenizer class.
-        
-        Returns:
-            int:
-                The length of the encoded form of the unknown token.
-        
-        Raises:
-            None.
-        """
         return len(self.sp_model.encode(str(self.unk_token)))
 
     def _tokenize(self, text, **kwargs):
@@ -561,9 +389,8 @@ class T5Tokenizer(PreTrainedTokenizer):
         `unk_token`. Here is an example with `unk_token = "<unk>"` and `unk_token_length = 4`.
         `self.tokenizer.sp_model.encode("<unk> Hey", out_type = str)[4:]`.
         """
-        tokens = self.sp_model.encode(text, out_type=str)
         if self.legacy or not text.startswith((SPIECE_UNDERLINE, " ")):
-            return tokens
+            return self.sp_model.encode(text, out_type=str)
 
         # 1. Encode string + prefix ex: "<unk> Hey"
         tokens = self.sp_model.encode(self.unk_token + text, out_type=str)
@@ -581,9 +408,11 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     def convert_tokens_to_string(self, tokens):
         """Converts a sequence of tokens (string) in a single string."""
+        # since we manually add the prefix space, we have to remove it when decoding
+        if tokens[0].startswith(SPIECE_UNDERLINE) and self.add_prefix_space:
+            tokens[0] = tokens[0][1:]
+
         current_sub_tokens = []
-        # since we manually add the prefix space, we have to remove it
-        tokens[0] = tokens[0].lstrip(SPIECE_UNDERLINE)
         out_string = ""
         prev_is_special = False
         for token in tokens:
@@ -601,21 +430,6 @@ class T5Tokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-        '''
-        Save the vocabulary to the specified directory with an optional filename prefix.
-        
-        Args:
-            self (T5Tokenizer): The instance of the T5Tokenizer class.
-            save_directory (str): The directory where the vocabulary will be saved. It should be a valid directory path.
-            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary filename. Default is None.
-        
-        Returns:
-            Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
-        Raises:
-            OSError: If the save_directory is not a valid directory path.
-            FileNotFoundError: If the self.vocab_file does not exist.
-        '''
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

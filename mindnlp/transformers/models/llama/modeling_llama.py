@@ -1223,4 +1223,6 @@ __all__ = [
     "LlamaModel",
     "LlamaPreTrainedModel",
     "LlamaForSequenceClassification",
+    "LlamaForQuestionAnswering",
+    "LlamaForTokenClassification"
 ]

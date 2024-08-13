@@ -93,6 +93,7 @@ class WeightNorm:
         module.register_forward_pre_hook(fn)
 
         return fn
+
     def wrapper_func(self, cell, func):
         r"""
         wrapper_func where used to transpose cell_id to cell
