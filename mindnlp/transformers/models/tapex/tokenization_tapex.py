@@ -766,7 +766,6 @@ class TapexTokenizer(PreTrainedTokenizer):
         attention masks, etc. which are necessary for the model to work correctly. Use this method if you want to build
         your processing on your own, otherwise refer to `__call__`.
         """
-        print("encode_plus//table",table)
         encoded_inputs = self.encode_plus(
             table,
             query=query,
@@ -810,7 +809,6 @@ class TapexTokenizer(PreTrainedTokenizer):
             verbose=verbose,
             **kwargs,
         )
-        print('_encode_plus//table ',table)
         return self._encode_plus(
             table=table,
             query=query,
@@ -859,7 +857,6 @@ class TapexTokenizer(PreTrainedTokenizer):
                 "More information on available tokenizers at "
                 "https://github.com/huggingface/transformers/pull/2674"
             )
-        print('table',type(table),table)
         text = self.prepare_table_query(
             table, query, answer, truncation_strategy=truncation_strategy, max_length=max_length
         )

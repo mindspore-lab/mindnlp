@@ -26,7 +26,7 @@ import pandas as pd
 from tokenizers import AddedToken
 from mindnlp.transformers import TapexTokenizer
 from mindnlp.transformers.models.tapex.tokenization_tapex import VOCAB_FILES_NAMES
-from mindnlp.utils.testing_utils import slow #is_pt_tf_cross_test, require_pandas,
+from mindnlp.utils.testing_utils import slow
 
 from ...test_tokenization_common import TokenizerTesterMixin
 
@@ -832,8 +832,6 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 # in order to have equivalent results with encoding an empty table or empty sequence
                 del filtered_sequence[number_of_tokens + 1]
                 filtered_sequence = [x for x in filtered_sequence if x is not None]
-                print("Encoded sequence:", encoded_sequence)
-                print("Filtered sequence:", filtered_sequence)
                 self.assertEqual(encoded_sequence, filtered_sequence)
 
     # @slow

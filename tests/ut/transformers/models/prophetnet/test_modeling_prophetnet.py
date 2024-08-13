@@ -386,8 +386,6 @@ class ProphetNetModelTester:
             )
             random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
-            # print("model_result[0][0, :, random_slice_idx].asnumpy()",model_result[0][0, :, random_slice_idx].asnumpy())
-            # print('tied_model_result[0][0, :, random_slice_idx].asnumpy()',tied_model_result[0][0, :, random_slice_idx].asnumpy())
             # check that outputs are equal
             self.parent.assertTrue(
                 np.allclose(
@@ -1173,7 +1171,7 @@ class ProphetNetStandaloneEncoderModelTest(ModelTesterMixin, unittest.TestCase):
 
 @require_mindspore
 class ProphetNetModelIntegrationTest(unittest.TestCase):
-    @slow
+    # @slow
     def test_pretrained_checkpoint_hidden_states(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased")
 
@@ -1233,7 +1231,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
         expected_encoder_outputs_slice = Tensor(
             [[[-0.2526, -0.1951, -0.2185], [-0.8923, 0.2992, -0.4623], [-0.4585, 0.0165, -0.6652]]]
         )
-        expected_shape_encoder = (1, 28, 1024) ##?torch.Size()
+        expected_shape_encoder = (1, 28, 1024)
         self.assertEqual(encoder_outputs.shape, expected_shape_encoder)
         #        self.assertTrue(np.allclose(encoder_outputs[:, :3, :3], expected_encoder_outputs_slice, atol=1e-4))
         assert np.allclose(encoder_outputs[:, :3, :3].asnumpy(), expected_encoder_outputs_slice.asnumpy(), atol=1e-4)
@@ -1246,11 +1244,10 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
         #        self.assertTrue(np.allclose(next_first_stream_logits[:, :3, :3], expected_slice, atol=1e-4))
         assert np.allclose(next_first_stream_logits[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4)
 
-    @slow
+    # @slow
     def test_cnndm_inference(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased-cnndm")
         model.config.max_length = 512
-        # print("model",model)
         tokenizer = ProphetNetTokenizer.from_pretrained("microsoft/prophetnet-large-uncased-cnndm")
 
         ARTICLE_TO_SUMMARIZE = (
@@ -1263,7 +1260,6 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             " the youngest national key university.".lower()
         )
         input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=511, return_tensors="ms").input_ids
-        # print("input_ids",input_ids)
         summary_ids = model.generate(
             input_ids, num_beams=4, length_penalty=1.0, no_repeat_ngram_size=3, early_stopping=True
         )
@@ -1297,7 +1293,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             generated_titles,
         )
 
-    @slow
+    # @slow
     def test_question_gen_inference(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased-squad-qg")
 
@@ -1310,10 +1306,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
         ]
 
         input_ids = tokenizer(INPUTS, truncation=True, padding=True, return_tensors="ms").input_ids
-        # print("input_ids",input_ids)
-        # print("input_ids",input_ids.shape)
         gen_output = model.generate(input_ids, num_beams=5, early_stopping=True)
-        # print("gen_output",gen_output)
         generated_questions = tokenizer.batch_decode(gen_output, skip_special_tokens=True)
 
         EXPECTED_QUESTIONS = [

@@ -430,16 +430,12 @@ class ProphetNetPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            # module.weight.data.normal_(mean=0.0, std=self.config.init_std)
             nn.init.normal_(module.weight, mean=0.0, std=self.config.init_std)
             if module.bias is not None:
-                # module.bias.data.zero_()
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            # module.weight.data.normal_(mean=0.0, std=self.config.init_std)
             nn.init.normal_(module.weight, mean=0.0, std=self.config.init_std)
             if module.padding_idx is not None:
-                # module.weight.data[module.padding_idx].zero_()
                 module.weight.data[module.padding_idx] = 0
 
     def _shift_right(self, input_ids):
@@ -505,7 +501,6 @@ class ProphetNetPositionalEmbeddings(nn.Embedding):
         return super().forward(position_ids), position_ids
 
     def _forward(self, position_ids):
-        # print("position_ids",position_ids)
         return super().forward(position_ids)
 
 
@@ -537,7 +532,7 @@ class ProphetNetAttention(nn.Module):
         self.out_proj = nn.Linear(hidden_size, hidden_size)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return ops.transpose(tensor.view(bsz, seq_len, self.num_attn_heads, self.head_dim), 1, 2)#.swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_attn_heads, self.head_dim), 1, 2)
 
     def forward(
         self,
@@ -588,7 +583,7 @@ class ProphetNetAttention(nn.Module):
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
         src_len = key_states.shape[2]
-        attn_weights = ops.einsum("bsij,bsjk->bsik", query_states, ops.transpose(key_states, 2, 3))#.swapaxes(2, 3))
+        attn_weights = ops.einsum("bsij,bsjk->bsik", query_states, ops.transpose(key_states, 2, 3))
         expected_shape = (batch_size, self.num_attn_heads, tgt_len, src_len)
         if attn_weights.shape != expected_shape:
             raise ValueError(f"Attention weights should have size {expected_shape}, but is {attn_weights.shape}")
@@ -693,7 +688,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         self.onnx_trace = False
 
     def _shape(self, tensor, seq_len, batch_size):
-        return ops.transpose(tensor.view(batch_size, seq_len, self.num_attn_heads, self.head_dim), 1, 2)#.swapaxes(1, 2)
+        return ops.transpose(tensor.view(batch_size, seq_len, self.num_attn_heads, self.head_dim), 1, 2)
 
     def prepare_for_onnx_export_(self):
         self.onnx_trace = True
@@ -762,7 +757,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # [batch_size, number_heads, sequence_length, head_dimesion]
         # x [batch_size, number_heads, head_dimesion, sequence_length]
         # -> [batch_size, number_heads, sequence_length, sequence_length]
-        main_attn_weights = ops.einsum("bntc,bncs->bnts", main_query_states, ops.transpose(main_key_states, 2, 3))#.swapaxes(2, 3))
+        main_attn_weights = ops.einsum("bntc,bncs->bnts", main_query_states, ops.transpose(main_key_states, 2, 3))
 
         # retrieve relative position embeddings for each layer -> see paper for more details
         main_relative_pos_embeddings = self.get_main_relative_pos_embeddings(
@@ -858,12 +853,12 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # x [batch_size, ngram, number_heads, 2*sequence_length, head_dimesion]
         # -> [batch_size, ngram, number_heads, sequence_length, head_dimesion]
         predict_attn_output = ops.einsum(
-            "bnhts,bnhsc->bnhtc", (predict_attn_probs, ops.transpose(predict_value_states, 1, 2))#.swapaxes(1, 2))
+            "bnhts,bnhsc->bnhtc", (predict_attn_probs, ops.transpose(predict_value_states, 1, 2))
         )
 
         # reshape so that num_heads dim is merged into last `head_dim` axis
         # [batch_size, ngram, number_heads, sequence_length, head_dimesion] -> [batch_size, ngram, sequence_length, hidden_size]
-        predict_attn_output = ops.transpose(predict_attn_output, 2, 3)#.swapaxes(2, 3)
+        predict_attn_output = ops.transpose(predict_attn_output, 2, 3)
         predict_attn_output = predict_attn_output.reshape(batch_size, self.ngram, sequence_length, hidden_size)
         predict_attn_output = self.out_proj(predict_attn_output)
 
@@ -948,7 +943,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
             )
 
         # [batch_size, ngram, sequence_length, hidden_size]
-        hidden_states = ops.transpose(hidden_states, 1, 2)#.swapaxes(1, 2)
+        hidden_states = ops.transpose(hidden_states, 1, 2)
         rel_pos_embeddings = self.relative_pos_embeddings(hidden_states)
 
         # [batch_size, ngram, sequence_length, num_buckets, num_heads]
@@ -1865,7 +1860,7 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
                 break
             expend_targets[i, :, :] = labels
 
-        logits = ops.transpose(logits, 0, 1)#.swapaxes(0, 1)
+        logits = ops.transpose(logits, 0, 1)
         lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
@@ -2124,7 +2119,7 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
                 break
             expend_targets[i, :, :] = labels
 
-        logits = ops.transpose(logits, 0, 1)#.swapaxes(0, 1)
+        logits = ops.transpose(logits, 0, 1)
         lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
