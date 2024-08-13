@@ -785,13 +785,13 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = mindspore.nn.BCEWithLogitsLoss()
+                loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
