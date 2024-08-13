@@ -182,9 +182,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
-        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
+        *model_args, # pylint: disable=keyword-arg-before-vararg
         **kwargs,
     ) -> PreTrainedModel:
         r"""
