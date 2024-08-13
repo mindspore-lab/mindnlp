@@ -233,8 +233,8 @@ class DeformableDetrObjectDetectionOutput(ModelOutput):
     encoder_last_hidden_state: Optional[mindspore.Tensor] = None
     encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
-    enc_outputs_class = None
-    enc_outputs_coord_logits = None
+    enc_outputs_class: Optional = None
+    enc_outputs_coord_logits: Optional = None
 
 
 def _get_clones(module, N):
@@ -525,24 +525,22 @@ def multi_scale_deformable_attention(
     sampling_grids = 2 * sampling_locations - 1
     sampling_value_list = []
     for level_id, (height, width) in enumerate(value_spatial_shapes):
+        height, width = height.item(), width.item()
         # batch_size, height*width, num_heads, hidden_dim
         # -> batch_size, height*width, num_heads*hidden_dim
         # -> batch_size, num_heads*hidden_dim, height*width
         # -> batch_size*num_heads, hidden_dim, height, width
-        value_l_ = (
-            value_list[level_id]
-            .flatten(start_dim=2)
-            .transpose(1, 2)
-            .reshape(batch_size * num_heads, hidden_dim, height, width)
+        value_l_ = ops.transpose(ops.flatten(value_list[level_id], 2), 1, 2).reshape(
+            batch_size * num_heads, hidden_dim, height, width
         )
+
         # batch_size, num_queries, num_heads, num_points, 2
         # -> batch_size, num_heads, num_queries, num_points, 2
         # -> batch_size*num_heads, num_queries, num_points, 2
-        sampling_grid_l_ = (
-            sampling_grids[:, :, :, level_id]
-            .transpose(1, 2)
-            .flatten(start_dim=0, end_dim=1)
-        )
+        sampling_grid_l_ = ops.transpose(
+            sampling_grids[:, :, :, level_id], 1, 2
+        ).flatten(start_dim=0, end_dim=1)
+
         # batch_size*num_heads, hidden_dim, num_queries, num_points
         sampling_value_l_ = F.grid_sample(
             value_l_,
@@ -555,18 +553,18 @@ def multi_scale_deformable_attention(
     # (batch_size, num_queries, num_heads, num_levels, num_points)
     # -> (batch_size, num_heads, num_queries, num_levels, num_points)
     # -> (batch_size, num_heads, 1, num_queries, num_levels*num_points)
-    attention_weights = attention_weights.transpose(1, 2).reshape(
+    attention_weights = ops.transpose(attention_weights, 1, 2).reshape(
         batch_size * num_heads, 1, num_queries, num_levels * num_points
     )
     output = (
         (
-            ops.stack(sampling_value_list, dim=-2).flatten(start_dim=2)
+            ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2)
             * attention_weights
         )
         .sum(-1)
         .view(batch_size, num_heads * hidden_dim, num_queries)
     )
-    return output.transpose(1, 2)
+    return ops.transpose(output, 1, 2)
 
 
 class DeformableDetrMultiscaleDeformableAttention(nn.Module):
@@ -759,9 +757,9 @@ class DeformableDetrMultiheadAttention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
-        return tensor.view(
-            batch_size, seq_len, self.num_heads, self.head_dim
-        ).transpose(1, 2)
+        return ops.transpose(
+            tensor.view(batch_size, seq_len, self.num_heads, self.head_dim), 1, 2
+        )
 
     def with_pos_embed(
         self, tensor: mindspore.Tensor, position_embeddings: Optional[mindspore.Tensor]
@@ -799,7 +797,7 @@ class DeformableDetrMultiheadAttention(nn.Module):
 
         source_len = key_states.shape[1]
 
-        attn_weights = ops.bmm(query_states, key_states.transpose(1, 2))
+        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
 
         if attn_weights.shape != (batch_size * self.num_heads, target_len, source_len):
             raise ValueError(
@@ -861,7 +859,7 @@ class DeformableDetrMultiheadAttention(nn.Module):
         attn_output = attn_output.view(
             batch_size, self.num_heads, target_len, self.head_dim
         )
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(batch_size, target_len, embed_dim)
 
         attn_output = self.out_proj(attn_output)
@@ -1664,6 +1662,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         proposals = []
         _cur = 0
         for level, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             mask_flatten_ = padding_mask[:, _cur : (_cur + height * width)].view(
                 batch_size, height, width, 1
             )
@@ -1809,9 +1808,9 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             batch_size, num_channels, height, width = source.shape
             spatial_shape = (height, width)
             spatial_shapes.append(spatial_shape)
-            source = source.flatten(start_dim=2).transpose(1, 2)
+            source = ops.transpose(source.flatten(start_dim=2), 1, 2)
             mask = mask.flatten(start_dim=1)
-            pos_embed = pos_embed.flatten(start_dim=2).transpose(1, 2)
+            pos_embed = ops.transpose(pos_embed.flatten(start_dim=2), 1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
             source_flatten.append(source)
@@ -2287,16 +2286,14 @@ class DeformableDetrLoss(nn.Module):
         target_classes[idx] = target_classes_o
 
         target_classes_onehot = ops.zeros(
-            [
-                source_logits.shape[0],
-                source_logits.shape[1],
-                source_logits.shape[2] + 1,
-            ],
+            source_logits.shape[0],
+            source_logits.shape[1],
+            source_logits.shape[2] + 1,
             dtype=source_logits.dtype,
-            layout=source_logits.layout,
         )
-        target_classes_onehot.scatter_(2, target_classes.unsqueeze(-1), 1)
-
+        target_classes_onehot = ops.scatter(
+            target_classes_onehot, 2, target_classes.unsqueeze(-1), 1.0
+        )
         target_classes_onehot = target_classes_onehot[:, :, :-1]
         loss_ce = (
             sigmoid_focal_loss(
@@ -2407,7 +2404,7 @@ class DeformableDetrLoss(nn.Module):
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_boxes = sum(len(t["class_labels"]) for t in targets)
-        num_boxes = mindspore.Tensor([num_boxes], dtype=mindspore.float)
+        num_boxes = mindspore.Tensor([num_boxes], dtype=mindspore.float32)
         world_size = 1
         num_boxes = ops.clamp(num_boxes / world_size, min=1).item()
 
@@ -2600,8 +2597,8 @@ def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
 
-    left_top = ops.max(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    right_bottom = ops.min(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    left_top = ops.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+    right_bottom = ops.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
 
     width_height = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
     inter = width_height[:, :, 0] * width_height[:, :, 1]  # [N,M]
@@ -2632,8 +2629,8 @@ def generalized_box_iou(boxes1, boxes2):
         )
     iou, union = box_iou(boxes1, boxes2)
 
-    top_left = ops.min(boxes1[:, None, :2], boxes2[:, :2])
-    bottom_right = ops.max(boxes1[:, None, 2:], boxes2[:, 2:])
+    top_left = ops.minimum(boxes1[:, None, :2], boxes2[:, :2])
+    bottom_right = ops.maximum(boxes1[:, None, 2:], boxes2[:, 2:])
 
     width_height = (bottom_right - top_left).clamp(min=0)  # [N,M,2]
     area = width_height[:, :, 0] * width_height[:, :, 1]

@@ -660,7 +660,7 @@ class DeformableDetrImageProcessingTest(
 
         # do_pad=False, max_height=100, max_width=100, image=200x100 -> 100x50
         image_processor = DeformableDetrImageProcessor(
-            size={"height": 100, "width": 100},
+            size={"max_height": 100, "max_width": 100},
             do_pad=False,
         )
         inputs = image_processor(images=[image_1], return_tensors="ms")
