@@ -151,9 +151,9 @@ class MgpstrEmbeddings(nn.Module):
             bias=True,
         )
 
-        self.cls_token = ms.Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.cls_token = nn.Parameter(ops.zeros(1, 1, config.hidden_size))
 
-        self.pos_embed = ms.Parameter(
+        self.pos_embed = nn.Parameter(
             ops.zeros(1, self.num_patches + self.num_tokens, config.hidden_size)
         )
         self.pos_drop = nn.Dropout(p=config.drop_rate)
@@ -166,8 +166,8 @@ class MgpstrEmbeddings(nn.Module):
             )
 
         patch_embeddings = self.proj(pixel_values)
-        patch_embeddings = patch_embeddings.flatten(start_dim=2).swapaxes(
-            1, 2
+        patch_embeddings = ops.transpose(
+            patch_embeddings.flatten(start_dim=2), 1, 2
         )  # BCHW -> BNC
 
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
@@ -229,8 +229,8 @@ class MgpstrAttention(nn.Module):
         attention_probs = nn.Softmax(dim=-1)(attention_probs)
         attention_probs = self.attn_drop(attention_probs)
 
-        context_layer = (
-            (attention_probs @ value).swapaxes(1, 2).reshape(batch_size, num, channel)
+        context_layer = (ops.transpose(attention_probs @ value, 1, 2)).reshape(
+            batch_size, num, channel
         )
         context_layer = self.proj(context_layer)
         context_layer = self.proj_drop(context_layer)
@@ -322,9 +322,7 @@ class MgpstrEncoder(nn.Module):
 class MgpstrA3Module(nn.Module):
     def __init__(self, config: MgpstrConfig):
         super().__init__()
-        self.token_norm = nn.LayerNorm(
-            [config.hidden_size], eps=config.layer_norm_eps
-        )
+        self.token_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         if self.token_norm.bias is None:
             self.token_norm.bias.set_data(
                 initializer(
@@ -361,57 +359,31 @@ class MgpstrA3Module(nn.Module):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, MgpstrEmbeddings):
-            module.pos_embed.set_data(
-                initializer(
-                    TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
-                    module.pos_embed.shape,
-                    module.pos_embed.dtype,
-                )
+            nn.init.trunc_normal_(
+                module.pos_embed, mean=0.0, std=self.config.initializer_range
             )
-            module.cls_token.set_data(
-                initializer(
-                    TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
-                    module.cls_token.shape,
-                    module.cls_token.dtype,
-                )
+            nn.init.trunc_normal_(
+                module.cls_token, mean=0.0, std=self.config.initializer_range
             )
         elif isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.set_data(
-                initializer(
-                    TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
+            module.weight.data = nn.init.trunc_normal_(
+                module.weight.data, mean=0.0, std=self.config.initializer_range
             )
             if module.bias is not None:
-                module.bias.set_data(
-                    initializer(
-                        "zeros",
-                        module.bias.shape,
-                        module.bias.dtype,
-                    )
-                )
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
-            module.weight.set_data(
-                initializer(
-                    "zeros",
-                    module.bias.shape,
-                    module.bias.dtype,
-                )
-            )
-            module.weight.set_data(
-                initializer("ones", module.weight.shape, module.weight.dtype)
-            )
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
     def forward(self, hidden_states):
         hidden_states = self.token_norm(hidden_states)
-        hidden_states = hidden_states.swapaxes(1, 2).unsqueeze(-1)
+        hidden_states = ops.transpose(hidden_states, 1, 2).unsqueeze(-1)
         selected = self.tokenLearner(hidden_states)
         selected = selected.flatten(start_dim=2)
-        attentions = ops.softmax(selected, dim=-1)
+        attentions = nn.functional.softmax(selected, dim=-1)
 
         feat = self.feat(hidden_states)
-        feat = feat.flatten(start_dim=2).swapaxes(1, 2)
+        feat = ops.transpose(feat.flatten(start_dim=2), 1, 2)
         feat = ops.einsum("...si,...id->...sd", attentions, feat)
         a3_out = self.norm(feat)
 
@@ -472,8 +444,6 @@ class MgpstrPreTrainedModel(PreTrainedModel):
             module.weight.set_data(
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
-
-
 
 
 class MgpstrModel(MgpstrPreTrainedModel):
