@@ -169,7 +169,7 @@ class PrefixEncoder(nn.Module):
             # Use a two-layer MLP to encode the prefix
             kv_size = config.num_layers * config.kv_channels * config.multi_query_group_num * 2
             self.embedding = nn.Embedding(config.pre_seq_len, kv_size)
-            self.trans = nn.SequentialCell([
+            self.trans = nn.Sequential([
                 nn.Linear(kv_size, config.hidden_size),
                 nn.Tanh(),
                 nn.Linear(config.hidden_size, kv_size)
