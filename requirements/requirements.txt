@@ -28,3 +28,5 @@ g2p-en
 pycocotools
 Levenshtein
 bs4
+tiktoken
+git+https://github.com/lvyufeng/einops

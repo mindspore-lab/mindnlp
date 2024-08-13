@@ -55,6 +55,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertConfig"),
         ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
+        ("chatglm4", "ChatGLM4Config"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
         ("clipseg", "CLIPSegConfig"),
@@ -90,10 +91,13 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
+        ("florence2", "Florence2Config"),
         ("fnet", "FNetConfig"),
         ("focalnet", "FocalNetConfig"),
         ("funnel", "FunnelConfig"),
+        ("fuyu","FuyuConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
+        ("fsmt","FSMTConfig"),
         ("gemma", "GemmaConfig"),
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
@@ -145,6 +149,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("qdqbert", "QDQBertConfig"),
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),
+        ("realm","RealmConfig"),
         ("reformer", "ReformerConfig"),
         ("rembert", "RemBertConfig"),
         ("resnet", "ResNetConfig"),
@@ -169,6 +174,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
         ("trocr", "TrOCRConfig"),
+        ("tvlt","TvltConfig"),
         ("udop", "UdopConfig"),
         ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
@@ -269,6 +275,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("falcon", "FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("flaubert", "FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("flava", "FLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("florence2", "FLORENCE2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("fnet", "FNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("focalnet", "FOCALNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("fsmt", "FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -450,6 +457,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("canine", "CANINE"),
         ("chinese_clip", "Chinese-CLIP"),
         ("chatglm", "ChatGLM"),
+        ("chatglm4", "ChatGLM4"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
         ("clip_vision_model", "CLIPVisionModel"),
@@ -505,6 +513,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("flan-ul2", "FLAN-UL2"),
         ("flaubert", "FlauBERT"),
         ("flava", "FLAVA"),
+        ("florence2", "Florence2"),
         ("fnet", "FNet"),
         ("focalnet", "FocalNet"),
         ("fsmt", "FairSeq Machine-Translation"),
@@ -1356,6 +1365,9 @@ class AutoConfig:
         config_dict, unused_kwargs = PretrainedConfig.get_config_dict(
             pretrained_model_name_or_path, **kwargs
         )
+
+        fix_chatglm_name(config_dict)
+
         if "model_type" in config_dict:
             config_class = CONFIG_MAPPING[config_dict["model_type"]]
             return config_class.from_dict(config_dict, **unused_kwargs)
@@ -1387,3 +1399,23 @@ class AutoConfig:
                 "match!"
             )
         CONFIG_MAPPING.register(model_type, config, exist_ok=exist_ok)
+
+
+def fix_chatglm_name(config):
+    model_type = config.get('model_type', None)
+    if model_type is None or model_type != 'chatglm':
+        return
+    if 'glm-4' in config['_name_or_path']:
+        config['model_type'] = 'chatglm4'
+        new_model_name = 'ChatGLM4'
+    elif 'chatglm3' in config['_name_or_path']:
+        config['model_type'] = 'chatglm3'
+        new_model_name = 'ChatGLM3'
+    elif 'chatglm2' in config['_name_or_path']:
+        config['model_type'] = 'chatglm2'
+        new_model_name = 'ChatGLM2'
+
+    for arch in config['architectures']:
+        arch.replace('ChatGLM', new_model_name)
+    for k, v in config['auto_map'].items():
+        config['auto_map'][k] = v.replace('ChatGLM', new_model_name)

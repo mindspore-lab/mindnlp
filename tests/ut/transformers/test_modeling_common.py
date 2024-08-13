@@ -3070,7 +3070,7 @@ class ModelTesterMixin:
         )
         # inverting the attention mask
         mask_dtype = mindspore.float32
-        min_dtype = ops.finfo(mask_dtype).min
+        min_dtype = float(ops.finfo(mask_dtype).min)
         mask_shared_prefix = (mask_shared_prefix.eq(0.0)).to(dtype=mask_dtype) * min_dtype
 
         # Creating a position_ids tensor. note the repeating figures in the end.

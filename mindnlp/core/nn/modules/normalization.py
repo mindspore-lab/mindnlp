@@ -141,8 +141,8 @@ class GroupNorm(Module):
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
-        self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs), 'weight', affine)
-        self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs),  'bias', affine)
+        self.weight = Parameter(ops.empty(num_channels, **factory_kwargs), 'weight', affine)
+        self.bias = Parameter(ops.empty(num_channels, **factory_kwargs),  'bias', affine)
 
     def forward(self, input):
         return group_norm(input, self.num_groups, self.weight, self.bias, self.eps)

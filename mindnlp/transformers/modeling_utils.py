@@ -570,10 +570,10 @@ def _load_state_dict_into_model(model_to_load, state_dict, start_prefix, assign_
     for key in state_dict.keys():
         new_key = None
         if "gamma" in key:
-            logger.warning(PARAM_RENAME_WARNING.format("gamma", "weight"))
+            # logger.warning(PARAM_RENAME_WARNING.format("gamma", "weight"))
             new_key = key.replace("gamma", "weight")
         if "beta" in key:
-            logger.warning(PARAM_RENAME_WARNING.format("beta", "bias"))
+            # logger.warning(PARAM_RENAME_WARNING.format("beta", "bias"))
             new_key = key.replace("beta", "bias")
         if new_key:
             old_keys.append(key)
@@ -817,7 +817,7 @@ class ModuleUtilsMixin:
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
         extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
-        extended_attention_mask = (1.0 - extended_attention_mask) * ops.finfo(dtype).min
+        extended_attention_mask = (1.0 - extended_attention_mask) * float(ops.finfo(dtype).min)
         return extended_attention_mask
 
     def get_head_mask(
@@ -1193,7 +1193,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         Note `set_default_dtype` currently only works with floating-point types and asserts if for example,
         `torch.int64` is passed. So if a non-float `dtype` is passed this functions will throw an exception.
         """
-        if not isinstance(dtype, typing.Float):
+        if not isinstance(dtype, (typing.Float, typing.BFloat)):
             raise ValueError(
                 f"Can't instantiate {cls.__name__} model under dtype={dtype} since it is not a floating point dtype"
             )
@@ -2431,7 +2431,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         resume_download = kwargs.pop("resume_download", None)
         proxies = kwargs.pop("proxies", None)
         output_loading_info = kwargs.pop("output_loading_info", False)
-        _ = kwargs.pop("mirror", None)
         from_pipeline = kwargs.pop("_from_pipeline", None)
         from_auto_class = kwargs.pop("_from_auto", False)
         _fast_init = kwargs.pop("_fast_init", True)
@@ -2592,16 +2591,31 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 elif not use_safetensors and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant))
                 ):
-                    # Load from a PyTorch checkpoint
+                    # Load from a MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
                     )
                 elif not use_safetensors and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant))
                 ):
-                    # Load from a sharded PyTorch checkpoint
+                    # Load from a sharded MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
+                elif not use_safetensors and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_NAME, variant))
+                ):
+                    # Load from a PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_NAME, variant)
+                    )
+                elif not use_safetensors and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant))
+                ):
+                    # Load from a sharded PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant)
                     )
                     is_sharded = True
                 elif use_safetensors:
@@ -2611,7 +2625,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                     )
                 else:
                     raise EnvironmentError(
-                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(SAFE_WEIGHTS_NAME, variant)},"
+                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}, {_add_variant(SAFE_WEIGHTS_NAME, variant)},"
                         f" found in directory {pretrained_model_name_or_path}."
                     )
             elif os.path.isfile(os.path.join(subfolder, pretrained_model_name_or_path)):
@@ -2875,6 +2889,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
             config, use_flash_attention_2=use_flash_attention_2, ms_dtype=ms_dtype, device_map=device_map
         )
 
+        model_kwargs.pop('mirror', None)
         with ContextManagers(init_contexts):
             # Let's make sure we don't run the init function of buffer modules
             model = cls(config, *model_args, **model_kwargs)
