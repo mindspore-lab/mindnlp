@@ -11,57 +11,70 @@ from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 from mindnlp.configs import USE_PYBOOST
 from .modules._utils import _pair
 
+
 def gelu(input, approximate='none'):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.gelu(input, approximate)
     return ops.gelu(input, approximate)
+
 
 def relu(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.relu(input)
     return ops.relu(input)
 
+
 def tanh(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.tanh(input)
     return ops.tanh(input)
+
 
 def sigmoid(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.sigmoid(input)
     return ops.sigmoid(input)
 
+
 def silu(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.silu(input)
     return ops.silu(input)
 
+
 def mish(input):
     return ops.mish(input)
 
+
 def relu6(input):
     return ops.relu6(input)
+
 
 def elu(input, alpha=1.0):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.elu(input, alpha)
     return ops.elu(input, alpha)
 
+
 def glu(input, dim=-1):
     return ops.glu(input, dim)
+
 
 def softplus(input, beta=1, threshold=20):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
+
 def logsigmoid(input):
     return ops.logsigmoid(input)
+
 
 def leaky_relu(input, alpha=0.2):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
     return ops.leaky_relu(input, alpha)
+
 
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
@@ -113,6 +126,7 @@ def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count
 
     return output_array
 
+
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0):
     """
     Perform 2D average pooling on the input array.
@@ -142,19 +156,23 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
             input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
 
         pad_mode = "SAME" if ceil_mode else "VALID"
-        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
+        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride),
+                                                  pad_mode=pad_mode)
         output = _avgpool2d(input)
         return output
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
 
 def dropout(input, p=0.5, training=True):
     if USE_PYBOOST:
         return mindspore.mint.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
+
 def dropout2d(input, p=0.5, training=False):
     return ops.dropout2d(input, p, training)
+
 
 def drop_and_mask(keep_prob, seed=None):
     seed0, seed1 = _get_seed(seed, "dropout")
@@ -163,7 +181,10 @@ def drop_and_mask(keep_prob, seed=None):
     out, mask = dropout_op(input)
     return out, mask
 
+
 dense_ = ops.Dense()
+
+
 def linear(input, weight, bias=None):
     if USE_PYBOOST:
         return mindspore.mint.linear(input, weight, bias)
@@ -172,24 +193,31 @@ def linear(input, weight, bias=None):
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
     if USE_PYBOOST:
-        return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
+        return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction,
+                                                                             pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
+
 
 def log_softmax(input, dim=-1):
     return ops.log_softmax(input, dim)
 
+
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
     if USE_PYBOOST:
-        return mindspore.ops.auto_generate.gen_ops_prim.embedding_op(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
+        return mindspore.ops.auto_generate.gen_ops_prim.embedding_op(input, weight, padding_idx, max_norm, norm_type,
+                                                                     scale_grad_by_freq)
     return ops.gather(weight, input, 0)
+
 
 def rms_norm(input, weight, eps=1e-5):
     return ops.rms_norm(input, weight, eps)[0]
+
 
 def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
         query, key, cos, sin, position_ids, cos_format
     )
+
 
 def pad(input, pad, mode='constant', value=0.0):
     if USE_PYBOOST:
@@ -198,19 +226,24 @@ def pad(input, pad, mode='constant', value=0.0):
         return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
 
+
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
     # return _nll_loss(input, target, weight)
     return ops.nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
 
+
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+
 
 def mse_loss(input, target, reduction='mean'):
     return ops.mse_loss(input, target, reduction)
 
+
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
+
 
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
@@ -218,6 +251,7 @@ def softmax(input, dim=-1, *, dtype=None):
     if dim is None:
         dim = -1
     return ops.softmax(input, dim, dtype=dtype)
+
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if USE_PYBOOST:
@@ -229,8 +263,11 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     _layer_norm = _get_cache_prim(ops.LayerNorm)(begin_axis, begin_axis, epsilon=eps)
     return _layer_norm(input, weight, bias)[0]
 
-def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
+
+def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None,
+                antialias=False):
     return ops.interpolate(input, size, scale_factor, mode, align_corners, recompute_scale_factor)
+
 
 def normalize(input, p=2.0, dim=1, eps=1e-6):
     r"""
@@ -254,6 +291,7 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     The resulting tensor will have the same shape as the input tensor.
     """
     return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
     if USE_PYBOOST:
@@ -288,17 +326,23 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
         eps
     )
 
+
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
     if not isinstance(padding, (int, tuple)):
         pad_mode = padding
 
-    return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
+    return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation,
+                      groups=groups)
+
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if USE_PYBOOST:
-        return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
-    return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+        return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation,
+                                                       ceil_mode=ceil_mode, return_indices=return_indices)
+    return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode,
+                          return_indices=return_indices)
+
 
 def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if stride is None:
@@ -321,6 +365,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
@@ -331,20 +376,21 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     std = ops.sqrt(var + eps)
     input = ops.div(ops.sub(input, mean), std)
     input = input.reshape(input_shape)
-    output = ops.add(input *weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
-                        bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
+    output = ops.add(input * weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
+                     bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
     return output
 
+
 def _in_projection(
-    q,
-    k,
-    v,
-    w_q,
-    w_k,
-    w_v,
-    b_q=None,
-    b_k=None,
-    b_v=None,
+        q,
+        k,
+        v,
+        w_q,
+        w_k,
+        w_v,
+        b_q=None,
+        b_k=None,
+        b_v=None,
 ):
     r"""
     Performs the in-projection step of the attention operation. This is simply
@@ -391,11 +437,11 @@ def _in_projection(
 
 
 def _in_projection_packed(
-    q: Tensor,
-    k: Tensor,
-    v: Tensor,
-    w: Tensor,
-    b: Optional[Tensor] = None,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        w: Tensor,
+        b: Optional[Tensor] = None,
 ) -> List[Tensor]:
     r"""
     Performs the in-projection step of the attention operation, using packed weights.
@@ -453,6 +499,7 @@ def _in_projection_packed(
         else:
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
+
 
 def scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal):
     embed_size = query.shape[-1]
@@ -522,31 +569,31 @@ def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
 
 
 def multi_head_attention_forward(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    embed_dim_to_check: int,
-    num_heads: int,
-    in_proj_weight: Optional[Tensor],
-    in_proj_bias: Optional[Tensor],
-    bias_k: Optional[Tensor],
-    bias_v: Optional[Tensor],
-    add_zero_attn: bool,
-    dropout_p: float,
-    out_proj_weight: Tensor,
-    out_proj_bias: Optional[Tensor],
-    training: bool = True,
-    key_padding_mask: Optional[Tensor] = None,
-    need_weights: bool = True,
-    attn_mask: Optional[Tensor] = None,
-    use_separate_proj_weight: bool = False,
-    q_proj_weight: Optional[Tensor] = None,
-    k_proj_weight: Optional[Tensor] = None,
-    v_proj_weight: Optional[Tensor] = None,
-    static_k: Optional[Tensor] = None,
-    static_v: Optional[Tensor] = None,
-    average_attn_weights: bool = True,
-    is_causal: bool = False,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        embed_dim_to_check: int,
+        num_heads: int,
+        in_proj_weight: Optional[Tensor],
+        in_proj_bias: Optional[Tensor],
+        bias_k: Optional[Tensor],
+        bias_v: Optional[Tensor],
+        add_zero_attn: bool,
+        dropout_p: float,
+        out_proj_weight: Tensor,
+        out_proj_bias: Optional[Tensor],
+        training: bool = True,
+        key_padding_mask: Optional[Tensor] = None,
+        need_weights: bool = True,
+        attn_mask: Optional[Tensor] = None,
+        use_separate_proj_weight: bool = False,
+        q_proj_weight: Optional[Tensor] = None,
+        k_proj_weight: Optional[Tensor] = None,
+        v_proj_weight: Optional[Tensor] = None,
+        static_k: Optional[Tensor] = None,
+        static_v: Optional[Tensor] = None,
+        average_attn_weights: bool = True,
+        is_causal: bool = False,
 ) -> Tuple[Tensor, Optional[Tensor]]:
     r"""
     Args:
@@ -713,12 +760,14 @@ def multi_head_attention_forward(
         if attn_mask.ndim == 2:
             correct_2d_size = (tgt_len, src_len)
             if attn_mask.shape != correct_2d_size:
-                raise RuntimeError(f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}.")
+                raise RuntimeError(
+                    f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}.")
             attn_mask = attn_mask.unsqueeze(0)
         elif attn_mask.ndim == 3:
             correct_3d_size = (bsz * num_heads, tgt_len, src_len)
             if attn_mask.shape != correct_3d_size:
-                raise RuntimeError(f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}.")
+                raise RuntimeError(
+                    f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}.")
         else:
             raise RuntimeError(f"attn_mask's dimension {attn_mask.ndim} is not supported")
 
@@ -776,7 +825,7 @@ def multi_head_attention_forward(
     if key_padding_mask is not None:
         assert key_padding_mask.shape == (bsz, src_len), \
             f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
-        key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len).   \
+        key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len). \
             expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
         if attn_mask is None:
             attn_mask = key_padding_mask
@@ -845,6 +894,7 @@ def multi_head_attention_forward(
             attn_output = attn_output.squeeze(1)
         return attn_output, None
 
+
 def _canonical_mask(
         mask: Optional[mindspore.Tensor],
         mask_name: str,
@@ -874,6 +924,7 @@ def _canonical_mask(
             # )
     return mask
 
+
 def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     if input is None:
         return None
@@ -881,15 +932,18 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
         return input.dtype
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
 
+
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 
+
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
     return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
+
 
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
@@ -903,13 +957,13 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad = (0,) * 4
 
     _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
-                                        kernel_size=(1, weight.shape[-1]),
-                                        mode=1,
-                                        pad_mode=pad_mode,
-                                        pad=pad,
-                                        stride=(1, stride),
-                                        dilation=(1, dilation),
-                                        group=groups)
+                                          kernel_size=(1, weight.shape[-1]),
+                                          mode=1,
+                                          pad_mode=pad_mode,
+                                          pad=pad,
+                                          stride=(1, stride),
+                                          dilation=(1, dilation),
+                                          group=groups)
 
     input = input.expand_dims(2)
     output = _conv2d(input, weight.expand_dims(2))
@@ -920,35 +974,42 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     output = output.squeeze(2)
     return output
 
+
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
     return ops.ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)[0]
+
 
 def one_hot(tensor, num_classes=-1):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.one_hot(tensor, num_classes)
     return ops.one_hot(tensor, num_classes)
 
+
 def pixel_shuffle(input, upscale_factor):
     return ops.pixel_shuffle(input, upscale_factor)
 
+
 def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_shuffle(input, downscale_factor)
+
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     if USE_PYBOOST:
         return mindspore.mint.grid_sample(input, grid, mode, padding_mode, align_corners)
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
+
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
     return ops.cosine_similarity(x1, x2, dim, eps)
+
 
 # def pairwise_distance():
 #     return ops.pairwise_distance
 
 def make_attention_mask(
-    query_input: Tensor,
-    key_input: Tensor,
-    dtype=mindspore.float32,
+        query_input: Tensor,
+        key_input: Tensor,
+        dtype=mindspore.float32,
 ):
     """Mask-making helper for attention weights.
 
@@ -972,7 +1033,7 @@ def make_attention_mask(
 
 
 def make_causal_mask(
-    x: Tensor, dtype=mindspore.float32
+        x: Tensor, dtype=mindspore.float32
 ) -> Tensor:
     """Make a causal mask for self-attention.
 

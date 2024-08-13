@@ -44,8 +44,6 @@ def verify_backbone_config_arguments(
         raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
 
 
-
-
 class UPerNetConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration

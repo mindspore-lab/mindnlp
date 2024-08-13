@@ -29,7 +29,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 from packaging import version
-# from parameterized import parameterized
+from parameterized import parameterized
 from pytest import mark
 
 from mindnlp.transformers import (
