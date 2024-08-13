@@ -54,7 +54,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         bsz, seq_len = ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
         return super().forward(positions + self.offset)
 
@@ -453,7 +453,7 @@ class TrOCRPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.set_data(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
-            if module.bias:
+            if module.bias is not None:
                 module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
