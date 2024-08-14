@@ -3824,7 +3824,7 @@ class SequenceSummary(nn.Module):
         elif self.summary_type == "first":
             output = hidden_states[:, 0]
         elif self.summary_type == "mean":
-            output = hidden_states.mean(dim=1)
+            output = ops.mean(hidden_states, dim=1)
         elif self.summary_type == "cls_index":
             if cls_index is None:
                 cls_index = ops.full_like(
