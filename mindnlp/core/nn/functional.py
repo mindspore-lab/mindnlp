@@ -955,7 +955,7 @@ def cosine_similarity(x1, x2, dim=1, eps=1e-8):
         zero_norm_mask = (x1.sum(dim) == 0) & (x2.sum(dim) == 0)
 
     cosine_sim = ops.cosine_similarity(x1, x2, dim, eps)
-    return ops.where(zero_norm_mask, 1, cosine_sim)
+    return ops.select(zero_norm_mask, ops.ones_like(cosine_sim), cosine_sim)
 
 # def pairwise_distance():
 #     return ops.pairwise_distance
