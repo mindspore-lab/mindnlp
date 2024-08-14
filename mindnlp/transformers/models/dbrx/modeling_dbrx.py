@@ -153,12 +153,11 @@ def load_balancing_loss_func(
     """
     if gate_logits is None or not isinstance(gate_logits, tuple):
         return mindspore.Tensor(0.0)
-    else:
-        return list(gate_logits)
+
 
     if isinstance(gate_logits, tuple):
 
-        concatenated_gate_logits = ops.cat([layer_gate for layer_gate in gate_logits], dim=0)
+        concatenated_gate_logits = ops.cat(list(gate_logits), dim=0)
 
     routing_weights = F.softmax(concatenated_gate_logits, dim=-1)
 
@@ -680,7 +679,7 @@ class DbrxExperts(nn.Module):
                 * top_weights[token_list, topk_list, None]
             )
 
-            out.index_add(0, token_idx, expert_out)            
+            out.index_add(0, token_idx, expert_out)
         out = out.reshape(bsz, q_len, hidden_size)
         return out
 
