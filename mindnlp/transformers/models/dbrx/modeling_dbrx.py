@@ -13,13 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Mindspore DBRX model."""
-
 import math
 from typing import Any, Optional, Tuple, Union
-
-import mindspore
-mindspore.set_context(pynative_synchronize=True)
 import numpy as np
+import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
@@ -31,8 +28,6 @@ from ....utils import (
     logging,
 )
 from .configuration_dbrx import DbrxConfig
-
-
 
 
 logger = logging.get_logger(__name__)
@@ -49,18 +44,27 @@ class DbrxRotaryEmbedding(nn.Module):
         self.max_position_embeddings = max_position_embeddings
         self.base = base
 
-        inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
+        inv_freq = 1.0 / (
+            self.base
+            ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim)
+        )
         self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
     @mindspore._no_grad()
     def forward(self, x, position_ids, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
-        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
+        inv_freq_expanded = (
+            self.inv_freq[None, :, None]
+            .float()
+            .broadcast_to((position_ids.shape[0], -1, 1))
+        )
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 since bfloat16 loses precision on long contexts
         # See https://github.com/huggingface/transformers/pull/29285
 
-        freqs =ops.transpose(inv_freq_expanded.float() @ position_ids_expanded.float(),1,2)
+        freqs = ops.transpose(
+            inv_freq_expanded.float() @ position_ids_expanded.float(), 1, 2
+        )
         emb = ops.cat((freqs, freqs), dim=-1)
         cos = emb.cos()
         sin = emb.sin()
@@ -112,7 +116,9 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
+    hidden_states = hidden_states[:, :, None, :, :].broadcast_to(
+        (batch, num_key_value_heads, n_rep, slen, head_dim)
+    )
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -145,10 +151,14 @@ def load_balancing_loss_func(
     """
     if gate_logits is None or not isinstance(gate_logits, tuple):
         return mindspore.Tensor(0.0)
+    else:
+        return list(gate_logits)
 
     if isinstance(gate_logits, tuple):
 
-        concatenated_gate_logits = ops.cat([layer_gate for layer_gate in gate_logits], dim=0)
+        concatenated_gate_logits = ops.cat(
+            [layer_gate for layer_gate in gate_logits], dim=0
+        )
 
     routing_weights = F.softmax(concatenated_gate_logits, dim=-1)
 
@@ -164,19 +174,23 @@ def load_balancing_loss_func(
         router_prob_per_expert = ops.mean(routing_weights, dim=0)
     else:
         batch_size, sequence_length = attention_mask.shape
-        num_hidden_layers = concatenated_gate_logits.shape[0] // (batch_size * sequence_length)
+        num_hidden_layers = concatenated_gate_logits.shape[0] // (
+            batch_size * sequence_length
+        )
 
         # Compute the mask that masks all padding tokens as 0 with the same shape of expert_mask
         expert_attention_mask = (
             attention_mask[None, :, :, None, None]
-            .broadcast_to((num_hidden_layers, batch_size, sequence_length, top_k, num_experts))
+            .broadcast_to(
+                (num_hidden_layers, batch_size, sequence_length, top_k, num_experts)
+            )
             .reshape(-1, top_k, num_experts)
         )
 
         # Compute the percentage of tokens routed to each experts
-        tokens_per_expert = ops.sum(expert_mask.float() * expert_attention_mask, dim=0) / ops.sum(
-            expert_attention_mask, dim=0
-        )
+        tokens_per_expert = ops.sum(
+            expert_mask.float() * expert_attention_mask, dim=0
+        ) / ops.sum(expert_attention_mask, dim=0)
 
         # Compute the mask that masks all padding tokens as 0 with the same shape of tokens_per_expert
         router_per_expert_attention_mask = (
@@ -186,9 +200,9 @@ def load_balancing_loss_func(
         )
 
         # Compute the average probability of routing to these experts
-        router_prob_per_expert = ops.sum(routing_weights * router_per_expert_attention_mask, dim=0) / ops.sum(
-            router_per_expert_attention_mask, dim=0
-        )
+        router_prob_per_expert = ops.sum(
+            routing_weights * router_per_expert_attention_mask, dim=0
+        ) / ops.sum(router_per_expert_attention_mask, dim=0)
 
     overall_loss = ops.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
     return overall_loss * num_experts
@@ -221,7 +235,9 @@ class DbrxAttention(nn.Module):
         self.is_causal = True
 
         self.Wqkv = nn.Linear(
-            self.hidden_size, self.hidden_size + 2 * self.num_key_value_heads * self.head_dim, bias=False
+            self.hidden_size,
+            self.hidden_size + 2 * self.num_key_value_heads * self.head_dim,
+            bias=False,
         )
         self.out_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
         self.rotary_emb = DbrxRotaryEmbedding(
@@ -258,33 +274,53 @@ class DbrxAttention(nn.Module):
             dim=2,
         )
 
-        #query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        query_states = ops.transpose(ops.view(query_states,bsz, q_len, self.num_heads, self.head_dim),1,2)
-        #key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        key_states = ops.transpose(ops.view(key_states,bsz, q_len, self.num_key_value_heads, self.head_dim),1,2)
-        #value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = ops.transpose(ops.view(value_states,bsz, q_len, self.num_key_value_heads, self.head_dim),1,2)
+        # query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+        query_states = ops.transpose(
+            ops.view(query_states, bsz, q_len, self.num_heads, self.head_dim), 1, 2
+        )
+        # key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        key_states = ops.transpose(
+            ops.view(key_states, bsz, q_len, self.num_key_value_heads, self.head_dim),
+            1,
+            2,
+        )
+        # value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        value_states = ops.transpose(
+            ops.view(value_states, bsz, q_len, self.num_key_value_heads, self.head_dim),
+            1,
+            2,
+        )
 
         cos, sin = self.rotary_emb(value_states, position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+        query_states, key_states = apply_rotary_pos_emb(
+            query_states, key_states, cos, sin
+        )
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; position_ids needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos,"cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.block_idx, cache_kwargs)
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(
+                key_states, value_states, self.block_idx, cache_kwargs
+            )
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, ops.transpose(key_states,2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = ops.matmul(
+            query_states, ops.transpose(key_states, 2, 3)
+        ) / math.sqrt(self.head_dim)
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = F.dropout(attn_weights, p=self.attn_pdrop, training=self.training)
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(
+            query_states.dtype
+        )
+        attn_weights = F.dropout(
+            attn_weights, p=self.attn_pdrop, training=self.training
+        )
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -293,7 +329,7 @@ class DbrxAttention(nn.Module):
                 + f" {attn_output.shape}"
             )
 
-        attn_output = ops.transpose(attn_output,1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
         attn_output = self.out_proj(attn_output)
 
@@ -301,7 +337,6 @@ class DbrxAttention(nn.Module):
             attn_weights = None
 
         return attn_output, attn_weights, past_key_value
-
 
 
 class DbrxSdpaAttention(DbrxAttention):
@@ -320,7 +355,9 @@ class DbrxSdpaAttention(DbrxAttention):
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
-    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+    ) -> Tuple[
+        mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]
+    ]:
         if output_attentions:
             # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
             logger.warning_once(
@@ -340,7 +377,7 @@ class DbrxSdpaAttention(DbrxAttention):
         bsz, q_len, _ = hidden_states.shape
 
         qkv_states = self.Wqkv(hidden_states)
-        if self.clip_qkv is not None:
+        if self.clip_qkv:
             qkv_states = qkv_states.clamp(min=-self.clip_qkv, max=self.clip_qkv)
 
         query_states, key_states, value_states = ops.split(
@@ -352,21 +389,30 @@ class DbrxSdpaAttention(DbrxAttention):
             ],
             dim=2,
         )
-        print(query_states.view(bsz, q_len, self.num_heads, self.head_dim))
-        #query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        query_states = ops.transpose(ops.view(query_states,bsz, q_len, self.num_heads, self.head_dim),1,2)
-        #key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        key_states = ops.transpose(ops.view(key_states,bsz, q_len, self.num_heads, self.head_dim),1,2)
-        #value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = ops.transpose(ops.view(value_states,bsz, q_len, self.num_heads, self.head_dim),1,2)
+        # query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+        query_states = ops.transpose(
+            ops.view(query_states, bsz, q_len, self.num_heads, self.head_dim), 1, 2
+        )
+        # key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        key_states = ops.transpose(
+            ops.view(key_states, bsz, q_len, self.num_heads, self.head_dim), 1, 2
+        )
+        # value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        value_states = ops.transpose(
+            ops.view(value_states, bsz, q_len, self.num_heads, self.head_dim), 1, 2
+        )
 
         cos, sin = self.rotary_emb(value_states, position_ids, seq_len=None)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, None)
+        query_states, key_states = apply_rotary_pos_emb(
+            query_states, key_states, cos, sin, None
+        )
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.block_idx, cache_kwargs)
+            key_states, value_states = past_key_value.update(
+                key_states, value_states, self.block_idx, cache_kwargs
+            )
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -395,7 +441,7 @@ class DbrxSdpaAttention(DbrxAttention):
             is_causal=is_causal,
         )
 
-        attn_output = ops.transpose(attn_output,1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.view(bsz, q_len, -1)
 
         attn_output = self.out_proj(attn_output)
@@ -431,7 +477,9 @@ class DbrxNormAttentionNorm(nn.Module):
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
         **kwargs: Any,
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, Optional[mindspore.Tensor], Optional[Cache]]:
+    ) -> Tuple[
+        mindspore.Tensor, mindspore.Tensor, Optional[mindspore.Tensor], Optional[Cache]
+    ]:
         residual_states = hidden_states
         hidden_states = self.norm_1(hidden_states).to(hidden_states.dtype)
 
@@ -446,7 +494,9 @@ class DbrxNormAttentionNorm(nn.Module):
             **kwargs,
         )
 
-        hidden_states = F.dropout(hidden_states, p=self.resid_pdrop, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.resid_pdrop, training=self.training
+        )
         hidden_states = hidden_states + residual_states
 
         residual_states = hidden_states
@@ -473,23 +523,30 @@ class DbrxRouter(nn.Module):
 
         self.layer = nn.Linear(self.hidden_size, self.moe_num_experts, bias=False)
 
-    def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def forward(
+        self, hidden_states: mindspore.Tensor
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         if self.training and self.moe_jitter_eps is not None:
             low = 1.0 - self.moe_jitter_eps
             high = 1.0 + self.moe_jitter_eps
 
             # 生成与 hidden_states 形状相同的随机数张量
-            random_tensor = mindspore.tensor(np.random.uniform(low, high, size=hidden_states.shape),dtype = hidden_states.dtype)
+            random_tensor = mindspore.tensor(
+                np.random.uniform(low, high, size=hidden_states.shape),
+                dtype=hidden_states.dtype,
+            )
 
             # 将原始 hidden_states 根据 random_tensor 进行放缩
             hidden_states = hidden_states * random_tensor
 
         hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
-        weights = F.softmax(self.layer(hidden_states),dim=-1, dtype=mindspore.float32)
+        weights = F.softmax(self.layer(hidden_states), dim=-1, dtype=mindspore.float32)
         top_weights, top_experts = ops.topk(weights, self.moe_top_k, dim=-1)
 
         top_weights_scale = (
-            ops.norm(top_weights, p=self.moe_normalize_expert_weights, dim=-1, keepdim=True)
+            ops.norm(
+                top_weights, p=self.moe_normalize_expert_weights, dim=-1, keepdim=True
+            )
             if self.moe_normalize_expert_weights is not None
             else 1.0
         )
@@ -501,21 +558,37 @@ class DbrxRouter(nn.Module):
 
 
 class DbrxExpertGLU(nn.Module):
-    def __init__(self, hidden_size: int, ffn_hidden_size: int, moe_num_experts: int, ffn_act_fn: dict):
+    def __init__(
+        self,
+        hidden_size: int,
+        ffn_hidden_size: int,
+        moe_num_experts: int,
+        ffn_act_fn: dict,
+    ):
         super().__init__()
         self.hidden_size = hidden_size
         self.ffn_hidden_size = ffn_hidden_size
         self.moe_num_experts = moe_num_experts
 
-        self.w1 = nn.Parameter(ops.empty(moe_num_experts * ffn_hidden_size, hidden_size))
-        self.v1 = nn.Parameter(ops.empty(moe_num_experts * ffn_hidden_size, hidden_size))
-        self.w2 = nn.Parameter(ops.empty(moe_num_experts * ffn_hidden_size, hidden_size))
+        self.w1 = nn.Parameter(
+            ops.empty(moe_num_experts * ffn_hidden_size, hidden_size)
+        )
+        self.v1 = nn.Parameter(
+            ops.empty(moe_num_experts * ffn_hidden_size, hidden_size)
+        )
+        self.w2 = nn.Parameter(
+            ops.empty(moe_num_experts * ffn_hidden_size, hidden_size)
+        )
 
         act_fn_name = ffn_act_fn.get("name", "silu")
         self.activation_fn = ACT2FN[act_fn_name]
 
     def forward(
-        self, x: mindspore.Tensor, expert_w1: mindspore.Tensor, expert_v1: mindspore.Tensor, expert_w2: mindspore.Tensor
+        self,
+        x: mindspore.Tensor,
+        expert_w1: mindspore.Tensor,
+        expert_v1: mindspore.Tensor,
+        expert_w2: mindspore.Tensor,
     ) -> mindspore.Tensor:
         gate_proj = x.matmul(expert_w1.t())
         up_proj = x.matmul(expert_v1.t())
@@ -526,7 +599,13 @@ class DbrxExpertGLU(nn.Module):
 
 
 class DbrxExperts(nn.Module):
-    def __init__(self, hidden_size: int, ffn_hidden_size: int, moe_num_experts: int, ffn_act_fn: dict):
+    def __init__(
+        self,
+        hidden_size: int,
+        ffn_hidden_size: int,
+        moe_num_experts: int,
+        ffn_act_fn: dict,
+    ):
         super().__init__()
         self.moe_num_experts = moe_num_experts
         self.mlp = DbrxExpertGLU(
@@ -537,34 +616,66 @@ class DbrxExperts(nn.Module):
         )
 
     def forward(
-        self, x: mindspore.Tensor, weights: mindspore.Tensor, top_weights: mindspore.Tensor, top_experts: mindspore.Tensor
+        self,
+        x: mindspore.Tensor,
+        weights: mindspore.Tensor,
+        top_weights: mindspore.Tensor,
+        top_experts: mindspore.Tensor,
     ) -> mindspore.Tensor:
         bsz, q_len, hidden_size = x.shape
         x = x.view(-1, hidden_size)
         out = ops.zeros_like(x)
 
-        expert_mask = F.one_hot(top_experts, num_classes=self.moe_num_experts).permute(2, 1, 0)
+        expert_mask = F.one_hot(top_experts, num_classes=self.moe_num_experts).permute(
+            2, 1, 0
+        )
         # Chunk experts at once to avoid storing full parameter multiple times in autograd
-        #w1_chunked = self.mlp.w1.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
+        # w1_chunked = self.mlp.w1.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
         #    self.moe_num_experts, dim=0
-        #)
-        w1_chunked = ops.chunk(ops.view(self.mlp.w1,self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size),self.moe_num_experts, dim=0)
-        #v1_chunked = self.mlp.v1.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
+        # )
+        w1_chunked = ops.chunk(
+            ops.view(
+                self.mlp.w1,
+                self.mlp.moe_num_experts,
+                self.mlp.ffn_hidden_size,
+                self.mlp.hidden_size,
+            ),
+            self.moe_num_experts,
+            dim=0,
+        )
+        # v1_chunked = self.mlp.v1.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
         #   self.moe_num_experts, dim=0
-        #)
-        v1_chunked = ops.chunk(ops.view(self.mlp.v1,self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size),self.moe_num_experts, dim=0)
-        #w2_chunked = self.mlp.w2.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
+        # )
+        v1_chunked = ops.chunk(
+            ops.view(
+                self.mlp.v1,
+                self.mlp.moe_num_experts,
+                self.mlp.ffn_hidden_size,
+                self.mlp.hidden_size,
+            ),
+            self.moe_num_experts,
+            dim=0,
+        )
+        # w2_chunked = self.mlp.w2.view(self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size).chunk(
         #   self.moe_num_experts, dim=0
-        #)
-        w2_chunked = ops.chunk(ops.view(self.mlp.w2,self.mlp.moe_num_experts, self.mlp.ffn_hidden_size, self.mlp.hidden_size),self.moe_num_experts, dim=0)
+        # )
+        w2_chunked = ops.chunk(
+            ops.view(
+                self.mlp.w2,
+                self.mlp.moe_num_experts,
+                self.mlp.ffn_hidden_size,
+                self.mlp.hidden_size,
+            ),
+            self.moe_num_experts,
+            dim=0,
+        )
 
+        w1_chunked = [(ops.squeeze(w1, dim=0)) for w1 in w1_chunked]
+        v1_chunked = [(ops.squeeze(v1, dim=0)) for v1 in v1_chunked]
+        w2_chunked = [(ops.squeeze(w2, dim=0)) for w2 in w2_chunked]
 
-        w1_chunked = [(ops.squeeze(w1,dim=0)) for w1 in w1_chunked]
-        v1_chunked = [(ops.squeeze(v1,dim=0))  for v1 in v1_chunked]
-        w2_chunked = [(ops.squeeze(w2,dim=0))  for w2 in w2_chunked]
-        
         for expert_idx in range(0, self.moe_num_experts):
-            topk_idx,token_idx = ops.nonzero(expert_mask[expert_idx],as_tuple=True)
+            topk_idx, token_idx = ops.nonzero(expert_mask[expert_idx], as_tuple=True)
             topk_idx = topk_idx.astype(mindspore.int32)
             token_idx = token_idx.astype(mindspore.int32)
             if token_idx.shape[0] == 0:
@@ -575,14 +686,20 @@ class DbrxExperts(nn.Module):
 
             expert_tokens = x[None, token_list].reshape(-1, hidden_size)
             expert_out = (
-                self.mlp(expert_tokens, w1_chunked[expert_idx], v1_chunked[expert_idx], w2_chunked[expert_idx])
+                self.mlp(
+                    expert_tokens,
+                    w1_chunked[expert_idx],
+                    v1_chunked[expert_idx],
+                    w2_chunked[expert_idx],
+                )
                 * top_weights[token_list, topk_list, None]
             )
 
             out.index_add(0, token_idx, expert_out)
-            
+
         out = out.reshape(bsz, q_len, hidden_size)
         return out
+
 
 class DbrxFFN(nn.Module):
     def __init__(self, config: DbrxConfig):
@@ -640,7 +757,12 @@ class DbrxBlock(nn.Module):
         Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Cache]],
         Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[mindspore.Tensor]],
         Tuple[mindspore.Tensor, Optional[Cache], Optional[mindspore.Tensor]],
-        Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Cache], Optional[mindspore.Tensor]],
+        Tuple[
+            mindspore.Tensor,
+            Optional[mindspore.Tensor],
+            Optional[Cache],
+            Optional[mindspore.Tensor],
+        ],
     ]:
         """Forward function for DbrxBlock.
 
@@ -660,20 +782,24 @@ class DbrxBlock(nn.Module):
         """
 
         # Norm + Attention + Norm
-        resid_states, hidden_states, self_attn_weights, present_key_value = self.norm_attn_norm(
-            hidden_states=hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_value=past_key_value,
-            output_attentions=output_attentions,
-            use_cache=use_cache,
-            cache_position=cache_position,
-            **kwargs,
+        resid_states, hidden_states, self_attn_weights, present_key_value = (
+            self.norm_attn_norm(
+                hidden_states=hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
+                use_cache=use_cache,
+                cache_position=cache_position,
+                **kwargs,
+            )
         )
 
         # Fully Connected
         hidden_states, router_logits = self.ffn(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.resid_pdrop, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.resid_pdrop, training=self.training
+        )
         hidden_states = resid_states + hidden_states
 
         outputs = (hidden_states,)
@@ -707,7 +833,6 @@ DBRX_START_DOCSTRING = r"""
 """
 
 
-
 class DbrxPreTrainedModel(PreTrainedModel):
     config_class = DbrxConfig
     base_model_prefix = "transformer"
@@ -723,21 +848,21 @@ class DbrxPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: nn.Module):
         std = self.config.initializer_range
         if isinstance(module, nn.Linear):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx] = 0
         elif isinstance(module, nn.LayerNorm):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, DbrxExpertGLU):
-            nn.init.normal_(module.w1,mean=0.0, std=std)
-            nn.init.normal_(module.v1,mean=0.0, std=std)
-            nn.init.normal_(module.w2,mean=0.0, std=std)
+            nn.init.normal_(module.w1, mean=0.0, std=std)
+            nn.init.normal_(module.v1, mean=0.0, std=std)
+            nn.init.normal_(module.w2, mean=0.0, std=std)
 
 
 DBRX_INPUTS_DOCSTRING = r"""
@@ -817,7 +942,6 @@ DBRX_INPUTS_DOCSTRING = r"""
 """
 
 
-
 class DbrxModel(DbrxPreTrainedModel):
     """Transformer decoder consisting of *config.num_hidden_layers*. Each layer is a [`DbrxBlock`] layer.
 
@@ -834,7 +958,9 @@ class DbrxModel(DbrxPreTrainedModel):
         self.emb_pdrop = config.emb_pdrop
 
         self.wte = nn.Embedding(config.vocab_size, config.d_model, self.padding_idx)
-        self.blocks = nn.ModuleList([DbrxBlock(config, block_idx) for block_idx in range(config.n_layers)])
+        self.blocks = nn.ModuleList(
+            [DbrxBlock(config, block_idx) for block_idx in range(config.n_layers)]
+        )
         self.norm_f = nn.LayerNorm(config.d_model)
         self.gradient_checkpointing = False
 
@@ -846,7 +972,6 @@ class DbrxModel(DbrxPreTrainedModel):
 
     def set_input_embeddings(self, value: nn.Embedding):
         self.wte = value
-
 
     def forward(
         self,
@@ -862,15 +987,25 @@ class DbrxModel(DbrxPreTrainedModel):
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, MoeModelOutputWithPast]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
         output_router_logits = (
-            output_router_logits if output_router_logits is not None else self.config.output_router_logits
+            output_router_logits
+            if output_router_logits is not None
+            else self.config.output_router_logits
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if (input_ids is None) ^ (inputs_embeds is not None):
             raise ValueError(
@@ -886,9 +1021,13 @@ class DbrxModel(DbrxPreTrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.wte(input_ids)
 
-        inputs_embeds = F.dropout(inputs_embeds, p=self.emb_pdrop, training=self.training)
+        inputs_embeds = F.dropout(
+            inputs_embeds, p=self.emb_pdrop, training=self.training
+        )
         return_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache):  # kept for BC (non `Cache` `past_key_values` inputs)
+        if use_cache and not isinstance(
+            past_key_values, Cache
+        ):  # kept for BC (non `Cache` `past_key_values` inputs)
             return_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
@@ -897,7 +1036,9 @@ class DbrxModel(DbrxPreTrainedModel):
             )
 
         if cache_position is None:
-            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+            past_seen_tokens = (
+                past_key_values.get_seq_length() if past_key_values is not None else 0
+            )
             cache_position = ops.arange(
                 past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1]
             )
@@ -906,7 +1047,11 @@ class DbrxModel(DbrxPreTrainedModel):
             position_ids = cache_position.unsqueeze(0)
 
         causal_mask = self._update_causal_mask(
-            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+            attention_mask,
+            inputs_embeds,
+            cache_position,
+            past_key_values,
+            output_attentions,
         )
 
         # embed positions
@@ -970,7 +1115,13 @@ class DbrxModel(DbrxPreTrainedModel):
         if not return_dict:
             return tuple(
                 v
-                for v in [hidden_states, next_cache, all_hidden_states, all_self_attns, all_router_logits]
+                for v in [
+                    hidden_states,
+                    next_cache,
+                    all_hidden_states,
+                    all_self_attns,
+                    all_router_logits,
+                ]
                 if v is not None
             )
         return MoeModelOutputWithPast(
@@ -1003,11 +1154,17 @@ class DbrxModel(DbrxPreTrainedModel):
         # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
         # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
         # to infer the attention mask.
-        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        past_seen_tokens = (
+            past_key_values.get_seq_length() if past_key_values is not None else 0
+        )
         using_static_cache = isinstance(past_key_values, StaticCache)
 
         # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
-        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+        if (
+            self.config._attn_implementation == "sdpa"
+            and not using_static_cache
+            and not output_attentions
+        ):
             if AttentionMaskConverter._ignore_causal_mask_sdpa(
                 attention_mask,
                 inputs_embeds=input_tensor,
@@ -1022,16 +1179,17 @@ class DbrxModel(DbrxPreTrainedModel):
         if using_static_cache:
             target_length = past_key_values.get_max_length()
         else:
-            target_length = (
-                attention_mask.shape[-1]
-                if isinstance(attention_mask, mindspore.Tensor)
-                else past_seen_tokens + sequence_length + 1
-            )
+            if isinstance(attention_mask, mindspore.Tensor):
+                target_length = attention_mask.shape[-1]
+            else:
+                target_length = past_seen_tokens + sequence_length + 1
 
         if attention_mask is not None and attention_mask.dim() == 4:
             # in this case we assume that the mask comes already in inverted form and requires no inversion or slicing
             if attention_mask.max() != 0:
-                raise ValueError("Custom 4D attention mask should be passed in inverted form with max==0`")
+                raise ValueError(
+                    "Custom 4D attention mask should be passed in inverted form with max==0`"
+                )
             causal_mask = attention_mask
         else:
             causal_mask = ops.full(
@@ -1040,15 +1198,22 @@ class DbrxModel(DbrxPreTrainedModel):
             if sequence_length != 1:
                 causal_mask = ops.triu(causal_mask, diagonal=1)
             causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
+            causal_mask = causal_mask[None, None, :, :].broadcast_to(
+                (input_tensor.shape[0], 1, -1, -1)
+            )
             if attention_mask is not None:
-                causal_mask = ops.clone(causal_mask)  # copy to contiguous memory for in-place edit
+                causal_mask = ops.clone(
+                    causal_mask
+                )  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-                padding_mask = padding_mask == 0
-                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                    padding_mask, min_dtype
+                padding_mask = (
+                    causal_mask[:, :, :, :mask_length]
+                    + attention_mask[:, None, None, :]
                 )
+                padding_mask = padding_mask == 0
+                causal_mask[:, :, :, :mask_length] = causal_mask[
+                    :, :, :, :mask_length
+                ].masked_fill(padding_mask, min_dtype)
         if (
             self.config._attn_implementation == "sdpa"
             and attention_mask is not None
@@ -1058,7 +1223,9 @@ class DbrxModel(DbrxPreTrainedModel):
             # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
             # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
             # Details: https://github.com/pytorch/pytorch/issues/110213
-            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
+            causal_mask = AttentionMaskConverter._unmask_unattended(
+                causal_mask, min_dtype
+            )
 
         return causal_mask
 
@@ -1093,7 +1260,6 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
 
     def get_decoder(self) -> DbrxModel:
         return self.transformer
-
 
     def forward(
         self,
@@ -1137,14 +1303,24 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
         output_router_logits = (
-            output_router_logits if output_router_logits is not None else self.config.output_router_logits
+            output_router_logits
+            if output_router_logits is not None
+            else self.config.output_router_logits
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.transformer(
@@ -1186,7 +1362,9 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
                 attention_mask,
             )
             if labels is not None and loss is not None:
-                loss += self.moe_loss_weight * aux_loss  # make sure to reside in the same device
+                loss += (
+                    self.moe_loss_weight * aux_loss
+                )  # make sure to reside in the same device
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1222,14 +1400,16 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         if past_key_values is not None:
             if inputs_embeds is not None:  # Exception 1
                 input_ids = input_ids[:, -cache_position.shape[0] :]
-            elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
+            elif (
+                input_ids.shape[1] != cache_position.shape[0]
+            ):  # Default case (the "else", a no op, is Exception 2)
                 input_ids = input_ids[:, cache_position]
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            #position_ids.masked_fill_(attention_mask == 0, 1)
-            ops.masked_fill(position_ids,attention_mask==0,value=1)
+            # position_ids.masked_fill_(attention_mask == 0, 1)
+            ops.masked_fill(position_ids, attention_mask == 0, value=1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
@@ -1237,7 +1417,9 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
         else:
-            model_inputs = {"input_ids": input_ids}  # `contiguous()` needed for compilation use cases
+            model_inputs = {
+                "input_ids": input_ids
+            }  # `contiguous()` needed for compilation use cases
 
         model_inputs.update(
             {
@@ -1250,8 +1432,9 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         )
         return model_inputs
 
+
 __all__ = [
-    'DbrxModel',
-    'DbrxPreTrainedModel',
-    'DbrxForCausalLM',
+    "DbrxModel",
+    "DbrxPreTrainedModel",
+    "DbrxForCausalLM",
 ]
