@@ -673,7 +673,7 @@ class ModelTesterMixin:
             # do not compare returned loss (0-dim tensor) / codebook ids (int) / caching objects
             elif batched_object is None or not isinstance(batched_object, mindspore.Tensor):
                 return
-            elif batched_object.dim() == 0:
+            elif batched_object.ndim == 0:
                 return
             else:
                 # indexing the first element does not always work

@@ -22,7 +22,7 @@ import pytest
 from datasets import load_dataset
 
 from mindnlp.transformers import UniSpeechSatConfig
-from mindnlp.modules.functional import normalize
+from mindnlp.core.nn.functional import normalize
 from mindnlp.utils.testing_utils import (
     is_mindspore_available,
     require_soundfile,

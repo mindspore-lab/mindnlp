@@ -949,7 +949,13 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
-    return ops.cosine_similarity(x1, x2, dim, eps)
+    if DEVICE_TARGET == 'Ascend':
+        zero_norm_mask = ((x1.sum(dim) == 0).int() & (x2.sum(dim) == 0).int()).bool()
+    else:
+        zero_norm_mask = (x1.sum(dim) == 0) & (x2.sum(dim) == 0)
+
+    cosine_sim = ops.cosine_similarity(x1, x2, dim, eps)
+    return ops.where(zero_norm_mask, 1, cosine_sim)
 
 # def pairwise_distance():
 #     return ops.pairwise_distance

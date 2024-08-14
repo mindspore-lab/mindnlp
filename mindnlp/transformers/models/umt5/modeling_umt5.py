@@ -12,26 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Mindspore UMT5 model."""
+"""PyTorch UMT5 model."""
 
 import copy
 import math
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal, Constant
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import (
-    DUMMY_INPUTS,
-    DUMMY_MASK,
-    logging,
-)
-from ...activations import ACT2FN
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
+from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
@@ -42,7 +33,11 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    DUMMY_INPUTS,
+    DUMMY_MASK,
+    logging,
+)
 from .configuration_umt5 import UMT5Config
 
 
@@ -59,7 +54,7 @@ class UMT5LayerNorm(nn.Module):
         Construct a layernorm module in the UMT5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size))
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
@@ -68,7 +63,7 @@ class UMT5LayerNorm(nn.Module):
         # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
         # half-precision inputs is done in fp32
 
-        variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
+        variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), -1, keepdim=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
 
         # convert into half-precision if necessary
@@ -94,7 +89,7 @@ class UMT5DenseActDense(nn.Module):
         if (
             isinstance(self.wo.weight, mindspore.Tensor)
             and hidden_states.dtype != self.wo.weight.dtype
-            and self.wo.weight.dtype != mindspore.int32
+            and self.wo.weight.dtype != mindspore.int8
         ):
             hidden_states = hidden_states.to(self.wo.weight.dtype)
         hidden_states = self.wo(hidden_states)
@@ -123,7 +118,7 @@ class UMT5DenseGatedActDense(nn.Module):
         if (
             isinstance(self.wo.weight, mindspore.Tensor)
             and hidden_states.dtype != self.wo.weight.dtype
-            and self.wo.weight.dtype != mindspore.int32
+            and self.wo.weight.dtype != mindspore.int8
         ):
             hidden_states = hidden_states.to(self.wo.weight.dtype)
 
@@ -230,7 +225,6 @@ class UMT5Attention(nn.Module):
         relative_buckets += ops.where(is_small, relative_position, relative_position_if_large)
         return relative_buckets
 
-
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
         context_position = ops.arange(query_length, dtype=mindspore.int64)[:, None]
@@ -269,7 +263,7 @@ class UMT5Attention(nn.Module):
                 value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         query_states = self._shape(self.q(hidden_states))
-        attention_scores = ops.matmul(query_states, key_states.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_states, ops.transpose(key_states, -1, -2))
 
         # compute positional bias
         if self.has_relative_attention_bias:
@@ -286,7 +280,7 @@ class UMT5Attention(nn.Module):
             position_bias = position_bias[:, :, -hidden_states.shape[1] :, :]
         if attention_mask is not None:
             position_bias = position_bias + attention_mask  # (batch_size, n_heads, seq_length, key_length)
-            #fine
+
         if self.is_decoder:
             # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
@@ -296,10 +290,11 @@ class UMT5Attention(nn.Module):
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
             past_key_value = (key_states, value_states)
+
         attention_scores += position_bias
         # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.softmax(attention_scores.float(), dim=-1).type_as(attention_scores)
-        attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_weights = nn.functional.softmax(attention_scores.float(), dim=-1).type_as(attention_scores)
+        attn_weights = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         # Mask heads if we want to
         if layer_head_mask is not None:
@@ -403,7 +398,7 @@ class UMT5Block(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            max_dtype = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max
+            max_dtype = float(ops.finfo(hidden_states.dtype).max)
             clamp_value = ops.where(ops.isinf(hidden_states).any(), max_dtype - 1000, max_dtype)
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
@@ -423,7 +418,7 @@ class UMT5Block(nn.Module):
             )
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16:
-                max_dtype = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max
+                max_dtype = float(ops.finfo(hidden_states.dtype).max)
                 clamp_value = ops.where(ops.isinf(hidden_states).any(), max_dtype - 1000, max_dtype)
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
@@ -434,7 +429,7 @@ class UMT5Block(nn.Module):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            max_dtype = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max
+            max_dtype = float(ops.finfo(hidden_states.dtype).max)
             clamp_value = ops.where(ops.isinf(hidden_states).any(), max_dtype - 1000, max_dtype)
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
@@ -482,8 +477,8 @@ class UMT5PreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-        input_ids = mindspore.Tensor(DUMMY_INPUTS)
-        input_mask = mindspore.Tensor(DUMMY_MASK)
+        input_ids = mindspore.tensor(DUMMY_INPUTS)
+        input_mask = mindspore.tensor(DUMMY_MASK)
         dummy_inputs = {
             "decoder_input_ids": input_ids,
             "input_ids": input_ids,
@@ -491,117 +486,85 @@ class UMT5PreTrainedModel(PreTrainedModel):
         }
         return dummy_inputs
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
-        if isinstance(cell, UMT5LayerNorm):
-            cell.weight.set_data(initializer(Constant(factor * 1.0), cell.weight.shape, cell.weight.dtype))
+        if isinstance(module, UMT5LayerNorm):
+            nn.init.constant_(module.weight, factor * 1.0)
         elif isinstance(
-            cell,
-            (UMT5Model, UMT5ForConditionalGeneration, UMT5EncoderModel, UMT5ForQuestionAnswering),
+            module,
+            (
+                UMT5Model,
+                UMT5ForConditionalGeneration,
+                UMT5EncoderModel,
+                UMT5ForQuestionAnswering,
+            ),
         ):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            cell.shared.weight.set_data(initializer(Normal(factor * 1.0),
-                                                cell.shared.weight.shape, cell.shared.weight.dtype))
-            if hasattr(cell, "lm_head") and not self.config.tie_word_embeddings:
-                cell.lm_head.weight.set_data(initializer(Normal(factor * 1.0), cell.lm_head.weight.shape, cell.lm_head.weight.dtype))
-            if hasattr(cell, "qa_outputs"):
-                cell.qa_outputs.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                            cell.qa_outputs.weight.shape, cell.qa_outputs.weight.dtype))
-                cell.qa_outputs.bias.set_data(initializer('zeros', cell.qa_outputs.bias.shape, cell.qa_outputs.bias.dtype))
-        elif isinstance(cell, UMT5ForTokenClassification):
-            if hasattr(cell, "classifier"):
-                cell.classifier.weight.set_data(initializer(Normal(factor * 1.0),
-                                                            cell.classifier.weight.shape, cell.classifier.weight.dtype))
-                cell.classifier.bias.set_data(initializer('zeros', cell.classifier.bias.shape, cell.classifier.bias.dtype))
-        elif isinstance(cell, UMT5ClassificationHead):
-            cell.dense.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.dense.weight.shape, cell.dense.weight.dtype))
-
-            if hasattr(cell.dense, "bias") and cell.dense.bias is not None:
-                cell.dense.bias.set_data(initializer('zeros', cell.dense.bias.shape, cell.dense.bias.dtype))
-            cell.out_proj.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
-
-            if hasattr(cell.out_proj, "bias") and cell.out_proj.bias is not None:
-                cell.out_proj.bias.set_data(initializer('zeros', cell.out_proj.bias.shape, cell.out_proj.bias.dtype))
-
-        elif isinstance(cell, UMT5DenseActDense):
+            nn.init.normal_(module.shared.weight, mean=0.0, std=factor * 1.0)
+            if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
+                nn.init.normal_(module.lm_head.weight, mean=0.0, std=factor * 1.0)
+            if hasattr(module, "qa_outputs"):
+                nn.init.normal_(module.qa_outputs.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+                nn.init.zeros_(module.qa_outputs.bias)
+        elif isinstance(module, UMT5ForTokenClassification):
+            if hasattr(module, "classifier"):
+                nn.init.normal_(module.classifier.weight, mean=0.0, std=factor * 1.0)
+                nn.init.zeros_(module.classifier.bias)
+        elif isinstance(module, UMT5ClassificationHead):
+            nn.init.normal_(module.dense.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.dense, "bias") and module.dense.bias is not None:
+                nn.init.zeros_(module.dense.bias)
+            nn.init.normal_(module.out_proj.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.out_proj, "bias") and module.out_proj.bias is not None:
+                nn.init.zeros_(module.out_proj.bias)
+        elif isinstance(module, UMT5DenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            cell.wi.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi.weight.shape, cell.wi.weight.dtype))
-            if hasattr(cell.wi, "bias") and cell.wi.bias is not None:
-                cell.wi.bias.set_data(initializer('zeros', cell.wi.bias.shape, cell.wi.bias.dtype))
-
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
-                                                cell.wo.weight.shape, cell.wo.weight.dtype))
-
-            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
-        elif isinstance(cell, UMT5DenseGatedActDense):
-            cell.wi_0.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi_0.weight.shape, cell.wi_0.weight.dtype))
-            if hasattr(cell.wi_0, "bias") and cell.wi_0.bias is not None:
-                cell.wi_0.bias.set_data(initializer('zeros', cell.wi_0.bias.shape, cell.wi_0.bias.dtype))
-
-            cell.wi_1.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi_1.weight.shape, cell.wi_1.weight.dtype))
-            if hasattr(cell.wi_1, "bias") and cell.wi_1.bias is not None:
-                cell.wi_1.bias.set_data(initializer('zeros', cell.wi_1.bias.shape, cell.wi_1.bias.dtype))
-
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
-                                                cell.wo.weight.shape, cell.wo.weight.dtype))
-
-            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
-        elif isinstance(cell, UMT5Attention):
+            nn.init.normal_(module.wi.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi, "bias") and module.wi.bias is not None:
+                nn.init.zeros_(module.wi.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zeros_(module.wo.bias)
+        elif isinstance(module, UMT5DenseGatedActDense):
+            nn.init.normal_(module.wi_0.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_0, "bias") and module.wi_0.bias is not None:
+                nn.init.zeros_(module.wi_0.bias)
+            nn.init.normal_(module.wi_1.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_1, "bias") and module.wi_1.bias is not None:
+                nn.init.zeros_(module.wi_1.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zeros_(module.wo.bias)
+        elif isinstance(module, UMT5Attention):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/attention.py#L136
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_kv
             n_heads = self.config.num_heads
-            cell.q.weight.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),
-                                                cell.q.weight.shape, cell.q.weight.dtype))
-            cell.k.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                cell.k.weight.shape, cell.k.weight.dtype))
-            cell.v.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                cell.v.weight.shape, cell.v.weight.dtype))
-            cell.o.weight.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
-                                                cell.o.weight.shape, cell.o.weight.dtype))
-            if cell.has_relative_attention_bias:
-                cell.relative_attention_bias.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                    cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
+            nn.init.normal_(module.q.weight, mean=0.0, std=factor * ((d_model * key_value_proj_dim) ** -0.5))
+            nn.init.normal_(module.k.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.v.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.o.weight, mean=0.0, std=factor * ((n_heads * key_value_proj_dim) ** -0.5))
+            if module.has_relative_attention_bias:
+                nn.init.normal_(module.relative_attention_bias.weight, mean=0.0, std=factor * ((d_model) ** -0.5))
 
     def _shift_right(self, input_ids):
-        """
-        This method, _shift_right, is a member of the MT5PreTrainedModel class. It shifts the input_ids to the right and adds a decoder start token at the beginning.
-        
-        Args:
-            self (MT5PreTrainedModel): The instance of the MT5PreTrainedModel class.
-            input_ids (mindspore.Tensor): The input tensor containing the tokenized input sequence. It represents the input sequence to be shifted to the right.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            ValueError: It may raise a ValueError if either decoder_start_token_id or pad_token_id is not defined in the model configuration. The error message provides guidance on how to resolve the issue.
-        """
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id
 
         if decoder_start_token_id is None:
             raise ValueError(
-                "self.model.config.decoder_start_token_id has to be defined. In MT5 it is usually set to the pad_token_id. "
-                "See MT5 docs for more information."
+                "self.model.config.decoder_start_token_id has to be defined. In UMT5 it is usually set to the pad_token_id. "
+                "See UMT5 docs for more information."
             )
 
-        # shift inputs to the right
-        shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-        shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
-        shifted_input_ids[..., 0] = decoder_start_token_id
+        # Item assignment is not supported natively for proxies.
+        shifted_input_ids = ops.full(input_ids.shape[:-1] + (1,), decoder_start_token_id)
+        shifted_input_ids = ops.cat([shifted_input_ids, input_ids[..., :-1]], dim=-1)
 
         if pad_token_id is None:
             raise ValueError("self.model.config.pad_token_id has to be defined.")
@@ -657,7 +620,7 @@ class UMT5Stack(UMT5PreTrainedModel):
             raise ValueError(
                 f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
             )
-        if input_ids is not None:
+        elif input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
@@ -679,21 +642,23 @@ class UMT5Stack(UMT5PreTrainedModel):
         if use_cache is True:
             if not self.is_decoder:
                 raise ValueError(f"`use_cache` can only be set to `True` if {self} is used as a decoder")
+
         if attention_mask is None:
-            attention_mask = ops.ones((batch_size, mask_seq_length), mindspore.float32)
-        #if(attention_mask.type() =="Bool"):
-        #    attention_mask = ops.cast(attention_mask, mindspore.int64)
+            attention_mask = ops.ones(batch_size, mask_seq_length)
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
             encoder_attention_mask = ops.ones(
                 batch_size, encoder_seq_length, dtype=mindspore.int64
             )
+
         # initialize past_key_values with `None` if past does not exist
         if past_key_values is None:
             past_key_values = [None] * len(self.block)
+
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
+
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.is_decoder and encoder_hidden_states is not None:
@@ -710,7 +675,7 @@ class UMT5Stack(UMT5PreTrainedModel):
                 logger.warning_once(
                     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
                 )
-                use_cache = True
+                use_cache = False
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
@@ -718,11 +683,14 @@ class UMT5Stack(UMT5PreTrainedModel):
         present_key_value_states = () if use_cache else None
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
-        all_cross_attentions = () if (output_attentions and self.is_decoder) else None
+        all_cross_attentions = () if output_attentions and self.is_decoder else None
+
         hidden_states = self.dropout(inputs_embeds)
+
         for i, (layer_module, past_key_value) in enumerate(zip(self.block, past_key_values)):
             layer_head_mask = head_mask[i]
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
+
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -789,12 +757,30 @@ class UMT5Stack(UMT5PreTrainedModel):
             cross_attentions=all_cross_attentions,
         )
 
+
 class UMT5Model(UMT5PreTrainedModel):
+    r"""
+    Examples:
+
+    ```python
+    >>> from transformers import UMT5Model, AutoTokenizer
+
+    >>> model = UMT5Model.from_pretrained("google/umt5-small")
+    >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
+    >>> noisy_text = "UN Offizier sagt, dass weiter <extra_id_0> werden muss in Syrien."
+    >>> label = "<extra_id_0> verhandelt"
+    >>> inputs = tokenizer(inputs, return_tensors="pt")
+    >>> labels = tokenizer(label=label, return_tensors="pt")
+
+    >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
+    >>> hidden_states = outputs.last_hidden_state
+    ```"""
 
     model_type = "umt5"
+    config_class = UMT5Config
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
-    def __init__(self, config: UMT5Config):
+    def __init__(self, config):
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
 
@@ -809,8 +795,10 @@ class UMT5Model(UMT5PreTrainedModel):
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = UMT5Stack(decoder_config, self.shared)
+
         # Initialize weights and apply final processing
         self.post_init()
+
     # Copied from transformers.models.t5.modeling_t5.T5Model.get_input_embeddings
     def get_input_embeddings(self):
         return self.shared
@@ -818,8 +806,9 @@ class UMT5Model(UMT5PreTrainedModel):
     # Copied from transformers.models.t5.modeling_t5.T5Model.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
         self.shared = new_embeddings
-        #self.encoder.set_input_embeddings(new_embeddings)
-        #self.decoder.set_input_embeddings(new_embeddings)
+        self.encoder.set_input_embeddings(new_embeddings)
+        self.decoder.set_input_embeddings(new_embeddings)
+
     # Copied from transformers.models.t5.modeling_t5.T5Model._tie_weights
     def _tie_weights(self):
         if self.config.tie_word_embeddings:
@@ -860,7 +849,7 @@ class UMT5Model(UMT5PreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
         r"""
         Returns:
 
@@ -878,12 +867,12 @@ class UMT5Model(UMT5PreTrainedModel):
         >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
 
         >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for UMT5Model.
+        >>> # This is not needed for torch's UMT5ForConditionalGeneration as it does this internally using labels arg.
         >>> decoder_input_ids = model._shift_right(decoder_input_ids)
 
         >>> # forward pass
         >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
-        >>> 
-        s = outputs.last_hidden_state
+        >>> last_hidden_states = outputs.last_hidden_state
         ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -923,8 +912,10 @@ class UMT5Model(UMT5PreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+
         if not return_dict:
             return decoder_outputs + encoder_outputs
+
         return Seq2SeqModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
@@ -957,7 +948,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
     model_type = "umt5"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
-    def __init__(self, config: UMT5Config):
+    def __init__(self, config):
         super().__init__(config)
         self.model_dim = config.d_model
 
@@ -1061,8 +1052,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
         ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        if labels is not None:
-            use_cache = False
+
         # Encode if needed (training, first prediction pass)
         if encoder_outputs is None:
             # Convert encoder inputs in embeddings if needed
@@ -1115,8 +1105,8 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
-            # TODO(thom): Add z_loss
+            loss_fct = CrossEntropyLoss(ignore_index=-100)
+            loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
@@ -1185,6 +1175,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
                 tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
+
 
 class UMT5EncoderModel(UMT5PreTrainedModel):
     r"""
@@ -1285,6 +1276,7 @@ class UMT5EncoderModel(UMT5PreTrainedModel):
 
         return encoder_outputs
 
+
 class UMT5ForSequenceClassification(UMT5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
@@ -1364,8 +1356,8 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
 
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         batch_size, _, hidden_size = sequence_output.shape
         sentence_representation = sequence_output[eos_mask].view(batch_size, -1, hidden_size)[:, -1, :]
         logits = self.classification_head(sentence_representation)
@@ -1381,17 +1373,21 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.config.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
+
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
             logits=logits,
@@ -1404,6 +1400,7 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
             encoder_attentions=outputs.encoder_attentions,
         )
 
+
 class UMT5ForTokenClassification(UMT5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
     _tied_weights_keys = ["transformer.encoder.embed_tokens.weight"]
@@ -1415,11 +1412,10 @@ class UMT5ForTokenClassification(UMT5PreTrainedModel):
 
         self.transformer = UMT5EncoderModel(config)
         self.dropout = nn.Dropout(config.classifier_dropout)
-
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
-        self.post_init()
-        # Initialize weights and apply final processing
 
+        # Initialize weights and apply final processing
+        self.post_init()
 
     # Copied from transformers.models.t5.modeling_t5.T5ForTokenClassification.forward with T5->UMT5
     def forward(
@@ -1454,11 +1450,10 @@ class UMT5ForTokenClassification(UMT5PreTrainedModel):
         hidden_states = self.dropout(hidden_states)
         logits = self.classifier(hidden_states)
 
-
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1), ignore_index=-100)
-            # TODO(thom): Add z_loss
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits, outputs[2:-1])
@@ -1470,6 +1465,7 @@ class UMT5ForTokenClassification(UMT5PreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
 
 class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
@@ -1609,8 +1605,9 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
         )
 
         sequence_output = decoder_outputs[0]
+
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1618,17 +1615,19 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
             if len(start_positions.shape) > 1:
-                start_positions = start_positions.squeeze(-1).to(start_logits)
+                start_positions = start_positions.squeeze(-1)
             if len(end_positions.shape) > 1:
-                end_positions = end_positions.squeeze(-1).to(end_logits)
+                end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
+
         if not return_dict:
             output = (start_logits, end_logits) + decoder_outputs[1:] + encoder_outputs
             return ((total_loss,) + output) if total_loss is not None else output
@@ -1645,6 +1644,7 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
             encoder_hidden_states=encoder_outputs.hidden_states,
             encoder_attentions=encoder_outputs.attentions,
         )
+
 __all__ = [
     "UMT5EncoderModel",
     "UMT5ForConditionalGeneration",
