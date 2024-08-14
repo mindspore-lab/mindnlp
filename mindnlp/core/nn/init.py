@@ -111,7 +111,7 @@ class Uniform(Initializer):
         self.b = b
 
     def _initialize(self, arr):
-        tmp = _init_random_uniform(-self.a, self.b, arr.shape)
+        tmp = _init_random_uniform(self.a, self.b, arr.shape)
         _assignment(arr, tmp)
 
 
