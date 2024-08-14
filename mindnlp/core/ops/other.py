@@ -96,12 +96,12 @@ def diag(input):
 def einsum_label_to_index(label):
     """
     Args:
-        label (str): The label representing a dimension in an Einstein sum. 
+        label (str): The label representing a dimension in an Einstein sum.
             It should be a single character from the alphabet (upper or lower case) or '.'.
-            
+
     Returns:
         NoneType: This function returns None.
-    
+
     Raises:
         None.
     """
@@ -114,20 +114,20 @@ def einsum_label_to_index(label):
 def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
     r"""
     This function takes three parameters: dim, dim_post_expr, and wrap_scalar.
-    
+
     Args:
         - dim (int): Represents the dimension to be wrapped.
         - dim_post_expr (int): Represents the value used to wrap the dimension.
         - wrap_scalar (bool, optional): Specifies whether a scalar value should be wrapped. Default is True.
-    
+
     Returns:
         None: This function does not return a value directly.
-    
+
     Raises:
         AssertionError: Raised if the value of dim_post_expr is less than or equal to 0 and wrap_scalar is False.
         AssertionError: Raised if the value of dim is less than the minimum or greater than the maximum allowed range.
         AssertionError: Raised if the value of dim is negative and cannot be wrapped due to invalid dim_post_expr.
-    
+
     """
     if dim_post_expr <= 0:
         assert wrap_scalar
@@ -143,14 +143,14 @@ def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
 def dim_list_to_bitset(opt_dims, ndims):
     r"""
     Converts a list of optional dimensions to a bitset representation.
-    
+
     Args:
         opt_dims (List[int]): The list of optional dimensions to be converted to a bitset representation.
         ndims (int): The total number of dimensions.
-    
+
     Returns:
         List[bool]: A list representing the bitset, where True indicates the presence of the dimension and False indicates its absence.
-    
+
     Raises:
         None
     """
@@ -167,16 +167,16 @@ def dim_list_to_bitset(opt_dims, ndims):
 def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
     """
     Calculate the sum-product pair of two arrays along specified dimensions.
-    
+
     Args:
         left_ (array): The left input array.
         right_ (array): The right input array.
         sum_dims_ (list): A list of dimensions along which to calculate the sum-product pair.
         keep_dim_ (bool): A flag indicating whether to keep the dimensions in the result.
-    
+
     Returns:
         None. The function performs the sum-product pair calculation and returns None.
-    
+
     Raises:
         AssertionError: If the number of dimensions of the input arrays do not match,
                        or if non-broadcast dimensions do not match.
@@ -276,10 +276,10 @@ def einsum(equation, *operands):
             The equation should follow the Einstein summation convention with subscripts in [a-zA-Z],
             commas separating operands, and '->' indicating the output structure.
             It must include at least one operand. An ellipsis '...' can be used to represent multiple dimensions.
-            
+
     Returns:
         None: This function does not return a value.
-    
+
     Raises:
         AssertionError: If the function is called without providing at least one operand.
         AssertionError: If an invalid subscript is given in the equation string.
@@ -631,10 +631,10 @@ def contains(self, key):
     Args:
         self (object): The object instance on which the method is called.
         key (object): The key to be checked for containment in the object.
-        
+
     Returns:
         None: This function returns None, indicating whether the key is contained in the object.
-        
+
     Raises:
         None
     """
@@ -645,7 +645,7 @@ def contains(self, key):
 def initialize(self, init_method):
     r"""
     Initializes the object with the given initialization method.
-    
+
     Args:
         self (object): The instance of the class.
         init_method (str): The method used for initialization.
@@ -655,13 +655,13 @@ def initialize(self, init_method):
                 - "zeros": Initializes the data with zeros.
                 - "ones": Initializes the data with ones.
             Default value is "random".
-    
+
     Returns:
         None. This function does not return any value.
-    
+
     Raises:
         None.
-    
+
     Note:
         This function sets the data of the object using the specified `init_method` and the object's shape and data type.
     """
