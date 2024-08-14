@@ -1,11 +1,10 @@
-# coding=utf-8
-# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +20,11 @@ from typing import Dict, Optional, Union
 import numpy as np
 from huggingface_hub import hf_hub_download
 
+from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils.import_utils import requires_backends
+from mindnlp.utils.testing_utils import is_mindspore_available
+
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import convert_to_rgb, normalize, to_channel_dimension_format, to_pil_image
 from ...image_utils import (
@@ -32,11 +36,6 @@ from ...image_utils import (
     to_numpy_array,
     valid_images,
 )
-
-from mindnlp.core import ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils.import_utils import requires_backends
-from mindnlp.utils.testing_utils import is_mindspore_available
 from ....utils import TensorType, is_vision_available, logging
 
 

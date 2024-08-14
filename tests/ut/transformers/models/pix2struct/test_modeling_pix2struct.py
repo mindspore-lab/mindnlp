@@ -220,7 +220,7 @@ class Pix2StructVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model_name = "/home/ma-user/work/models/google/pix2struct-textcaps-base"
+        model_name = "google/pix2struct-textcaps-base"
         model = Pix2StructVisionModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
@@ -673,10 +673,8 @@ class Pix2StructModelTest(ModelTesterMixin, unittest.TestCase):
 
 # We will verify our results on an image of a stop sign
 def prepare_img():
-    filepath = "/home/ma-user/work/images/australia.jpg"
-    im = Image.open(filepath)
-    # url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/australia.jpg"
-    # im = Image.open(requests.get(url, stream=True).raw)
+    url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/australia.jpg"
+    im = Image.open(requests.get(url, stream=True).raw)
     return im
 
 
@@ -685,8 +683,8 @@ def prepare_img():
 @slow
 class Pix2StructIntegrationTest(unittest.TestCase):
     def test_inference_image_captioning(self):
-        model = Pix2StructForConditionalGeneration.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
-        processor = Pix2StructProcessor.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
+        model = Pix2StructForConditionalGeneration.from_pretrained("google/pix2struct-textcaps-base")
+        processor = Pix2StructProcessor.from_pretrained("google/pix2struct-textcaps-base")
         image = prepare_img()
 
         # image only
@@ -699,16 +697,14 @@ class Pix2StructIntegrationTest(unittest.TestCase):
         )
 
     def test_batched_inference_image_captioning(self):
-        model = Pix2StructForConditionalGeneration.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
-        processor = Pix2StructProcessor.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
+        model = Pix2StructForConditionalGeneration.from_pretrained("google/pix2struct-textcaps-base")
+        processor = Pix2StructProcessor.from_pretrained("google/pix2struct-textcaps-base")
         image_1 = prepare_img()
 
-        second_url = "/home/ma-user/work/images/temple-bar-dublin-world-famous-irish-pub.jpg"
-        image_2 = Image.open(second_url)
-        # second_url = (
-        #     "https://www.connollycove.com/wp-content/uploads/2019/06/temple-bar-dublin-world-famous-irish-pub.jpg"
-        # )
-        # image_2 = Image.open(requests.get(second_url, stream=True).raw)
+        second_url = (
+            "https://www.connollycove.com/wp-content/uploads/2019/06/temple-bar-dublin-world-famous-irish-pub.jpg"
+        )
+        image_2 = Image.open(requests.get(second_url, stream=True).raw)
 
         # image only
         inputs = processor(images=[image_1, image_2], return_tensors="ms")
@@ -725,14 +721,12 @@ class Pix2StructIntegrationTest(unittest.TestCase):
         )
 
     def test_batched_inference_image_captioning_conditioned(self):
-        model = Pix2StructForConditionalGeneration.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
-        processor = Pix2StructProcessor.from_pretrained("/home/ma-user/work/models/google/pix2struct-textcaps-base")
+        model = Pix2StructForConditionalGeneration.from_pretrained("google/pix2struct-textcaps-base")
+        processor = Pix2StructProcessor.from_pretrained("google/pix2struct-textcaps-base")
         image_1 = prepare_img()
 
-        second_url = "/home/ma-user/work/images/temple-bar-dublin-world-famous-irish-pub.jpg"
-        image_2 = Image.open(second_url)
-        # second_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/temple-bar-dublin-world-famous-irish-pub.jpg"
-        # image_2 = Image.open(requests.get(second_url, stream=True).raw)
+        second_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/temple-bar-dublin-world-famous-irish-pub.jpg"
+        image_2 = Image.open(requests.get(second_url, stream=True).raw)
         texts = ["A picture of", "An photography of"]
 
         # image only
@@ -751,52 +745,40 @@ class Pix2StructIntegrationTest(unittest.TestCase):
         )
 
     def test_vqa_model(self):
-        model_id = "/home/ma-user/work/models/google/pix2struct-textcaps-base"
+        model_id = "google/pix2struct-textcaps-base"
 
-        image_url = "/home/ma-user/work/images/temple-bar-dublin-world-famous-irish-pub.jpg"
-        image = Image.open(image_url)
-        # image_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo.jpg"
-        # image = Image.open(requests.get(image_url, stream=True).raw)
+        image_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo.jpg"
+        image = Image.open(requests.get(image_url, stream=True).raw)
 
-        # model = Pix2StructForConditionalGeneration.from_pretrained(model_id, ms_dtype=mindspore.float32)
         model = Pix2StructForConditionalGeneration.from_pretrained(model_id)
         processor = Pix2StructProcessor.from_pretrained(model_id)
 
         # image only
         text = "What does the label 15 represent? (1) lava (2) core (3) tunnel (4) ash cloud"
 
-        # inputs = processor(images=image, return_tensors="ms", text=text).to(mindspore.float32)
         inputs = processor(images=image, return_tensors="ms", text=text)
 
         predictions = model.generate(**inputs)
         self.assertEqual(processor.decode(predictions[0], skip_special_tokens=True), "ash cloud")
 
     def test_vqa_model_batched(self):
-        model_id = "/home/ma-user/work/models/google/pix2struct-textcaps-base"
+        model_id = "google/pix2struct-textcaps-base"
 
         image_urls = [
-            "/home/ma-user/work/images/ai2d-demo.jpg",
-            "/home/ma-user/work/images/ai2d-demo-2.png",
+            "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo.jpg",
+            "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo-2.png",
         ]
-
-        images = [Image.open(image_url) for image_url in image_urls]
-        # image_urls = [
-        #     "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo.jpg",
-        #     "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/ai2d-demo-2.png",
-        # ]
-        #
-        # images = [Image.open(requests.get(image_url, stream=True).raw) for image_url in image_urls]
+        
+        images = [Image.open(requests.get(image_url, stream=True).raw) for image_url in image_urls]
 
         texts = [
             "What does the label 15 represent? (1) lava (2) core (3) tunnel (4) ash cloud",
             "What is the producer in the diagram? (1) Phytoplankton (2) Zooplankton (3) Large fish (4) Small fish",
         ]
 
-        # model = Pix2StructForConditionalGeneration.from_pretrained(model_id, ms_dtype=mindspore.float32)
         model = Pix2StructForConditionalGeneration.from_pretrained(model_id)
         processor = Pix2StructProcessor.from_pretrained(model_id)
 
-        # inputs = processor(images=images, return_tensors="ms", text=texts).to(mindspore.float32)
         inputs = processor(images=images, return_tensors="ms", text=texts)
 
         predictions = model.generate(**inputs)

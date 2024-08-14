@@ -18,7 +18,6 @@ import math
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-import numpy as np
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 
@@ -83,7 +82,6 @@ except ImportError:
     pass
 except Exception:
     logger.warning("Discovered apex but it failed to load, falling back to Pix2StructLayerNorm")
-    pass
 
 ALL_LAYERNORM_LAYERS.append(Pix2StructLayerNorm)
 

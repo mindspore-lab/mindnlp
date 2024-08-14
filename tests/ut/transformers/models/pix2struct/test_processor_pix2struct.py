@@ -41,7 +41,7 @@ class Pix2StructProcessorTest(unittest.TestCase):
         self.tmpdirname = tempfile.mkdtemp()
 
         image_processor = Pix2StructImageProcessor()
-        tokenizer = T5Tokenizer.from_pretrained("/home/ma-user/work/models/google-t5/t5-small")
+        tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-small")
 
         processor = Pix2StructProcessor(image_processor, tokenizer)
 
@@ -190,3 +190,4 @@ class Pix2StructProcessorTest(unittest.TestCase):
 
         # For now the processor supports only ["flattened_patches", "input_ids", "attention_mask", "decoder_attention_mask"]
         self.assertListEqual(list(inputs.keys()), ["input_ids", "attention_mask"])
+        
