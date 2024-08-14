@@ -554,7 +554,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
 
         self.vit = ViTModel(config, add_pooling_layer=False, use_mask_token=True)
 
-        self.decoder = nn.SequentialCell(
+        self.decoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=config.hidden_size,
                 out_channels=config.encoder_stride**2 * config.num_channels,

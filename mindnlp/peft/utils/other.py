@@ -307,9 +307,9 @@ def _set_trainable(model, adapter_name):
                 setattr(parent, target_name, warp_cell)
 
                 # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
-                # self.cell_list is not set correctly if __setattr__'s value type is SequentialCell.
+                # self.cell_list is not set correctly if __setattr__'s value type is Sequential.
                 # Thus we set it apparently here. This line may be removed later.
-                if isinstance(parent, nn.SequentialCell):
+                if isinstance(parent, nn.Sequential):
                     parent.cell_list = list(parent._cells.values())
 
     for n, p in model.parameters_and_names():

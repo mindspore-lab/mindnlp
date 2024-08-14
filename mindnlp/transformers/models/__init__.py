@@ -165,6 +165,7 @@ from . import (
     plbart,
     poolformer,
     pop2piano,
+    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
@@ -196,6 +197,7 @@ from . import (
     swin2sr,
     t5,
     tapas,
+    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -383,6 +385,7 @@ from .phi3 import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
+from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -415,6 +418,7 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
+from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -601,6 +605,7 @@ __all__.extend(phi3.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
@@ -632,6 +637,7 @@ __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapex.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)

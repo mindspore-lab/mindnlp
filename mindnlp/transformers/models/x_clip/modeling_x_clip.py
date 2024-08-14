@@ -1155,7 +1155,7 @@ class PromptGeneratorLayer(nn.Module):
             embed_dim, eps=config.text_config.layer_norm_eps)
         self.norm3 = nn.LayerNorm(
             embed_dim, eps=config.text_config.layer_norm_eps)
-        self.mlp = nn.SequentialCell([
+        self.mlp = nn.Sequential([
             nn.Linear(embed_dim, embed_dim * 4),
             ACT2FN[config.prompt_hidden_act],
             nn.Dropout(config.prompt_attention_dropout),
