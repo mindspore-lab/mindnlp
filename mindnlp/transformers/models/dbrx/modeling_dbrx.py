@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Databricks Mosaic Research and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch DBRX model."""
+"""Mindspore DBRX model."""
 
 import math
 from typing import Any, Optional, Tuple, Union
@@ -22,7 +22,6 @@ mindspore.set_context(pynative_synchronize=True)
 import numpy as np
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from mindspore.common.initializer import initializer, Normal
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
@@ -484,8 +483,7 @@ class DbrxRouter(nn.Module):
 
             # 将原始 hidden_states 根据 random_tensor 进行放缩
             hidden_states = hidden_states * random_tensor
-        
-            
+
         hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
         weights = F.softmax(self.layer(hidden_states),dim=-1, dtype=mindspore.float32)
         top_weights, top_experts = ops.topk(weights, self.moe_top_k, dim=-1)
@@ -566,7 +564,6 @@ class DbrxExperts(nn.Module):
         w2_chunked = [(ops.squeeze(w2,dim=0))  for w2 in w2_chunked]
         
         for expert_idx in range(0, self.moe_num_experts):
-            #topk_idx, token_idx = ops.where(expert_mask[expert_idx])
             topk_idx,token_idx = ops.nonzero(expert_mask[expert_idx],as_tuple=True)
             topk_idx = topk_idx.astype(mindspore.int32)
             token_idx = token_idx.astype(mindspore.int32)
@@ -586,7 +583,6 @@ class DbrxExperts(nn.Module):
             
         out = out.reshape(bsz, q_len, hidden_size)
         return out
-
 
 class DbrxFFN(nn.Module):
     def __init__(self, config: DbrxConfig):
@@ -1241,7 +1237,7 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
         else:
-            model_inputs = {"input_ids": input_ids.contiguous()}  # `contiguous()` needed for compilation use cases
+            model_inputs = {"input_ids": input_ids}  # `contiguous()` needed for compilation use cases
 
         model_inputs.update(
             {
