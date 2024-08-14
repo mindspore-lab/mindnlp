@@ -154,4 +154,6 @@ def var_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # count_nonzero
 def count_nonzero(input, dim=None):
+    if dim is None:
+        dim = ()
     return ops.count_nonzero(input, dim)

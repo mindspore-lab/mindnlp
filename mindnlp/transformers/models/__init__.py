@@ -112,6 +112,7 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    idefics,
     jamba,
     jetmoe,
     kosmos2,
@@ -165,9 +166,11 @@ from . import (
     plbart,
     poolformer,
     pop2piano,
+    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
+    rag,
     realm,
     reformer,
     rembert,
@@ -195,6 +198,7 @@ from . import (
     swin2sr,
     t5,
     tapas,
+    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -215,6 +219,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vivit,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -325,6 +330,7 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .ibert import *
+from .idefics import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
@@ -381,9 +387,11 @@ from .phi3 import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
+from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .rag import *
 from .realm import *
 from .reformer import *
 from .rembert import *
@@ -412,6 +420,7 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
+from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -431,6 +440,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -542,6 +552,7 @@ __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(idefics.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(instructblip.__all__)
 __all__.extend(jamba.__all__)
@@ -597,9 +608,11 @@ __all__.extend(phi3.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(rag.__all__)
 __all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
@@ -627,6 +640,7 @@ __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapex.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
@@ -647,6 +661,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)

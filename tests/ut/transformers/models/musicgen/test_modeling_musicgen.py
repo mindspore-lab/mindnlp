@@ -12,13 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore Musicgen model. """
+"""Testing suite for the PyTorch Musicgen model."""
+
 import copy
 import inspect
 import math
+import tempfile
 import unittest
 
 import numpy as np
+from parameterized import parameterized
+from pytest import mark
 
 from mindnlp.transformers import (
     EncodecConfig,
@@ -43,7 +47,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops, nn
+    from mindnlp.core import nn, ops, no_grad, optim
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         MusicgenForCausalLM,
@@ -51,9 +56,8 @@ if is_mindspore_available():
         MusicgenModel,
     )
     from mindnlp.transformers.generation import (
-        GreedySearchEncoderDecoderOutput,
-        SampleEncoderDecoderOutput,
-        GreedySearchDecoderOnlyOutput,
+        GenerateDecoderOnlyOutput,
+        GenerateEncoderDecoderOutput,
     )
 
 
@@ -102,8 +106,7 @@ class MusicgenDecoderTester:
         parent,
         batch_size=4,  # need batch_size != num_hidden_layers
         seq_length=7,
-        is_training=False,
-        use_labels=False,
+        is_training=True,
         vocab_size=99,
         hidden_size=16,
         num_hidden_layers=2,
@@ -121,7 +124,6 @@ class MusicgenDecoderTester:
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.is_training = is_training
-        self.use_labels = use_labels
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
@@ -141,7 +143,9 @@ class MusicgenDecoderTester:
 
         config = self.get_config()
         inputs_dict = prepare_musicgen_decoder_inputs_dict(
-            config, input_ids, encoder_hidden_states=encoder_hidden_states
+            config,
+            input_ids,
+            encoder_hidden_states=encoder_hidden_states,
         )
         return config, inputs_dict
 
@@ -182,13 +186,50 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
     def test_config(self):
         self.config_tester.run_common_tests()
 
+    # special case for labels
+    def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
+        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+
+        if return_labels:
+            inputs_dict["labels"] = ops.zeros(
+                (self.model_tester.batch_size, self.model_tester.seq_length, self.model_tester.num_codebooks),
+                dtype=mindspore.int64,
+            )
+        return inputs_dict
+
+    def check_training_gradient_checkpointing(self, gradient_checkpointing_kwargs=None):
+        if not self.model_tester.is_training:
+            self.skipTest(reason="model_tester.is_training is set to False")
+
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.use_cache = False
+        config.return_dict = True
+        model = MusicgenForCausalLM(config)
+
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
+        model.train()
+
+        # Contrarily to the initial method, we don't unfreeze freezed parameters.
+        # Indeed, sinusoidal position embeddings have frozen weights that should stay frozen.
+
+        optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+        inputs = self._prepare_for_class(inputs_dict, MusicgenForCausalLM, return_labels=True)
+        loss = model(**inputs).loss
+        loss.backward()
+        optimizer.step()
+
+        for k, v in model.named_parameters():
+            if v.requires_grad:
+                self.assertTrue(v.grad is not None, f"{k} in {MusicgenForCausalLM.__name__} has no gradient!")
+
     # override since we have to compute the input embeddings over codebooks
     def test_inputs_embeds(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -203,10 +244,11 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
                 [embed_tokens[codebook](input_ids[:, codebook]) for codebook in range(config.num_codebooks)]
             )
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
     # override since we have embeddings / LM heads over multiple codebooks
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
@@ -216,15 +258,19 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             lm_heads = model.get_output_embeddings()
             self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Linear))
 
-    # skip as this model doesn't support all arguments tested
+    @unittest.skip(reason="MusicGen does not use inputs_embeds")
+    def test_inputs_embeds_matches_input_ids(self):
+        pass
+
+    @unittest.skip(reason="MusicGen does not support all arguments tested")
     def test_model_outputs_equivalence(self):
         pass
 
-    # skip as this model has multiple inputs embeds and lm heads that should not be tied
+    @unittest.skip(reason="MusicGen has multiple inputs embeds and lm heads that should not be tied")
     def test_tie_model_weights(self):
         pass
 
-    # skip as this model has multiple inputs embeds and lm heads that should not be tied
+    @unittest.skip(reason="MusicGen has multiple inputs embeds and lm heads that should not be tied")
     def test_tied_weights_keys(self):
         pass
 
@@ -236,43 +282,38 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
         sequence_length = input_ids.shape[-1]
         input_ids = input_ids[: batch_size * config.num_codebooks, :]
 
-        # generate max 3 tokens
-        max_length = input_ids.shape[-1] + 3
         attention_mask = ops.ones((batch_size, sequence_length), dtype=mindspore.int64)
-        return config, input_ids, attention_mask, max_length
+        return config, input_ids, attention_mask
 
     @staticmethod
     def _get_logits_processor_and_warper_kwargs(
         input_length,
         forced_bos_token_id=None,
         forced_eos_token_id=None,
-        max_length=None,
     ):
-        process_kwargs = {
-            "min_length": input_length + 1 if max_length is None else max_length - 1,
-        }
+        process_kwargs = {}
         warper_kwargs = {}
         return process_kwargs, warper_kwargs
 
     def test_greedy_generate_stereo_outputs(self):
         for model_class in self.greedy_sample_model_classes:
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
             config.audio_channels = 2
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             output_generate = self._greedy_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 output_scores=True,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
             )
 
-            self.assertIsInstance(output_generate[0], GreedySearchDecoderOnlyOutput)
+            self.assertIsInstance(output_generate, GenerateDecoderOnlyOutput)
 
-            self.assertNotIn(config.pad_token_id, output_generate[0])
+            self.assertNotIn(config.pad_token_id, output_generate)
+
 
 
 def prepare_musicgen_inputs_dict(
@@ -284,6 +325,7 @@ def prepare_musicgen_inputs_dict(
     head_mask=None,
     decoder_head_mask=None,
     cross_attn_head_mask=None,
+    labels=None,
 ):
     if decoder_attention_mask is None:
         decoder_attention_mask = decoder_input_ids.reshape(
@@ -310,6 +352,7 @@ def prepare_musicgen_inputs_dict(
         "head_mask": head_mask,
         "decoder_head_mask": decoder_head_mask,
         "cross_attn_head_mask": cross_attn_head_mask,
+        "labels": labels,
     }
 
 
@@ -319,8 +362,7 @@ class MusicgenTester:
         parent,
         batch_size=4,  # need batch_size != num_hidden_layers
         seq_length=7,
-        is_training=False,
-        use_labels=False,
+        is_training=True,
         vocab_size=99,
         hidden_size=16,
         num_hidden_layers=2,
@@ -340,7 +382,6 @@ class MusicgenTester:
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.is_training = is_training
-        self.use_labels = use_labels
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
@@ -407,12 +448,48 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     test_pruning = False  # training is not supported yet for MusicGen
     test_headmasking = False
     test_resize_embeddings = False
-    # not to test torchscript as the model tester doesn't prepare `input_values` and `padding_mask`
-    # (and `torchscript` hates `None` values).
-    test_torchscript = False
 
     def setUp(self):
         self.model_tester = MusicgenTester(self)
+
+    # special case for labels
+    def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
+        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+
+        if return_labels:
+            inputs_dict["labels"] = ops.zeros(
+                (self.model_tester.batch_size, self.model_tester.seq_length, self.model_tester.num_codebooks),
+                dtype=mindspore.int64,
+            )
+        return inputs_dict
+
+    def check_training_gradient_checkpointing(self, gradient_checkpointing_kwargs=None):
+        if not self.model_tester.is_training:
+            self.skipTest(reason="model_tester.is_training is set to False")
+
+        for model_class in self.all_model_classes:
+            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+            config.use_cache = False
+            config.return_dict = True
+            model = model_class(config)
+
+            model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
+            model.train()
+
+            # The audio encoder weights are not used during the forward pass (only during the generate pass)
+            # So we need to freeze it to be able to train.
+            model.freeze_audio_encoder()
+
+            optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+            inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
+            loss = model(**inputs).loss
+            loss.backward()
+            optimizer.step()
+
+            for k, v in model.named_parameters():
+                if v.requires_grad:
+                    self.assertTrue(v.grad is not None, f"{k} in {model_class.__name__} has no gradient!")
 
     def _check_output_with_attentions(self, outputs, config, input_ids, decoder_input_ids):
         text_encoder_config = config.text_encoder
@@ -455,16 +532,17 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         **kwargs,
     ):
         model = model_class(config)
-        model.set_train(False)
+        model.eval()
 
-        outputs = model(
-            input_ids=input_ids,
-            decoder_input_ids=decoder_input_ids,
-            attention_mask=attention_mask,
-            decoder_attention_mask=decoder_attention_mask,
-            output_attentions=True,
-            **kwargs,
-        )
+        with no_grad():
+            outputs = model(
+                input_ids=input_ids,
+                decoder_input_ids=decoder_input_ids,
+                attention_mask=attention_mask,
+                decoder_attention_mask=decoder_attention_mask,
+                output_attentions=True,
+                **kwargs,
+            )
         self._check_output_with_attentions(outputs, config, input_ids, decoder_input_ids)
 
     def check_musicgen_model_output_attentions_from_config(
@@ -483,15 +561,16 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config.output_attentions = True  # model config -> won't work
 
         model = model_class(config)
-        model.set_train(False)
+        model.eval()
 
-        outputs = model(
-            input_ids=input_ids,
-            decoder_input_ids=decoder_input_ids,
-            attention_mask=attention_mask,
-            decoder_attention_mask=decoder_attention_mask,
-            **kwargs,
-        )
+        with no_grad():
+            outputs = model(
+                input_ids=input_ids,
+                decoder_input_ids=decoder_input_ids,
+                attention_mask=attention_mask,
+                decoder_attention_mask=decoder_attention_mask,
+                **kwargs,
+            )
         self.assertTrue(
             all(key not in outputs for key in ["encoder_attentions", "decoder_attentions", "cross_attentions"])
         )
@@ -500,15 +579,16 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config.decoder.output_attentions = True
 
         model = model_class(config)
-        model.set_train(False)
+        model.eval()
 
-        outputs = model(
-            input_ids=input_ids,
-            decoder_input_ids=decoder_input_ids,
-            attention_mask=attention_mask,
-            decoder_attention_mask=decoder_attention_mask,
-            **kwargs,
-        )
+        with no_grad():
+            outputs = model(
+                input_ids=input_ids,
+                decoder_input_ids=decoder_input_ids,
+                attention_mask=attention_mask,
+                decoder_attention_mask=decoder_attention_mask,
+                **kwargs,
+            )
         self._check_output_with_attentions(outputs, config, input_ids, decoder_input_ids)
 
     # override since changing `output_attentions` from the top-level model config won't work
@@ -544,25 +624,52 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             )
             self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
 
-    # skip as this model has multiple inputs embeds and lm heads that should not be tied
+    # override since changing `gradient_checkpointing` from the top-level model config won't work
+    def test_gradient_checkpointing_backward_compatibility(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            if not model_class.supports_gradient_checkpointing:
+                continue
+
+            config.text_encoder.gradient_checkpointing = True
+            config.audio_encoder.gradient_checkpointing = True
+            config.decoder.gradient_checkpointing = True
+            model = model_class(config)
+            self.assertTrue(model.is_gradient_checkpointing)
+
+    @unittest.skip(reason="MusicGen has multiple inputs embeds and lm heads that should not be tied.")
     def test_tie_model_weights(self):
         pass
 
-    # skip as this model has multiple inputs embeds and lm heads that should not be tied
+    @unittest.skip(reason="MusicGen has multiple inputs embeds and lm heads that should not be tied.")
     def test_tied_model_weights_key_ignore(self):
         pass
 
-    # skip as this model has multiple inputs embeds and lm heads that should not be tied
+    @unittest.skip(reason="MusicGen has multiple inputs embeds and lm heads that should not be tied.")
     def test_tied_weights_keys(self):
+        pass
+
+    @unittest.skip(reason="No support for low_cpu_mem_usage=True.")
+    def test_save_load_low_cpu_mem_usage(self):
+        pass
+
+    @unittest.skip(reason="No support for low_cpu_mem_usage=True.")
+    def test_save_load_low_cpu_mem_usage_checkpoints(self):
+        pass
+
+    @unittest.skip(reason="No support for low_cpu_mem_usage=True.")
+    def test_save_load_low_cpu_mem_usage_no_safetensors(self):
         pass
 
     # override since changing `output_hidden_states` from the top-level model config won't work
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.encoder_hidden_states
 
@@ -605,7 +712,7 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 uniform_init_parms = ["conv"]
                 ignore_init = ["lstm"]
                 if param.requires_grad:
@@ -622,14 +729,14 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                         )
 
     # override since we have embeddings / LM heads over multiple codebooks
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), nn.Embedding)
             lm_heads = model.get_output_embeddings()
-            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Dense))
+            self.assertTrue(lm_heads is None or isinstance(lm_heads[0], nn.Linear))
 
     def _get_input_ids_and_config(self, batch_size=2):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -640,9 +747,7 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         input_ids = input_ids[:batch_size, :]
         attention_mask = ops.ones((batch_size, sequence_length), dtype=mindspore.int64)
 
-        # generate max 3 tokens
-        max_length = 3
-        return config, input_ids, attention_mask, max_length
+        return config, input_ids, attention_mask
 
     # override since the `input_ids` cannot be used as the `decoder_input_ids` for musicgen (input / outputs are
     # different modalities -> different shapes)
@@ -651,29 +756,22 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         model,
         input_ids,
         attention_mask,
-        max_length,
         output_scores=False,
         output_attentions=False,
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        logits_process_kwargs, _ = self._get_logits_processor_and_warper_kwargs(
-            input_ids.shape[-1],
-            max_length=max_length,
-        )
-
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
             do_sample=False,
             num_beams=1,
-            max_length=max_length,
+            max_new_tokens=self.max_new_tokens,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             output_scores=output_scores,
             return_dict_in_generate=return_dict_in_generate,
             remove_invalid_values=True,
-            **logits_process_kwargs,
             **model_kwargs,
         )
 
@@ -686,30 +784,25 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         model,
         input_ids,
         attention_mask,
-        max_length,
         num_return_sequences,
-        logits_warper_kwargs,
-        process_kwargs,
         output_scores=False,
         output_attentions=False,
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        mindspore.set_seed(0)
+        set_seed(0)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
             do_sample=True,
             num_beams=1,
-            max_length=max_length,
+            max_new_tokens=self.max_new_tokens,
             num_return_sequences=num_return_sequences,
             output_scores=output_scores,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict_in_generate=return_dict_in_generate,
             remove_invalid_values=True,
-            **logits_warper_kwargs,
-            **process_kwargs,
             **model_kwargs,
         )
 
@@ -720,126 +813,106 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         input_length,
         forced_bos_token_id=None,
         forced_eos_token_id=None,
-        max_length=None,
     ):
-        process_kwargs = {
-            "min_length": input_length + 1 if max_length is None else max_length - 1,
-        }
+        process_kwargs = {}
         warper_kwargs = {}
         return process_kwargs, warper_kwargs
 
     def test_greedy_generate_dict_outputs(self):
         for model_class in self.greedy_sample_model_classes:
             # disable cache
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
             config.use_cache = False
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             output_generate = self._greedy_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 output_scores=True,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
             )
 
-            self.assertIsInstance(output_generate, GreedySearchEncoderDecoderOutput)
+            self.assertIsInstance(output_generate, GenerateEncoderDecoderOutput)
 
             self.assertNotIn(config.pad_token_id, output_generate)
 
     def test_greedy_generate_dict_outputs_use_cache(self):
         for model_class in self.greedy_sample_model_classes:
             # enable cache
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
 
             config.use_cache = True
             config.is_decoder = True
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             output_generate = self._greedy_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 output_scores=True,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
             )
 
-            self.assertIsInstance(output_generate, GreedySearchEncoderDecoderOutput)
+            self.assertIsInstance(output_generate, GenerateEncoderDecoderOutput)
 
     def test_sample_generate(self):
         for model_class in self.greedy_sample_model_classes:
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
-            model = model_class(config).set_train(False)
-
-            process_kwargs, logits_warper_kwargs = self._get_logits_processor_and_warper_kwargs(
-                input_ids.shape[-1],
-                max_length=max_length,
-            )
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
+            model = model_class(config).eval()
 
             # check `generate()` and `sample()` are equal
             output_generate = self._sample_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 num_return_sequences=1,
-                logits_warper_kwargs=logits_warper_kwargs,
-                process_kwargs=process_kwargs,
             )
             self.assertIsInstance(output_generate, mindspore.Tensor)
 
     def test_sample_generate_dict_output(self):
         for model_class in self.greedy_sample_model_classes:
             # disable cache
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
             config.use_cache = False
-            model = model_class(config).set_train(False)
-
-            process_kwargs, logits_warper_kwargs = self._get_logits_processor_and_warper_kwargs(
-                input_ids.shape[-1],
-                max_length=max_length,
-            )
+            model = model_class(config).eval()
 
             output_generate = self._sample_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 num_return_sequences=3,
-                logits_warper_kwargs=logits_warper_kwargs,
-                process_kwargs=process_kwargs,
                 output_scores=True,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
             )
 
-            self.assertIsInstance(output_generate, SampleEncoderDecoderOutput)
+            self.assertIsInstance(output_generate, GenerateEncoderDecoderOutput)
 
     def test_generate_without_input_ids(self):
-        config, _, _, max_length = self._get_input_ids_and_config()
+        config, _, _ = self._get_input_ids_and_config()
 
         # if no bos token id => cannot generate from None
         if config.bos_token_id is None:
-            return
+            self.skipTest(reason="bos_token_id is None")
 
         for model_class in self.greedy_sample_model_classes:
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            output_ids_generate = model.generate(do_sample=False, max_length=max_length, remove_invalid_values=True)
+            output_ids_generate = model.generate(
+                do_sample=False, max_new_tokens=self.max_new_tokens, remove_invalid_values=True
+            )
             self.assertIsNotNone(output_ids_generate)
 
-    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
 
         for model_class in self.greedy_sample_model_classes:
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             model.half()
             # greedy
             model.generate(input_dict["input_ids"], attention_mask=input_dict["attention_mask"], max_new_tokens=10)
@@ -850,24 +923,50 @@ class MusicgenTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     def test_greedy_generate_stereo_outputs(self):
         for model_class in self.greedy_sample_model_classes:
-            config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
             config.audio_channels = 2
 
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             output_generate = self._greedy_generate(
                 model=model,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_length=max_length,
                 output_scores=True,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
             )
 
-            self.assertIsInstance(output_generate, GreedySearchEncoderDecoderOutput)
+            self.assertIsInstance(output_generate, GenerateEncoderDecoderOutput)
 
             self.assertNotIn(config.pad_token_id, output_generate)
+
+    @unittest.skip(
+        reason="MusicgenModel is actually not the base of MusicgenForCausalLM as the latter is a composit model"
+    )
+    def test_save_load_fast_init_from_base(self):
+        pass
+
+    def test_requires_grad_with_frozen_encoders(self):
+        config = self.model_tester.get_config()
+        for model_class in self.all_model_classes:
+            model = model_class(config)
+            model.freeze_audio_encoder()
+
+            audio_encoder_grads = [param.requires_grad for param in model.audio_encoder.parameters()]
+            text_encoder_grads = [param.requires_grad for param in model.text_encoder.parameters()]
+
+            self.assertFalse(all(audio_encoder_grads))
+            self.assertTrue(all(text_encoder_grads))
+
+            model = model_class(config)
+            model.freeze_text_encoder()
+
+            audio_encoder_grads = [param.requires_grad for param in model.audio_encoder.parameters()]
+            text_encoder_grads = [param.requires_grad for param in model.text_encoder.parameters()]
+
+            self.assertTrue(all(audio_encoder_grads))
+            self.assertFalse(all(text_encoder_grads))
 
 
 def get_bip_bip(bip_duration=0.125, duration=0.5, sample_rate=32000):
@@ -907,11 +1006,12 @@ class MusicgenIntegrationTests(unittest.TestCase):
             * pad_token_id
         )
 
-        logits = model(
-            input_ids,
-            attention_mask=attention_mask,
-            decoder_input_ids=decoder_input_ids,
-        ).logits
+        with no_grad():
+            logits = model(
+                input_ids,
+                attention_mask=attention_mask,
+                decoder_input_ids=decoder_input_ids,
+            ).logits
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -923,7 +1023,8 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(logits.shape == (*decoder_input_ids.shape, model.decoder.config.vocab_size))
-        self.assertTrue(np.allclose(logits[0, 0, :16].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
+        print(logits[0, 0, :16])
+        self.assertTrue(ops.allclose(logits[0, 0, :16], EXPECTED_LOGITS, atol=1e-4))
 
     @slow
     def test_logits_text_audio_prompt(self):
@@ -943,12 +1044,13 @@ class MusicgenIntegrationTests(unittest.TestCase):
         input_values = inputs.input_values
         padding_mask = inputs.padding_mask
 
-        logits = model(
-            input_ids,
-            attention_mask=attention_mask,
-            input_values=input_values,
-            padding_mask=padding_mask,
-        ).logits
+        with no_grad():
+            logits = model(
+                input_ids,
+                attention_mask=attention_mask,
+                input_values=input_values,
+                padding_mask=padding_mask,
+            ).logits
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -960,7 +1062,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(logits.shape == (8, 50, 2048))
-        self.assertTrue(np.allclose(logits[0, -1, :16].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(logits[0, -1, :16], EXPECTED_LOGITS, atol=1e-4))
 
     @slow
     def test_generate_unconditional_greedy(self):
@@ -981,7 +1083,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(output_values.shape == (1, 1, 3200))
-        self.assertTrue(np.allclose(output_values[0, 0, :16].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :16], EXPECTED_VALUES, atol=1e-4))
 
     @slow
     def test_generate_unconditional_sampling(self):
@@ -990,7 +1092,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # for stochastic sampling we can generate multiple outputs
         unconditional_inputs = model.get_unconditional_inputs(num_samples=2)
 
-        mindspore.set_seed(0)
+        set_seed(0)
         output_values = model.generate(**unconditional_inputs, do_sample=True, max_new_tokens=10)
 
         # fmt: off
@@ -1003,7 +1105,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(output_values.shape == (2, 1, 4480))
-        self.assertTrue(np.allclose(output_values[0, 0, :16].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :16], EXPECTED_VALUES, atol=1e-4))
 
     @slow
     def test_generate_text_prompt_greedy(self):
@@ -1030,7 +1132,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(output_values.shape == (2, 1, 4480))
-        self.assertTrue(np.allclose(output_values[0, 0, :10].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :10], EXPECTED_VALUES, atol=1e-4))
 
     @slow
     def test_generate_text_prompt_greedy_with_classifier_free_guidance(self):
@@ -1057,7 +1159,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(output_values.shape == (2, 1, 4480))
-        self.assertTrue(np.allclose(output_values[0, 0, :16].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :16], EXPECTED_VALUES, atol=1e-4))
 
     @slow
     def test_generate_text_prompt_sampling(self):
@@ -1070,7 +1172,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         input_ids = inputs.input_ids
         attention_mask = inputs.attention_mask
 
-        mindspore.set_seed(0)
+        set_seed(0)
         output_values = model.generate(
             input_ids, attention_mask=attention_mask, do_sample=True, guidance_scale=None, max_new_tokens=10
         )
@@ -1085,7 +1187,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         # fmt: on
 
         self.assertTrue(output_values.shape == (2, 1, 4480))
-        self.assertTrue(np.allclose(output_values[0, 0, :16].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :16], EXPECTED_VALUES, atol=1e-4))
 
     @slow
     def test_generate_text_audio_prompt(self):
@@ -1111,8 +1213,7 @@ class MusicgenIntegrationTests(unittest.TestCase):
         self.assertTrue(
             output_values.shape == (2, 1, 36480)
         )  # input values take shape 32000 and we generate from there
-        print(output_values[0, 0, -16:].asnumpy(), EXPECTED_VALUES.asnumpy())
-        self.assertTrue(np.allclose(output_values[0, 0, -16:].asnumpy(), EXPECTED_VALUES.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, -16:], EXPECTED_VALUES, atol=1e-4))
 
 
 @require_mindspore
@@ -1151,8 +1252,8 @@ class MusicgenStereoIntegrationTests(unittest.TestCase):
 
         # (bsz, channels, seq_len)
         self.assertTrue(output_values.shape == (1, 2, 5760))
-        self.assertTrue(np.allclose(output_values[0, 0, :16].asnumpy(), EXPECTED_VALUES_LEFT.asnumpy(), atol=1e-3))
-        self.assertTrue(np.allclose(output_values[0, 1, :16].asnumpy(), EXPECTED_VALUES_RIGHT.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, :16], EXPECTED_VALUES_LEFT, atol=1e-4))
+        self.assertTrue(ops.allclose(output_values[0, 1, :16], EXPECTED_VALUES_RIGHT, atol=1e-4))
 
     @slow
     def test_generate_text_audio_prompt(self):
@@ -1185,6 +1286,5 @@ class MusicgenStereoIntegrationTests(unittest.TestCase):
         # (bsz, channels, seq_len)
         self.assertTrue(output_values.shape == (2, 2, 37760))
         # input values take shape 32000 and we generate from there - we check the last (generated) values
-        print(output_values[0, 0, -16:].asnumpy(), EXPECTED_VALUES_LEFT.asnumpy())
-        self.assertTrue(np.allclose(output_values[0, 0, -16:].asnumpy(), EXPECTED_VALUES_LEFT.asnumpy(), atol=1e-3))
-        self.assertTrue(np.allclose(output_values[0, 1, -16:].asnumpy(), EXPECTED_VALUES_RIGHT.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output_values[0, 0, -16:], EXPECTED_VALUES_LEFT, atol=1e-4))
+        self.assertTrue(ops.allclose(output_values[0, 1, -16:], EXPECTED_VALUES_RIGHT, atol=1e-4))

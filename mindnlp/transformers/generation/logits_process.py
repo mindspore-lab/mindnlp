@@ -139,7 +139,7 @@ class MinLengthLogitsProcessor(LogitsProcessor):
         eos_token_mask = ops.isin(vocab_tensor, self.eos_token_id)
         scores_processed = scores
         if input_ids.shape[-1] < self.min_length:
-            scores_processed = ops.where(eos_token_mask, -math.inf, scores)
+            scores_processed = ops.where(eos_token_mask, float(ops.finfo(scores.dtype).min), scores)
         return scores_processed
 
 
@@ -206,7 +206,7 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
         vocab_tensor = ops.arange(scores.shape[-1])
         eos_token_mask = ops.isin(vocab_tensor, self.eos_token_id)
         if new_tokens_length < self.min_new_tokens:
-            scores_processed = ops.where(eos_token_mask, -math.inf, scores)
+            scores_processed = ops.where(eos_token_mask, float(ops.finfo(scores.dtype).min), scores)
 
         return scores_processed
 
@@ -435,6 +435,8 @@ class TopPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
         cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
@@ -495,6 +497,9 @@ class TopKLogitsWarper(LogitsWarper):
 
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
+
         top_k = min(self.top_k, scores.shape[-1])  # Safety check
         # Remove all tokens with a probability less than the last token of the top-k
         indices_to_remove = scores < ops.topk(scores, top_k)[0][..., -1, None]
@@ -560,6 +565,8 @@ class MinPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
         # Convert logits to probabilities
         probs = ops.softmax(scores, dim=-1)
         # Get the probability of the top token for each sequence in the batch
@@ -645,6 +652,8 @@ class TypicalLogitsWarper(LogitsWarper):
 
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
         # calculate entropy
         normalized = nn.functional.log_softmax(scores, dim=-1)
         p = ops.exp(normalized)
@@ -724,6 +733,8 @@ class EpsilonLogitsWarper(LogitsWarper):
 
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
         # Determine which indices to remove
         probabilities = ops.softmax(scores, dim=-1)
         indices_to_remove = probabilities < self.epsilon
@@ -805,6 +816,8 @@ class EtaLogitsWarper(LogitsWarper):
 
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(ops.finfo(scores.dtype).min)
         probabilities = ops.softmax(scores, dim=-1)
         entropy = ops.distributions.Categorical(logits=scores).entropy()
         eta = ops.min(self.epsilon, ops.sqrt(self.epsilon) * ops.exp(-entropy))[..., None]
@@ -1552,7 +1565,7 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
         cur_len = input_ids.shape[-1]
         scores_processed = scores
         if cur_len == self.max_length - 1:
-            scores_processed = ops.full_like(scores, -math.inf, dtype=scores.dtype)
+            scores_processed = ops.full_like(scores, float(ops.finfo(scores.dtype).min), dtype=scores.dtype)
             scores_processed[:, self.eos_token_id] = 0
         return scores_processed
 

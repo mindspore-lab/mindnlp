@@ -26,6 +26,7 @@ from mindspore.common.initializer import initializer, Normal, Constant
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import CrossEntropyLoss
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -39,6 +40,7 @@ from ...modeling_outputs import (
     Seq2SeqModelOutput,
     Seq2SeqQuestionAnsweringModelOutput,
     Seq2SeqSequenceClassifierOutput,
+    TokenClassifierOutput
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -315,11 +317,11 @@ class MT5LayerFF(nn.Module):
 
         Args:
             self (MT5LayerFF): An instance of the MT5LayerFF class.
-            hidden_states (torch.Tensor): The input hidden states tensor of shape
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape
                 (batch_size, sequence_length, hidden_size).
 
         Returns:
-            torch.Tensor: The output hidden states tensor after applying the feed-forward layer,
+            mindspore.Tensor: The output hidden states tensor after applying the feed-forward layer,
                 with the same shape as the input tensor.
 
         Raises:
@@ -829,11 +831,11 @@ class MT5LayerCrossAttention(nn.Module):
 
         Args:
             self (MT5LayerCrossAttention): The instance of the MT5LayerCrossAttention class.
-            hidden_states (torch.Tensor): The input hidden states to be processed.
-            key_value_states (torch.Tensor): The key-value states used in attention computation.
-            attention_mask (torch.Tensor, optional): Mask to avoid attending to specific positions. Default is None.
-            position_bias (torch.Tensor, optional): Bias values added to the attention scores. Default is None.
-            layer_head_mask (torch.Tensor, optional): Mask to control which heads are allowed to attend to which positions.
+            hidden_states (mindspore.Tensor): The input hidden states to be processed.
+            key_value_states (mindspore.Tensor): The key-value states used in attention computation.
+            attention_mask (mindspore.Tensor, optional): Mask to avoid attending to specific positions. Default is None.
+            position_bias (mindspore.Tensor, optional): Bias values added to the attention scores. Default is None.
+            layer_head_mask (mindspore.Tensor, optional): Mask to control which heads are allowed to attend to which positions.
                 Default is None.
             past_key_value (tuple, optional): Key and value tensors from the previous time steps. Default is None.
             use_cache (bool, optional): Whether to use cache for faster decoding. Default is False.
@@ -1257,7 +1259,7 @@ class MT5PreTrainedModel(PreTrainedModel):
 
         Args:
             self (MT5PreTrainedModel): The instance of the MT5PreTrainedModel class.
-            input_ids (torch.Tensor): The input tensor containing the tokenized input sequence.
+            input_ids (mindspore.Tensor): The input tensor containing the tokenized input sequence.
                 It represents the input sequence to be shifted to the right.
 
         Returns:
@@ -1331,7 +1333,7 @@ class MT5Stack(MT5PreTrainedModel):
         Args:
             self: The instance of the class.
             config (MT5Config): The configuration object for the MT5 model.
-            embed_tokens (Optional[torch.Tensor]): The embedded tokens for the model. Defaults to None.
+            embed_tokens (Optional[mindspore.Tensor]): The embedded tokens for the model. Defaults to None.
 
         Returns:
             None
@@ -1672,7 +1674,7 @@ class MT5Model(MT5PreTrainedModel):
 
         Args:
             self (MT5Model): An instance of the MT5Model class.
-            new_embeddings (torch.Tensor): The new input embeddings to be set.
+            new_embeddings (mindspore.Tensor): The new input embeddings to be set.
 
         Returns:
             None.
@@ -2859,11 +2861,76 @@ class MT5ForQuestionAnswering(MT5PreTrainedModel):
             encoder_attentions=encoder_outputs.attentions,
         )
 
+class MT5ForTokenClassification(MT5PreTrainedModel):
+    _tied_weights_keys = ["transformer.encoder.embed_tokens.weight"]
+
+    # Copied from transformers.models.t5.modeling_t5.T5ForTokenClassification.__init__ with T5->MT5
+    def __init__(self, config: MT5Config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.transformer = MT5EncoderModel(config)
+        self.dropout = nn.Dropout(config.classifier_dropout)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    # Copied from transformers.models.t5.modeling_t5.T5ForTokenClassification.forward with T5->MT5
+    def forward(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Returns:
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        hidden_states = outputs[0]
+        hidden_states = self.dropout(hidden_states)
+        logits = self.classifier(hidden_states)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits, outputs[2:-1])
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 __all__ = [
     "MT5EncoderModel",
     "MT5ForConditionalGeneration",
     "MT5ForQuestionAnswering",
     "MT5ForSequenceClassification",
+    "MT5ForTokenClassification",
     "MT5Model",
     "MT5PreTrainedModel",
     "MT5Stack",

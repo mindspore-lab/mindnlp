@@ -126,7 +126,8 @@ def clamp(input, min=None, max=None):
     return ops.clamp(input, min, max)
 
 # clip
-
+def clip(input, min=None, max=None):
+    return clamp(input, min, max)
 
 # conj_physical
 
