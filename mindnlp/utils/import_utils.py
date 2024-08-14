@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_ftfy_available = _is_package_available("ftfy")
 _einops_available = _is_package_available('einops')
 _tiktoken_available = _is_package_available('tiktoken')
 _bs4_available = importlib.util.find_spec("bs4") is not None
@@ -226,6 +227,11 @@ def get_mindspore_version():
         None: This function does not raise any exceptions.
     """
     return _mindspore_version
+
+
+
+def is_ftfy_available():
+    return _ftfy_available
 
 
 def is_datasets_available():
