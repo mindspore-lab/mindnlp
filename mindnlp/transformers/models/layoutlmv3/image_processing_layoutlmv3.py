@@ -370,4 +370,4 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
             data["boxes"] = boxes_batch
         return data
 
-__all__ = ["LayoutLMv3ImageProcessor"]
+__all__ = ['LayoutLMv3ImageProcessor']

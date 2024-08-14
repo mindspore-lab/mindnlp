@@ -116,7 +116,7 @@ class PromptEncoder(nn.Module):
                     batch_first=True,
                 )
 
-                self.mlp_head = nn.SequentialCell(
+                self.mlp_head = nn.Sequential(
                     nn.Linear(self.hidden_size * 2, self.hidden_size * 2),
                     nn.ReLU(),
                     nn.Linear(self.hidden_size * 2, self.output_size),
@@ -136,7 +136,7 @@ class PromptEncoder(nn.Module):
                     nn.ReLU(),
                     nn.Linear(self.hidden_size, self.output_size),
                 ]
-                self.mlp_head = nn.SequentialCell(*layers)
+                self.mlp_head = nn.Sequential(*layers)
 
             else:
                 raise ValueError("Prompt encoder type not recognized. Please use one of MLP (recommended) or LSTM.")

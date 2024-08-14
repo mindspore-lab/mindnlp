@@ -122,7 +122,7 @@ class PrefixEncoder(nn.Module):
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
-            self.trans = nn.SequentialCell(
+            self.trans = nn.Sequential(
                 nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
                 nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)

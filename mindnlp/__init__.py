@@ -21,6 +21,7 @@ import platform
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 os.environ["MS_DEV_FORCE_ACL"] = '1'
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 from mindspore import context
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error

@@ -41,8 +41,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import FuyuForCausalLM
 
-# mindspore.set_context(device_target="CPU")
-# mindspore.set_context(pynative_synchronize=True)
 
 class FuyuModelTester:
     def __init__(
