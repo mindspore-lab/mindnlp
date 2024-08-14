@@ -251,15 +251,7 @@ class XLNetModelTester:
         outputs_cache = model(input_ids_1, use_mems=True, perm_mask=causal_mask)
         outputs_no_cache = model(input_ids_1, use_mems=False, perm_mask=causal_mask)
         outputs_conf = model(input_ids_1)
-        #debug
-        # breakpoint()
-        # outputs_cache1 = model(input_ids_1, use_mems=True, perm_mask=causal_mask)
-        # outputs_cache2 = model(input_ids_1, use_mems=True, perm_mask=causal_mask)
-        # breakpoint()
-        #self.parent.assertTrue(False)
-        #debug test
-        # 
-        # 
+
    
 
 
