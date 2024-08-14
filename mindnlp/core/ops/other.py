@@ -9,7 +9,6 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
-from .creation import arange
 
 # atleast_2d
 
@@ -671,21 +670,20 @@ _stop_gradient = ops.StopGradient()
 def stop_gradient(input):
     return _stop_gradient(input)
 
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
 def unfold(input, dimension, size, step):
-    """Custom torch.Tensor.unfold implementation to enable the export to ONNX."""
-    shape = input.shape
-    rank = len(shape)
-    sizedim = shape[dimension]
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.Tensor(_indices).astype(mindspore.int32)
+    output = ops.gather(input, indices, axis=_dimension)
+    output = ops.moveaxis(output, _dimension + 1, -1)
 
-    low_indices = arange(0, sizedim, step)
-    min_length = sizedim - size // step + 1
-    indices = arange(size) + low_indices[:min_length][:, None]
-
-    s = [slice(None)] * rank
-    s[dimension] = indices
-    sliced = input[s]
-
-    perm = list(range(0, rank + 1))
-    perm.append(perm.pop(dimension + 1))
-
-    return sliced.permute(perm)
+    return output

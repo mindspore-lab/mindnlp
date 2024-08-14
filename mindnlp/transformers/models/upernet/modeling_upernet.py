@@ -1,107 +1,49 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2022 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""MindSpore UPerNet model."""
+"""PyTorch UperNet model. Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation."""
 
 from typing import List, Optional, Tuple, Union
 
-import mindspore as ms
-
+import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss
+
 from ...modeling_outputs import SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
-from .configuration_upernet import UPerNetConfig
+from ...backbone_utils import load_backbone
+from .configuration_upernet import UperNetConfig
 
 
-def load_backbone(config):
-    """
-    Loads the backbone model from a config object.
-
-    If the config is from the backbone model itself, then
-    we return a backbone model with randomly initialized
-    weights.
-
-    If the config is from the parent model of the backbone
-    model itself, then we load the pretrained backbone weights
-    if specified.
-    """
-    from mindnlp.transformers import AutoBackbone, AutoConfig
-
-    backbone_config = getattr(config, "backbone_config", None)
-    use_timm_backbone = getattr(config, "use_timm_backbone", None)
-    use_pretrained_backbone = getattr(config, "use_pretrained_backbone", None)
-    backbone_checkpoint = getattr(config, "backbone", None)
-    backbone_kwargs = getattr(config, "backbone_kwargs", None)
-    backbone_kwargs = {} if backbone_kwargs is None else backbone_kwargs
-
-    if backbone_kwargs and backbone_config is not None:
-        raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
-
-    # If there is a backbone_config and a backbone checkpoint, and use_pretrained_backbone=False then the desired
-    # behaviour is ill-defined: do you want to load from the checkpoint's config or the backbone_config?
-    if backbone_config is not None and backbone_checkpoint is not None and use_pretrained_backbone is not None:
-        raise ValueError("Cannot specify both config.backbone_config and config.backbone")
-
-    # If any of the following are set, then the config passed in is from a model which contains a backbone.
-    if (
-            backbone_config is None
-            and use_timm_backbone is None
-            and backbone_checkpoint is None
-            and backbone_checkpoint is None
-    ):
-        return AutoBackbone.from_config(config=config, **backbone_kwargs)
-
-    # config from the parent model that has a backbone
-    if use_timm_backbone:
-        if backbone_checkpoint is None:
-            raise ValueError("config.backbone must be set if use_timm_backbone is True")
-        # Because of how timm backbones were originally added to models, we need to pass in use_pretrained_backbone
-        # to determine whether to load the pretrained weights.
-        backbone = AutoBackbone.from_pretrained(
-            backbone_checkpoint,
-            use_timm_backbone=use_timm_backbone,
-            use_pretrained_backbone=use_pretrained_backbone,
-            **backbone_kwargs,
-        )
-    elif use_pretrained_backbone:
-        if backbone_checkpoint is None:
-            raise ValueError("config.backbone must be set if use_pretrained_backbone is True")
-        backbone = AutoBackbone.from_pretrained(backbone_checkpoint, **backbone_kwargs)
-    else:
-        if backbone_config is None and backbone_checkpoint is None:
-            raise ValueError("Either config.backbone_config or config.backbone must be set")
-        if backbone_config is None:
-            backbone_config = AutoConfig.from_pretrained(backbone_checkpoint, **backbone_kwargs)
-        backbone = AutoBackbone.from_config(config=backbone_config)
-    return backbone
+# General docstring
+_CONFIG_FOR_DOC = "UperNetConfig"
 
 
-class UPerNetConvModule(nn.Module):
+class UperNetConvModule(nn.Module):
     """
     A convolutional block that bundles conv/norm/activation layers. This block simplifies the usage of convolution
     layers, which are commonly used with a norm layer (e.g., BatchNorm) and activation layer (e.g., ReLU).
     """
 
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: Union[int, Tuple[int, int]],
-            padding: Union[int, Tuple[int, int], str] = 0,
-            bias: bool = False,
-            dilation: Union[int, Tuple[int, int]] = 1,
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        padding: Union[int, Tuple[int, int], str] = 0,
+        bias: bool = False,
+        dilation: Union[int, Tuple[int, int]] = 1,
     ) -> None:
         super().__init__()
         self.conv = nn.Conv2d(
@@ -115,7 +57,7 @@ class UPerNetConvModule(nn.Module):
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.activation = nn.ReLU()
 
-    def forward(self, input: ms.Tensor) -> ms.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         output = self.conv(input)
         output = self.batch_norm(output)
         output = self.activation(output)
@@ -123,24 +65,24 @@ class UPerNetConvModule(nn.Module):
         return output
 
 
-class UPerNetPyramidPoolingBlock(nn.Module):
+class UperNetPyramidPoolingBlock(nn.Module):
     def __init__(self, pool_scale: int, in_channels: int, channels: int) -> None:
         super().__init__()
         self.layers = [
             nn.AdaptiveAvgPool2d(pool_scale),
-            UPerNetConvModule(in_channels, channels, kernel_size=1),
+            UperNetConvModule(in_channels, channels, kernel_size=1),
         ]
         for i, layer in enumerate(self.layers):
-            self.insert_child_to_cell(str(i), layer)
+            self.add_module(str(i), layer)
 
-    def forward(self, input: ms.Tensor) -> ms.Tensor:
+    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = input
         for layer in self.layers:
             hidden_state = layer(hidden_state)
         return hidden_state
 
 
-class UPerNetPyramidPoolingModule(nn.Module):
+class UperNetPyramidPoolingModule(nn.Module):
     """
     Pyramid Pooling Module (PPM) used in PSPNet.
 
@@ -163,22 +105,22 @@ class UPerNetPyramidPoolingModule(nn.Module):
         self.channels = channels
         self.blocks = []
         for i, pool_scale in enumerate(pool_scales):
-            block = UPerNetPyramidPoolingBlock(pool_scale=pool_scale, in_channels=in_channels, channels=channels)
+            block = UperNetPyramidPoolingBlock(pool_scale=pool_scale, in_channels=in_channels, channels=channels)
             self.blocks.append(block)
-            self.insert_child_to_cell(str(i), block)
+            self.add_module(str(i), block)
 
-    def forward(self, x: ms.Tensor) -> List[ms.Tensor]:
+    def forward(self, x: mindspore.Tensor) -> List[mindspore.Tensor]:
         ppm_outs = []
         for ppm in self.blocks:
             ppm_out = ppm(x)
-            upsampled_ppm_out = ops.interpolate(
+            upsampled_ppm_out = nn.functional.interpolate(
                 ppm_out, size=x.shape[2:], mode="bilinear", align_corners=self.align_corners
             )
             ppm_outs.append(upsampled_ppm_out)
         return ppm_outs
 
 
-class UPerNetHead(nn.Module):
+class UperNetHead(nn.Module):
     """
     Unified Perceptual Parsing for Scene Understanding. This head is the implementation of
     [UPerNet](https://arxiv.org/abs/1807.10221).
@@ -192,16 +134,16 @@ class UPerNetHead(nn.Module):
         self.in_channels = in_channels
         self.channels = config.hidden_size
         self.align_corners = False
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True)
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1)
 
         # PSP Module
-        self.psp_modules = UPerNetPyramidPoolingModule(
+        self.psp_modules = UperNetPyramidPoolingModule(
             self.pool_scales,
             self.in_channels[-1],
             self.channels,
             align_corners=self.align_corners,
         )
-        self.bottleneck = UPerNetConvModule(
+        self.bottleneck = UperNetConvModule(
             self.in_channels[-1] + len(self.pool_scales) * self.channels,
             self.channels,
             kernel_size=3,
@@ -211,12 +153,12 @@ class UPerNetHead(nn.Module):
         self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
         for in_channels in self.in_channels[:-1]:  # skip the top layer
-            l_conv = UPerNetConvModule(in_channels, self.channels, kernel_size=1)
-            fpn_conv = UPerNetConvModule(self.channels, self.channels, kernel_size=3, padding=1)
+            l_conv = UperNetConvModule(in_channels, self.channels, kernel_size=1)
+            fpn_conv = UperNetConvModule(self.channels, self.channels, kernel_size=3, padding=1)
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
 
-        self.fpn_bottleneck = UPerNetConvModule(
+        self.fpn_bottleneck = UperNetConvModule(
             len(self.in_channels) * self.channels,
             self.channels,
             kernel_size=3,
@@ -227,12 +169,10 @@ class UPerNetHead(nn.Module):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        pass
-        # if isinstance(module, nn.Conv2d):
-        #     module.weight.set_data(initializer(Normal(self.config.initializer_range, 0),
-        #                                        shape=module.weight.shape, dtype=module.weight.dtype))
-        #     if module.bias is not None:
-        #         module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
+        if isinstance(module, nn.Conv2d):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 
     def psp_forward(self, inputs):
         x = inputs[-1]
@@ -243,7 +183,7 @@ class UPerNetHead(nn.Module):
 
         return output
 
-    def forward(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # build laterals
         laterals = [lateral_conv(encoder_hidden_states[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
 
@@ -253,7 +193,7 @@ class UPerNetHead(nn.Module):
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
-            laterals[i - 1] = laterals[i - 1] + ops.interpolate(
+            laterals[i - 1] = laterals[i - 1] + nn.functional.interpolate(
                 laterals[i], size=prev_shape, mode="bilinear", align_corners=self.align_corners
             )
 
@@ -263,7 +203,7 @@ class UPerNetHead(nn.Module):
         fpn_outs.append(laterals[-1])
 
         for i in range(used_backbone_levels - 1, 0, -1):
-            fpn_outs[i] = ops.interpolate(
+            fpn_outs[i] = nn.functional.interpolate(
                 fpn_outs[i], size=fpn_outs[0].shape[2:], mode="bilinear", align_corners=self.align_corners
             )
         fpn_outs = ops.cat(fpn_outs, dim=1)
@@ -273,16 +213,16 @@ class UPerNetHead(nn.Module):
         return output
 
 
-class UPerNetFCNHead(nn.Module):
+class UperNetFCNHead(nn.Module):
     """
     Fully Convolution Networks for Semantic Segmentation. This head is the implementation of
-    [FCNNet]. It uses only the feature of a certain layer in encoder.
+    [FCNNet](https://arxiv.org/abs/1411.4038>).
 
     Args:
         config:
             Configuration.
-        in_index (int):
-            Use the feature of which layer. Default: 2.
+        in_channels (int):
+            Number of input channels.
         kernel_size (int):
             The kernel size for convs in the head. Default: 3.
         dilation (int):
@@ -290,8 +230,7 @@ class UPerNetFCNHead(nn.Module):
     """
 
     def __init__(
-            self, config, in_index: int = 2, kernel_size: int = 3,
-            dilation: Union[int, Tuple[int, int]] = 1
+        self, config, in_index: int = 2, kernel_size: int = 3, dilation: Union[int, Tuple[int, int]] = 1
     ) -> None:
         super().__init__()
 
@@ -303,13 +242,15 @@ class UPerNetFCNHead(nn.Module):
         self.in_index = in_index
 
         conv_padding = (kernel_size // 2) * dilation
-        convs = [UPerNetConvModule(
-            self.in_channels, self.channels, kernel_size=kernel_size,
-            padding=conv_padding, dilation=dilation
-        )]
+        convs = []
+        convs.append(
+            UperNetConvModule(
+                self.in_channels, self.channels, kernel_size=kernel_size, padding=conv_padding, dilation=dilation
+            )
+        )
         for i in range(self.num_convs - 1):
             convs.append(
-                UPerNetConvModule(
+                UperNetConvModule(
                     self.channels, self.channels, kernel_size=kernel_size, padding=conv_padding, dilation=dilation
                 )
             )
@@ -318,24 +259,22 @@ class UPerNetFCNHead(nn.Module):
         else:
             self.convs = nn.Sequential(*convs)
         if self.concat_input:
-            self.conv_cat = UPerNetConvModule(
+            self.conv_cat = UperNetConvModule(
                 self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
             )
 
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, bias=True)
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1)
 
     def init_weights(self):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        pass
-        # if isinstance(module, nn.Conv2d):
-        #     module.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
-        #                                        shape=module.weight.shape, dtype=module.weight.dtype))
-        #     if module.bias is not None:
-        #         module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
+        if isinstance(module, nn.Conv2d):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 
-    def forward(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # just take the relevant feature maps
         hidden_states = encoder_hidden_states[self.in_index]
         output = self.convs(hidden_states)
@@ -345,18 +284,18 @@ class UPerNetFCNHead(nn.Module):
         return output
 
 
-class UPerNetPreTrainedModel(PreTrainedModel):
+class UperNetPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
 
-    config_class = UPerNetConfig
+    config_class = UperNetConfig
     main_input_name = "pixel_values"
     _no_split_modules = []
 
     def _init_weights(self, module):
-        if isinstance(module, UPerNetPreTrainedModel):
+        if isinstance(module, UperNetPreTrainedModel):
             module.backbone.init_weights()
             module.decode_head.init_weights()
             if module.auxiliary_head is not None:
@@ -370,62 +309,42 @@ class UPerNetPreTrainedModel(PreTrainedModel):
             self.auxiliary_head.init_weights()
 
 
-class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
-    """
-        UPerNet framework leveraging any vision backbone e.g. for ADE20k, CityScapes.
-    """
-
+class UperNetForSemanticSegmentation(UperNetPreTrainedModel):
     def __init__(self, config):
-        """
-        Args:
-            config ([`UPerNetConfig`]): Model configuration class with all the parameters of the model.
-                Initializing with a config file does not load the weights associated with the model, only the
-                configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-        """
         super().__init__(config)
 
         self.backbone = load_backbone(config)
 
         # Semantic segmentation head(s)
-        self.decode_head = UPerNetHead(config, in_channels=self.backbone.channels)
-        self.auxiliary_head = UPerNetFCNHead(config) if config.use_auxiliary_head else None
+        self.decode_head = UperNetHead(config, in_channels=self.backbone.channels)
+        self.auxiliary_head = UperNetFCNHead(config) if config.use_auxiliary_head else None
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def forward(
-            self,
-            pixel_values: Optional[ms.Tensor] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[ms.Tensor] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[tuple, SemanticSegmenterOutput]:
         r"""
-        Args:
-            pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-                Pixel values. Padding will be ignored by default should you provide it. Pixel values can be obtained using
-                [`AutoImageProcessor`]. See [`SegformerImageProcessor.__call__`] for details.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers of the backbone. See `hidden_states` under
-                returned tensors for more detail.
-            labels (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):
-                Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+        labels (`mindspore.Tensor` of shape `(batch_size, height, width)`, *optional*):
+            Ground truth semantic segmentation maps for computing the loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.modeling_outputs.SemanticSegmenterOutput or tuple(mindspore.Tensor)
 
         Examples:
         ```python
-
-        >>> from mindnlp.transformers import AutoImageProcessor, UPerNetForSemanticSegmentation
+        >>> from transformers import AutoImageProcessor, UperNetForSemanticSegmentation
         >>> from PIL import Image
         >>> from huggingface_hub import hf_hub_download
 
         >>> image_processor = AutoImageProcessor.from_pretrained("openmmlab/upernet-convnext-tiny")
-        >>> model = UPerNetForSemanticSegmentation.from_pretrained("openmmlab/upernet-convnext-tiny")
+        >>> model = UperNetForSemanticSegmentation.from_pretrained("openmmlab/upernet-convnext-tiny")
 
         >>> filepath = hf_hub_download(
         ...     repo_id="hf-internal-testing/fixtures_ade20k", filename="ADE_val_00000001.jpg", repo_type="dataset"
@@ -439,8 +358,7 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
         >>> logits = outputs.logits  # shape (batch_size, num_labels, height, width)
         >>> list(logits.shape)
         [1, 150, 512, 512]
-        ```
-        """
+        ```"""
         if labels is not None and self.config.num_labels == 1:
             raise ValueError("The number of labels should be greater than one")
 
@@ -448,19 +366,20 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
 
         outputs = self.backbone.forward_with_filtered_kwargs(
-            pixel_values, output_hidden_states=output_hidden_states
+            pixel_values, output_hidden_states=output_hidden_states, output_attentions=output_attentions
         )
         features = outputs.feature_maps
 
         logits = self.decode_head(features)
-        logits = ops.interpolate(logits, size=pixel_values.shape[2:], mode="bilinear", align_corners=False)
+        logits = nn.functional.interpolate(logits, size=pixel_values.shape[2:], mode="bilinear", align_corners=False)
 
         auxiliary_logits = None
         if self.auxiliary_head is not None:
             auxiliary_logits = self.auxiliary_head(features)
-            auxiliary_logits = ops.interpolate(
+            auxiliary_logits = nn.functional.interpolate(
                 auxiliary_logits, size=pixel_values.shape[2:], mode="bilinear", align_corners=False
             )
 
@@ -487,7 +406,7 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-
 __all__ = [
-    'UPerNetForSemanticSegmentation',
+    "UperNetForSemanticSegmentation",
+    "UperNetPreTrainedModel",
 ]
