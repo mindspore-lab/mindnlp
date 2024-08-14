@@ -1,6 +1,7 @@
 """array op"""
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp.configs import USE_PYBOOST, GENERATOR_SEED
 
@@ -59,8 +60,20 @@ def gather_nd(input, indices):
 def hstack(tensors):
     return ops.hstack(tensors)
 
-# index_add
 
+# index_fill
+def index_fill(input, dim, index, value):
+    return ops.index_fill(input, dim, index, value)
+
+# index_add
+def index_add(input, dim, index, source, *, alpha=1):
+    if USE_PYBOOST:
+        return mindspore.ops.auto_generate.gen_ops_prim.index_add_ext_op(input, index, source, dim, alpha)
+    return ops.index_add(input, index, source, dim)
+
+def inplace_index_add(input, dim, index, source):
+    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
+    return _inplace(input, index, source)
 
 # index_copy
 
@@ -159,6 +172,10 @@ def scatter_add(input, dim, index, src):
 # scatter_nd_update
 def scatter_nd_update(input, indices, update):
     return ops.scatter_nd_update(input, indices, update)
+
+
+def scatter_update(input, indices, updates):
+    return ops.scatter_update(input, indices, updates)
 
 # split
 def split(tensor, split_size_or_sections, dim=0):

@@ -429,7 +429,7 @@ class MultiheadAttention(Module):
             `batch_first` argument is ignored for unbatched inputs.
         """
 
-        is_batched = query.dim() == 3
+        is_batched = query.ndim == 3
 
         key_padding_mask = F._canonical_mask(
             mask=key_padding_mask,
@@ -452,12 +452,12 @@ class MultiheadAttention(Module):
             # make sure that the transpose op does not affect the "is" property
             if key is value:
                 if query is key:
-                    query = key = value = query.transpose(1, 0)
+                    query = key = value = ops.transpose(query, 1, 0)
                 else:
-                    query, key = (x.transpose(1, 0) for x in (query, key))
+                    query, key = (ops.transpose(x, 1, 0) for x in (query, key))
                     value = key
             else:
-                query, key, value = (x.transpose(1, 0) for x in (query, key, value))
+                query, key, value = (ops.transpose(x, 1, 0) for x in (query, key, value))
 
         if not self._qkv_same_embed_dim:
             attn_output, attn_output_weights = F.multi_head_attention_forward(
@@ -486,7 +486,7 @@ class MultiheadAttention(Module):
                 average_attn_weights=average_attn_weights,
                 is_causal=is_causal)
         if self.batch_first and is_batched:
-            return attn_output.transpose(1, 0), attn_output_weights
+            return ops.transpose(attn_output, 1, 0), attn_output_weights
         else:
             return attn_output, attn_output_weights
 
@@ -518,9 +518,9 @@ class MultiheadAttention(Module):
             mask_type = 2
 
             # Always expands attn_mask to 4D
-            if attn_mask.dim() == 3:
+            if attn_mask.ndim == 3:
                 attn_mask_expanded = attn_mask.view(batch_size, -1, seq_len, seq_len)
-            else:  # attn_mask.dim() == 2:
+            else:  # attn_mask.ndim == 2:
                 attn_mask_expanded = attn_mask.view(1, 1, seq_len, seq_len).expand(batch_size, self.num_heads, -1, -1)
             merged_mask = attn_mask_expanded
 

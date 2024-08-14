@@ -72,18 +72,23 @@ class LayerNorm(Module):
         self.normalized_shape = tuple(normalized_shape)
         self.eps = eps
         self.elementwise_affine = elementwise_affine
-        self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs), 'weight', elementwise_affine)
-        if bias:
-            self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs), 'bias', elementwise_affine)
+        if self.elementwise_affine:
+            self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            if bias:
+                self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            else:
+                self.register_parameter('bias', None)
         else:
+            self.register_parameter('weight', None)
             self.register_parameter('bias', None)
 
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        init.ones_(self.weight)
-        if self.bias is not None:
-            init.zeros_(self.bias)
+        if self.elementwise_affine:
+            init.ones_(self.weight)
+            if self.bias is not None:
+                init.zeros_(self.bias)
 
     def forward(self, input):
         return layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
@@ -141,8 +146,8 @@ class GroupNorm(Module):
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
-        self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs), 'weight', affine)
-        self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs),  'bias', affine)
+        self.weight = Parameter(ops.empty(num_channels, **factory_kwargs), 'weight', affine)
+        self.bias = Parameter(ops.empty(num_channels, **factory_kwargs),  'bias', affine)
 
     def forward(self, input):
         return group_norm(input, self.num_groups, self.weight, self.bias, self.eps)

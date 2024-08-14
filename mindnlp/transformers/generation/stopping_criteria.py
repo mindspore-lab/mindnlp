@@ -478,7 +478,7 @@ class StoppingCriteriaList(list):
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
         is_done = ops.full((input_ids.shape[0],), False, dtype=mindspore.bool_)
         for criteria in self:
-            is_done = is_done | criteria(input_ids, scores, **kwargs)
+            is_done = (is_done.int() | criteria(input_ids, scores, **kwargs).int()).bool()
         return is_done
 
     @property

@@ -55,6 +55,9 @@ def softplus(input, beta=1, threshold=20):
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
+def logsigmoid(input):
+    return ops.logsigmoid(input)
+
 def leaky_relu(input, alpha=0.2):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
@@ -172,8 +175,11 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
-def log_softmax(input, dim=-1):
-    return ops.log_softmax(input, dim)
+def log_softmax(input, dim=-1, dtype=None):
+    out = ops.log_softmax(input, dim)
+    if dtype is not None:
+        out = out.to(dtype)
+    return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
     if USE_PYBOOST:
@@ -195,6 +201,11 @@ def pad(input, pad, mode='constant', value=0.0):
         return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
 
+def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)
+    return ops.nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
 
@@ -212,6 +223,10 @@ def softmax(input, dim=-1, *, dtype=None):
     return ops.softmax(input, dim, dtype=dtype)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = ops.ones(normalized_shape, dtype=input.dtype)
+    if bias is None:
+        bias = ops.zeros(normalized_shape, dtype=input.dtype)
     if USE_PYBOOST:
         return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:

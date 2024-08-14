@@ -25,7 +25,6 @@ from mindspore import Tensor
 from mindspore.train.serialization import _exec_save
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import ModuleDict
 from .config import PeftConfig, PromptLearningConfig
 from ..transformers import PreTrainedModel
 
@@ -190,31 +189,18 @@ class PeftModel(nn.Module):
         return model
 
     def _setup_prompt_encoder(self, adapter_name: str):
-        r"""
-        This method '_setup_prompt_encoder' in the class 'PeftModel' is responsible for setting up the prompt encoder based on the provided adapter name.
-
-        Args:
-        - self: The instance of the 'PeftModel' class.
-        - adapter_name (str): The name of the adapter for which the prompt encoder is being set up. It is used to fetch configuration settings related to the specified adapter.
-
-        Returns:
-        None. This method does not return any value.
-
-        Raises:
-        - ValueError: Raised when the provided 'peft_type' in the configuration is not supported by the method.
-        """
         config = self.peft_config[adapter_name]
         if not hasattr(self, "prompt_encoder"):
-            self.prompt_encoder = ModuleDict({})
+            self.prompt_encoder = nn.ModuleDict({})
             self.prompt_tokens = {}
         transformer_backbone = None
-        for name, cell in self.base_model.cells_and_names():
-            for param in cell.get_parameters():
+        for name, module in self.base_model.named_children():
+            for param in module.parameters():
                 param.requires_grad = False
-            if isinstance(cell, PreTrainedModel):
+            if isinstance(module, PreTrainedModel):
                 # Make sure to freeze Tranformers model
                 if transformer_backbone is None:
-                    transformer_backbone = cell
+                    transformer_backbone = module
                     self.transformer_backbone_name = name
         if transformer_backbone is None:
             transformer_backbone = self.base_model
@@ -222,10 +208,15 @@ class PeftModel(nn.Module):
         if config.num_transformer_submodules is None:
             config.num_transformer_submodules = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
 
-        for named_param, value in list(transformer_backbone.parameters_and_names()):
+        for named_param, value in list(transformer_backbone.named_parameters()):
+            # for ZeRO-3, the tensor is sharded across accelerators and deepspeed modifies it to a tensor with shape [0]
+            # the actual unsharded shape is stored in "ds_shape" attribute
+            # special handling is needed in case the model is initialized in deepspeed.zero.Init() context or HfDeepSpeedConfig
+            # has been called before
+            # For reference refer to issue: https://github.com/huggingface/peft/issues/996
 
             if value.shape[0] == self.base_model.config.vocab_size:
-                self.word_embeddings = transformer_backbone.get_cell(named_param.replace(".weight", ""))
+                self.word_embeddings = transformer_backbone.get_submodule(named_param.replace(".weight", ""))
                 break
 
         if config.peft_type == PeftType.PROMPT_TUNING:
@@ -239,7 +230,7 @@ class PeftModel(nn.Module):
         else:
             raise ValueError("Not supported")
 
-        self.prompt_encoder.update(ModuleDict({adapter_name: prompt_encoder}))
+        self.prompt_encoder.update(nn.ModuleDict({adapter_name: prompt_encoder}))
         self.prompt_tokens[adapter_name] = ops.arange(
             config.num_virtual_tokens * config.num_transformer_submodules
         ).long()
@@ -262,13 +253,13 @@ class PeftModel(nn.Module):
 
         return load_result
 
-    def get_nb_trainable_parameters(self):
+    def get_nb_trainable_parameters(self) -> tuple[int, int]:
         r"""
-        Returns the number of trainable parameters and number of all parameters in the model.
+        Returns the number of trainable parameters and the number of all parameters in the model.
         """
         trainable_params = 0
         all_param = 0
-        for param in self.get_parameters():
+        for _, param in self.named_parameters():
             num_params = param.numel()
             # if using DS Zero 3 and the weights are initialized empty
             if num_params == 0 and hasattr(param, "ds_numel"):
@@ -278,7 +269,13 @@ class PeftModel(nn.Module):
             # one needs to multiply the number of parameters by 2 to get
             # the correct number of parameters
             if param.__class__.__name__ == "Params4bit":
-                num_params = num_params * 2
+                if hasattr(param, "element_size"):
+                    num_bytes = param.element_size()
+                elif not hasattr(param, "quant_storage"):
+                    num_bytes = 1
+                else:
+                    num_bytes = param.quant_storage.itemsize
+                num_params = num_params * 2 * num_bytes
 
             all_param += num_params
             if param.requires_grad:
@@ -293,7 +290,7 @@ class PeftModel(nn.Module):
         """
         prompt_encoder = self.prompt_encoder[adapter_name]
         prompt_tokens = (
-            self.prompt_tokens[adapter_name].unsqueeze(0).expand(1, -1)
+            self.prompt_tokens[adapter_name].unsqueeze(0).broadcast_to((1, -1))
         )
         if self.peft_config[adapter_name].peft_type == PeftType.PREFIX_TUNING:
             prompt_tokens = prompt_tokens[:, : self.peft_config[adapter_name].num_virtual_tokens]
@@ -315,12 +312,12 @@ class PeftModel(nn.Module):
         prompt_tokens = (
             self.prompt_tokens[self.active_adapter]
             .unsqueeze(0)
-            .expand(batch_size, -1)
+            .broadcast_to((batch_size, -1))
         )
         if peft_config.peft_type == PeftType.PREFIX_TUNING:
             prompt_tokens = prompt_tokens[:, : peft_config.num_virtual_tokens]
             if peft_config.inference_mode:
-                past_key_values = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
+                past_key_values = prompt_encoder.embedding.weight.tile((batch_size, 1, 1))
             else:
                 past_key_values = prompt_encoder(prompt_tokens)
             if self.base_model_dtype is not None:
@@ -346,7 +343,7 @@ class PeftModel(nn.Module):
                 prompts = prompt_encoder(prompt_tokens, task_ids)
             else:
                 if peft_config.inference_mode:
-                    prompts = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
+                    prompts = prompt_encoder.embedding.weight.tile((batch_size, 1, 1))
                 else:
                     prompts = prompt_encoder(prompt_tokens)
             return prompts

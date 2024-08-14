@@ -41,8 +41,8 @@ def llama_apply_rotary_pos_emb(q, cos, sin, position_ids):
         cos = ops.gather_elements(cos, 2, gather_indices)
         sin = ops.gather_elements(sin, 2, gather_indices)
     else:
-        cos = cos[position_ids].expand_dims(1)
-        sin = sin[position_ids].expand_dims(1)
+        cos = cos[position_ids].unsqueeze(1)
+        sin = sin[position_ids].unsqueeze(1)
     q_embed = (q * cos) + (llama_rotate_half(q) * sin)
     return q_embed
 
@@ -87,7 +87,7 @@ def llama_compute_query_states(model: nn.Module, **kwargs) -> Tensor:
         else:
             past_seen_tokens = past_key_value.get_usable_length(q_len, model.layer_idx)
             new_cache_positions = Tensor(ops.arange(past_seen_tokens, past_seen_tokens + q_len))
-        position_ids = ops.expand_dims(new_cache_positions, 0)
+        position_ids = ops.unsqueeze(new_cache_positions, 0)
 
     rotary_emb_kwargs = {"position_ids": position_ids}
     if "seq_len" in inspect.signature(model.rotary_emb).parameters:
@@ -95,8 +95,8 @@ def llama_compute_query_states(model: nn.Module, **kwargs) -> Tensor:
 
     cos, sin = model.rotary_emb(value_states, **rotary_emb_kwargs)
     if cos.shape[0] == 3:
-        cos = ops.expand_dims(cos, 1)
-        sin = ops.expand_dims(sin, 1)
+        cos = ops.unsqueeze(cos, 1)
+        sin = ops.unsqueeze(sin, 1)
 
     return (query_states * cos) + (llama_rotate_half(query_states) * sin)
 

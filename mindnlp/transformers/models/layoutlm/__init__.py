@@ -14,10 +14,14 @@
 """
 Layoutlm Model.
 """
-from . import configuration_layoutlm, modeling_layoutlm
+from . import configuration_layoutlm, modeling_layoutlm, tokenization_layoutlm, tokenization_layoutlm_fast
 from .configuration_layoutlm import *
 from .modeling_layoutlm import *
+from .tokenization_layoutlm import *
+from .tokenization_layoutlm_fast import *
 
 __all__ = []
 __all__.extend(modeling_layoutlm.__all__)
 __all__.extend(configuration_layoutlm.__all__)
+__all__.extend(tokenization_layoutlm.__all__)
+__all__.extend(tokenization_layoutlm_fast.__all__)

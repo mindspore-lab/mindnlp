@@ -61,7 +61,7 @@ class SwiftFormerPatchEmbedding(nn.Module):
 
         in_chs = config.num_channels
         out_chs = config.embed_dims[0]
-        self.patch_embedding = nn.SequentialCell(
+        self.patch_embedding = nn.Sequential(
             nn.Conv2d(
                 in_chs,
                 out_chs // 2,

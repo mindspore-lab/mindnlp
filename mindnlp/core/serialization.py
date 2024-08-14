@@ -32,7 +32,6 @@ from enum import Enum
 from typing import Dict, Union, Optional, Any, OrderedDict
 from functools import reduce
 from dataclasses import dataclass
-from ml_dtypes import bfloat16
 
 import numpy as np
 import mindspore
@@ -42,9 +41,15 @@ from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_
 import safetensors
 import safetensors.numpy
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import SUPPORT_BF16
 from .nn import Module
 from ..utils import logging
+
+
+if SUPPORT_BF16:
+    from mindspore.common.np_dtype import bfloat16 # pylint: disable=import-error
+else:
+    from ml_dtypes import bfloat16
 
 logger = logging.get_logger(__name__)
 
@@ -209,6 +214,23 @@ the file.
         if filename in self.file.namelist():
             return self.file.getinfo(filename).header_offset
         return None
+
+class PyTorchFileWriter:
+    def __init__(self, file):
+        self.zipfile = zipfile.ZipFile(file, mode='w')
+        self.written_records = set()
+
+    def write_record(self, name, data, offset=0):
+        if name in self.written_records:
+            raise RuntimeError(f"Record {name} already written")
+        self.written_records.add(name)
+        self.zipfile.writestr(name, data)
+
+    def write_end_of_file(self):
+        pass
+
+    def get_all_written_records(self):
+        return self.written_records
 
 class LoadEndianness(Enum):
 
@@ -695,6 +717,44 @@ class _open_zipfile_reader(_opener):
         """
         super().__init__(PyTorchFileReader(name_or_buffer))
 
+class _open_zipfile_writer_file(_opener):
+    def __init__(self, name):
+        self.file_stream = None
+        self.name = str(name)
+        try:
+            self.name.encode('ascii')
+        except UnicodeEncodeError:
+            self.file_stream = io.FileIO(self.name, mode='w')
+            super().__init__(PyTorchFileWriter(self.file_stream))
+        else:
+            super().__init__(PyTorchFileWriter(self.name))
+
+    def __exit__(self, *args):
+        self.file_like.write_end_of_file()
+        if self.file_stream is not None:
+            self.file_stream.close()
+
+class _open_zipfile_writer_buffer(_opener):
+    def __init__(self, buffer):
+        if not callable(getattr(buffer, "write", None)):
+            msg = f"Buffer of {str(type(buffer)).strip('<>')} has no callable attribute 'write'"
+            if not hasattr(buffer, "write"):
+                raise AttributeError(msg)
+            raise TypeError(msg)
+        self.buffer = buffer
+        super().__init__(PyTorchFileWriter(buffer))
+
+    def __exit__(self, *args):
+        self.file_like.write_end_of_file()
+        self.buffer.flush()
+
+def _open_zipfile_writer(name_or_buffer):
+    if _is_path(name_or_buffer):
+        container = _open_zipfile_writer_file
+    else:
+        container = _open_zipfile_writer_buffer
+    return container(name_or_buffer)
+
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     '''Rebuilds a tensor based on the provided parameters.
     
@@ -719,7 +779,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         num_elemets = reduce(operator.mul, size)
     array = storage[storage_offset: storage_offset + num_elemets]
 
-    if array.dtype == bfloat16:
+    if array.dtype == bfloat16 and not SUPPORT_BF16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
 
@@ -1051,7 +1111,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         else:
             order = "C"
             array = array.reshape(size, order=order)
-        if array.dtype == bfloat16:
+        if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
         new_result[k] = mindspore.Parameter(array, requires_grad=v.requires_grad)
@@ -1205,6 +1265,33 @@ def convert_torch_to_mindspore(pth_file):
 
     return ms_ckpt_path
 
+def _check_save_filelike(f):
+    if not isinstance(f, (str, os.PathLike)) and not hasattr(f, 'write'):
+        raise AttributeError(
+            "expected 'f' to be string, path, or a file-like object with "
+            "a 'write' attribute")
+
+def save(obj, f, pickle_module = pickle, pickle_protocol = 2):
+    _check_save_filelike(f)
+    with _open_zipfile_writer(f) as opened_zipfile:
+        _save(obj, opened_zipfile, pickle_module, pickle_protocol)
+
+def _save(obj, zip_file, pickle_module, pickle_protocol):
+    serialized_storages = {}
+
+    data_buf = io.BytesIO()
+    pickler = pickle_module.Pickler(data_buf, protocol=pickle_protocol)
+    pickler.dump(obj)
+    data_value = data_buf.getvalue()
+    zip_file.write_record('archive/data.pkl', data_value, len(data_value))
+
+    for key in sorted(serialized_storages.keys()):
+        name = f'archive/data/{key}'
+        storage = serialized_storages[key]
+        storage_data = storage.inner_data
+        zip_file.write_record(name, storage_data)
+
+
 def safe_load_file(filename):
     """
     This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
@@ -1225,12 +1312,12 @@ def safe_load_file(filename):
             break
 
     state_dict = safetensors.numpy.load_file(filename)
-    if USE_PYBOOST or dtype != bfloat16:
+    if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
         out_states = {k: mindspore.Parameter(v) for k, v in state_dict.items()}
         return out_states
-    else:
-        out_states = {k: mindspore.Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
-        return out_states
+
+    out_states = {k: mindspore.Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
+    return out_states
 
 
 def safe_save_file(tensor_dict, filename, metadata=None):

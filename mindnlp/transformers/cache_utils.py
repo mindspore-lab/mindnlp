@@ -219,8 +219,6 @@ class QuantizedCacheConfig(CacheConfig):
             Defaults to 128.
         compute_dtype (`torch.dtype`, *optional*, defaults to `torch.float16`):
             The defualt dtype used for computations in the model. Keys and Values will be cast to this dtype after dequantization.
-        device (`str`, *optional*, defaults to `"cpu"`):
-            Device on which to perform computations, should be same as the model's device.
     """
 
     def __init__(
@@ -232,7 +230,6 @@ class QuantizedCacheConfig(CacheConfig):
         q_group_size: Optional[int] = 64,
         residual_length: Optional[int] = 128,
         compute_dtype: Optional[mindspore.dtype.TensorType] = mindspore.float16,
-        device: Optional[str] = "cpu",
     ):
         super().__init__()
         self.backend = backend
@@ -242,7 +239,6 @@ class QuantizedCacheConfig(CacheConfig):
         self.q_group_size = q_group_size
         self.residual_length = residual_length
         self.compute_dtype = compute_dtype
-        self.device = device
 
     def validate(self):
         """Validates if the arguments passed are correct"""
@@ -444,8 +440,8 @@ class DynamicCache(Cache):
     def batch_repeat_interleave(self, repeats: int):
         """Repeat the cache `repeats` times in the batch dimension. Used in contrastive search."""
         for layer_idx in range(len(self)):
-            self.key_cache[layer_idx] = self.key_cache[layer_idx].repeat_interleave(repeats, dim=0)
-            self.value_cache[layer_idx] = self.value_cache[layer_idx].repeat_interleave(repeats, dim=0)
+            self.key_cache[layer_idx] = ops.repeat_interleave(self.key_cache[layer_idx], repeats, dim=0)
+            self.value_cache[layer_idx] = ops.repeat_interleave(self.value_cache[layer_idx], repeats, dim=0)
 
     def batch_select_indices(self, indices: mindspore.Tensor):
         """Only keep the `indices` in the batch dimension of the cache. Used in contrastive search."""
@@ -479,7 +475,6 @@ class QuantizedCache(DynamicCache):
         self.axis_key = cache_config.axis_key
         self.axis_value = cache_config.axis_value
         self.compute_dtype = cache_config.compute_dtype
-        self.device = cache_config.device
 
         super().__init__()
 
@@ -509,7 +504,7 @@ class QuantizedCache(DynamicCache):
             keys_to_return = ops.cat(keys_to_return, dim=-2)
             values_to_return = ops.cat(values_to_return, dim=-2)
             if (
-                self.key_cache[layer_idx].dim() == 4
+                self.key_cache[layer_idx].ndim == 4
                 and self.key_cache[layer_idx].shape[-2] + 1 >= self.residual_length
             ):
                 self._quantized_key_cache[layer_idx] = self._quantize(keys_to_return, axis=self.axis_key)
@@ -656,7 +651,7 @@ class SinkCache(Cache):
         if using_rope and layer_idx == 0:
             # BC: some models still pass `sin`/`cos` with 2 dims. In those models, they are the full sin/cos. Remove
             # after all RoPE models have a llama-like cache utilization.
-            if cos.dim() == 2:
+            if cos.ndim == 2:
                 self._cos_cache = cos
                 self._sin_cache = sin
             else:
@@ -722,8 +717,6 @@ class StaticCache(Cache):
             The maximum batch size with which the model will be used.
         max_cache_len (`int`):
             The maximum sequence length with which the model will be used.
-        device (`torch.device`):
-            The device on which the cache should be initialized. Should be the same as the layer.
         dtype (*optional*, defaults to `mindspore.float32`):
             The default `dtype` to use when initializing the layer.
     """
@@ -788,20 +781,26 @@ class StaticCache(Cache):
         v_out = self.value_cache[layer_idx]
 
         if cache_position is None:
-            k_out.copy_(key_states)
-            v_out.copy_(value_states)
+            # k_out.copy_(key_states)
+            # v_out.copy_(value_states)
+            k_out.assign_value(key_states)
+            v_out.assign_value(value_states)
         else:
             # Note: here we use `tensor.index_copy_(dim, index, tensor)` that is equivalent to
             # `tensor[:, :, index] = tensor`, but the first one is compile-friendly and it does explicitly an in-place
             # operation, that avoids copies and uses less memory.
-            try:
-                # If using several devices (e.g.: multiple GPUs), we need to ensure everything is on the same one
-                k_out = k_out.index_copy(2, cache_position, key_states)
-                v_out = v_out.index_copy(2, cache_position, value_states)
-            except NotImplementedError:
-                # The operator 'aten::index_copy.out' is not currently implemented for the MPS device.
-                k_out[:, :, cache_position] = key_states
-                v_out[:, :, cache_position] = value_states
+            # try:
+            #     # If using several devices (e.g.: multiple GPUs), we need to ensure everything is on the same one
+            #     # k_out = k_out.index_copy(2, cache_position, key_states)
+            #     # v_out = v_out.index_copy(2, cache_position, value_states)
+            # except NotImplementedError:
+            # # The operator 'aten::index_copy.out' is not currently implemented for the MPS device.
+            # k_out[:, :, cache_position] = key_states
+            # v_out[:, :, cache_position] = value_states
+
+            # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
+            k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
+            v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
 
         return k_out, v_out
 
@@ -810,7 +809,7 @@ class StaticCache(Cache):
         # Occupied cache == any slot in the 3rd dim (sequence length) holds a non-zero value. To save on compute, let's
         # limit the check to the first batch member and head dimension.
         # TODO: deprecate this function in favor of `cache_position`
-        return (self.key_cache[layer_idx][0, 0].any(dim=-1)).sum()
+        return (ops.any(self.key_cache[layer_idx][0, 0], dim=-1)).sum()
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states."""
@@ -820,8 +819,8 @@ class StaticCache(Cache):
         """Resets the cache values while preserving the objects"""
         for layer_idx in range(len(self.key_cache)):
             # In-place ops prevent breaking the static address
-            self.key_cache[layer_idx].zero_()
-            self.value_cache[layer_idx].zero_()
+            self.key_cache[layer_idx][...] = 0
+            self.value_cache[layer_idx][...] = 0
 
 
 class SlidingWindowCache(StaticCache):
@@ -848,8 +847,6 @@ class SlidingWindowCache(StaticCache):
             The maximum batch size with which the model will be used.
         max_cache_len (`int`):
             The maximum sequence length with which the model will be used.
-        device (`torch.device`):
-            The device on which the cache should be initialized. Should be the same as the layer.
         dtype (*optional*, defaults to `mindspore.float32`):
             The default `dtype` to use when initializing the layer.
     """
@@ -920,8 +917,8 @@ class SlidingWindowCache(StaticCache):
     def reset(self):
         for layer_idx in range(len(self.key_cache)):
             # In-place ops prevent breaking the static address
-            self.key_cache[layer_idx].zero_()
-            self.value_cache[layer_idx].zero_()
+            self.key_cache[layer_idx][...] = 0
+            self.value_cache[layer_idx][...] = 0
 
 
 class EncoderDecoderCache(Cache):
@@ -1137,8 +1134,8 @@ class HybridCache(Cache):
         k_out[:, :, cache_position] = key_states
         v_out[:, :, cache_position] = value_states
         # `_.zero()` followed by `+=` is equivalent `=`, but compile-friendly (without graph breaks due to assignment)
-        self.key_cache[layer_idx].zero_()
-        self.value_cache[layer_idx].zero_()
+        self.key_cache[layer_idx][:] = 0
+        self.value_cache[layer_idx][:] = 0
 
         self.key_cache[layer_idx] += k_out
         self.value_cache[layer_idx] += v_out
@@ -1192,8 +1189,8 @@ class HybridCache(Cache):
         """Resets the cache values while preserving the objects"""
         for layer_idx in range(len(self.key_cache)):
             # In-place ops prevent breaking the static address
-            self.key_cache[layer_idx].zero_()
-            self.value_cache[layer_idx].zero_()
+            self.key_cache[layer_idx][...] = 0
+            self.value_cache[layer_idx][...] = 0
 
 
 class MambaCache:
@@ -1204,7 +1201,6 @@ class MambaCache:
         config: MambaConfig
         max_batch_size: int
         dtype: torch.dtype
-        device: torch.device
 
     Attributes:
         dtype: torch.dtype
@@ -1220,7 +1216,6 @@ class MambaCache:
         config: PretrainedConfig,
         max_batch_size: int,
         dtype: mindspore.dtype.TensorType = mindspore.float16,
-        device: Optional[str] = None,
         **kwargs,
     ):
         self.dtype = dtype
@@ -1254,15 +1249,15 @@ class MambaCache:
         cache_position = cache_position.clamp(0, self.conv_kernel_size - 1)
 
         conv_state = conv_state.roll(shifts=-1, dims=-1)
-        conv_state[:, :, cache_position] = new_conv_state.to(conv_state.device)
-        self.conv_states[layer_idx].zero_()
+        conv_state[:, :, cache_position] = new_conv_state
+        self.conv_states[layer_idx][:] = 0
         self.conv_states[layer_idx] += conv_state
         return self.conv_states[layer_idx]
 
     def update_ssm_state(self, layer_idx: int, new_ssm_state: mindspore.Tensor):
-        self.ssm_states[layer_idx] = new_ssm_state.to(self.ssm_states.device)
+        self.ssm_states[layer_idx] = new_ssm_state
         return self.ssm_states[layer_idx]
 
     def reset(self):
-        self.conv_states.zero_()
-        self.ssm_states.zero_()
+        self.conv_states[:] = 0
+        self.ssm_states[:] = 0

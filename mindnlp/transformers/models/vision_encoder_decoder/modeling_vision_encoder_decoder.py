@@ -43,7 +43,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("Make sure to set the pad_token_id attribute of the model's configuration.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -182,9 +182,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
-        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
+        *model_args, # pylint: disable=keyword-arg-before-vararg
         **kwargs,
     ) -> PreTrainedModel:
         r"""
