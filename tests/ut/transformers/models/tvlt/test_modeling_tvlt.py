@@ -41,7 +41,6 @@ if is_mindspore_available():
     from datasets import load_dataset
     from mindnlp.transformers import TvltImageProcessor
     from mindnlp.transformers import TvltFeatureExtractor
-# mindspore.set_context(device_target="CPU")
 
 class TvltModelTester:
     def __init__(

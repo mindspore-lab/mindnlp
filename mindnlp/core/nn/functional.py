@@ -8,7 +8,7 @@ from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
@@ -34,6 +34,8 @@ def sigmoid(input):
 def silu(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.silu(input)
+    if DEVICE_TARGET == 'CPU':
+        return input * sigmoid(input)
     return ops.silu(input)
 
 def mish(input):
