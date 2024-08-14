@@ -154,7 +154,6 @@ from . import (
     opt,
     owlvit,
     pegasus,
-    pegasus_x,
     perceiver,
     persimmon,
     phi,
@@ -364,7 +363,6 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
-from .pegasus_x import *
 from .perceiver import *
 from .persimmon import *
 from .phi import *
