@@ -550,6 +550,8 @@ def flip(input, dims):
 
 # meshgrid
 def meshgrid(*tensors, indexing=None):
+    if isinstance(tensors[0], (list, tuple)):
+        tensors = tensors[0]
     return ops.meshgrid(*tensors, indexing=indexing)
 
 # lcm

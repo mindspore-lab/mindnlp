@@ -718,7 +718,7 @@ MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES = OrderedDict(
         ("llava-next-video", "LlavaNextVideoForConditionalGeneration"),
         ("llava_next", "LlavaNextForConditionalGeneration"),
         ("paligemma", "PaliGemmaForConditionalGeneration"),
-        ("pix2struct", "Pix2StructForConditionalGeneration"),
+        # ("pix2struct", "Pix2StructForConditionalGeneration"),
         ("video_llava", "VideoLlavaForConditionalGeneration"),
         ("vipllava", "VipLlavaForConditionalGeneration"),
         ("vision-encoder-decoder", "VisionEncoderDecoderModel"),

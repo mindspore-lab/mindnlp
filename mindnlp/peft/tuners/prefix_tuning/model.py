@@ -81,7 +81,7 @@ class PrefixEncoder(nn.Module):
         if self.prefix_projection and not config.inference_mode:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(num_virtual_tokens, token_dim)
-            self.transform = nn.SequentialCell(
+            self.transform = nn.Sequential(
                 nn.Linear(token_dim, encoder_hidden_size),
                 nn.Tanh(),
                 nn.Linear(encoder_hidden_size, num_layers * 2 * token_dim),

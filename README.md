@@ -25,9 +25,9 @@
 
   * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
   mounts of useful datasets.
-  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](https://github.com/mindspore-lab/mindnlp/examples/).
-  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](https://github.com/mindspore-lab/mindnlp/llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/bert)**, **[Roberta](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/roberta)**, **[GPT2](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/gpt2)**, **[T5](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/t5)**, etc.
+  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
+  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
+  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
     You can use them easily by following code snippet:
     ```python
     from mindnlp.transformers import AutoModel
