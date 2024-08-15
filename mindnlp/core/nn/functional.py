@@ -8,7 +8,7 @@ from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
@@ -34,6 +34,8 @@ def sigmoid(input):
 def silu(input):
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.silu(input)
+    if DEVICE_TARGET == 'CPU':
+        return input * sigmoid(input)
     return ops.silu(input)
 
 def mish(input):
@@ -947,7 +949,13 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
-    return ops.cosine_similarity(x1, x2, dim, eps)
+    if DEVICE_TARGET == 'Ascend':
+        zero_norm_mask = ((x1.sum(dim) == 0).int() & (x2.sum(dim) == 0).int()).bool()
+    else:
+        zero_norm_mask = (x1.sum(dim) == 0) & (x2.sum(dim) == 0)
+
+    cosine_sim = ops.cosine_similarity(x1, x2, dim, eps)
+    return ops.select(zero_norm_mask, ops.ones_like(cosine_sim), cosine_sim)
 
 # def pairwise_distance():
 #     return ops.pairwise_distance

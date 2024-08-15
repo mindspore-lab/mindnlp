@@ -4,7 +4,6 @@ import copy
 import inspect
 import unittest
 from typing import Dict, List, Tuple
-
 import numpy as np
 
 
@@ -193,7 +192,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have `inputs_embeds` logics")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `attention` logic")

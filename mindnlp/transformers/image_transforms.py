@@ -796,6 +796,9 @@ def convert_to_rgb(image: ImageInput) -> ImageInput:
     if not isinstance(image, PIL.Image.Image):
         return image
 
+    if image.mode == "RGB":
+        return image
+
     image = image.convert("RGB")
     return image
 

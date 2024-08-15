@@ -19,8 +19,7 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
-from mindnlp.transformers import AutoTokenizer, NystromformerConfig
+from mindnlp.transformers import NystromformerConfig
 from mindnlp.utils.testing_utils import slow
 
 from ...test_configuration_common import ConfigTester

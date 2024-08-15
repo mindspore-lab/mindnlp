@@ -66,6 +66,7 @@ from . import (
     cpmbee,
     cvt,
     data2vec,
+    dbrx,
     deberta,
     deberta_v2,
     decision_transformer,
@@ -160,10 +161,12 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    pegasus_x,
     perceiver,
     persimmon,
     phi,
     phi3,
+    pix2struct,
     plbart,
     poolformer,
     pop2piano,
@@ -287,6 +290,7 @@ from .cpmant import *
 from .cpmbee import *
 from .cvt import *
 from .data2vec import *
+from .dbrx import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
@@ -380,10 +384,12 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .pegasus_x import *
 from .perceiver import *
 from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .pix2struct import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
@@ -506,6 +512,7 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
 __all__.extend(data2vec.__all__)
+__all__.extend(dbrx.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
@@ -600,10 +607,12 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(pix2struct.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)

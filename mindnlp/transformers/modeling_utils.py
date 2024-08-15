@@ -1413,17 +1413,21 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         # output_embeddings.weight = nn.Parameter(input_embeddings.weight.clone())
         # # else:
         output_embeddings.weight = input_embeddings.weight
-
         if getattr(output_embeddings, "bias", None) is not None:
-            output_embeddings.bias.assign_value(nn.functional.pad(
-                output_embeddings.bias,
-                (
+            if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
+                new_bias = nn.functional.pad(
+                    output_embeddings.bias,
+                    (
+                        0,
+                        output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],
+                    ),
+                    "constant",
                     0,
-                    output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],
-                ),
-                "constant",
-                0,
-            ))
+                )
+            else:
+                new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
+            output_embeddings.bias.assign_value(new_bias)
+
         if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
             output_embeddings.out_features = input_embeddings.num_embeddings
 
