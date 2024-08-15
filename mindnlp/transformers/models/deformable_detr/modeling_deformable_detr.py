@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-import numpy as np
 
 from mindnlp.core import get_default_dtype, nn, ops, no_grad
 from mindnlp.core.nn import functional as F
@@ -2396,7 +2395,7 @@ class DeformableDetrLoss(nn.Module):
         outputs_without_aux = {
             k: v
             for k, v in outputs.items()
-            if k != "auxiliary_outputs" and k != "enc_outputs"
+            if k not in ("auxiliary_outputs", "enc_outputs")
         }
 
         # Retrieve the matching between the outputs of the last layer and the targets
