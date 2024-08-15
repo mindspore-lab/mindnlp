@@ -82,7 +82,8 @@ if is_scipy_available():
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-SUPPORTED_ANNOTATION_FORMATS = (AnnotationFormat.COCO_DETECTION, AnnotationFormat.COCO_PANOPTIC)
+SUPPORTED_ANNOTATION_FORMATS = (
+    AnnotationFormat.COCO_DETECTION, AnnotationFormat.COCO_PANOPTIC)
 
 
 # Copied from transformers.models.detr.image_processing_detr.get_size_with_aspect_ratio
@@ -200,7 +201,7 @@ def get_numpy_to_framework_fn(arr) -> Callable:
     """
     if isinstance(arr, np.ndarray):
         return np.array
-    
+
     if is_mindspore_available() and is_mindspore_tensor(arr):
         import mindspore
 
@@ -229,7 +230,8 @@ def normalize_annotation(annotation: Dict, image_size: Tuple[int, int]) -> Dict:
         if key == "boxes":
             boxes = value
             boxes = corners_to_center_format(boxes)
-            boxes /= np.asarray([image_width, image_height, image_width, image_height], dtype=np.float32)
+            boxes /= np.asarray([image_width, image_height,
+                                image_width, image_height], dtype=np.float32)
             norm_annotation[key] = boxes
         else:
             norm_annotation[key] = value
@@ -253,11 +255,14 @@ def get_max_height_width(
         input_data_format = infer_channel_dimension_format(images[0])
 
     if input_data_format == ChannelDimension.FIRST:
-        _, max_height, max_width = max_across_indices([img.shape for img in images])
+        _, max_height, max_width = max_across_indices(
+            [img.shape for img in images])
     elif input_data_format == ChannelDimension.LAST:
-        max_height, max_width, _ = max_across_indices([img.shape for img in images])
+        max_height, max_width, _ = max_across_indices(
+            [img.shape for img in images])
     else:
-        raise ValueError(f"Invalid channel dimension format: {input_data_format}")
+        raise ValueError(
+            f"Invalid channel dimension format: {input_data_format}")
     return (max_height, max_width)
 
 
@@ -273,7 +278,8 @@ def make_pixel_mask(
         output_size (`Tuple[int, int]`):
             Output size of the mask.
     """
-    input_height, input_width = get_image_size(image, channel_dim=input_data_format)
+    input_height, input_width = get_image_size(
+        image, channel_dim=input_data_format)
     mask = np.zeros(output_size, dtype=np.int64)
     mask[:input_height, :input_width] = 1
     return mask
@@ -322,21 +328,24 @@ def prepare_coco_detection_annotation(
     """
     Convert the target in COCO format into the format expected by ConditionalDetr.
     """
-    image_height, image_width = get_image_size(image, channel_dim=input_data_format)
+    image_height, image_width = get_image_size(
+        image, channel_dim=input_data_format)
 
     image_id = target["image_id"]
     image_id = np.asarray([image_id], dtype=np.int64)
 
     # Get all COCO annotations for the given image.
     annotations = target["annotations"]
-    annotations = [obj for obj in annotations if "iscrowd" not in obj or obj["iscrowd"] == 0]
+    annotations = [
+        obj for obj in annotations if "iscrowd" not in obj or obj["iscrowd"] == 0]
 
     classes = [obj["category_id"] for obj in annotations]
     classes = np.asarray(classes, dtype=np.int64)
 
     # for conversion to coco api
     area = np.asarray([obj["area"] for obj in annotations], dtype=np.float32)
-    iscrowd = np.asarray([obj["iscrowd"] if "iscrowd" in obj else 0 for obj in annotations], dtype=np.int64)
+    iscrowd = np.asarray(
+        [obj["iscrowd"] if "iscrowd" in obj else 0 for obj in annotations], dtype=np.int64)
 
     boxes = [obj["bbox"] for obj in annotations]
     # guard against no boxes via resizing
@@ -353,7 +362,8 @@ def prepare_coco_detection_annotation(
     new_target["boxes"] = boxes[keep]
     new_target["area"] = area[keep]
     new_target["iscrowd"] = iscrowd[keep]
-    new_target["orig_size"] = np.asarray([int(image_height), int(image_width)], dtype=np.int64)
+    new_target["orig_size"] = np.asarray(
+        [int(image_height), int(image_width)], dtype=np.int64)
 
     if annotations and "keypoints" in annotations[0]:
         keypoints = [obj["keypoints"] for obj in annotations]
@@ -367,7 +377,8 @@ def prepare_coco_detection_annotation(
 
     if return_segmentation_masks:
         segmentation_masks = [obj["segmentation"] for obj in annotations]
-        masks = convert_coco_poly_to_mask(segmentation_masks, image_height, image_width)
+        masks = convert_coco_poly_to_mask(
+            segmentation_masks, image_height, image_width)
         new_target["masks"] = masks[keep]
 
     return new_target
@@ -417,19 +428,24 @@ def prepare_coco_panoptic_annotation(
     """
     Prepare a coco panoptic annotation for ConditionalDetr.
     """
-    image_height, image_width = get_image_size(image, channel_dim=input_data_format)
+    image_height, image_width = get_image_size(
+        image, channel_dim=input_data_format)
     annotation_path = pathlib.Path(masks_path) / target["file_name"]
 
     new_target = {}
-    new_target["image_id"] = np.asarray([target["image_id"] if "image_id" in target else target["id"]], dtype=np.int64)
-    new_target["size"] = np.asarray([image_height, image_width], dtype=np.int64)
-    new_target["orig_size"] = np.asarray([image_height, image_width], dtype=np.int64)
+    new_target["image_id"] = np.asarray(
+        [target["image_id"] if "image_id" in target else target["id"]], dtype=np.int64)
+    new_target["size"] = np.asarray(
+        [image_height, image_width], dtype=np.int64)
+    new_target["orig_size"] = np.asarray(
+        [image_height, image_width], dtype=np.int64)
 
     if "segments_info" in target:
         masks = np.asarray(PIL.Image.open(annotation_path), dtype=np.uint32)
         masks = rgb_to_id(masks)
 
-        ids = np.array([segment_info["id"] for segment_info in target["segments_info"]])
+        ids = np.array([segment_info["id"]
+                       for segment_info in target["segments_info"]])
         masks = masks == ids[:, None, None]
         masks = masks.astype(np.uint8)
         if return_masks:
@@ -469,7 +485,8 @@ def get_segmentation_image(
                 m_id[m_id == eq_id] = equiv[0]
 
     seg_img = id_to_rgb(m_id)
-    seg_img = resize(seg_img, (final_w, final_h), resample=PILImageResampling.NEAREST)
+    seg_img = resize(seg_img, (final_w, final_h),
+                     resample=PILImageResampling.NEAREST)
     return seg_img
 
 
@@ -536,7 +553,8 @@ def post_process_panoptic_sample(
         raise ValueError("Not as many boxes as there are classes")
 
     cur_masks = masks[keep]
-    cur_masks = resize(cur_masks[:, None], processed_size, resample=PILImageResampling.BILINEAR)
+    cur_masks = resize(cur_masks[:, None], processed_size,
+                       resample=PILImageResampling.BILINEAR)
     cur_masks = safe_squeeze(cur_masks, 1)
     b, h, w = cur_masks.shape
 
@@ -548,7 +566,8 @@ def post_process_panoptic_sample(
         if not is_thing_map[label]:
             stuff_equiv_classes[label].append(k)
 
-    seg_img = get_segmentation_image(cur_masks, processed_size, target_size, stuff_equiv_classes, deduplicate=True)
+    seg_img = get_segmentation_image(
+        cur_masks, processed_size, target_size, stuff_equiv_classes, deduplicate=True)
     area = get_mask_area(cur_masks, processed_size, n_classes=len(cur_scores))
 
     # We filter out any mask that is too small
@@ -559,21 +578,25 @@ def post_process_panoptic_sample(
             cur_masks = cur_masks[~filtered_small]
             cur_scores = cur_scores[~filtered_small]
             cur_classes = cur_classes[~filtered_small]
-            seg_img = get_segmentation_image(cur_masks, (h, w), target_size, stuff_equiv_classes, deduplicate=True)
-            area = get_mask_area(seg_img, target_size, n_classes=len(cur_scores))
+            seg_img = get_segmentation_image(
+                cur_masks, (h, w), target_size, stuff_equiv_classes, deduplicate=True)
+            area = get_mask_area(seg_img, target_size,
+                                 n_classes=len(cur_scores))
             filtered_small = np.array([a <= 4 for a in area], dtype=bool)
     else:
         cur_classes = np.ones((1, 1), dtype=np.int64)
 
     segments_info = [
-        {"id": i, "isthing": is_thing_map[cat], "category_id": int(cat), "area": a}
+        {"id": i, "isthing": is_thing_map[cat],
+            "category_id": int(cat), "area": a}
         for i, (cat, a) in enumerate(zip(cur_classes, area))
     ]
     del cur_classes
 
     with io.BytesIO() as out:
         PIL.Image.fromarray(seg_img).save(out, format="PNG")
-        predictions = {"png_string": out.getvalue(), "segments_info": segments_info}
+        predictions = {"png_string": out.getvalue(
+        ), "segments_info": segments_info}
 
     return predictions
 
@@ -601,7 +624,8 @@ def resize_annotation(
         resample (`PILImageResampling`, defaults to `PILImageResampling.NEAREST`):
             The resampling filter to use when resizing the masks.
     """
-    ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(target_size, orig_size))
+    ratios = tuple(float(s) / float(s_orig)
+                   for s, s_orig in zip(target_size, orig_size))
     ratio_height, ratio_width = ratios
 
     new_annotation = {}
@@ -610,7 +634,9 @@ def resize_annotation(
     for key, value in annotation.items():
         if key == "boxes":
             boxes = value
-            scaled_boxes = boxes * np.asarray([ratio_width, ratio_height, ratio_width, ratio_height], dtype=np.float32)
+            scaled_boxes = boxes * \
+                np.asarray([ratio_width, ratio_height, ratio_width,
+                           ratio_height], dtype=np.float32)
             new_annotation["boxes"] = scaled_boxes
         elif key == "area":
             area = value
@@ -618,7 +644,8 @@ def resize_annotation(
             new_annotation["area"] = scaled_area
         elif key == "masks":
             masks = value[:, None]
-            masks = np.array([resize(mask, target_size, resample=resample) for mask in masks])
+            masks = np.array(
+                [resize(mask, target_size, resample=resample) for mask in masks])
             masks = masks.astype(np.float32)
             masks = masks[:, 0] > threshold
             new_annotation["masks"] = masks
@@ -628,7 +655,6 @@ def resize_annotation(
             new_annotation[key] = value
 
     return new_annotation
-
 
 
 def binary_mask_to_rle(mask):
@@ -864,7 +890,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         else:
             max_size = None if size is None else 1333
 
-        size = size if size is not None else {"shortest_edge": 800, "longest_edge": 1333}
+        size = size if size is not None else {
+            "shortest_edge": 800, "longest_edge": 1333}
         size = get_size_dict(size, max_size=max_size, default_to_square=False)
 
         # Backwards compatibility
@@ -917,7 +944,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         if "max_size" in kwargs:
             image_processor_dict["max_size"] = kwargs.pop("max_size")
         if "pad_and_return_pixel_mask" in kwargs:
-            image_processor_dict["pad_and_return_pixel_mask"] = kwargs.pop("pad_and_return_pixel_mask")
+            image_processor_dict["pad_and_return_pixel_mask"] = kwargs.pop(
+                "pad_and_return_pixel_mask")
         return super().from_dict(image_processor_dict, **kwargs)
 
     def prepare_annotation(
@@ -1126,7 +1154,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         """
         Pad an image with zeros to the given size.
         """
-        input_height, input_width = get_image_size(image, channel_dim=input_data_format)
+        input_height, input_width = get_image_size(
+            image, channel_dim=input_data_format)
         output_height, output_width = output_size
 
         pad_bottom = output_height - input_height
@@ -1142,14 +1171,16 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         )
         if annotation is not None:
             annotation = self._update_annotation_for_padded_image(
-                annotation, (input_height, input_width), (output_height, output_width), padding, update_bboxes
+                annotation, (input_height, input_width), (output_height,
+                                                          output_width), padding, update_bboxes
             )
         return padded_image, annotation
 
     def pad(
         self,
         images: List[np.ndarray],
-        annotations: Optional[Union[AnnotationType, List[AnnotationType]]] = None,
+        annotations: Optional[Union[AnnotationType,
+                                    List[AnnotationType]]] = None,
         constant_values: Union[float, Iterable[float]] = 0,
         return_pixel_mask: bool = True,
         return_tensors: Optional[Union[str, TensorType]] = None,
@@ -1195,9 +1226,11 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         if pad_size is not None:
             padded_size = (pad_size["height"], pad_size["width"])
         else:
-            padded_size = get_max_height_width(images, input_data_format=input_data_format)
+            padded_size = get_max_height_width(
+                images, input_data_format=input_data_format)
 
-        annotation_list = annotations if annotations is not None else [None] * len(images)
+        annotation_list = annotations if annotations is not None else [
+            None] * len(images)
         padded_images = []
         padded_annotations = []
         for image, annotation in zip(images, annotation_list):
@@ -1217,7 +1250,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
 
         if return_pixel_mask:
             masks = [
-                make_pixel_mask(image=image, output_size=padded_size, input_data_format=input_data_format)
+                make_pixel_mask(image=image, output_size=padded_size,
+                                input_data_format=input_data_format)
                 for image in images
             ]
             data["pixel_mask"] = masks
@@ -1235,7 +1269,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
     def preprocess(
         self,
         images: ImageInput,
-        annotations: Optional[Union[AnnotationType, List[AnnotationType]]] = None,
+        annotations: Optional[Union[AnnotationType,
+                                    List[AnnotationType]]] = None,
         return_segmentation_masks: bool = None,
         masks_path: Optional[Union[str, pathlib.Path]] = None,
         do_resize: Optional[bool] = None,
@@ -1346,7 +1381,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
 
         do_resize = self.do_resize if do_resize is None else do_resize
         size = self.size if size is None else size
-        size = get_size_dict(size=size, max_size=max_size, default_to_square=False)
+        size = get_size_dict(size=size, max_size=max_size,
+                             default_to_square=False)
         resample = self.resample if resample is None else resample
         do_rescale = self.do_rescale if do_rescale is None else do_rescale
         rescale_factor = self.rescale_factor if rescale_factor is None else rescale_factor
@@ -1367,7 +1403,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "
                 "mindspore.Tensor, tf.Tensor or jax.ndarray."
             )
-        validate_kwargs(captured_kwargs=kwargs.keys(), valid_processor_keys=self._valid_processor_keys)
+        validate_kwargs(captured_kwargs=kwargs.keys(),
+                        valid_processor_keys=self._valid_processor_keys)
 
         # Here, the pad() method pads to the maximum of (width, height). It does not need to be validated.
         validate_preprocess_arguments(
@@ -1391,7 +1428,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
 
         format = AnnotationFormat(format)
         if annotations is not None:
-            validate_annotations(format, SUPPORTED_ANNOTATION_FORMATS, annotations)
+            validate_annotations(
+                format, SUPPORTED_ANNOTATION_FORMATS, annotations)
 
         if (
             masks_path is not None
@@ -1445,7 +1483,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                         image, size=size, max_size=max_size, resample=resample, input_data_format=input_data_format
                     )
                     resized_annotation = self.resize_annotation(
-                        target, orig_size, get_image_size(resized_image, input_data_format)
+                        target, orig_size, get_image_size(
+                            resized_image, input_data_format)
                     )
                     resized_images.append(resized_image)
                     resized_annotations.append(resized_annotation)
@@ -1454,12 +1493,14 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 del resized_images, resized_annotations
             else:
                 images = [
-                    self.resize(image, size=size, resample=resample, input_data_format=input_data_format)
+                    self.resize(image, size=size, resample=resample,
+                                input_data_format=input_data_format)
                     for image in images
                 ]
 
         if do_rescale:
-            images = [self.rescale(image, rescale_factor, input_data_format=input_data_format) for image in images]
+            images = [self.rescale(
+                image, rescale_factor, input_data_format=input_data_format) for image in images]
 
         if do_normalize:
             images = [
@@ -1468,7 +1509,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
 
         if do_convert_annotations and annotations is not None:
             annotations = [
-                self.normalize_annotation(annotation, get_image_size(image, input_data_format))
+                self.normalize_annotation(
+                    annotation, get_image_size(image, input_data_format))
                 for annotation, image in zip(annotations, images)
             ]
 
@@ -1486,10 +1528,12 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
             )
         else:
             images = [
-                to_channel_dimension_format(image, data_format, input_channel_dim=input_data_format)
+                to_channel_dimension_format(
+                    image, data_format, input_channel_dim=input_data_format)
                 for image in images
             ]
-            encoded_inputs = BatchFeature(data={"pixel_values": images}, tensor_type=return_tensors)
+            encoded_inputs = BatchFeature(
+                data={"pixel_values": images}, tensor_type=return_tensors)
             if annotations is not None:
                 encoded_inputs["labels"] = [
                     BatchFeature(annotation, tensor_type=return_tensors) for annotation in annotations
@@ -1522,14 +1566,18 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         out_logits, out_bbox = outputs.logits, outputs.pred_boxes
 
         if len(out_logits) != len(target_sizes):
-            raise ValueError("Make sure that you pass in as many target sizes as the batch dimension of the logits")
+            raise ValueError(
+                "Make sure that you pass in as many target sizes as the batch dimension of the logits")
         if target_sizes.shape[1] != 2:
-            raise ValueError("Each element of target_sizes must contain the size (h, w) of each image of the batch")
+            raise ValueError(
+                "Each element of target_sizes must contain the size (h, w) of each image of the batch")
 
         prob = out_logits.sigmoid()
-        topk_values, topk_indexes = ops.topk(prob.view(out_logits.shape[0], -1), 300, dim=1)
+        topk_values, topk_indexes = ops.topk(
+            prob.view(out_logits.shape[0], -1), 300, dim=1)
         scores = topk_values
-        topk_boxes = ops.div(topk_indexes, out_logits.shape[2], rounding_mode="floor")
+        topk_boxes = ops.div(
+            topk_indexes, out_logits.shape[2], rounding_mode="floor")
         labels = topk_indexes % out_logits.shape[2]
         boxes = center_to_corners_format(out_bbox)
         boxes = ops.gather(boxes, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
@@ -1539,7 +1587,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1)
         boxes = boxes * scale_fct[:, None, :]
 
-        results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
+        results = [{"scores": s, "labels": l, "boxes": b}
+                   for s, l, b in zip(scores, labels, boxes)]
 
         return results
 
@@ -1579,7 +1628,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         k_value = min(top_k, prob.shape[1])
         topk_values, topk_indexes = ops.topk(prob, k_value, dim=1)
         scores = topk_values
-        topk_boxes = ops.div(topk_indexes, out_logits.shape[2], rounding_mode="floor")
+        topk_boxes = ops.div(
+            topk_indexes, out_logits.shape[2], rounding_mode="floor")
         labels = topk_indexes % out_logits.shape[2]
         boxes = center_to_corners_format(out_bbox)
         boxes = ops.gather(boxes, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
@@ -1621,14 +1671,17 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 `mindspore.Tensor` correspond to a semantic class id.
         """
         class_queries_logits = outputs.logits  # [batch_size, num_queries, num_classes+1]
-        masks_queries_logits = outputs.pred_masks  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, height, width]
+        masks_queries_logits = outputs.pred_masks
 
         # Remove the null class `[..., :-1]`
         masks_classes = ops.softmax(class_queries_logits, axis=-1)[..., :-1]
-        masks_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, height, width]
+        masks_probs = masks_queries_logits.sigmoid()
 
         # Semantic segmentation logits of shape (batch_size, num_classes, height, width)
-        segmentation = ops.einsum("bqc, bqhw -> bchw", masks_classes, masks_probs)
+        segmentation = ops.einsum(
+            "bqc, bqhw -> bchw", masks_classes, masks_probs)
         batch_size = class_queries_logits.shape[0]
 
         # Resize logits and compute semantic segmentation maps
@@ -1647,7 +1700,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 semantic_segmentation.append(semantic_map)
         else:
             semantic_segmentation = segmentation.argmax(dim=1)
-            semantic_segmentation = [semantic_segmentation[i] for i in range(semantic_segmentation.shape[0])]
+            semantic_segmentation = [semantic_segmentation[i]
+                                     for i in range(semantic_segmentation.shape[0])]
 
         return semantic_segmentation
 
@@ -1691,15 +1745,18 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 - **score** -- Prediction score of segment with `segment_id`.
         """
         class_queries_logits = outputs.logits  # [batch_size, num_queries, num_classes+1]
-        masks_queries_logits = outputs.pred_masks  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, height, width]
+        masks_queries_logits = outputs.pred_masks
 
         batch_size = class_queries_logits.shape[0]
         num_labels = class_queries_logits.shape[-1] - 1
 
-        mask_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, height, width]
+        mask_probs = masks_queries_logits.sigmoid()
 
         # Predicted label and score of each query (batch_size, num_queries)
-        pred_scores, pred_labels = ops.softmax(class_queries_logits, axis=-1).max(-1)
+        pred_scores, pred_labels = ops.softmax(
+            class_queries_logits, axis=-1).max(-1)
 
         # Loop over items in batch size
         results: List[Dict[str, TensorType]] = []
@@ -1713,7 +1770,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
             if mask_probs_item.shape[0] <= 0:
                 height, width = target_sizes[i] if target_sizes is not None else mask_probs_item.shape[1:]
                 segmentation = ops.zeros((height, width)) - 1
-                results.append({"segmentation": segmentation, "segments_info": []})
+                results.append(
+                    {"segmentation": segmentation, "segments_info": []})
                 continue
 
             # Get segmentation map and segment information of batch item
@@ -1732,7 +1790,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
             if return_coco_annotation:
                 segmentation = convert_segmentation_to_rle(segmentation)
 
-            results.append({"segmentation": segmentation, "segments_info": segments})
+            results.append({"segmentation": segmentation,
+                           "segments_info": segments})
         return results
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.post_process_panoptic_segmentation with Detr->ConditionalDetr
@@ -1780,19 +1839,24 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
         """
 
         if label_ids_to_fuse is None:
-            logger.warning_once("`label_ids_to_fuse` unset. No instance will be fused.")
+            logger.warning_once(
+                "`label_ids_to_fuse` unset. No instance will be fused.")
             label_ids_to_fuse = set()
 
-        class_queries_logits = outputs.logits  # [batch_size, num_queries, num_classes+1]
-        masks_queries_logits = outputs.pred_masks  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, num_classes+1]
+        class_queries_logits = outputs.logits
+        # [batch_size, num_queries, height, width]
+        masks_queries_logits = outputs.pred_masks
 
         batch_size = class_queries_logits.shape[0]
         num_labels = class_queries_logits.shape[-1] - 1
 
-        mask_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
+        # [batch_size, num_queries, height, width]
+        mask_probs = masks_queries_logits.sigmoid()
 
         # Predicted label and score of each query (batch_size, num_queries)
-        pred_scores, pred_labels = ops.softmax(class_queries_logits, axis=-1).max(-1)
+        pred_scores, pred_labels = ops.softmax(
+            class_queries_logits, axis=-1).max(-1)
 
         # Loop over items in batch size
         results: List[Dict[str, TensorType]] = []
@@ -1806,7 +1870,8 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
             if mask_probs_item.shape[0] <= 0:
                 height, width = target_sizes[i] if target_sizes is not None else mask_probs_item.shape[1:]
                 segmentation = ops.zeros((height, width)) - 1
-                results.append({"segmentation": segmentation, "segments_info": []})
+                results.append(
+                    {"segmentation": segmentation, "segments_info": []})
                 continue
 
             # Get segmentation map and segment information of batch item
@@ -1821,7 +1886,9 @@ class ConditionalDetrImageProcessor(BaseImageProcessor):
                 target_size=target_size,
             )
 
-            results.append({"segmentation": segmentation, "segments_info": segments})
+            results.append({"segmentation": segmentation,
+                           "segments_info": segments})
         return results
+
 
 __all__ = ['ConditionalDetrImageProcessor']

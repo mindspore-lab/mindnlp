@@ -22,8 +22,8 @@ from typing import List, Optional, Tuple
 import regex as re
 
 
-from ...tokenization_utils import AddedToken, PreTrainedTokenizer
 from mindnlp.utils import logging
+from ...tokenization_utils import AddedToken, PreTrainedTokenizer
 from .number_normalizer import EnglishNormalizer
 
 
@@ -48,7 +48,8 @@ def bytes_to_unicode():
     tables between utf-8 bytes and unicode strings.
     """
     bs = (
-        list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
+        list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"),
+                                                         ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
     )
     cs = bs[:]
     n = 0
@@ -152,10 +153,14 @@ class ClvpTokenizer(PreTrainedTokenizer):
         add_eos_token=False,
         **kwargs,
     ):
-        bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
-        eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
-        unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
-        pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
+        bos_token = AddedToken(bos_token, special=True) if isinstance(
+            bos_token, str) else bos_token
+        eos_token = AddedToken(eos_token, special=True) if isinstance(
+            eos_token, str) else eos_token
+        unk_token = AddedToken(unk_token, special=True) if isinstance(
+            unk_token, str) else unk_token
+        pad_token = AddedToken(pad_token, special=True) if isinstance(
+            pad_token, str) else pad_token
 
         self.add_bos_token = add_bos_token
         self.add_eos_token = add_eos_token
@@ -175,7 +180,8 @@ class ClvpTokenizer(PreTrainedTokenizer):
         self.add_prefix_space = add_prefix_space
 
         # Should have added re.IGNORECASE so BPE merges can happen for capitalized versions of contractions
-        self.pat = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
+        self.pat = re.compile(
+            r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
         super().__init__(
             errors=errors,
@@ -213,7 +219,8 @@ class ClvpTokenizer(PreTrainedTokenizer):
             return token
 
         while True:
-            bigram = min(pairs, key=lambda pair: self.bpe_ranks.get(pair, float("inf")))
+            bigram = min(pairs, key=lambda pair: self.bpe_ranks.get(
+                pair, float("inf")))
             if bigram not in self.bpe_ranks:
                 break
             first, second = bigram
@@ -301,7 +308,8 @@ class ClvpTokenizer(PreTrainedTokenizer):
 
             # if the token is "Ġ" we replace it with "[SPACE]" (if "[SPACE]" is present in the vocab), otherwise we keep the "Ġ".
             bpe_tokens.extend(
-                "[SPACE]" if bpe_token == "\u0120" and "[SPACE]" in self.encoder.keys() else bpe_token
+                "[SPACE]" if bpe_token == "\u0120" and "[SPACE]" in self.encoder.keys(
+                ) else bpe_token
                 for bpe_token in self.bpe(token).split(" ")
             )
 
@@ -321,33 +329,42 @@ class ClvpTokenizer(PreTrainedTokenizer):
     def convert_tokens_to_string(self, tokens):
         """Converts a sequence of tokens (string) in a single string."""
         text = "".join(tokens)
-        text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors=self.errors)
+        text = bytearray([self.byte_decoder[c]
+                         for c in text]).decode("utf-8", errors=self.errors)
         return text
 
     def clean_up_tokenization(self, text):
         text = "".join(text)
-        vocab_tokens = list(self.encoder.keys()) + list(self.added_tokens_encoder.keys())
+        vocab_tokens = list(self.encoder.keys()) + \
+            list(self.added_tokens_encoder.keys())
 
-        text = text.replace("[SPACE]", " ") if "[SPACE]" in vocab_tokens else text
-        text = text.replace("[STOP]", " ") if "[STOP]" in vocab_tokens else text
+        text = text.replace(
+            "[SPACE]", " ") if "[SPACE]" in vocab_tokens else text
+        text = text.replace(
+            "[STOP]", " ") if "[STOP]" in vocab_tokens else text
 
-        text = text.replace(self.unk_token, "").replace("   ", " ").replace("  ", " ")
+        text = text.replace(self.unk_token, "").replace(
+            "   ", " ").replace("  ", " ")
         return text
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         if not os.path.isdir(save_directory):
-            logger.error(f"Vocabulary path ({save_directory}) should be a directory")
+            logger.error(
+                f"Vocabulary path ({save_directory}) should be a directory")
             return
         vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory, (filename_prefix + "-" if filename_prefix else "") +
+            VOCAB_FILES_NAMES["vocab_file"]
         )
         merge_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["merges_file"]
+            save_directory, (filename_prefix + "-" if filename_prefix else "") +
+            VOCAB_FILES_NAMES["merges_file"]
         )
 
         with open(vocab_file, "w", encoding="utf-8") as f:
-            f.write(json.dumps(self.encoder, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+            f.write(json.dumps(self.encoder, indent=2,
+                    sort_keys=True, ensure_ascii=False) + "\n")
 
         index = 0
         with open(merge_file, "w", encoding="utf-8") as writer:
@@ -363,5 +380,6 @@ class ClvpTokenizer(PreTrainedTokenizer):
                 index += 1
 
         return vocab_file, merge_file
-    
+
+
 __all__ = ["ClvpTokenizer"]

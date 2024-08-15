@@ -14,18 +14,14 @@
 # limitations under the License.
 """Conditional DETR model configuration"""
 
-from collections import OrderedDict
-from typing import Mapping, Optional, Union
+from typing import Optional, Union
 
-from packaging import version
-
-from ...configuration_utils import PretrainedConfig
-#from ...onnx import OnnxConfig
 from mindnlp.utils import logging
-#from ...utils.backbone_utils import verify_backbone_config_arguments
+from ...configuration_utils import PretrainedConfig
 from ..auto import CONFIG_MAPPING
 
 logger = logging.get_logger(__name__)
+
 
 def verify_backbone_config_arguments(
         use_timm_backbone: bool,
@@ -38,13 +34,16 @@ def verify_backbone_config_arguments(
     Verify that the config arguments to be passed to load_backbone are valid
     """
     if backbone_config is not None and backbone is not None:
-        raise ValueError("You can't specify both `backbone` and `backbone_config`.")
+        raise ValueError(
+            "You can't specify both `backbone` and `backbone_config`.")
 
     if backbone_config is not None and use_timm_backbone:
-        raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
+        raise ValueError(
+            "You can't specify both `backbone_config` and `use_timm_backbone`.")
 
     if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
-        raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
+        raise ValueError(
+            "You can't specify both `backbone_kwargs` and `backbone_config`.")
 
 
 class ConditionalDetrConfig(PretrainedConfig):
@@ -209,8 +208,10 @@ class ConditionalDetrConfig(PretrainedConfig):
         # Backwards compatibility
         elif not use_timm_backbone and backbone in (None, "resnet50"):
             if backbone_config is None:
-                logger.info("`backbone_config` is `None`. Initializing the config with the default `ResNet` backbone.")
-                backbone_config = CONFIG_MAPPING["resnet"](out_features=["stage4"])
+                logger.info(
+                    "`backbone_config` is `None`. Initializing the config with the default `ResNet` backbone.")
+                backbone_config = CONFIG_MAPPING["resnet"](
+                    out_features=["stage4"])
             elif isinstance(backbone_config, dict):
                 backbone_model_type = backbone_config.get("model_type")
                 config_class = CONFIG_MAPPING[backbone_model_type]
@@ -271,8 +272,7 @@ class ConditionalDetrConfig(PretrainedConfig):
     def hidden_size(self) -> int:
         return self.d_model
 
-__all__ = [
-        'ConditionalDetrConfig',
-        #'ConditionalDetrOnnxConfig',
-]
 
+__all__ = [
+    'ConditionalDetrConfig',
+]

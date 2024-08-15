@@ -16,8 +16,8 @@
 
 import warnings
 
-from ...image_transforms import rgb_to_id as _rgb_to_id
 from mindnlp.utils import logging
+from ...image_transforms import rgb_to_id as _rgb_to_id
 from .image_processing_conditional_detr import ConditionalDetrImageProcessor
 
 
@@ -41,5 +41,6 @@ class ConditionalDetrFeatureExtractor(ConditionalDetrImageProcessor):
             FutureWarning,
         )
         super().__init__(*args, **kwargs)
+
 
 __all__ = ['ConditionalDetrFeatureExtractor']
