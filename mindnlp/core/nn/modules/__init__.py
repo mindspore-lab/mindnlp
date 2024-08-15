@@ -18,3 +18,4 @@ from .pixelshuffle import PixelUnshuffle, PixelShuffle
 from .upsampling import Upsample, UpsamplingBilinear2d, UpsamplingNearest2d
 from .loss import *
 from .distance import *
+from .adaptive import AdaptiveLogSoftmaxWithLoss
