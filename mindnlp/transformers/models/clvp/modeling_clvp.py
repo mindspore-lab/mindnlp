@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
 import mindspore
-#from torch.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
 import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
@@ -69,7 +68,7 @@ def clvp_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return ops.cat((-x2, x1), dim=-1)
 
 
@@ -120,7 +119,8 @@ def _pad_extra_bos_eos_tokens(
     if add_bos_token:
         input_ids = ops.pad(input_ids, (1, 0), value=bos_token_id)
         attention_mask = (
-            ops.pad(attention_mask, (1, 0), value=1) if attention_mask is not None else attention_mask
+            ops.pad(attention_mask, (1, 0),
+                    value=1) if attention_mask is not None else attention_mask
         )
 
     modified_input_ids = input_ids
@@ -132,16 +132,20 @@ def _pad_extra_bos_eos_tokens(
             # locate where the valid tokens end and then add the eos token
             each_input_id = mindspore.tensor(each_input_id)
             pad_token_id = mindspore.tensor(pad_token_id)
-            if ops.isin(each_input_id, pad_token_id).sum():           
-                pos = ops.where(each_input_id == pad_token_id, each_input_id, pad_token_id)[0].min()
+            if ops.isin(each_input_id, pad_token_id).sum():
+                pos = ops.where(each_input_id == pad_token_id,
+                                each_input_id, pad_token_id)[0].min()
                 modified_input_ids[i] = ops.concatenate(
-                    [each_input_id[:pos], mindspore.tensor([eos_token_id]), each_input_id[pos:]]
+                    [each_input_id[:pos], mindspore.tensor(
+                        [eos_token_id]), each_input_id[pos:]]
                 )
             else:
                 # if there are no pad tokens present, then add eos to the end
-                modified_input_ids[i] = ops.pad(each_input_id, (0, 1), value=eos_token_id)
+                modified_input_ids[i] = ops.pad(
+                    each_input_id, (0, 1), value=eos_token_id)
         attention_mask = (
-            ops.pad(attention_mask, (1, 0), value=1) if attention_mask is not None else attention_mask
+            ops.pad(attention_mask, (1, 0),
+                    value=1) if attention_mask is not None else attention_mask
         )
 
     return modified_input_ids, attention_mask
@@ -236,7 +240,8 @@ class ClvpRMSNorm(nn.Module):
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
         variance = hidden_states.pow(2).mean(-1, keep_dims=True)
-        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
+        hidden_states = hidden_states * \
+            ops.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
 
     def extra_repr(self):
@@ -251,8 +256,10 @@ class ClvpRotaryPositionalEmbedding(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        dim = max(config.projection_dim // (config.num_attention_heads * 2), 32)
-        inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.int64).float() / dim))
+        dim = max(config.projection_dim //
+                  (config.num_attention_heads * 2), 32)
+        inv_freq = 1.0 / \
+            (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.int64).float() / dim))
 
         self.register_buffer("inv_freq", inv_freq)
         self.cached_sequence_length = None
@@ -294,13 +301,17 @@ class ClvpSelfAttention(nn.Module):
 
         if hasattr(config, "max_position_embeddings"):
             max_positions = config.max_position_embeddings
-            bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_))
+            bias = ops.tril(
+                ops.ones((max_positions, max_positions), dtype=mindspore.bool_))
             bias = bias.view(1, 1, max_positions, max_positions)
             self.register_buffer("bias", bias, persistent=False)
 
-        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
-        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
-        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
+        self.k_proj = nn.Linear(
+            self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
+        self.v_proj = nn.Linear(
+            self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
+        self.q_proj = nn.Linear(
+            self.embed_dim, self.embed_dim, bias=config.use_attention_bias)
         self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     # Copied from transformers.models.clip.modeling_clip.CLIPAttention._shape
@@ -321,12 +332,14 @@ class ClvpSelfAttention(nn.Module):
         # Raise error when position_ids is None but rotary_pos_emb is provided, because we need that when applying
         # rotary_pos_emb to query and key states.
         if rotary_pos_emb is not None and position_ids is None:
-            raise ValueError("`position_ids` must be provided when `rotary_pos_emb` is not None.")
+            raise ValueError(
+                "`position_ids` must be provided when `rotary_pos_emb` is not None.")
 
         bsz, _, embed_dim = hidden_states.shape
 
         # get query proj
-        query_states = self._shape(self.q_proj(hidden_states), -1, bsz) * self.scale
+        query_states = self._shape(self.q_proj(
+            hidden_states), -1, bsz) * self.scale
         key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
         value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
@@ -358,7 +371,8 @@ class ClvpSelfAttention(nn.Module):
             )
 
             cos, sin = rotary_pos_emb.cos().squeeze(0), rotary_pos_emb.sin().squeeze(0)
-            query_rot, key_rot, value_rot = apply_rotary_pos_emb(query_rot, key_rot, value_rot, cos, sin, position_ids)
+            query_rot, key_rot, value_rot = apply_rotary_pos_emb(
+                query_rot, key_rot, value_rot, cos, sin, position_ids)
 
             # [batch_size, num_heads, seq_length, head_dim]
             query_states = ops.cat((query_rot, query_pass), dim=-1)
@@ -382,7 +396,8 @@ class ClvpSelfAttention(nn.Module):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(
+            attn_weights, p=self.dropout, training=self.training)
         attn_output = ops.matmul(attn_probs, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, tgt_len, self.head_dim):
@@ -446,8 +461,10 @@ class ClvpEncoderLayer(nn.Module):
         self.self_attn = ClvpSelfAttention(config)
         self.mlp = ClvpEncoderMLP(config)
 
-        self.input_rmsnorm = ClvpRMSNorm(self.embed_dim, eps=config.layer_norm_eps)
-        self.post_attention_rmsnorm = ClvpRMSNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.input_rmsnorm = ClvpRMSNorm(
+            self.embed_dim, eps=config.layer_norm_eps)
+        self.post_attention_rmsnorm = ClvpRMSNorm(
+            self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -524,9 +541,11 @@ class ClvpDecoderLayer(nn.Module):
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.input_layernorm = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
+        self.input_layernorm = nn.LayerNorm(
+            hidden_size, eps=config.layer_norm_epsilon)
         self.attn = ClvpSelfAttention(config)
-        self.post_attention_layernorm = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm(
+            hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = ClvpDecoderMLP(inner_dim, config)
 
@@ -589,25 +608,30 @@ class ClvpConditioningEncoder(nn.Module):
         self.text_config = config.text_config
         self.decoder_config = config.decoder_config
 
-        self.text_token_embedding = nn.Embedding(self.text_config.vocab_size, self.decoder_config.hidden_size)
+        self.text_token_embedding = nn.Embedding(
+            self.text_config.vocab_size, self.decoder_config.hidden_size)
         self.text_position_embedding = nn.Embedding(
             self.decoder_config.max_text_tokens, self.decoder_config.hidden_size
         )
 
-        self.mel_conv = nn.Conv1d(self.decoder_config.feature_size, self.decoder_config.hidden_size, kernel_size=1)
+        self.mel_conv = nn.Conv1d(
+            self.decoder_config.feature_size, self.decoder_config.hidden_size, kernel_size=1)
 
         # define group norms to be used before each attention layer
-        num_groups = self.compute_groupnorm_groups(self.decoder_config.hidden_size)
+        num_groups = self.compute_groupnorm_groups(
+            self.decoder_config.hidden_size)
         self.group_norms = nn.ModuleList(
             [
-                nn.GroupNorm(num_groups, self.decoder_config.hidden_size, eps=1e-5, affine=True)
+                nn.GroupNorm(
+                    num_groups, self.decoder_config.hidden_size, eps=1e-5, affine=True)
                 for _ in range(self.decoder_config.num_mel_attn_blocks)
             ]
         )
 
         # define the attention layers
         self.mel_attn_blocks = nn.ModuleList(
-            [ClvpSelfAttention(self.decoder_config) for _ in range(self.decoder_config.num_mel_attn_blocks)]
+            [ClvpSelfAttention(self.decoder_config) for _ in range(
+                self.decoder_config.num_mel_attn_blocks)]
         )
 
         self.gradient_checkpointing = False
@@ -642,17 +666,20 @@ class ClvpConditioningEncoder(nn.Module):
     ):
         # process text
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             batch_size, seq_length = input_ids.shape
         elif inputs_embeds is not None:
             batch_size, seq_length = inputs_embeds.shape[:-1]
         else:
-            raise ValueError("You have to specify either input_ids or inputs_embeds")
+            raise ValueError(
+                "You have to specify either input_ids or inputs_embeds")
 
         # construct attention mask if not given
         if attention_mask is None:
-            attention_mask = ops.ones((batch_size, seq_length), dtype=mindspore.int64)
+            attention_mask = ops.ones(
+                (batch_size, seq_length), dtype=mindspore.int64)
 
         # We add bos and eos input_ids in the modeling file instead of the tokenizer file to keep the logic simple
         # This logic is specific to ClvpConditioningEncoder and not used by other modules.
@@ -668,19 +695,7 @@ class ClvpConditioningEncoder(nn.Module):
         position_embeds = self.text_position_embedding(position_ids)
         text_embeds = inputs_embeds + position_embeds
 
-        #if self.gradient_checkpointing and self.training:
-            # process each log-mel spectrogram into a single vector
-            #mel_spec = torch.utils.checkpoint.checkpoint(self.mel_conv, input_features)
-
-            #for i, mel_attn_block in enumerate(self.mel_attn_blocks):
-               # residual_mel_spec = mel_spec.transpose(1, 2)
-
-                #mel_spec = torch.utils.checkpoint.checkpoint(self.group_norms[i], mel_spec).transpose(1, 2)
-                #mel_spec = torch.utils.checkpoint.checkpoint(mel_attn_block, mel_spec)[0] + residual_mel_spec
-                #mel_spec = mel_spec.transpose(1, 2)
-
-        #else:
-            # process each log-mel spectrogram into a single vector
+        # process each log-mel spectrogram into a single vector
         mel_spec = self.mel_conv(input_features)
 
         for i, mel_attn_block in enumerate(self.mel_attn_blocks):
@@ -750,7 +765,7 @@ class ClvpPreTrainedModel(PreTrainedModel):
                 self.config, "text_config") else self.config
             factor = config.initializer_factor
             cell.projection.weight.set_data(initializer(Normal(factor * (config.hidden_size**-0.5)),
-                                             cell.projection.weight.shape, cell.projection.weight.dtype))
+                                                        cell.projection.weight.shape, cell.projection.weight.dtype))
         elif isinstance(cell, ClvpConditioningEncoder):
             cell.mel_conv.weight.set_data(initializer(Normal(factor),
                                                       cell.mel_conv.weight.shape, cell.mel_conv.weight.dtype))
@@ -771,7 +786,6 @@ class ClvpPreTrainedModel(PreTrainedModel):
                 'zeros', cell.bias.shape, cell.bias.dtype))
 
 
-
 class ClvpEncoder(ClvpPreTrainedModel):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
@@ -785,14 +799,19 @@ class ClvpEncoder(ClvpPreTrainedModel):
         super().__init__(config)
 
         self.config = config
-        self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.rotary_pos_emb = ClvpRotaryPositionalEmbedding(config) if config.use_rotary_embedding else None
-        self.layers = nn.ModuleList([ClvpEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.token_embedding = nn.Embedding(
+            config.vocab_size, config.hidden_size)
+        self.rotary_pos_emb = ClvpRotaryPositionalEmbedding(
+            config) if config.use_rotary_embedding else None
+        self.layers = nn.ModuleList(
+            [ClvpEncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
         self.sequence_summary = SequenceSummary(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps)
 
-        self.projection = nn.Linear(config.hidden_size, config.projection_dim, bias=False)
+        self.projection = nn.Linear(
+            config.hidden_size, config.projection_dim, bias=False)
         self.gradient_checkpointing = False
 
         self.post_init()
@@ -849,45 +868,41 @@ class ClvpEncoder(ClvpPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
+            self.warn_if_padding_and_no_attention_mask(
+                input_ids, attention_mask)
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
             inputs_embeds = self.token_embedding(input_ids)
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
         else:
-            raise ValueError("You have to specify either input_ids or inputs_embeds")
+            raise ValueError(
+                "You have to specify either input_ids or inputs_embeds")
 
         # expand attention_mask and create position_ids if needed
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
+            attention_mask = _prepare_4d_attention_mask(
+                attention_mask, inputs_embeds.dtype)
 
         if position_ids is None:
-            #device = input_ids.device if input_ids is not None else inputs_embeds.device
+            # device = input_ids.device if input_ids is not None else inputs_embeds.device
             position_ids = ops.arange(input_shape[1], dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
 
-        rotary_pos_emb = self.rotary_pos_emb(inputs_embeds) if self.rotary_pos_emb is not None else None
+        rotary_pos_emb = self.rotary_pos_emb(
+            inputs_embeds) if self.rotary_pos_emb is not None else None
 
         hidden_states = inputs_embeds
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
-            #if self.gradient_checkpointing and self.training:
-                #layer_outputs = torch.utils.checkpoint.checkpoint(
-                    #encoder_layer.__call__,
-                    #hidden_states,
-                    #rotary_pos_emb,
-                    #attention_mask,
-                    #position_ids,
-                #)
-            #else:
             layer_outputs = encoder_layer(
                 hidden_states,
                 rotary_pos_emb,
@@ -937,12 +952,16 @@ class ClvpDecoder(ClvpPreTrainedModel):
 
         self.config = config
 
-        self.input_embeds_layer = nn.Embedding(self.config.vocab_size, self.config.hidden_size)
-        self.position_embeds_layer = nn.Embedding(self.config.max_position_embeddings, self.config.hidden_size)
+        self.input_embeds_layer = nn.Embedding(
+            self.config.vocab_size, self.config.hidden_size)
+        self.position_embeds_layer = nn.Embedding(
+            self.config.max_position_embeddings, self.config.hidden_size)
 
         self.drop = nn.Dropout(self.config.embd_pdrop)
-        self.layers = nn.ModuleList([ClvpDecoderLayer(self.config) for _ in range(self.config.num_hidden_layers)])
-        self.layer_norm = nn.LayerNorm(self.config.hidden_size, eps=self.config.layer_norm_epsilon)
+        self.layers = nn.ModuleList(
+            [ClvpDecoderLayer(self.config) for _ in range(self.config.num_hidden_layers)])
+        self.layer_norm = nn.LayerNorm(
+            self.config.hidden_size, eps=self.config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
 
@@ -962,7 +981,6 @@ class ClvpDecoder(ClvpPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.layers[layer].attn.prune_heads(heads)
 
-    #@add_start_docstrings_to_model_forward(CLVP_DECODER_INPUTS_DOCSTRING)
     def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
@@ -985,19 +1003,20 @@ class ClvpDecoder(ClvpPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
+            self.warn_if_padding_and_no_attention_mask(
+                input_ids, attention_mask)
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
-            input_ids.shape[0]
+            # input_ids.shape[0]
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
-            inputs_embeds.shape[0]
+            # inputs_embeds.shape[0]
         else:
-            raise ValueError("You have to specify either input_ids or inputs_embeds")
-
-        #device = input_ids.device if input_ids is not None else inputs_embeds.device
+            raise ValueError(
+                "You have to specify either input_ids or inputs_embeds")
 
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
@@ -1026,7 +1045,8 @@ class ClvpDecoder(ClvpPreTrainedModel):
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x num_attention_heads x N x N
         # head_mask has shape num_hidden_layers x batch x num_attention_heads x N x N
-        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
+        head_mask = self.get_head_mask(
+            head_mask, self.config.num_hidden_layers)
 
         hidden_states = inputs_embeds
 
@@ -1053,16 +1073,6 @@ class ClvpDecoder(ClvpPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            #if self.gradient_checkpointing and self.training:
-                #outputs = torch.utils.checkpoint.checkpoint(
-                    #block.__call__,
-                    #hidden_states,
-                    #None,
-                    #attention_mask,
-                    #position_ids,
-                    #head_mask[i],
-                #)
-            #else:
             outputs = block(
                 hidden_states,
                 past_key_value=past_key_value,
@@ -1078,9 +1088,11 @@ class ClvpDecoder(ClvpPreTrainedModel):
                 presents = presents + (outputs[1],)
 
             if output_attentions:
-                all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
+                all_self_attentions = all_self_attentions + \
+                    (outputs[2 if use_cache else 1],)
                 if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + (outputs[3 if use_cache else 2],)
+                    all_cross_attentions = all_cross_attentions + \
+                        (outputs[3 if use_cache else 2],)
 
         hidden_states = self.layer_norm(hidden_states)
 
@@ -1180,7 +1192,8 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
         self.model = ClvpModel(self.config)
 
         self.final_norm = nn.LayerNorm(self.config.hidden_size)
-        self.lm_head = nn.Linear(self.config.hidden_size, self.config.vocab_size, bias=True)
+        self.lm_head = nn.Linear(
+            self.config.hidden_size, self.config.vocab_size, bias=True)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1233,28 +1246,33 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
             mel_start_token_embedding += self.model.decoder.position_embeds_layer(
                 ops.full((conditioning_embeds.shape[0], 1), fill_value=0)
             )
-            conditioning_embeds = ops.concat([conditioning_embeds, mel_start_token_embedding], dim=1)
+            conditioning_embeds = ops.concat(
+                [conditioning_embeds, mel_start_token_embedding], dim=1)
 
             # subtract the positional_ids here
             if hasattr(model_kwargs, "attention_mask"):
-                position_ids = model_kwargs["attention_mask"].long().cumsum(-1) - 1
+                position_ids = model_kwargs["attention_mask"].long(
+                ).cumsum(-1) - 1
             else:
                 position_ids = ops.range(
                     0, conditioning_embeds.shape[1] - 1, dtype=mindspore.int64
                 )
-            position_ids = position_ids.unsqueeze(0).tile((conditioning_embeds.shape[0], 1))
+            position_ids = position_ids.unsqueeze(
+                0).tile((conditioning_embeds.shape[0], 1))
 
             model_kwargs["inputs_embeds"] = conditioning_embeds - self.model.decoder.position_embeds_layer(
                 position_ids
             )
             model_kwargs["input_ids"] = (
-                ops.ones((model_kwargs["inputs_embeds"].shape[0], 1), dtype=mindspore.int64)
+                ops.ones(
+                    (model_kwargs["inputs_embeds"].shape[0], 1), dtype=mindspore.int64)
                 * self.config.bos_token_id
             )
 
             return model_kwargs["inputs_embeds"], "inputs_embeds", model_kwargs
 
-        inputs = self._maybe_initialize_input_ids_for_generation(inputs, bos_token_id, model_kwargs)
+        inputs = self._maybe_initialize_input_ids_for_generation(
+            inputs, bos_token_id, model_kwargs)
         return inputs, input_name, model_kwargs
 
     def prepare_inputs_for_generation(
@@ -1275,7 +1293,7 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
 
             input_ids = input_ids[:, remove_prefix_length:]
             if token_type_ids is not None:
-                token_type_ids = token_type_ids[:, -input_ids.shape[1] :]
+                token_type_ids = token_type_ids[:, -input_ids.shape[1]:]
 
         attention_mask = kwargs.get("attention_mask", None)
         position_ids = kwargs.get("position_ids", None)
@@ -1290,7 +1308,8 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
             position_ids = None
 
         if conditioning_embeds is not None and past_key_values is not None:
-            position_ids = mindspore.tensor([input_ids_length], dtype=mindspore.int64)
+            position_ids = mindspore.tensor(
+                [input_ids_length], dtype=mindspore.int64)
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and past_key_values is None:
@@ -1358,13 +1377,13 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
             loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = loss_fct(
+                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1390,7 +1409,8 @@ class ClvpForCausalLM(ClvpPreTrainedModel):
         beam_idx at every generation step.
         """
         return tuple(
-            tuple(past_state.index_select(0, beam_idx) for past_state in layer_past)
+            tuple(past_state.index_select(0, beam_idx)
+                  for past_state in layer_past)
             for layer_past in past_key_values
         )
 
@@ -1426,7 +1446,8 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         self.text_encoder_model = ClvpEncoder(config.text_config)
         self.speech_encoder_model = ClvpEncoder(config.speech_config)
 
-        self.logit_scale = nn.Parameter(mindspore.tensor(self.config.logit_scale_init_value))
+        self.logit_scale = nn.Parameter(
+            mindspore.tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1445,8 +1466,10 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         decoder_fixing_codes = self.config.decoder_config.decoder_fixing_codes
         speech_ids = speech_ids[:, 1:]
 
-        stop_token_indices = ops.where(speech_ids == self.speech_decoder_model.config.eos_token_id, mindspore.tensor(1), 0)
-        speech_ids = ops.masked_fill(speech_ids, mask=stop_token_indices.bool(), value=decoder_fixing_codes[0])
+        stop_token_indices = ops.where(
+            speech_ids == self.speech_decoder_model.config.eos_token_id, mindspore.tensor(1), 0)
+        speech_ids = ops.masked_fill(
+            speech_ids, mask=stop_token_indices.bool(), value=decoder_fixing_codes[0])
 
         for i, each_seq_stop_token_index in enumerate(stop_token_indices):
             # This means that no stop tokens were found so the sentence was still being generated, in that case we don't need
@@ -1617,7 +1640,6 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
 
         return outputs[0]
 
-
     def forward(
         self,
         input_ids: mindspore.Tensor = None,
@@ -1710,7 +1732,8 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
-        logits_per_text = ops.matmul(text_embeds, speech_embeds.t()) * logit_scale
+        logits_per_text = ops.matmul(
+            text_embeds, speech_embeds.t()) * logit_scale
         logits_per_speech = logits_per_text.t()
 
         loss = None
@@ -1748,7 +1771,7 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
             speech_encoder_hidden_states=speech_outputs.hidden_states,
         )
 
-    #@torch.no_grad()
+    # @torch.no_grad()
     def generate(
         self,
         input_ids: mindspore.Tensor = None,
@@ -1810,7 +1833,8 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
             generation_config = self.generation_config
 
         generation_config = copy.deepcopy(generation_config)
-        model_kwargs = generation_config.update(**kwargs)  # All unused kwargs must be model kwargs
+        # All unused kwargs must be model kwargs
+        model_kwargs = generation_config.update(**kwargs)
         generation_config.validate()
         self._validate_model_kwargs(model_kwargs.copy())
 
@@ -1865,12 +1889,14 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         text_embeds = text_outputs[0]
 
         # normalized features
-        speech_embeds = speech_embeds / speech_embeds.norm(p=2, dim=-1, keepdim=True)
+        speech_embeds = speech_embeds / \
+            speech_embeds.norm(p=2, dim=-1, keepdim=True)
         text_embeds = text_embeds / text_embeds.norm(p=2, dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
-        logits_per_text = ops.matmul(text_embeds, speech_embeds.t()) * logit_scale
+        logits_per_text = ops.matmul(
+            text_embeds, speech_embeds.t()) * logit_scale
         logits_per_speech = logits_per_text.t()
 
         if not generation_config.return_dict_in_generate:
@@ -1904,6 +1930,7 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
             text_encoder_hidden_states=text_outputs.hidden_states,
             speech_encoder_hidden_states=speech_outputs.hidden_states,
         )
+
 
 __all__ = [
     "ClvpModelForConditionalGeneration",

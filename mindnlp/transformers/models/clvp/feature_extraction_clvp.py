@@ -21,10 +21,10 @@ from typing import List, Optional, Union
 
 import numpy as np
 
+from mindnlp.utils import TensorType, logging
 from ...audio_utils import mel_filter_bank, spectrogram, window_function
 from ...feature_extraction_sequence_utils import SequenceFeatureExtractor
 from ...feature_extraction_utils import BatchFeature
-from mindnlp.utils import TensorType, logging
 
 
 logger = logging.get_logger(__name__)
@@ -78,7 +78,8 @@ class ClvpFeatureExtractor(SequenceFeatureExtractor):
         n_fft=1024,
         padding_value=0.0,
         mel_norms=None,
-        return_attention_mask=False,  # pad inputs to max length with silence token (zero) and no attention mask
+        # pad inputs to max length with silence token (zero) and no attention mask
+        return_attention_mask=False,
         **kwargs,
     ):
         super().__init__(
@@ -192,15 +193,19 @@ class ClvpFeatureExtractor(SequenceFeatureExtractor):
                 "Failing to do so can result in silent errors that might be hard to debug."
             )
 
-        is_batched_numpy = isinstance(raw_speech, np.ndarray) and len(raw_speech.shape) > 1
+        is_batched_numpy = isinstance(
+            raw_speech, np.ndarray) and len(raw_speech.shape) > 1
         if is_batched_numpy and len(raw_speech.shape) > 2:
-            raise ValueError(f"Only mono-channel audio is supported for input to {self}")
+            raise ValueError(
+                f"Only mono-channel audio is supported for input to {self}")
         is_batched = is_batched_numpy or (
-            isinstance(raw_speech, (list, tuple)) and (isinstance(raw_speech[0], (np.ndarray, tuple, list)))
+            isinstance(raw_speech, (list, tuple)) and (
+                isinstance(raw_speech[0], (np.ndarray, tuple, list)))
         )
 
         if is_batched:
-            raw_speech = [np.asarray([speech], dtype=np.float32).T for speech in raw_speech]
+            raw_speech = [np.asarray(
+                [speech], dtype=np.float32).T for speech in raw_speech]
         elif not is_batched and not isinstance(raw_speech, np.ndarray):
             raw_speech = np.asarray(raw_speech, dtype=np.float32)
         elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(np.float64):
@@ -212,7 +217,8 @@ class ClvpFeatureExtractor(SequenceFeatureExtractor):
 
         batched_speech = BatchFeature({"input_features": raw_speech})
 
-        max_length = self.default_audio_length * self.sampling_rate if max_length is None else max_length
+        max_length = self.default_audio_length * \
+            self.sampling_rate if max_length is None else max_length
 
         padded_inputs = self.pad(
             batched_speech,
@@ -231,10 +237,12 @@ class ClvpFeatureExtractor(SequenceFeatureExtractor):
         ]
 
         if isinstance(input_features[0], List):
-            padded_inputs["input_features"] = [np.asarray(feature) for feature in input_features]
+            padded_inputs["input_features"] = [
+                np.asarray(feature) for feature in input_features]
         else:
             padded_inputs["input_features"] = input_features
 
         return padded_inputs.convert_to_tensors(return_tensors)
-    
+
+
 __all__ = ["ClvpFeatureExtractor"]

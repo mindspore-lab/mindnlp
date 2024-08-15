@@ -16,17 +16,15 @@
 
 import os
 from typing import TYPE_CHECKING, Union
+from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 if TYPE_CHECKING:
     pass
 
-from ...configuration_utils import PretrainedConfig
-from mindnlp.utils import logging
-
 
 logger = logging.get_logger(__name__)
-
 
 
 class ClvpEncoderConfig(PretrainedConfig):
@@ -166,7 +164,8 @@ class ClvpEncoderConfig(PretrainedConfig):
     ) -> "PretrainedConfig":
         cls._set_token_in_kwargs(kwargs)
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs)
 
         # make sure to have the config_type be either "text_config" or "speech_config"
         # this is to make sure that we can load only text or speech configs from the nested ClvpConfig.
@@ -347,7 +346,8 @@ class ClvpDecoderConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         cls._set_token_in_kwargs(kwargs)
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs)
 
         # get the speech config dict if we are loading from ClvpConfig
         if config_dict.get("model_type") == "clvp":
@@ -431,15 +431,18 @@ class ClvpConfig(PretrainedConfig):
 
         if text_config is None:
             text_config = {}
-            logger.info("`text_config` is `None`. Initializing the `ClvpEncoderConfig` with default values.")
+            logger.info(
+                "`text_config` is `None`. Initializing the `ClvpEncoderConfig` with default values.")
 
         if speech_config is None:
             speech_config = {}
-            logger.info("`speech_config` is `None`. initializing the `ClvpEncoderConfig` with default values.")
+            logger.info(
+                "`speech_config` is `None`. initializing the `ClvpEncoderConfig` with default values.")
 
         if decoder_config is None:
             decoder_config = {}
-            logger.info("`decoder_config` is `None`. initializing the `ClvpDecoderConfig` with default values.")
+            logger.info(
+                "`decoder_config` is `None`. initializing the `ClvpDecoderConfig` with default values.")
 
         self.text_config = ClvpEncoderConfig(**text_config)
         self.speech_config = ClvpEncoderConfig(**speech_config)
@@ -479,9 +482,10 @@ class ClvpConfig(PretrainedConfig):
             decoder_config=decoder_config.to_dict(),
             **kwargs,
         )
-    
+
+
 __all__ = [
-        "ClvpConfig",
-        "ClvpDecoderConfig",
-        "ClvpEncoderConfig",
-        ]
+    "ClvpConfig",
+    "ClvpDecoderConfig",
+    "ClvpEncoderConfig",
+]

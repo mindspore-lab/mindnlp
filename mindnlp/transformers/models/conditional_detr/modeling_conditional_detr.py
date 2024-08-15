@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ MindSpore Conditional DETR model."""
-import pdb
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
@@ -359,7 +358,7 @@ class ConditionalDetrConvEncoder(nn.Module):
                     in_chans=num_channels,
                     **kwargs,
                 )
-           
+
         else:
             backbone = load_backbone(config)
 
@@ -382,12 +381,14 @@ class ConditionalDetrConvEncoder(nn.Module):
 
     def forward(self, pixel_values: mindspore.Tensor, pixel_mask: mindspore.Tensor):
         # send pixel_values through the model to get list of feature maps
-        features = self.model(pixel_values) if self.config.use_timm_backbone else self.model(pixel_values).feature_maps
+        features = self.model(pixel_values) if self.config.use_timm_backbone else self.model(
+            pixel_values).feature_maps
 
         out = []
         for feature_map in features:
             # downsample pixel_mask to match shape of corresponding feature_map
-            mask = F.interpolate(pixel_mask[None].float(), size=feature_map.shape[-2:]).to(mindspore.bool_)[0]
+            mask = F.interpolate(pixel_mask[None].float(
+            ), size=feature_map.shape[-2:]).to(mindspore.bool_)[0]
             out.append((feature_map, mask))
         return out
 
@@ -409,7 +410,8 @@ class ConditionalDetrConvModel(nn.Module):
         pos = []
         for feature_map, mask in out:
             # position encoding
-            pos.append(self.position_embedding(feature_map, mask).to(feature_map.dtype))
+            pos.append(self.position_embedding(
+                feature_map, mask).to(feature_map.dtype))
 
         return out, pos
 
@@ -441,12 +443,15 @@ class ConditionalDetrSinePositionEmbedding(nn.Module):
             x_embed = x_embed / (x_embed[:, :, -1:] + 1e-6) * self.scale
 
         dim_t = ops.arange(self.embedding_dim, dtype=mindspore.int64).float()
-        dim_t = self.temperature ** (2 * ops.div(dim_t, 2, rounding_mode="floor") / self.embedding_dim)
+        dim_t = self.temperature ** (2 * ops.div(dim_t,
+                                     2, rounding_mode="floor") / self.embedding_dim)
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(
+        ), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(
+        ), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
         pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
@@ -468,7 +473,8 @@ class ConditionalDetrLearnedPositionEmbedding(nn.Module):
         height_values = ops.arange(height)
         x_emb = self.column_embeddings(width_values)
         y_emb = self.row_embeddings(height_values)
-        pos = ops.cat([ops.tile(x_emb.unsqueeze(0), (height, 1, 1)), ops.tile(y_emb.unsqueeze(1), (1, width, 1))], dim=-1)
+        pos = ops.cat([ops.tile(x_emb.unsqueeze(0), (height, 1, 1)), ops.tile(
+            y_emb.unsqueeze(1), (1, width, 1))], dim=-1)
         pos = pos.permute(2, 0, 1)
         pos = pos.unsqueeze(0)
         pos = ops.tile(pos, (pixel_values.shape[0], 1, 1, 1))
@@ -480,7 +486,8 @@ def build_position_encoding(config):
     n_steps = config.d_model // 2
     if config.position_embedding_type == "sine":
         # TODO find a better way of exposing other arguments
-        position_embedding = ConditionalDetrSinePositionEmbedding(n_steps, normalize=True)
+        position_embedding = ConditionalDetrSinePositionEmbedding(
+            n_steps, normalize=True)
     elif config.position_embedding_type == "learned":
         position_embedding = ConditionalDetrLearnedPositionEmbedding(n_steps)
     else:
@@ -499,17 +506,19 @@ def gen_sine_position_embeddings(pos_tensor, d_model):
     y_embed = pos_tensor[:, :, 1] * scale
     pos_x = x_embed[:, :, None] / dim_t
     pos_y = y_embed[:, :, None] / dim_t
-    pos_x = ops.stack((pos_x[:, :, 0::2].sin(), pos_x[:, :, 1::2].cos()), dim=3).flatten(start_dim=2)
-    pos_y = ops.stack((pos_y[:, :, 0::2].sin(), pos_y[:, :, 1::2].cos()), dim=3).flatten(start_dim=2)
+    pos_x = ops.stack(
+        (pos_x[:, :, 0::2].sin(), pos_x[:, :, 1::2].cos()), dim=3).flatten(start_dim=2)
+    pos_y = ops.stack(
+        (pos_y[:, :, 0::2].sin(), pos_y[:, :, 1::2].cos()), dim=3).flatten(start_dim=2)
     pos = ops.cat((pos_y, pos_x), dim=2)
     return pos
 
 
 def inverse_sigmoid(x, eps=1e-5):
-    #x = x.clamp(min=0, max=1)
+    # x = x.clamp(min=0, max=1)
     x = ops.clamp(x, min=0, max=1)
     x1 = x.clamp(min=eps)
-    #x2 = (1 - x).clamp(min=eps)
+    # x2 = (1 - x).clamp(min=eps)
     x2 = ops.clamp((1-x), min=eps)
     return ops.log(x1 / x2)
 
@@ -575,22 +584,28 @@ class DetrAttention(nn.Module):
         # add key-value position embeddings to the key value states
         if spatial_position_embeddings is not None:
             key_value_states_original = key_value_states
-            key_value_states = self.with_pos_embed(key_value_states, spatial_position_embeddings)
+            key_value_states = self.with_pos_embed(
+                key_value_states, spatial_position_embeddings)
 
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
         # get key, value proj
         if is_cross_attention:
             # cross_attentions
-            key_states = self._shape(self.k_proj(key_value_states), -1, batch_size)
-            value_states = self._shape(self.v_proj(key_value_states_original), -1, batch_size)
+            key_states = self._shape(self.k_proj(
+                key_value_states), -1, batch_size)
+            value_states = self._shape(self.v_proj(
+                key_value_states_original), -1, batch_size)
         else:
             # self_attention
-            key_states = self._shape(self.k_proj(hidden_states), -1, batch_size)
-            value_states = self._shape(self.v_proj(hidden_states_original), -1, batch_size)
+            key_states = self._shape(
+                self.k_proj(hidden_states), -1, batch_size)
+            value_states = self._shape(self.v_proj(
+                hidden_states_original), -1, batch_size)
 
         proj_shape = (batch_size * self.num_heads, -1, self.head_dim)
-        query_states = self._shape(query_states, target_len, batch_size).view(*proj_shape)
+        query_states = self._shape(
+            query_states, target_len, batch_size).view(*proj_shape)
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
 
@@ -610,8 +625,10 @@ class DetrAttention(nn.Module):
                     f"Attention mask should be of size {(batch_size, 1, target_len, source_len)}, but is"
                     f" {attention_mask.shape}"
                 )
-            attn_weights = attn_weights.view(batch_size, self.num_heads, target_len, source_len) + attention_mask
-            attn_weights = attn_weights.view(batch_size * self.num_heads, target_len, source_len)
+            attn_weights = attn_weights.view(
+                batch_size, self.num_heads, target_len, source_len) + attention_mask
+            attn_weights = attn_weights.view(
+                batch_size * self.num_heads, target_len, source_len)
 
         attn_weights = ops.softmax(attn_weights, dim=-1)
 
@@ -620,12 +637,15 @@ class DetrAttention(nn.Module):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(batch_size, self.num_heads, target_len, source_len)
-            attn_weights = attn_weights_reshaped.view(batch_size * self.num_heads, target_len, source_len)
+            attn_weights_reshaped = attn_weights.view(
+                batch_size, self.num_heads, target_len, source_len)
+            attn_weights = attn_weights_reshaped.view(
+                batch_size * self.num_heads, target_len, source_len)
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(
+            attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -635,7 +655,8 @@ class DetrAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.view(batch_size, self.num_heads, target_len, self.head_dim)
+        attn_output = attn_output.view(
+            batch_size, self.num_heads, target_len, self.head_dim)
         attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(batch_size, target_len, embed_dim)
 
@@ -707,7 +728,8 @@ class ConditionalDetrAttention(nn.Module):
 
         proj_shape = (batch_size * self.num_heads, -1, self.head_dim)
         v_proj_shape = (batch_size * self.num_heads, -1, self.v_head_dim)
-        query_states = self._qk_shape(query_states, target_len, batch_size).view(*proj_shape)
+        query_states = self._qk_shape(
+            query_states, target_len, batch_size).view(*proj_shape)
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*v_proj_shape)
 
@@ -727,8 +749,10 @@ class ConditionalDetrAttention(nn.Module):
                     f"Attention mask should be of size {(batch_size, 1, target_len, source_len)}, but is"
                     f" {attention_mask.shape}"
                 )
-            attn_weights = attn_weights.view(batch_size, self.num_heads, target_len, source_len) + attention_mask
-            attn_weights = attn_weights.view(batch_size * self.num_heads, target_len, source_len)
+            attn_weights = attn_weights.view(
+                batch_size, self.num_heads, target_len, source_len) + attention_mask
+            attn_weights = attn_weights.view(
+                batch_size * self.num_heads, target_len, source_len)
 
         attn_weights = ops.softmax(attn_weights, dim=-1)
 
@@ -737,12 +761,15 @@ class ConditionalDetrAttention(nn.Module):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(batch_size, self.num_heads, target_len, source_len)
-            attn_weights = attn_weights_reshaped.view(batch_size * self.num_heads, target_len, source_len)
+            attn_weights_reshaped = attn_weights.view(
+                batch_size, self.num_heads, target_len, source_len)
+            attn_weights = attn_weights_reshaped.view(
+                batch_size * self.num_heads, target_len, source_len)
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(
+            attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -752,7 +779,8 @@ class ConditionalDetrAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.view(batch_size, self.num_heads, target_len, self.v_head_dim)
+        attn_output = attn_output.view(
+            batch_size, self.num_heads, target_len, self.v_head_dim)
         attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(batch_size, target_len, self.out_dim)
 
@@ -806,16 +834,19 @@ class ConditionalDetrEncoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.activation_dropout, training=self.training)
 
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.dropout, training=self.training)
 
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
@@ -823,7 +854,8 @@ class ConditionalDetrEncoderLayer(nn.Module):
         if self.training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
                 clamp_value = ops.finfo(hidden_states.dtype).max - 1000
-                hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+                hidden_states = ops.clamp(
+                    hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -934,7 +966,8 @@ class ConditionalDetrDecoderLayer(nn.Module):
         )
         # ============ End of Self-Attention =============
 
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -962,11 +995,15 @@ class ConditionalDetrDecoderLayer(nn.Module):
 
         q = q.view(batch_size, num_queries, self.nhead, n_model // self.nhead)
         query_sine_embed = self.ca_qpos_sine_proj(query_sine_embed)
-        query_sine_embed = query_sine_embed.view(batch_size, num_queries, self.nhead, n_model // self.nhead)
-        q = ops.cat([q, query_sine_embed], dim=3).view(batch_size, num_queries, n_model * 2)
+        query_sine_embed = query_sine_embed.view(
+            batch_size, num_queries, self.nhead, n_model // self.nhead)
+        q = ops.cat([q, query_sine_embed], dim=3).view(
+            batch_size, num_queries, n_model * 2)
         k = k.view(batch_size, source_len, self.nhead, n_model // self.nhead)
-        k_pos = k_pos.view(batch_size, source_len, self.nhead, n_model // self.nhead)
-        k = ops.cat([k, k_pos], dim=3).view(batch_size, source_len, n_model * 2)
+        k_pos = k_pos.view(batch_size, source_len,
+                           self.nhead, n_model // self.nhead)
+        k = ops.cat([k, k_pos], dim=3).view(
+            batch_size, source_len, n_model * 2)
 
         # Cross-Attention Block
         cross_attn_weights = None
@@ -981,7 +1018,8 @@ class ConditionalDetrDecoderLayer(nn.Module):
                 output_attentions=output_attentions,
             )
 
-            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(
+                hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -990,9 +1028,11 @@ class ConditionalDetrDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -1018,7 +1058,8 @@ class MLP(nn.Module):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.ModuleList([nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
+        self.layers = nn.ModuleList(
+            [nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
@@ -1031,28 +1072,38 @@ class ConditionalDetrPreTrainedModel(PreTrainedModel):
     config_class = ConditionalDetrConfig
     base_model_prefix = "model"
     main_input_name = "pixel_values"
-    _no_split_modules = [r"ConditionalDetrConvEncoder", r"ConditionalDetrEncoderLayer", r"ConditionalDetrDecoderLayer"]
+    _no_split_modules = [r"ConditionalDetrConvEncoder",
+                         r"ConditionalDetrEncoderLayer", r"ConditionalDetrDecoderLayer"]
 
     def _init_weights(self, cell):
         std = self.config.init_std
         xavier_std = self.config.init_xavier_std
 
         if isinstance(cell, ConditionalDetrMHAttentionMap):
-            cell.k_linear.bias.set_data(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias.set_data(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
+            cell.k_linear.bias.set_data(initializer(
+                'zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
+            cell.q_linear.bias.set_data(initializer(
+                'zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
+            cell.k_linear.weight.set_data(initializer(XavierUniform(
+                xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
+            cell.q_linear.weight.set_data(initializer(XavierUniform(
+                xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
         elif isinstance(cell, ConditionalDetrLearnedPositionEmbedding):
-            cell.row_embeddings.weight.set_data(initializer(Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight.set_data(initializer(Uniform(), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
+            cell.row_embeddings.weight.set_data(initializer(
+                Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
+            cell.column_embeddings.weight.set_data(initializer(Uniform(
+            ), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
         if isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(
+                Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.set_data(initializer(
+                    'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(
+                Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0.0
 
@@ -1079,7 +1130,8 @@ class ConditionalDetrEncoder(ConditionalDetrPreTrainedModel):
         self.dropout = config.dropout
         self.layerdrop = config.encoder_layerdrop
 
-        self.layers = nn.ModuleList([ConditionalDetrEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([ConditionalDetrEncoderLayer(
+            config) for _ in range(config.encoder_layers)])
 
         # in the original ConditionalDETR, no layernorm is used at the end of the encoder, as "normalize_before" is set to False by default
 
@@ -1127,12 +1179,14 @@ class ConditionalDetrEncoder(ConditionalDetrPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         hidden_states = inputs_embeds
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(
+            hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
             # [batch_size, seq_len] -> [batch_size, 1, target_seq_len, source_seq_len]
-            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
+            attention_mask = _prepare_4d_attention_mask(
+                attention_mask, inputs_embeds.dtype)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1192,7 +1246,8 @@ class ConditionalDetrDecoder(ConditionalDetrPreTrainedModel):
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
 
-        self.layers = nn.ModuleList([ConditionalDetrDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([ConditionalDetrDecoderLayer(
+            config) for _ in range(config.decoder_layers)])
         # in Conditional DETR, the decoder uses layernorm after the last decoder layer output
         self.layernorm = nn.LayerNorm(config.d_model)
         d_model = config.d_model
@@ -1264,7 +1319,6 @@ class ConditionalDetrDecoder(ConditionalDetrPreTrainedModel):
             hidden_states = inputs_embeds
             input_shape = inputs_embeds.shape[:-1]
 
-
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
             # [batch_size, seq_len] -> [batch_size, 1, target_seq_len, source_seq_len]
@@ -1278,7 +1332,8 @@ class ConditionalDetrDecoder(ConditionalDetrPreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        all_cross_attentions = () if (output_attentions and encoder_hidden_states is not None) else None
+        all_cross_attentions = () if (
+            output_attentions and encoder_hidden_states is not None) else None
 
         reference_points_before_sigmoid = self.ref_point_head(
             query_position_embeddings
@@ -1286,7 +1341,8 @@ class ConditionalDetrDecoder(ConditionalDetrPreTrainedModel):
         reference_points = reference_points_before_sigmoid.sigmoid().swapaxes(0, 1)
         obj_center = reference_points[..., :2].swapaxes(0, 1)
         # get sine embedding for the query vector
-        query_sine_embed_before_transformation = gen_sine_position_embeddings(obj_center, self.config.d_model)
+        query_sine_embed_before_transformation = gen_sine_position_embeddings(
+            obj_center, self.config.d_model)
 
         for idx, decoder_layer in enumerate(self.layers):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
@@ -1384,9 +1440,11 @@ class ConditionalDetrModel(ConditionalDetrPreTrainedModel):
         self.backbone = ConditionalDetrConvModel(backbone, object_queries)
 
         # Create projection layer
-        self.input_projection = nn.Conv2d(backbone.intermediate_channel_sizes[-1], config.d_model, kernel_size=1)
+        self.input_projection = nn.Conv2d(
+            backbone.intermediate_channel_sizes[-1], config.d_model, kernel_size=1)
 
-        self.query_position_embeddings = nn.Embedding(config.num_queries, config.d_model)
+        self.query_position_embeddings = nn.Embedding(
+            config.num_queries, config.d_model)
 
         self.encoder = ConditionalDetrEncoder(config)
         self.decoder = ConditionalDetrDecoder(config)
@@ -1408,7 +1466,6 @@ class ConditionalDetrModel(ConditionalDetrPreTrainedModel):
         for name, param in self.backbone.conv_encoder.model.named_parameters():
             param.requires_grad_(True)
 
-    
     def forward(
         self,
         pixel_values: mindspore.Tensor,
@@ -1476,8 +1533,10 @@ class ConditionalDetrModel(ConditionalDetrPreTrainedModel):
 
         # Third, flatten the feature map + object_queries of shape NxCxHxW to NxCxHW, and permute it to NxHWxC
         # In other words, turn their shape into (batch_size, sequence_length, hidden_size)
-        flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
-        object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
+        flattened_features = projected_feature_map.flatten(
+            start_dim=2).permute(0, 2, 1)
+        object_queries = object_queries_list[-1].flatten(
+            start_dim=2).permute(0, 2, 1)
 
         flattened_mask = ops.flatten(mask, start_dim=1)
 
@@ -1497,12 +1556,15 @@ class ConditionalDetrModel(ConditionalDetrPreTrainedModel):
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(
                 last_hidden_state=encoder_outputs[0],
-                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
-                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+                hidden_states=encoder_outputs[1] if len(
+                    encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(
+                    encoder_outputs) > 2 else None,
             )
 
         # Fifth, sent query embeddings + object_queries through the decoder (which is conditioned on the encoder output)
-        query_position_embeddings = ops.tile(self.query_position_embeddings.weight.unsqueeze(0), (batch_size, 1, 1))
+        query_position_embeddings = ops.tile(
+            self.query_position_embeddings.weight.unsqueeze(0), (batch_size, 1, 1))
         queries = ops.zeros_like(query_position_embeddings)
 
         # decoder outputs consists of (dec_features, dec_hidden, dec_attn)
@@ -1552,8 +1614,8 @@ class ConditionalDetrForObjectDetection(ConditionalDetrPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     # taken from https://github.com/Atten4Vis/conditionalDETR/blob/master/models/conditional_detr.py
+
     def _set_aux_loss(self, outputs_class, outputs_coord):
         # this is a workaround to make torchscript happy, as torchscript
         # doesn't support dictionary with non-homogeneous values, such
@@ -1665,7 +1727,8 @@ class ConditionalDetrForObjectDetection(ConditionalDetrPreTrainedModel):
             outputs_loss["logits"] = logits
             outputs_loss["pred_boxes"] = pred_boxes
             if self.config.auxiliary_loss:
-                intermediate = outputs.intermediate_hidden_states if return_dict else outputs[4]
+                intermediate = outputs.intermediate_hidden_states if return_dict else outputs[
+                    4]
                 outputs_class = self.class_labels_classifier(intermediate)
 
                 for lvl in range(intermediate.shape[0]):
@@ -1675,19 +1738,23 @@ class ConditionalDetrForObjectDetection(ConditionalDetrPreTrainedModel):
                     outputs_coords.append(outputs_coord)
                 outputs_coord = ops.stack(outputs_coords)
 
-                auxiliary_outputs = self._set_aux_loss(outputs_class, outputs_coord)
+                auxiliary_outputs = self._set_aux_loss(
+                    outputs_class, outputs_coord)
                 outputs_loss["auxiliary_outputs"] = auxiliary_outputs
 
             loss_dict = criterion(outputs_loss, labels)
             # Fourth: compute total loss, as a weighted sum of the various losses
-            weight_dict = {"loss_ce": self.config.cls_loss_coefficient, "loss_bbox": self.config.bbox_loss_coefficient}
+            weight_dict = {"loss_ce": self.config.cls_loss_coefficient,
+                           "loss_bbox": self.config.bbox_loss_coefficient}
             weight_dict["loss_giou"] = self.config.giou_loss_coefficient
             if self.config.auxiliary_loss:
                 aux_weight_dict = {}
                 for i in range(self.config.decoder_layers - 1):
-                    aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
+                    aux_weight_dict.update(
+                        {k + f"_{i}": v for k, v in weight_dict.items()})
                 weight_dict.update(aux_weight_dict)
-            loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+            loss = sum(loss_dict[k] * weight_dict[k]
+                       for k in loss_dict.keys() if k in weight_dict)
 
         if not return_dict:
             if auxiliary_outputs is not None:
@@ -1724,7 +1791,8 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
         intermediate_channel_sizes = self.conditional_detr.model.backbone.conv_encoder.intermediate_channel_sizes
 
         self.mask_head = ConditionalDetrMaskHeadSmallConv(
-            hidden_size + number_of_heads, intermediate_channel_sizes[::-1][-3:], hidden_size
+            hidden_size +
+            number_of_heads, intermediate_channel_sizes[::-1][-3:], hidden_size
         )
 
         self.bbox_attention = ConditionalDetrMHAttentionMap(
@@ -1734,7 +1802,6 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    
     def forward(
         self,
         pixel_values: mindspore.Tensor,
@@ -1807,17 +1874,21 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
             pixel_mask = ops.ones((batch_size, height, width))
 
         # First, get list of feature maps and object_queries
-        features, object_queries_list = self.conditional_detr.model.backbone(pixel_values, pixel_mask=pixel_mask)
+        features, object_queries_list = self.conditional_detr.model.backbone(
+            pixel_values, pixel_mask=pixel_mask)
 
         # Second, apply 1x1 convolution to reduce the channel dimension to d_model (256 by default)
         feature_map, mask = features[-1]
         batch_size, num_channels, height, width = feature_map.shape
-        projected_feature_map = self.conditional_detr.model.input_projection(feature_map)
+        projected_feature_map = self.conditional_detr.model.input_projection(
+            feature_map)
 
         # Third, flatten the feature map + object_queries of shape NxCxHxW to NxCxHW, and permute it to NxHWxC
         # In other words, turn their shape into (batch_size, sequence_length, hidden_size)
-        flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
-        object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
+        flattened_features = projected_feature_map.flatten(
+            start_dim=2).permute(0, 2, 1)
+        object_queries = object_queries_list[-1].flatten(
+            start_dim=2).permute(0, 2, 1)
 
         flattened_mask = ops.flatten(mask, start_dim=1)
 
@@ -1837,13 +1908,16 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(
                 last_hidden_state=encoder_outputs[0],
-                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
-                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+                hidden_states=encoder_outputs[1] if len(
+                    encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(
+                    encoder_outputs) > 2 else None,
             )
 
         # Fifth, sent query embeddings + object_queries through the decoder (which is conditioned on the encoder output)
         query_position_embeddings = ops.tile(
-            self.conditional_detr.model.query_position_embeddings.weight.unsqueeze(0),
+            self.conditional_detr.model.query_position_embeddings.weight.unsqueeze(
+                0),
             (batch_size, 1, 1)
         )
         queries = ops.zeros_like(query_position_embeddings)
@@ -1865,17 +1939,19 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
 
         # Sixth, compute logits, pred_boxes and pred_masks
         logits = self.conditional_detr.class_labels_classifier(sequence_output)
-        pred_boxes = self.conditional_detr.bbox_predictor(sequence_output).sigmoid()
+        pred_boxes = self.conditional_detr.bbox_predictor(
+            sequence_output).sigmoid()
 
-        memory = encoder_outputs[0].permute(0, 2, 1).view(batch_size, self.config.d_model, height, width)
+        memory = encoder_outputs[0].permute(0, 2, 1).view(
+            batch_size, self.config.d_model, height, width)
         mask = flattened_mask.view(batch_size, height, width)
 
-        # FIXME h_boxes takes the last one computed, keep this in mind
         # important: we need to reverse the mask, since in the original implementation the mask works reversed
         # bbox_mask is of shape (batch_size, num_queries, number_of_attention_heads in bbox_attention, height/32, width/32)
         bbox_mask = self.bbox_attention(sequence_output, memory, mask=~mask)
 
-        seg_masks = self.mask_head(projected_feature_map, bbox_mask, [features[2][0], features[1][0], features[0][0]])
+        seg_masks = self.mask_head(projected_feature_map, bbox_mask, [
+                                   features[2][0], features[1][0], features[0][0]])
 
         pred_masks = seg_masks.view(
             batch_size, self.conditional_detr.config.num_queries, seg_masks.shape[-2], seg_masks.shape[-1]
@@ -1895,7 +1971,7 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
                 focal_alpha=self.config.focal_alpha,
                 losses=losses,
             )
-            
+
             # Third: compute the losses, based on outputs and labels
             outputs_loss = {}
             outputs_loss["logits"] = logits
@@ -1903,29 +1979,37 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
             outputs_loss["pred_masks"] = pred_masks
             if self.config.auxiliary_loss:
                 intermediate = decoder_outputs.intermediate_hidden_states if return_dict else decoder_outputs[-1]
-                outputs_class = self.conditional_detr.class_labels_classifier(intermediate)
-                outputs_coord = self.conditional_detr.bbox_predictor(intermediate).sigmoid()
-                auxiliary_outputs = self.conditional_detr._set_aux_loss(outputs_class, outputs_coord)
+                outputs_class = self.conditional_detr.class_labels_classifier(
+                    intermediate)
+                outputs_coord = self.conditional_detr.bbox_predictor(
+                    intermediate).sigmoid()
+                auxiliary_outputs = self.conditional_detr._set_aux_loss(
+                    outputs_class, outputs_coord)
                 outputs_loss["auxiliary_outputs"] = auxiliary_outputs
 
             loss_dict = criterion(outputs_loss, labels)
             # Fourth: compute total loss, as a weighted sum of the various losses
-            weight_dict = {"loss_ce": 1, "loss_bbox": self.config.bbox_loss_coefficient}
+            weight_dict = {"loss_ce": 1,
+                           "loss_bbox": self.config.bbox_loss_coefficient}
             weight_dict["loss_giou"] = self.config.giou_loss_coefficient
             weight_dict["loss_mask"] = self.config.mask_loss_coefficient
             weight_dict["loss_dice"] = self.config.dice_loss_coefficient
             if self.config.auxiliary_loss:
                 aux_weight_dict = {}
                 for i in range(self.config.decoder_layers - 1):
-                    aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
+                    aux_weight_dict.update(
+                        {k + f"_{i}": v for k, v in weight_dict.items()})
                 weight_dict.update(aux_weight_dict)
-            loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+            loss = sum(loss_dict[k] * weight_dict[k]
+                       for k in loss_dict.keys() if k in weight_dict)
 
         if not return_dict:
             if auxiliary_outputs is not None:
-                output = (logits, pred_boxes, pred_masks) + auxiliary_outputs + decoder_outputs + encoder_outputs
+                output = (logits, pred_boxes, pred_masks) + \
+                    auxiliary_outputs + decoder_outputs + encoder_outputs
             else:
-                output = (logits, pred_boxes, pred_masks) + decoder_outputs + encoder_outputs
+                output = (logits, pred_boxes, pred_masks) + \
+                    decoder_outputs + encoder_outputs
             return ((loss, loss_dict) + output) if loss is not None else output
 
         return ConditionalDetrSegmentationOutput(
@@ -1964,7 +2048,8 @@ class ConditionalDetrMaskHeadSmallConv(nn.Module):
                 " GroupNorm is set to 8"
             )
 
-        inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
+        inter_dims = [dim, context_dim // 2, context_dim // 4,
+                      context_dim // 8, context_dim // 16, context_dim // 64]
 
         self.lay1 = nn.Conv2d(dim, dim, 3, padding=1)
         self.gn1 = nn.GroupNorm(8, dim)
@@ -1986,15 +2071,18 @@ class ConditionalDetrMaskHeadSmallConv(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                m.weight.set_data(Parameter(initializer(HeUniform(), m.weight.shape, m.weight.dtype)))
-                m.bias.set_data(Parameter(initializer('zeros', m.bias.shape, m.bias.dtype)))
+                m.weight.set_data(Parameter(initializer(
+                    HeUniform(), m.weight.shape, m.weight.dtype)))
+                m.bias.set_data(Parameter(initializer(
+                    'zeros', m.bias.shape, m.bias.dtype)))
 
     def forward(self, x: Tensor, bbox_mask: Tensor, fpns: List[Tensor]):
         # here we concatenate x, the projected feature map, of shape (batch_size, d_model, heigth/32, width/32) with
         # the bbox_mask = the attention maps of shape (batch_size, n_queries, n_heads, height/32, width/32).
         # We expand the projected feature map to match the number of heads.
         # TODO: impl flatten01
-        x = ops.cat([_expand(x, bbox_mask.shape[1]), ops.flatten(bbox_mask, 0, 1)], 1)
+        x = ops.cat([_expand(x, bbox_mask.shape[1]),
+                    ops.flatten(bbox_mask, 0, 1)], 1)
 
         x = self.lay1(x)
         x = self.gn1(x)
@@ -2048,14 +2136,20 @@ class ConditionalDetrMHAttentionMap(nn.Module):
 
     def forward(self, q, k, mask: Optional[Tensor] = None):
         q = self.q_linear(q)
-        k = F.conv2d(k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
-        queries_per_head = q.view(q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads)
-        keys_per_head = k.view(k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-2], k.shape[-1])
-        weights = ops.einsum("bqnc,bnchw->bqnhw", queries_per_head * self.normalize_fact, keys_per_head)
+        k = F.conv2d(
+            k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
+        queries_per_head = q.view(
+            q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads)
+        keys_per_head = k.view(
+            k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-2], k.shape[-1])
+        weights = ops.einsum(
+            "bqnc,bnchw->bqnhw", queries_per_head * self.normalize_fact, keys_per_head)
 
         if mask is not None:
-            weights = ops.masked_fill(weights, mask.unsqueeze(1).unsqueeze(1), float(ops.finfo(weights.dtype).min))
-        weights = ops.softmax(weights.flatten(start_dim=2), dim=-1).view(weights.shape)
+            weights = ops.masked_fill(weights, mask.unsqueeze(
+                1).unsqueeze(1), float(ops.finfo(weights.dtype).min))
+        weights = ops.softmax(weights.flatten(
+            start_dim=2), dim=-1).view(weights.shape)
         weights = self.dropout(weights)
         return weights
 
@@ -2100,7 +2194,8 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = F.binary_cross_entropy_with_logits(
+        inputs, targets, reduction="none")
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -2148,7 +2243,8 @@ class ConditionalDetrLoss(nn.Module):
         source_logits = outputs["logits"]
 
         idx = self._get_source_permutation_idx(indices)
-        target_classes_o = ops.cat([t["class_labels"][J] for t, (_, J) in zip(targets, indices)])
+        target_classes_o = ops.cat([t["class_labels"][J]
+                                   for t, (_, J) in zip(targets, indices)])
         target_classes = ops.full(
             source_logits.shape[:2], self.num_classes, dtype=mindspore.int64
         )
@@ -2157,14 +2253,16 @@ class ConditionalDetrLoss(nn.Module):
         target_classes_onehot = ops.zeros(
             source_logits.shape[0], source_logits.shape[1], source_logits.shape[2] + 1,
             dtype=source_logits.dtype,
-            #layout=source_logits.layout,
-            #device=source_logits.device,
+            # layout=source_logits.layout,
+            # device=source_logits.device,
         )
-        target_classes_onehot = ops.scatter(target_classes_onehot, 2, target_classes.unsqueeze(-1), 1.)
+        target_classes_onehot = ops.scatter(
+            target_classes_onehot, 2, target_classes.unsqueeze(-1), 1.)
 
         target_classes_onehot = target_classes_onehot[:, :, :-1]
         loss_ce = (
-            sigmoid_focal_loss(source_logits, target_classes_onehot, num_boxes, alpha=self.focal_alpha, gamma=2)
+            sigmoid_focal_loss(source_logits, target_classes_onehot,
+                               num_boxes, alpha=self.focal_alpha, gamma=2)
             * source_logits.shape[1]
         )
         losses = {"loss_ce": loss_ce}
@@ -2196,7 +2294,8 @@ class ConditionalDetrLoss(nn.Module):
             raise KeyError("No predicted boxes found in outputs")
         idx = self._get_source_permutation_idx(indices)
         source_boxes = outputs["pred_boxes"][idx]
-        target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
+        target_boxes = ops.cat([t["boxes"][i]
+                               for t, (_, i) in zip(targets, indices)], dim=0)
 
         loss_bbox = F.l1_loss(source_boxes, target_boxes, reduction="none")
 
@@ -2204,7 +2303,8 @@ class ConditionalDetrLoss(nn.Module):
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
 
         loss_giou = 1 - ops.diag(
-            generalized_box_iou(center_to_corners_format(source_boxes), center_to_corners_format(target_boxes))
+            generalized_box_iou(center_to_corners_format(
+                source_boxes), center_to_corners_format(target_boxes))
         )
         losses["loss_giou"] = loss_giou.sum() / num_boxes
         return losses
@@ -2244,13 +2344,15 @@ class ConditionalDetrLoss(nn.Module):
 
     def _get_source_permutation_idx(self, indices):
         # permute predictions following indices
-        batch_idx = ops.cat([ops.full_like(source, i, dtype=mindspore.int64) for i, (source, _) in enumerate(indices)])
+        batch_idx = ops.cat([ops.full_like(source, i, dtype=mindspore.int64)
+                            for i, (source, _) in enumerate(indices)])
         source_idx = ops.cat([source for (source, _) in indices])
         return batch_idx, source_idx
 
     def _get_target_permutation_idx(self, indices):
         # permute targets following indices
-        batch_idx = ops.cat([ops.full_like(target, i, dtype=mindspore.int64) for i, (_, target) in enumerate(indices)])
+        batch_idx = ops.cat([ops.full_like(target, i, dtype=mindspore.int64)
+                            for i, (_, target) in enumerate(indices)])
         target_idx = ops.cat([target for (_, target) in indices])
         return batch_idx, target_idx
 
@@ -2276,7 +2378,8 @@ class ConditionalDetrLoss(nn.Module):
                 List of dicts, such that `len(targets) == batch_size`. The expected keys in each dict depends on the
                 losses applied, see each loss' doc.
         """
-        outputs_without_aux = {k: v for k, v in outputs.items() if k != "auxiliary_outputs"}
+        outputs_without_aux = {
+            k: v for k, v in outputs.items() if k != "auxiliary_outputs"}
 
         # Retrieve the matching between the outputs of the last layer and the targets
         indices = self.matcher(outputs_without_aux, targets)
@@ -2290,7 +2393,8 @@ class ConditionalDetrLoss(nn.Module):
         # Compute all the requested losses
         losses = {}
         for loss in self.losses:
-            losses.update(self.get_loss(loss, outputs, targets, indices, num_boxes))
+            losses.update(self.get_loss(
+                loss, outputs, targets, indices, num_boxes))
 
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if "auxiliary_outputs" in outputs:
@@ -2300,7 +2404,8 @@ class ConditionalDetrLoss(nn.Module):
                     if loss == "masks":
                         # Intermediate masks losses are too costly to compute, we ignore them.
                         continue
-                    l_dict = self.get_loss(loss, auxiliary_outputs, targets, indices, num_boxes)
+                    l_dict = self.get_loss(
+                        loss, auxiliary_outputs, targets, indices, num_boxes)
                     l_dict = {k + f"_{i}": v for k, v in l_dict.items()}
                     losses.update(l_dict)
 
@@ -2320,7 +2425,8 @@ class ConditionalDetrMLPPredictionHead(nn.Module):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.ModuleList([nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
+        self.layers = nn.ModuleList(
+            [nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
@@ -2378,8 +2484,10 @@ class ConditionalDetrHungarianMatcher(nn.Module):
         batch_size, num_queries = outputs["logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch
-        out_prob = ops.softmax(ops.flatten(outputs["logits"], 0, 1), -1)  # [batch_size * num_queries, num_classes]
-        out_bbox = ops.flatten(outputs["pred_boxes"], 0, 1)               # [batch_size * num_queries, 4]
+        # [batch_size * num_queries, num_classes]
+        out_prob = ops.softmax(ops.flatten(outputs["logits"], 0, 1), -1)
+        # [batch_size * num_queries, 4]
+        out_bbox = ops.flatten(outputs["pred_boxes"], 0, 1)
 
         # Also concat the target labels and boxes
         target_ids = ops.cat([v["class_labels"] for v in targets])
@@ -2388,22 +2496,28 @@ class ConditionalDetrHungarianMatcher(nn.Module):
         # Compute the classification cost.
         alpha = 0.25
         gamma = 2.0
-        neg_cost_class = (1 - alpha) * (out_prob**gamma) * (-(1 - out_prob + 1e-8).log())
-        pos_cost_class = alpha * ((1 - out_prob) ** gamma) * (-(out_prob + 1e-8).log())
-        class_cost = pos_cost_class[:, target_ids] - neg_cost_class[:, target_ids]
+        neg_cost_class = (1 - alpha) * (out_prob**gamma) * \
+            (-(1 - out_prob + 1e-8).log())
+        pos_cost_class = alpha * \
+            ((1 - out_prob) ** gamma) * (-(out_prob + 1e-8).log())
+        class_cost = pos_cost_class[:, target_ids] - \
+            neg_cost_class[:, target_ids]
 
         # Compute the L1 cost between boxes
         bbox_cost = ops.cdist(out_bbox, target_bbox, p=1.0)
 
         # Compute the giou cost between boxes
-        giou_cost = -generalized_box_iou(center_to_corners_format(out_bbox), center_to_corners_format(target_bbox))
+        giou_cost = -generalized_box_iou(center_to_corners_format(
+            out_bbox), center_to_corners_format(target_bbox))
 
         # Final cost matrix
-        cost_matrix = self.bbox_cost * bbox_cost + self.class_cost * class_cost + self.giou_cost * giou_cost
+        cost_matrix = self.bbox_cost * bbox_cost + \
+            self.class_cost * class_cost + self.giou_cost * giou_cost
         cost_matrix = cost_matrix.view(batch_size, num_queries, -1)
 
         sizes = [len(v["boxes"]) for v in targets]
-        indices = [linear_sum_assignment(c[i]) for i, c in enumerate(cost_matrix.split(sizes, -1))]
+        indices = [linear_sum_assignment(c[i]) for i, c in enumerate(
+            cost_matrix.split(sizes, -1))]
         return [(Tensor(i, dtype=mindspore.int64), Tensor(j, dtype=mindspore.int64)) for i, j in indices]
 
 
@@ -2457,9 +2571,11 @@ def generalized_box_iou(boxes1, boxes2):
     # degenerate boxes gives inf / nan results
     # so do an early check
     if not (boxes1[:, 2:] >= boxes1[:, :2]).all():
-        raise ValueError(f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
+        raise ValueError(
+            f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
     if not (boxes2[:, 2:] >= boxes2[:, :2]).all():
-        raise ValueError(f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
+        raise ValueError(
+            f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
     iou, union = box_iou(boxes1, boxes2)
 
     top_left = ops.minimum(boxes1[:, None, :2], boxes2[:, :2])
@@ -2510,11 +2626,14 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         tensor = ops.zeros(tuple(batch_shape), dtype=dtype)
         mask = ops.ones((batch_size, height, width), dtype=mindspore.bool_)
         for img, pad_img, m in zip(tensor_list, tensor, mask):
-            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]] = img.copy()
+            pad_img[: img.shape[0], : img.shape[1],
+                    : img.shape[2]] = img.copy()
             m[: img.shape[1], : img.shape[2]] = False
     else:
         raise ValueError("Only 3-dimensional tensors are supported")
     return NestedTensor(tensor, mask)
+
+
 __all__ = [
     'ConditionalDetrForObjectDetection',
     'ConditionalDetrForSegmentation',
