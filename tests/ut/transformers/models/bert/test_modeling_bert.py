@@ -181,6 +181,9 @@ class BertModelTester:
         input_ids,
         token_type_ids,
         input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
         encoder_hidden_states,
         encoder_attention_mask,
     ):
@@ -211,7 +214,11 @@ class BertModelTester:
         input_ids,
         token_type_ids,
         input_mask,
+        sequence_labels,
         token_labels,
+        choice_labels,
+        encoder_hidden_states,
+        encoder_attention_mask,
     ):
         model = BertLMHeadModel(config=config)
         
@@ -234,7 +241,9 @@ class BertModelTester:
         input_ids,
         token_type_ids,
         input_mask,
+        sequence_labels,
         token_labels,
+        choice_labels,
         encoder_hidden_states,
         encoder_attention_mask,
     ):
@@ -263,7 +272,11 @@ class BertModelTester:
         self,
         config,
         input_ids,
+        token_type_ids,
         input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
         encoder_hidden_states,
         encoder_attention_mask,
     ):
