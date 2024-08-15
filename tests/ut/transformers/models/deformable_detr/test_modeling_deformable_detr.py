@@ -597,11 +597,12 @@ class DeformableDetrModelTest(
                 expected_arg_names = ["pixel_values", "pixel_mask"]
                 self.assertListEqual(arg_names[:1], expected_arg_names)
 
+    @unittest.skip("MindNLP does not depend on timm")
     def test_different_timm_backbone(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         # let's pick a random timm backbone
-        config.backbone = "tf_mobilenetv3_small_075"
+        config.backbone = "tf_mobilenetv3_small_075.in1k"
         config.backbone_config = None
         config.use_timm_backbone = True
         config.backbone_kwargs = {"out_indices": [1, 2, 3, 4]}
