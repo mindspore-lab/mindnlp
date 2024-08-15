@@ -190,7 +190,7 @@ def prepare_inputs_for_generation(input_ids, past_key_values=None, **kwargs):
 
     if attention_mask is not None and position_ids is None:
         # create position_ids on the fly for batch generation
-        position_ids = attention_mask.long().cumsum(-1) - 1
+        position_ids = attention_mask.int().cumsum(-1) - 1
         position_ids.masked_fill(attention_mask == 0, 1)
         if past_key_values:
             position_ids = position_ids[:, -1].unsqueeze(-1)
@@ -1144,8 +1144,8 @@ class IdeficsModel(IdeficsPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill(attention_mask == 0, 1)
+            position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
         elif position_ids is None:
             position_ids = ops.arange(
                 past_key_values_length, seq_length + past_key_values_length, dtype=mindspore.int64

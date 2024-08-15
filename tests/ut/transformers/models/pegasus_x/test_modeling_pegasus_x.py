@@ -60,7 +60,6 @@ def prepare_pegasus_x_inputs_dict(
         "decoder_attention_mask": attention_mask,
     }
 
-# mindspore.set_context(pynative_synchronize=True) #debug
 @require_mindspore
 class PegasusXModelTester:
     def __init__(

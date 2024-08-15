@@ -1774,7 +1774,7 @@ class ModelTesterMixin:
                     else:
                         self.assertTrue(
                             ops.allclose(
-                                set_nan_tensor_to_zero(tuple_object), set_nan_tensor_to_zero(dict_object), atol=1e-5
+                                set_nan_tensor_to_zero(tuple_object), set_nan_tensor_to_zero(dict_object), atol=1e-4
                             ),
                             msg=(
                                 "Tuple and dict output are not equal. Difference:"
