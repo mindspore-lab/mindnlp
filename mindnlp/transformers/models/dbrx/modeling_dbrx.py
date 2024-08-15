@@ -28,7 +28,6 @@ from ....utils import (
     logging,
 )
 from .configuration_dbrx import DbrxConfig
-mindspore.set_context(pynative_synchronize=True)
 
 
 

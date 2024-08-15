@@ -78,6 +78,8 @@ def ranint_like(input, low, high, *, dtype=None):
 
 # randn
 def randn(*size, dtype=None):
+    if dtype is None:
+        dtype = get_default_dtype()
     return ops.randn(*size, dtype=dtype)
 
 # randn_like

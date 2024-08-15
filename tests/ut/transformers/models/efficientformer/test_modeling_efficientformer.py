@@ -47,7 +47,6 @@ if is_mindspore_available():
         EfficientFormerModel,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 if is_vision_available():
     from PIL import Image
 
